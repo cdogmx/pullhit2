@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             GradingCompaniesSeeder::class,
             PokemonCatalogSeeder::class,
+            ChaosRisingSeeder::class,
         ]);
 
         // User::factory(10)->create();

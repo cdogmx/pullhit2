@@ -1,0 +1,1915 @@
+{
+    "set": {
+        "slug": "chaos-rising-en",
+        "name": "Chaos Rising",
+        "code": "CRI",
+        "language": "en",
+        "series": "Mega Evolution",
+        "set_family": "Chaos Rising",
+        "released_at": "2026-05-22",
+        "external_ids": {
+            "ptcgio_set_id": "me4"
+        }
+    },
+    "cards": [
+        {
+            "number": "1",
+            "name": "Weedle",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "sowsow",
+                "hp": 50,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-1",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-1/large"
+            }
+        },
+        {
+            "number": "2",
+            "name": "Kakuna",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Mugi Hamada",
+                "hp": 80,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-2",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-2/large"
+            }
+        },
+        {
+            "number": "3",
+            "name": "Beedrill ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Double Rare",
+                "variant": "holo",
+                "illustrator": "toriyufu",
+                "hp": 310,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-3",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-3/large"
+            }
+        },
+        {
+            "number": "4",
+            "name": "Carnivine",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Heisuke Kitazawa",
+                "hp": 110,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-4",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-4/large"
+            }
+        },
+        {
+            "number": "5",
+            "name": "Chespin",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "HACCAN",
+                "hp": 70,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-5",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-5/large"
+            }
+        },
+        {
+            "number": "6",
+            "name": "Quilladin",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Hideki Ishikawa",
+                "hp": 100,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-6",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-6/large"
+            }
+        },
+        {
+            "number": "7",
+            "name": "Chesnaught",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "holo",
+                "illustrator": "Uta",
+                "hp": 180,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-7",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-7/large"
+            }
+        },
+        {
+            "number": "8",
+            "name": "Vulpix",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Yoshimoto Yoshimon",
+                "hp": 70,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-8",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-8/large"
+            }
+        },
+        {
+            "number": "9",
+            "name": "Ninetales",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Ryuta Fuse",
+                "hp": 120,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-9",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-9/large"
+            }
+        },
+        {
+            "number": "10",
+            "name": "Ho-Oh",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "holo",
+                "illustrator": "Takumi Wada",
+                "hp": 130,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-10",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-10/large"
+            }
+        },
+        {
+            "number": "11",
+            "name": "Fennekin",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "saino misaki",
+                "hp": 70,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-11",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-11/large"
+            }
+        },
+        {
+            "number": "12",
+            "name": "Braixen",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Taiga Kasai",
+                "hp": 100,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-12",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-12/large"
+            }
+        },
+        {
+            "number": "13",
+            "name": "Delphox",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "holo",
+                "illustrator": "Gemi",
+                "hp": 160,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-13",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-13/large"
+            }
+        },
+        {
+            "number": "14",
+            "name": "Litleo",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Mina Nakai",
+                "hp": 70,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-14",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-14/large"
+            }
+        },
+        {
+            "number": "15",
+            "name": "Mega Pyroar ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Double Rare",
+                "variant": "holo",
+                "illustrator": "Keisuke Azuma",
+                "hp": 340,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-15",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-15/large"
+            }
+        },
+        {
+            "number": "16",
+            "name": "Remoraid",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Mori You",
+                "hp": 70,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-16",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-16/large"
+            }
+        },
+        {
+            "number": "17",
+            "name": "Octillery",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "matazo",
+                "hp": 110,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-17",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-17/large"
+            }
+        },
+        {
+            "number": "18",
+            "name": "Delibird",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Saboteri",
+                "hp": 90,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-18",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-18/large"
+            }
+        },
+        {
+            "number": "19",
+            "name": "Keldeo",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "holo",
+                "illustrator": "Mitsuhiro Arita",
+                "hp": 110,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-19",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-19/large"
+            }
+        },
+        {
+            "number": "20",
+            "name": "Froakie",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Kariya",
+                "hp": 70,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-20",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-20/large"
+            }
+        },
+        {
+            "number": "21",
+            "name": "Frogadier",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Nelnal",
+                "hp": 100,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-21",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-21/large"
+            }
+        },
+        {
+            "number": "22",
+            "name": "Mega Greninja ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Double Rare",
+                "variant": "holo",
+                "illustrator": "takuyoa",
+                "hp": 350,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-22",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-22/large"
+            }
+        },
+        {
+            "number": "23",
+            "name": "Bergmite",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Anesaki Dynamic",
+                "hp": 80,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-23",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-23/large"
+            }
+        },
+        {
+            "number": "24",
+            "name": "Avalugg",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Tomoki Sone",
+                "hp": 160,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-24",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-24/large"
+            }
+        },
+        {
+            "number": "25",
+            "name": "Wimpod",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "0313",
+                "hp": 70,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-25",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-25/large"
+            }
+        },
+        {
+            "number": "26",
+            "name": "Golisopod",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Takeshi Nakamura",
+                "hp": 140,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-26",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-26/large"
+            }
+        },
+        {
+            "number": "27",
+            "name": "Mareep",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "UKUMO viti",
+                "hp": 70,
+                "type": "Lightning"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-27",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-27/large"
+            }
+        },
+        {
+            "number": "28",
+            "name": "Flaaffy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "miki kudo",
+                "hp": 90,
+                "type": "Lightning"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-28",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-28/large"
+            }
+        },
+        {
+            "number": "29",
+            "name": "Ampharos",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "holo",
+                "illustrator": "CHORISO",
+                "hp": 160,
+                "type": "Lightning"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-29",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-29/large"
+            }
+        },
+        {
+            "number": "30",
+            "name": "Emolga",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Kazumasa Yasukuni",
+                "hp": 70,
+                "type": "Lightning"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-30",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-30/large"
+            }
+        },
+        {
+            "number": "31",
+            "name": "Deoxys",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Shiburingaru",
+                "hp": 110,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-31",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-31/large"
+            }
+        },
+        {
+            "number": "32",
+            "name": "Deoxys",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "nagimiso",
+                "hp": 120,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-32",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-32/large"
+            }
+        },
+        {
+            "number": "33",
+            "name": "Deoxys",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "GOSSAN",
+                "hp": 130,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-33",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-33/large"
+            }
+        },
+        {
+            "number": "34",
+            "name": "Deoxys",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "hncl",
+                "hp": 100,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-34",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-34/large"
+            }
+        },
+        {
+            "number": "35",
+            "name": "Mega Floette ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Double Rare",
+                "variant": "holo",
+                "illustrator": "aky CG Works",
+                "hp": 250,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-35",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-35/large"
+            }
+        },
+        {
+            "number": "36",
+            "name": "Espurr",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "sowsow",
+                "hp": 60,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-36",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-36/large"
+            }
+        },
+        {
+            "number": "37",
+            "name": "Meowstic",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "mingo",
+                "hp": 100,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-37",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-37/large"
+            }
+        },
+        {
+            "number": "38",
+            "name": "Phantump",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Taiga Kasai",
+                "hp": 70,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-38",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-38/large"
+            }
+        },
+        {
+            "number": "39",
+            "name": "Trevenant",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "holo",
+                "illustrator": "Uninori",
+                "hp": 130,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-39",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-39/large"
+            }
+        },
+        {
+            "number": "40",
+            "name": "Pumpkaboo",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Jerky",
+                "hp": 60,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-40",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-40/large"
+            }
+        },
+        {
+            "number": "41",
+            "name": "Gourgeist ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Double Rare",
+                "variant": "holo",
+                "illustrator": "5ban Graphics",
+                "hp": 270,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-41",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-41/large"
+            }
+        },
+        {
+            "number": "42",
+            "name": "Xerneas",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "holo",
+                "illustrator": "KEIICHIRO ITO",
+                "hp": 130,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-42",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-42/large"
+            }
+        },
+        {
+            "number": "43",
+            "name": "Sudowoodo",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "GOTO minori",
+                "hp": 110,
+                "type": "Fighting"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-43",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-43/large"
+            }
+        },
+        {
+            "number": "44",
+            "name": "Phanpy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Akino Fukuji",
+                "hp": 80,
+                "type": "Fighting"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-44",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-44/large"
+            }
+        },
+        {
+            "number": "45",
+            "name": "Donphan",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Julie Hang",
+                "hp": 150,
+                "type": "Fighting"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-45",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-45/large"
+            }
+        },
+        {
+            "number": "46",
+            "name": "Baltoy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Tomomi Ozaki",
+                "hp": 70,
+                "type": "Fighting"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-46",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-46/large"
+            }
+        },
+        {
+            "number": "47",
+            "name": "Claydol",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Oswaldo KATO",
+                "hp": 120,
+                "type": "Fighting"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-47",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-47/large"
+            }
+        },
+        {
+            "number": "48",
+            "name": "Mega Gallade ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Double Rare",
+                "variant": "holo",
+                "illustrator": "5ban Graphics",
+                "hp": 350,
+                "type": "Fighting"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-48",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-48/large"
+            }
+        },
+        {
+            "number": "49",
+            "name": "Zubat",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Mékayu",
+                "hp": 40,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-49",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-49/large"
+            }
+        },
+        {
+            "number": "50",
+            "name": "Golbat",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Mousho",
+                "hp": 80,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-50",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-50/large"
+            }
+        },
+        {
+            "number": "51",
+            "name": "Crobat",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "holo",
+                "illustrator": "IKEDA Saki",
+                "hp": 130,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-51",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-51/large"
+            }
+        },
+        {
+            "number": "52",
+            "name": "Qwilfish",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "nisimono",
+                "hp": 90,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-52",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-52/large"
+            }
+        },
+        {
+            "number": "53",
+            "name": "Stunky",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Nobuhiro Imagawa",
+                "hp": 70,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-53",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-53/large"
+            }
+        },
+        {
+            "number": "54",
+            "name": "Skuntank",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Yuriko Akase",
+                "hp": 110,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-54",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-54/large"
+            }
+        },
+        {
+            "number": "55",
+            "name": "Krookodile ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Double Rare",
+                "variant": "holo",
+                "illustrator": "5ban Graphics",
+                "hp": 320,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-55",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-55/large"
+            }
+        },
+        {
+            "number": "56",
+            "name": "Trubbish",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Souichirou Gunjima",
+                "hp": 70,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-56",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-56/large"
+            }
+        },
+        {
+            "number": "57",
+            "name": "Garbodor",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "HYOGONOSUKE",
+                "hp": 140,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-57",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-57/large"
+            }
+        },
+        {
+            "number": "58",
+            "name": "Skrelp",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Shimaris Yukichi",
+                "hp": 70,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-58",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-58/large"
+            }
+        },
+        {
+            "number": "59",
+            "name": "Beldum",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "toi8",
+                "hp": 70,
+                "type": "Metal"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-59",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-59/large"
+            }
+        },
+        {
+            "number": "60",
+            "name": "Metang",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Kazumasa Yasukuni",
+                "hp": 100,
+                "type": "Metal"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-60",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-60/large"
+            }
+        },
+        {
+            "number": "61",
+            "name": "Metagross",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Bun Toujo",
+                "hp": 180,
+                "type": "Metal"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-61",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-61/large"
+            }
+        },
+        {
+            "number": "62",
+            "name": "Ferroseed",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "OKUBO",
+                "hp": 70,
+                "type": "Metal"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-62",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-62/large"
+            }
+        },
+        {
+            "number": "63",
+            "name": "Ferrothorn",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Haru Akasaka",
+                "hp": 130,
+                "type": "Metal"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-63",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-63/large"
+            }
+        },
+        {
+            "number": "64",
+            "name": "Cobalion ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Double Rare",
+                "variant": "holo",
+                "illustrator": "5ban Graphics",
+                "hp": 210,
+                "type": "Metal"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-64",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-64/large"
+            }
+        },
+        {
+            "number": "65",
+            "name": "Mega Dragalge ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Double Rare",
+                "variant": "holo",
+                "illustrator": "5ban Graphics",
+                "hp": 330,
+                "type": "Dragon"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-65",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-65/large"
+            }
+        },
+        {
+            "number": "66",
+            "name": "Goomy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Anesaki Dynamic",
+                "hp": 60,
+                "type": "Dragon"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-66",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-66/large"
+            }
+        },
+        {
+            "number": "67",
+            "name": "Sliggoo",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Yoriyuki Ikegami",
+                "hp": 90,
+                "type": "Dragon"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-67",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-67/large"
+            }
+        },
+        {
+            "number": "68",
+            "name": "Goodra",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "holo",
+                "illustrator": "Tonji Matsuno",
+                "hp": 160,
+                "type": "Dragon"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-68",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-68/large"
+            }
+        },
+        {
+            "number": "69",
+            "name": "Tauros",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Satoshi Ito",
+                "hp": 130,
+                "type": "Colorless"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-69",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-69/large"
+            }
+        },
+        {
+            "number": "70",
+            "name": "Patrat",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Souichirou Gunjima",
+                "hp": 70,
+                "type": "Colorless"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-70",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-70/large"
+            }
+        },
+        {
+            "number": "71",
+            "name": "Watchog",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "Kouki Saitou",
+                "hp": 100,
+                "type": "Colorless"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-71",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-71/large"
+            }
+        },
+        {
+            "number": "72",
+            "name": "Minccino",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "normal",
+                "illustrator": "ryoma uratsuka",
+                "hp": 70,
+                "type": "Colorless"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-72",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-72/large"
+            }
+        },
+        {
+            "number": "73",
+            "name": "Cinccino ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Double Rare",
+                "variant": "holo",
+                "illustrator": "5ban Graphics",
+                "hp": 240,
+                "type": "Colorless"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-73",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-73/large"
+            }
+        },
+        {
+            "number": "74",
+            "name": "Adversity Policy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Ayaka Yoshida"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-74",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-74/large"
+            }
+        },
+        {
+            "number": "75",
+            "name": "Ange Floette",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "MARINA Chikazawa"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-75",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-75/large"
+            }
+        },
+        {
+            "number": "76",
+            "name": "AZ's Tranquility",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "GIDORA"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-76",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-76/large"
+            }
+        },
+        {
+            "number": "77",
+            "name": "Emma",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Akira Komayama"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-77",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-77/large"
+            }
+        },
+        {
+            "number": "78",
+            "name": "Great Haul Net",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Toyste Beach"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-78",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-78/large"
+            }
+        },
+        {
+            "number": "79",
+            "name": "Philippe",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Souichirou Gunjima"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-79",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-79/large"
+            }
+        },
+        {
+            "number": "80",
+            "name": "Prism Tower",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "MARINA Chikazawa"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-80",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-80/large"
+            }
+        },
+        {
+            "number": "81",
+            "name": "Roxie's Performance",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Nobusawa/Mochipuyo"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-81",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-81/large"
+            }
+        },
+        {
+            "number": "82",
+            "name": "Special Red Card",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Studio Bora Inc."
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-82",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-82/large"
+            }
+        },
+        {
+            "number": "83",
+            "name": "Transformation Tome",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "normal",
+                "illustrator": "Toyste Beach"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-83",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-83/large"
+            }
+        },
+        {
+            "number": "84",
+            "name": "Bubbly Water Energy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "holo"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-84",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-84/large"
+            }
+        },
+        {
+            "number": "85",
+            "name": "Magnetic Metal Energy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "holo"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-85",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-85/large"
+            }
+        },
+        {
+            "number": "86",
+            "name": "Nitro Fire Energy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "holo"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-86",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-86/large"
+            }
+        },
+        {
+            "number": "87",
+            "name": "Chespin",
+            "attributes": {
+                "language": "en",
+                "rarity": "Illustration Rare",
+                "variant": "holo",
+                "illustrator": "Atsushi Furusawa",
+                "hp": 70,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-87",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-87/large"
+            }
+        },
+        {
+            "number": "88",
+            "name": "Froakie",
+            "attributes": {
+                "language": "en",
+                "rarity": "Illustration Rare",
+                "variant": "holo",
+                "illustrator": "Susumu Maeya",
+                "hp": 70,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-88",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-88/large"
+            }
+        },
+        {
+            "number": "89",
+            "name": "Frogadier",
+            "attributes": {
+                "language": "en",
+                "rarity": "Illustration Rare",
+                "variant": "holo",
+                "illustrator": "Susumu Maeya",
+                "hp": 100,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-89",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-89/large"
+            }
+        },
+        {
+            "number": "90",
+            "name": "Ampharos",
+            "attributes": {
+                "language": "en",
+                "rarity": "Illustration Rare",
+                "variant": "holo",
+                "illustrator": "saino misaki",
+                "hp": 160,
+                "type": "Lightning"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-90",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-90/large"
+            }
+        },
+        {
+            "number": "91",
+            "name": "Xerneas",
+            "attributes": {
+                "language": "en",
+                "rarity": "Illustration Rare",
+                "variant": "holo",
+                "illustrator": "YASHIRO Nanaco",
+                "hp": 130,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-91",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-91/large"
+            }
+        },
+        {
+            "number": "92",
+            "name": "Claydol",
+            "attributes": {
+                "language": "en",
+                "rarity": "Illustration Rare",
+                "variant": "holo",
+                "illustrator": "matazo",
+                "hp": 120,
+                "type": "Fighting"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-92",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-92/large"
+            }
+        },
+        {
+            "number": "93",
+            "name": "Crobat",
+            "attributes": {
+                "language": "en",
+                "rarity": "Illustration Rare",
+                "variant": "holo",
+                "illustrator": "Kazuhisa Uragami",
+                "hp": 130,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-93",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-93/large"
+            }
+        },
+        {
+            "number": "94",
+            "name": "Metang",
+            "attributes": {
+                "language": "en",
+                "rarity": "Illustration Rare",
+                "variant": "holo",
+                "illustrator": "Kurata So",
+                "hp": 100,
+                "type": "Metal"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-94",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-94/large"
+            }
+        },
+        {
+            "number": "95",
+            "name": "Sliggoo",
+            "attributes": {
+                "language": "en",
+                "rarity": "Illustration Rare",
+                "variant": "holo",
+                "illustrator": "aspara",
+                "hp": 90,
+                "type": "Dragon"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-95",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-95/large"
+            }
+        },
+        {
+            "number": "96",
+            "name": "Tauros",
+            "attributes": {
+                "language": "en",
+                "rarity": "Illustration Rare",
+                "variant": "holo",
+                "illustrator": "Tsuyoshi Nagano",
+                "hp": 130,
+                "type": "Colorless"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-96",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-96/large"
+            }
+        },
+        {
+            "number": "97",
+            "name": "Watchog",
+            "attributes": {
+                "language": "en",
+                "rarity": "Illustration Rare",
+                "variant": "holo",
+                "illustrator": "MARINA Chikazawa",
+                "hp": 100,
+                "type": "Colorless"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-97",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-97/large"
+            }
+        },
+        {
+            "number": "98",
+            "name": "Beedrill ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "5ban Graphics",
+                "hp": 310,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-98",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-98/large"
+            }
+        },
+        {
+            "number": "99",
+            "name": "Mega Pyroar ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "Keisuke Azuma",
+                "hp": 340,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-99",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-99/large"
+            }
+        },
+        {
+            "number": "100",
+            "name": "Mega Greninja ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "takuyoa",
+                "hp": 350,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-100",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-100/large"
+            }
+        },
+        {
+            "number": "101",
+            "name": "Mega Floette ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "aky CG Works",
+                "hp": 250,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-101",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-101/large"
+            }
+        },
+        {
+            "number": "102",
+            "name": "Gourgeist ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "5ban Graphics",
+                "hp": 270,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-102",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-102/large"
+            }
+        },
+        {
+            "number": "103",
+            "name": "Cobalion ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "5ban Graphics",
+                "hp": 210,
+                "type": "Metal"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-103",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-103/large"
+            }
+        },
+        {
+            "number": "104",
+            "name": "Mega Dragalge ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "5ban Graphics",
+                "hp": 330,
+                "type": "Dragon"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-104",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-104/large"
+            }
+        },
+        {
+            "number": "105",
+            "name": "Cinccino ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "5ban Graphics",
+                "hp": 240,
+                "type": "Colorless"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-105",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-105/large"
+            }
+        },
+        {
+            "number": "106",
+            "name": "AZ's Tranquility",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "GIDORA"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-106",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-106/large"
+            }
+        },
+        {
+            "number": "107",
+            "name": "Emma",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "Akira Komayama"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-107",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-107/large"
+            }
+        },
+        {
+            "number": "108",
+            "name": "Energy Retrieval",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "Studio Bora Inc."
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-108",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-108/large"
+            }
+        },
+        {
+            "number": "109",
+            "name": "Jumbo Ice Cream",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "AYUMI ODASHIMA"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-109",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-109/large"
+            }
+        },
+        {
+            "number": "110",
+            "name": "Philippe",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "Souichirou Gunjima"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-110",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-110/large"
+            }
+        },
+        {
+            "number": "111",
+            "name": "Prism Tower",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "MARINA Chikazawa"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-111",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-111/large"
+            }
+        },
+        {
+            "number": "112",
+            "name": "Roxie's Performance",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "Nobusawa/Mochipuyo"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-112",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-112/large"
+            }
+        },
+        {
+            "number": "113",
+            "name": "Special Red Card",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "Studio Bora Inc."
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-113",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-113/large"
+            }
+        },
+        {
+            "number": "114",
+            "name": "Surfing Beach",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "AYUMI ODASHIMA"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-114",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-114/large"
+            }
+        },
+        {
+            "number": "115",
+            "name": "Tool Scrapper",
+            "attributes": {
+                "language": "en",
+                "rarity": "Ultra Rare",
+                "variant": "holo",
+                "illustrator": "Studio Bora Inc."
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-115",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-115/large"
+            }
+        },
+        {
+            "number": "116",
+            "name": "Mega Greninja ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Special Illustration Rare",
+                "variant": "holo",
+                "illustrator": "Susumu Maeya",
+                "hp": 350,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-116",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-116/large"
+            }
+        },
+        {
+            "number": "117",
+            "name": "Mega Floette ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Special Illustration Rare",
+                "variant": "holo",
+                "illustrator": "Teeziro",
+                "hp": 250,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-117",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-117/large"
+            }
+        },
+        {
+            "number": "118",
+            "name": "Mega Dragalge ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Special Illustration Rare",
+                "variant": "holo",
+                "illustrator": "Kazumasa Yasukunio",
+                "hp": 330,
+                "type": "Dragon"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-118",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-118/large"
+            }
+        },
+        {
+            "number": "119",
+            "name": "Cinccino ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Special Illustration Rare",
+                "variant": "holo",
+                "illustrator": "Keisin",
+                "hp": 240,
+                "type": "Colorless"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-119",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-119/large"
+            }
+        },
+        {
+            "number": "120",
+            "name": "AZ's Tranquility",
+            "attributes": {
+                "language": "en",
+                "rarity": "Special Illustration Rare",
+                "variant": "holo",
+                "illustrator": "OKACHEKE"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-120",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-120/large"
+            }
+        },
+        {
+            "number": "121",
+            "name": "Roxie's Performance",
+            "attributes": {
+                "language": "en",
+                "rarity": "Special Illustration Rare",
+                "variant": "holo",
+                "illustrator": "Tomowaka"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-121",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-121/large"
+            }
+        },
+        {
+            "number": "122",
+            "name": "Mega Greninja ex",
+            "attributes": {
+                "language": "en",
+                "rarity": "Mega Hyper Rare",
+                "variant": "holo",
+                "illustrator": "takuyoa",
+                "hp": 350,
+                "type": "Water"
+            },
+            "external_ids": {
+                "ptcgio_id": "me4-122",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-122/large"
+            }
+        }
+    ]
+}
