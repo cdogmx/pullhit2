@@ -41,15 +41,23 @@ class CreateCatalogItem
     ): CatalogItem {
         $validated = $this->registry->validate($vertical->slug, $itemType->value, $attributes);
 
-        $identityHash = IdentityHash::compute(
-            verticalSlug: $vertical->slug,
-            productLineSlug: $productLine->slug,
-            setKey: $set?->code ?? $set?->slug,
-            itemType: $itemType->value,
-            name: $name,
-            number: $number,
-            attributes: $validated,
-        );
+        $hashArgs = [
+            'verticalSlug' => $vertical->slug,
+            'productLineSlug' => $productLine->slug,
+            'setKey' => $set?->code ?? $set?->slug,
+            'itemType' => $itemType->value,
+            'name' => $name,
+            'number' => $number,
+        ];
+
+        // identity_hash is unique per printing (includes variant/finish);
+        // base_key drops the variant-defining facets so every printing of the
+        // same card shares one group.
+        $identityHash = IdentityHash::compute(...$hashArgs, attributes: $validated);
+
+        $variantKeys = $this->registry->get($vertical->slug)->variantDefiningKeys($itemType->value);
+        $baseAttributes = array_diff_key($validated, array_flip($variantKeys));
+        $baseKey = IdentityHash::compute(...$hashArgs, attributes: $baseAttributes);
 
         $item = CatalogItem::firstOrNew(['identity_hash' => $identityHash]);
 
@@ -66,6 +74,7 @@ class CreateCatalogItem
             'external_ids' => $externalIds === [] ? null : $externalIds,
             'primary_image_path' => $primaryImagePath,
             'identity_hash' => $identityHash,
+            'base_key' => $baseKey,
         ])->save();
 
         return $item;

@@ -8,12 +8,13 @@
         "set_family": "Chaos Rising",
         "released_at": "2026-05-22",
         "external_ids": {
-            "ptcgio_set_id": "me4"
+            "ptcgio_set_id": "me4",
+            "tcgplayer_group_id": 24655
         }
     },
-    "cards": [
+    "singles": [
         {
-            "number": "1",
+            "number": "001/086",
             "name": "Weedle",
             "attributes": {
                 "language": "en",
@@ -24,12 +25,30 @@
                 "type": "Grass"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693561,
                 "ptcgio_id": "me4-1",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-1/large"
             }
         },
         {
-            "number": "2",
+            "number": "001/086",
+            "name": "Weedle",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "sowsow",
+                "hp": 50,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693561,
+                "ptcgio_id": "me4-1",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-1/large"
+            }
+        },
+        {
+            "number": "002/086",
             "name": "Kakuna",
             "attributes": {
                 "language": "en",
@@ -40,12 +59,30 @@
                 "type": "Grass"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693502,
                 "ptcgio_id": "me4-2",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-2/large"
             }
         },
         {
-            "number": "3",
+            "number": "002/086",
+            "name": "Kakuna",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Mugi Hamada",
+                "hp": 80,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693502,
+                "ptcgio_id": "me4-2",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-2/large"
+            }
+        },
+        {
+            "number": "003/086",
             "name": "Beedrill ex",
             "attributes": {
                 "language": "en",
@@ -56,12 +93,13 @@
                 "type": "Grass"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693453,
                 "ptcgio_id": "me4-3",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-3/large"
             }
         },
         {
-            "number": "4",
+            "number": "004/086",
             "name": "Carnivine",
             "attributes": {
                 "language": "en",
@@ -72,12 +110,30 @@
                 "type": "Grass"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693459,
                 "ptcgio_id": "me4-4",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-4/large"
             }
         },
         {
-            "number": "5",
+            "number": "004/086",
+            "name": "Carnivine",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Heisuke Kitazawa",
+                "hp": 110,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693459,
+                "ptcgio_id": "me4-4",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-4/large"
+            }
+        },
+        {
+            "number": "005/086",
             "name": "Chespin",
             "attributes": {
                 "language": "en",
@@ -88,12 +144,30 @@
                 "type": "Grass"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693461,
                 "ptcgio_id": "me4-5",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-5/large"
             }
         },
         {
-            "number": "6",
+            "number": "005/086",
+            "name": "Chespin",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "HACCAN",
+                "hp": 70,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693461,
+                "ptcgio_id": "me4-5",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-5/large"
+            }
+        },
+        {
+            "number": "006/086",
             "name": "Quilladin",
             "attributes": {
                 "language": "en",
@@ -104,12 +178,30 @@
                 "type": "Grass"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693537,
                 "ptcgio_id": "me4-6",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-6/large"
             }
         },
         {
-            "number": "7",
+            "number": "006/086",
+            "name": "Quilladin",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Hideki Ishikawa",
+                "hp": 100,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693537,
+                "ptcgio_id": "me4-6",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-6/large"
+            }
+        },
+        {
+            "number": "007/086",
             "name": "Chesnaught",
             "attributes": {
                 "language": "en",
@@ -120,12 +212,30 @@
                 "type": "Grass"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693460,
                 "ptcgio_id": "me4-7",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-7/large"
             }
         },
         {
-            "number": "8",
+            "number": "007/086",
+            "name": "Chesnaught",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "reverse_holo",
+                "illustrator": "Uta",
+                "hp": 180,
+                "type": "Grass"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693460,
+                "ptcgio_id": "me4-7",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-7/large"
+            }
+        },
+        {
+            "number": "008/086",
             "name": "Vulpix",
             "attributes": {
                 "language": "en",
@@ -136,12 +246,30 @@
                 "type": "Fire"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693558,
                 "ptcgio_id": "me4-8",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-8/large"
             }
         },
         {
-            "number": "9",
+            "number": "008/086",
+            "name": "Vulpix",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Yoshimoto Yoshimon",
+                "hp": 70,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693558,
+                "ptcgio_id": "me4-8",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-8/large"
+            }
+        },
+        {
+            "number": "009/086",
             "name": "Ninetales",
             "attributes": {
                 "language": "en",
@@ -152,12 +280,30 @@
                 "type": "Fire"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693526,
                 "ptcgio_id": "me4-9",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-9/large"
             }
         },
         {
-            "number": "10",
+            "number": "009/086",
+            "name": "Ninetales",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Ryuta Fuse",
+                "hp": 120,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693526,
+                "ptcgio_id": "me4-9",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-9/large"
+            }
+        },
+        {
+            "number": "010/086",
             "name": "Ho-Oh",
             "attributes": {
                 "language": "en",
@@ -168,12 +314,30 @@
                 "type": "Fire"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693500,
                 "ptcgio_id": "me4-10",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-10/large"
             }
         },
         {
-            "number": "11",
+            "number": "010/086",
+            "name": "Ho-Oh",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "reverse_holo",
+                "illustrator": "Takumi Wada",
+                "hp": 130,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693500,
+                "ptcgio_id": "me4-10",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-10/large"
+            }
+        },
+        {
+            "number": "011/086",
             "name": "Fennekin",
             "attributes": {
                 "language": "en",
@@ -184,12 +348,30 @@
                 "type": "Fire"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693484,
                 "ptcgio_id": "me4-11",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-11/large"
             }
         },
         {
-            "number": "12",
+            "number": "011/086",
+            "name": "Fennekin",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "saino misaki",
+                "hp": 70,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693484,
+                "ptcgio_id": "me4-11",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-11/large"
+            }
+        },
+        {
+            "number": "012/086",
             "name": "Braixen",
             "attributes": {
                 "language": "en",
@@ -200,12 +382,30 @@
                 "type": "Fire"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693457,
                 "ptcgio_id": "me4-12",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-12/large"
             }
         },
         {
-            "number": "13",
+            "number": "012/086",
+            "name": "Braixen",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Taiga Kasai",
+                "hp": 100,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693457,
+                "ptcgio_id": "me4-12",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-12/large"
+            }
+        },
+        {
+            "number": "013/086",
             "name": "Delphox",
             "attributes": {
                 "language": "en",
@@ -216,12 +416,30 @@
                 "type": "Fire"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693473,
                 "ptcgio_id": "me4-13",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-13/large"
             }
         },
         {
-            "number": "14",
+            "number": "013/086",
+            "name": "Delphox",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "reverse_holo",
+                "illustrator": "Gemi",
+                "hp": 160,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693473,
+                "ptcgio_id": "me4-13",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-13/large"
+            }
+        },
+        {
+            "number": "014/086",
             "name": "Litleo",
             "attributes": {
                 "language": "en",
@@ -232,12 +450,30 @@
                 "type": "Fire"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693505,
                 "ptcgio_id": "me4-14",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-14/large"
             }
         },
         {
-            "number": "15",
+            "number": "014/086",
+            "name": "Litleo",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Mina Nakai",
+                "hp": 70,
+                "type": "Fire"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693505,
+                "ptcgio_id": "me4-14",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-14/large"
+            }
+        },
+        {
+            "number": "015/086",
             "name": "Mega Pyroar ex",
             "attributes": {
                 "language": "en",
@@ -248,12 +484,13 @@
                 "type": "Fire"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693519,
                 "ptcgio_id": "me4-15",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-15/large"
             }
         },
         {
-            "number": "16",
+            "number": "016/086",
             "name": "Remoraid",
             "attributes": {
                 "language": "en",
@@ -264,12 +501,30 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693539,
                 "ptcgio_id": "me4-16",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-16/large"
             }
         },
         {
-            "number": "17",
+            "number": "016/086",
+            "name": "Remoraid",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Mori You",
+                "hp": 70,
+                "type": "Water"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693539,
+                "ptcgio_id": "me4-16",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-16/large"
+            }
+        },
+        {
+            "number": "017/086",
             "name": "Octillery",
             "attributes": {
                 "language": "en",
@@ -280,12 +535,30 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693528,
                 "ptcgio_id": "me4-17",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-17/large"
             }
         },
         {
-            "number": "18",
+            "number": "017/086",
+            "name": "Octillery",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "matazo",
+                "hp": 110,
+                "type": "Water"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693528,
+                "ptcgio_id": "me4-17",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-17/large"
+            }
+        },
+        {
+            "number": "018/086",
             "name": "Delibird",
             "attributes": {
                 "language": "en",
@@ -296,12 +569,30 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693472,
                 "ptcgio_id": "me4-18",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-18/large"
             }
         },
         {
-            "number": "19",
+            "number": "018/086",
+            "name": "Delibird",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Saboteri",
+                "hp": 90,
+                "type": "Water"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693472,
+                "ptcgio_id": "me4-18",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-18/large"
+            }
+        },
+        {
+            "number": "019/086",
             "name": "Keldeo",
             "attributes": {
                 "language": "en",
@@ -312,12 +603,30 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693503,
                 "ptcgio_id": "me4-19",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-19/large"
             }
         },
         {
-            "number": "20",
+            "number": "019/086",
+            "name": "Keldeo",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "reverse_holo",
+                "illustrator": "Mitsuhiro Arita",
+                "hp": 110,
+                "type": "Water"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693503,
+                "ptcgio_id": "me4-19",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-19/large"
+            }
+        },
+        {
+            "number": "020/086",
             "name": "Froakie",
             "attributes": {
                 "language": "en",
@@ -328,12 +637,30 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693488,
                 "ptcgio_id": "me4-20",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-20/large"
             }
         },
         {
-            "number": "21",
+            "number": "020/086",
+            "name": "Froakie",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Kariya",
+                "hp": 70,
+                "type": "Water"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693488,
+                "ptcgio_id": "me4-20",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-20/large"
+            }
+        },
+        {
+            "number": "021/086",
             "name": "Frogadier",
             "attributes": {
                 "language": "en",
@@ -344,12 +671,30 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693490,
                 "ptcgio_id": "me4-21",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-21/large"
             }
         },
         {
-            "number": "22",
+            "number": "021/086",
+            "name": "Frogadier",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Nelnal",
+                "hp": 100,
+                "type": "Water"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693490,
+                "ptcgio_id": "me4-21",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-21/large"
+            }
+        },
+        {
+            "number": "022/086",
             "name": "Mega Greninja ex",
             "attributes": {
                 "language": "en",
@@ -360,12 +705,13 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693515,
                 "ptcgio_id": "me4-22",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-22/large"
             }
         },
         {
-            "number": "23",
+            "number": "023/086",
             "name": "Bergmite",
             "attributes": {
                 "language": "en",
@@ -376,12 +722,30 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693456,
                 "ptcgio_id": "me4-23",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-23/large"
             }
         },
         {
-            "number": "24",
+            "number": "023/086",
+            "name": "Bergmite",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Anesaki Dynamic",
+                "hp": 80,
+                "type": "Water"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693456,
+                "ptcgio_id": "me4-23",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-23/large"
+            }
+        },
+        {
+            "number": "024/086",
             "name": "Avalugg",
             "attributes": {
                 "language": "en",
@@ -392,12 +756,30 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693448,
                 "ptcgio_id": "me4-24",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-24/large"
             }
         },
         {
-            "number": "25",
+            "number": "024/086",
+            "name": "Avalugg",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Tomoki Sone",
+                "hp": 160,
+                "type": "Water"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693448,
+                "ptcgio_id": "me4-24",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-24/large"
+            }
+        },
+        {
+            "number": "025/086",
             "name": "Wimpod",
             "attributes": {
                 "language": "en",
@@ -408,12 +790,30 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693562,
                 "ptcgio_id": "me4-25",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-25/large"
             }
         },
         {
-            "number": "26",
+            "number": "025/086",
+            "name": "Wimpod",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "0313",
+                "hp": 70,
+                "type": "Water"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693562,
+                "ptcgio_id": "me4-25",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-25/large"
+            }
+        },
+        {
+            "number": "026/086",
             "name": "Golisopod",
             "attributes": {
                 "language": "en",
@@ -424,12 +824,30 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693494,
                 "ptcgio_id": "me4-26",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-26/large"
             }
         },
         {
-            "number": "27",
+            "number": "026/086",
+            "name": "Golisopod",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Takeshi Nakamura",
+                "hp": 140,
+                "type": "Water"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693494,
+                "ptcgio_id": "me4-26",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-26/large"
+            }
+        },
+        {
+            "number": "027/086",
             "name": "Mareep",
             "attributes": {
                 "language": "en",
@@ -440,12 +858,30 @@
                 "type": "Lightning"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693507,
                 "ptcgio_id": "me4-27",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-27/large"
             }
         },
         {
-            "number": "28",
+            "number": "027/086",
+            "name": "Mareep",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "UKUMO viti",
+                "hp": 70,
+                "type": "Lightning"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693507,
+                "ptcgio_id": "me4-27",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-27/large"
+            }
+        },
+        {
+            "number": "028/086",
             "name": "Flaaffy",
             "attributes": {
                 "language": "en",
@@ -456,12 +892,30 @@
                 "type": "Lightning"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693487,
                 "ptcgio_id": "me4-28",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-28/large"
             }
         },
         {
-            "number": "29",
+            "number": "028/086",
+            "name": "Flaaffy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "miki kudo",
+                "hp": 90,
+                "type": "Lightning"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693487,
+                "ptcgio_id": "me4-28",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-28/large"
+            }
+        },
+        {
+            "number": "029/086",
             "name": "Ampharos",
             "attributes": {
                 "language": "en",
@@ -472,12 +926,30 @@
                 "type": "Lightning"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693445,
                 "ptcgio_id": "me4-29",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-29/large"
             }
         },
         {
-            "number": "30",
+            "number": "029/086",
+            "name": "Ampharos",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "reverse_holo",
+                "illustrator": "CHORISO",
+                "hp": 160,
+                "type": "Lightning"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693445,
+                "ptcgio_id": "me4-29",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-29/large"
+            }
+        },
+        {
+            "number": "030/086",
             "name": "Emolga",
             "attributes": {
                 "language": "en",
@@ -488,12 +960,30 @@
                 "type": "Lightning"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693481,
                 "ptcgio_id": "me4-30",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-30/large"
             }
         },
         {
-            "number": "31",
+            "number": "030/086",
+            "name": "Emolga",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Kazumasa Yasukuni",
+                "hp": 70,
+                "type": "Lightning"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693481,
+                "ptcgio_id": "me4-30",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-30/large"
+            }
+        },
+        {
+            "number": "031/086",
             "name": "Deoxys",
             "attributes": {
                 "language": "en",
@@ -504,12 +994,30 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693474,
                 "ptcgio_id": "me4-31",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-31/large"
             }
         },
         {
-            "number": "32",
+            "number": "031/086",
+            "name": "Deoxys",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Shiburingaru",
+                "hp": 110,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693474,
+                "ptcgio_id": "me4-31",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-31/large"
+            }
+        },
+        {
+            "number": "032/086",
             "name": "Deoxys",
             "attributes": {
                 "language": "en",
@@ -520,12 +1028,30 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693475,
                 "ptcgio_id": "me4-32",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-32/large"
             }
         },
         {
-            "number": "33",
+            "number": "032/086",
+            "name": "Deoxys",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "nagimiso",
+                "hp": 120,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693475,
+                "ptcgio_id": "me4-32",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-32/large"
+            }
+        },
+        {
+            "number": "033/086",
             "name": "Deoxys",
             "attributes": {
                 "language": "en",
@@ -536,12 +1062,30 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693476,
                 "ptcgio_id": "me4-33",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-33/large"
             }
         },
         {
-            "number": "34",
+            "number": "033/086",
+            "name": "Deoxys",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "GOSSAN",
+                "hp": 130,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693476,
+                "ptcgio_id": "me4-33",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-33/large"
+            }
+        },
+        {
+            "number": "034/086",
             "name": "Deoxys",
             "attributes": {
                 "language": "en",
@@ -552,12 +1096,30 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693477,
                 "ptcgio_id": "me4-34",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-34/large"
             }
         },
         {
-            "number": "35",
+            "number": "034/086",
+            "name": "Deoxys",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "hncl",
+                "hp": 100,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693477,
+                "ptcgio_id": "me4-34",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-34/large"
+            }
+        },
+        {
+            "number": "035/086",
             "name": "Mega Floette ex",
             "attributes": {
                 "language": "en",
@@ -568,12 +1130,13 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693511,
                 "ptcgio_id": "me4-35",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-35/large"
             }
         },
         {
-            "number": "36",
+            "number": "036/086",
             "name": "Espurr",
             "attributes": {
                 "language": "en",
@@ -584,12 +1147,30 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693483,
                 "ptcgio_id": "me4-36",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-36/large"
             }
         },
         {
-            "number": "37",
+            "number": "036/086",
+            "name": "Espurr",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "sowsow",
+                "hp": 60,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693483,
+                "ptcgio_id": "me4-36",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-36/large"
+            }
+        },
+        {
+            "number": "037/086",
             "name": "Meowstic",
             "attributes": {
                 "language": "en",
@@ -600,12 +1181,30 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693521,
                 "ptcgio_id": "me4-37",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-37/large"
             }
         },
         {
-            "number": "38",
+            "number": "037/086",
+            "name": "Meowstic",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "mingo",
+                "hp": 100,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693521,
+                "ptcgio_id": "me4-37",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-37/large"
+            }
+        },
+        {
+            "number": "038/086",
             "name": "Phantump",
             "attributes": {
                 "language": "en",
@@ -616,12 +1215,30 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693531,
                 "ptcgio_id": "me4-38",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-38/large"
             }
         },
         {
-            "number": "39",
+            "number": "038/086",
+            "name": "Phantump",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Taiga Kasai",
+                "hp": 70,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693531,
+                "ptcgio_id": "me4-38",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-38/large"
+            }
+        },
+        {
+            "number": "039/086",
             "name": "Trevenant",
             "attributes": {
                 "language": "en",
@@ -632,12 +1249,30 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693556,
                 "ptcgio_id": "me4-39",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-39/large"
             }
         },
         {
-            "number": "40",
+            "number": "039/086",
+            "name": "Trevenant",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "reverse_holo",
+                "illustrator": "Uninori",
+                "hp": 130,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693556,
+                "ptcgio_id": "me4-39",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-39/large"
+            }
+        },
+        {
+            "number": "040/086",
             "name": "Pumpkaboo",
             "attributes": {
                 "language": "en",
@@ -648,12 +1283,30 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693536,
                 "ptcgio_id": "me4-40",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-40/large"
             }
         },
         {
-            "number": "41",
+            "number": "040/086",
+            "name": "Pumpkaboo",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Jerky",
+                "hp": 60,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693536,
+                "ptcgio_id": "me4-40",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-40/large"
+            }
+        },
+        {
+            "number": "041/086",
             "name": "Gourgeist ex",
             "attributes": {
                 "language": "en",
@@ -664,12 +1317,13 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693497,
                 "ptcgio_id": "me4-41",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-41/large"
             }
         },
         {
-            "number": "42",
+            "number": "042/086",
             "name": "Xerneas",
             "attributes": {
                 "language": "en",
@@ -680,12 +1334,30 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693563,
                 "ptcgio_id": "me4-42",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-42/large"
             }
         },
         {
-            "number": "43",
+            "number": "042/086",
+            "name": "Xerneas",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "reverse_holo",
+                "illustrator": "KEIICHIRO ITO",
+                "hp": 130,
+                "type": "Psychic"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693563,
+                "ptcgio_id": "me4-42",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-42/large"
+            }
+        },
+        {
+            "number": "043/086",
             "name": "Sudowoodo",
             "attributes": {
                 "language": "en",
@@ -696,12 +1368,30 @@
                 "type": "Fighting"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693550,
                 "ptcgio_id": "me4-43",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-43/large"
             }
         },
         {
-            "number": "44",
+            "number": "043/086",
+            "name": "Sudowoodo",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "GOTO minori",
+                "hp": 110,
+                "type": "Fighting"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693550,
+                "ptcgio_id": "me4-43",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-43/large"
+            }
+        },
+        {
+            "number": "044/086",
             "name": "Phanpy",
             "attributes": {
                 "language": "en",
@@ -712,12 +1402,30 @@
                 "type": "Fighting"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693530,
                 "ptcgio_id": "me4-44",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-44/large"
             }
         },
         {
-            "number": "45",
+            "number": "044/086",
+            "name": "Phanpy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Akino Fukuji",
+                "hp": 80,
+                "type": "Fighting"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693530,
+                "ptcgio_id": "me4-44",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-44/large"
+            }
+        },
+        {
+            "number": "045/086",
             "name": "Donphan",
             "attributes": {
                 "language": "en",
@@ -728,12 +1436,30 @@
                 "type": "Fighting"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693478,
                 "ptcgio_id": "me4-45",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-45/large"
             }
         },
         {
-            "number": "46",
+            "number": "045/086",
+            "name": "Donphan",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Julie Hang",
+                "hp": 150,
+                "type": "Fighting"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693478,
+                "ptcgio_id": "me4-45",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-45/large"
+            }
+        },
+        {
+            "number": "046/086",
             "name": "Baltoy",
             "attributes": {
                 "language": "en",
@@ -744,12 +1470,30 @@
                 "type": "Fighting"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693452,
                 "ptcgio_id": "me4-46",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-46/large"
             }
         },
         {
-            "number": "47",
+            "number": "046/086",
+            "name": "Baltoy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Tomomi Ozaki",
+                "hp": 70,
+                "type": "Fighting"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693452,
+                "ptcgio_id": "me4-46",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-46/large"
+            }
+        },
+        {
+            "number": "047/086",
             "name": "Claydol",
             "attributes": {
                 "language": "en",
@@ -760,12 +1504,30 @@
                 "type": "Fighting"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693466,
                 "ptcgio_id": "me4-47",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-47/large"
             }
         },
         {
-            "number": "48",
+            "number": "047/086",
+            "name": "Claydol",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Oswaldo KATO",
+                "hp": 120,
+                "type": "Fighting"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693466,
+                "ptcgio_id": "me4-47",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-47/large"
+            }
+        },
+        {
+            "number": "048/086",
             "name": "Mega Gallade ex",
             "attributes": {
                 "language": "en",
@@ -776,12 +1538,13 @@
                 "type": "Fighting"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693514,
                 "ptcgio_id": "me4-48",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-48/large"
             }
         },
         {
-            "number": "49",
+            "number": "049/086",
             "name": "Zubat",
             "attributes": {
                 "language": "en",
@@ -792,12 +1555,30 @@
                 "type": "Darkness"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693565,
                 "ptcgio_id": "me4-49",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-49/large"
             }
         },
         {
-            "number": "50",
+            "number": "049/086",
+            "name": "Zubat",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Mékayu",
+                "hp": 40,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693565,
+                "ptcgio_id": "me4-49",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-49/large"
+            }
+        },
+        {
+            "number": "050/086",
             "name": "Golbat",
             "attributes": {
                 "language": "en",
@@ -808,12 +1589,30 @@
                 "type": "Darkness"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693493,
                 "ptcgio_id": "me4-50",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-50/large"
             }
         },
         {
-            "number": "51",
+            "number": "050/086",
+            "name": "Golbat",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Mousho",
+                "hp": 80,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693493,
+                "ptcgio_id": "me4-50",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-50/large"
+            }
+        },
+        {
+            "number": "051/086",
             "name": "Crobat",
             "attributes": {
                 "language": "en",
@@ -824,12 +1623,30 @@
                 "type": "Darkness"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693470,
                 "ptcgio_id": "me4-51",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-51/large"
             }
         },
         {
-            "number": "52",
+            "number": "051/086",
+            "name": "Crobat",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "reverse_holo",
+                "illustrator": "IKEDA Saki",
+                "hp": 130,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693470,
+                "ptcgio_id": "me4-51",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-51/large"
+            }
+        },
+        {
+            "number": "052/086",
             "name": "Qwilfish",
             "attributes": {
                 "language": "en",
@@ -840,12 +1657,30 @@
                 "type": "Darkness"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693538,
                 "ptcgio_id": "me4-52",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-52/large"
             }
         },
         {
-            "number": "53",
+            "number": "052/086",
+            "name": "Qwilfish",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "nisimono",
+                "hp": 90,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693538,
+                "ptcgio_id": "me4-52",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-52/large"
+            }
+        },
+        {
+            "number": "053/086",
             "name": "Stunky",
             "attributes": {
                 "language": "en",
@@ -856,12 +1691,30 @@
                 "type": "Darkness"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693549,
                 "ptcgio_id": "me4-53",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-53/large"
             }
         },
         {
-            "number": "54",
+            "number": "053/086",
+            "name": "Stunky",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Nobuhiro Imagawa",
+                "hp": 70,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693549,
+                "ptcgio_id": "me4-53",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-53/large"
+            }
+        },
+        {
+            "number": "054/086",
             "name": "Skuntank",
             "attributes": {
                 "language": "en",
@@ -872,12 +1725,30 @@
                 "type": "Darkness"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693544,
                 "ptcgio_id": "me4-54",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-54/large"
             }
         },
         {
-            "number": "55",
+            "number": "054/086",
+            "name": "Skuntank",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Yuriko Akase",
+                "hp": 110,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693544,
+                "ptcgio_id": "me4-54",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-54/large"
+            }
+        },
+        {
+            "number": "055/086",
             "name": "Krookodile ex",
             "attributes": {
                 "language": "en",
@@ -888,12 +1759,13 @@
                 "type": "Darkness"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693504,
                 "ptcgio_id": "me4-55",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-55/large"
             }
         },
         {
-            "number": "56",
+            "number": "056/086",
             "name": "Trubbish",
             "attributes": {
                 "language": "en",
@@ -904,12 +1776,30 @@
                 "type": "Darkness"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693557,
                 "ptcgio_id": "me4-56",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-56/large"
             }
         },
         {
-            "number": "57",
+            "number": "056/086",
+            "name": "Trubbish",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Souichirou Gunjima",
+                "hp": 70,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693557,
+                "ptcgio_id": "me4-56",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-56/large"
+            }
+        },
+        {
+            "number": "057/086",
             "name": "Garbodor",
             "attributes": {
                 "language": "en",
@@ -920,12 +1810,30 @@
                 "type": "Darkness"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693492,
                 "ptcgio_id": "me4-57",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-57/large"
             }
         },
         {
-            "number": "58",
+            "number": "057/086",
+            "name": "Garbodor",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "HYOGONOSUKE",
+                "hp": 140,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693492,
+                "ptcgio_id": "me4-57",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-57/large"
+            }
+        },
+        {
+            "number": "058/086",
             "name": "Skrelp",
             "attributes": {
                 "language": "en",
@@ -936,12 +1844,30 @@
                 "type": "Darkness"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693543,
                 "ptcgio_id": "me4-58",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-58/large"
             }
         },
         {
-            "number": "59",
+            "number": "058/086",
+            "name": "Skrelp",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Shimaris Yukichi",
+                "hp": 70,
+                "type": "Darkness"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693543,
+                "ptcgio_id": "me4-58",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-58/large"
+            }
+        },
+        {
+            "number": "059/086",
             "name": "Beldum",
             "attributes": {
                 "language": "en",
@@ -952,12 +1878,30 @@
                 "type": "Metal"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693455,
                 "ptcgio_id": "me4-59",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-59/large"
             }
         },
         {
-            "number": "60",
+            "number": "059/086",
+            "name": "Beldum",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "toi8",
+                "hp": 70,
+                "type": "Metal"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693455,
+                "ptcgio_id": "me4-59",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-59/large"
+            }
+        },
+        {
+            "number": "060/086",
             "name": "Metang",
             "attributes": {
                 "language": "en",
@@ -968,12 +1912,30 @@
                 "type": "Metal"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693523,
                 "ptcgio_id": "me4-60",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-60/large"
             }
         },
         {
-            "number": "61",
+            "number": "060/086",
+            "name": "Metang",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Kazumasa Yasukuni",
+                "hp": 100,
+                "type": "Metal"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693523,
+                "ptcgio_id": "me4-60",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-60/large"
+            }
+        },
+        {
+            "number": "061/086",
             "name": "Metagross",
             "attributes": {
                 "language": "en",
@@ -984,12 +1946,30 @@
                 "type": "Metal"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693522,
                 "ptcgio_id": "me4-61",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-61/large"
             }
         },
         {
-            "number": "62",
+            "number": "061/086",
+            "name": "Metagross",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Bun Toujo",
+                "hp": 180,
+                "type": "Metal"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693522,
+                "ptcgio_id": "me4-61",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-61/large"
+            }
+        },
+        {
+            "number": "062/086",
             "name": "Ferroseed",
             "attributes": {
                 "language": "en",
@@ -1000,12 +1980,30 @@
                 "type": "Metal"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693485,
                 "ptcgio_id": "me4-62",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-62/large"
             }
         },
         {
-            "number": "63",
+            "number": "062/086",
+            "name": "Ferroseed",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "OKUBO",
+                "hp": 70,
+                "type": "Metal"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693485,
+                "ptcgio_id": "me4-62",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-62/large"
+            }
+        },
+        {
+            "number": "063/086",
             "name": "Ferrothorn",
             "attributes": {
                 "language": "en",
@@ -1016,12 +2014,30 @@
                 "type": "Metal"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693486,
                 "ptcgio_id": "me4-63",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-63/large"
             }
         },
         {
-            "number": "64",
+            "number": "063/086",
+            "name": "Ferrothorn",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Haru Akasaka",
+                "hp": 130,
+                "type": "Metal"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693486,
+                "ptcgio_id": "me4-63",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-63/large"
+            }
+        },
+        {
+            "number": "064/086",
             "name": "Cobalion ex",
             "attributes": {
                 "language": "en",
@@ -1032,12 +2048,13 @@
                 "type": "Metal"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693468,
                 "ptcgio_id": "me4-64",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-64/large"
             }
         },
         {
-            "number": "65",
+            "number": "065/086",
             "name": "Mega Dragalge ex",
             "attributes": {
                 "language": "en",
@@ -1048,12 +2065,13 @@
                 "type": "Dragon"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693508,
                 "ptcgio_id": "me4-65",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-65/large"
             }
         },
         {
-            "number": "66",
+            "number": "066/086",
             "name": "Goomy",
             "attributes": {
                 "language": "en",
@@ -1064,12 +2082,30 @@
                 "type": "Dragon"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693496,
                 "ptcgio_id": "me4-66",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-66/large"
             }
         },
         {
-            "number": "67",
+            "number": "066/086",
+            "name": "Goomy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Anesaki Dynamic",
+                "hp": 60,
+                "type": "Dragon"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693496,
+                "ptcgio_id": "me4-66",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-66/large"
+            }
+        },
+        {
+            "number": "067/086",
             "name": "Sliggoo",
             "attributes": {
                 "language": "en",
@@ -1080,12 +2116,30 @@
                 "type": "Dragon"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693545,
                 "ptcgio_id": "me4-67",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-67/large"
             }
         },
         {
-            "number": "68",
+            "number": "067/086",
+            "name": "Sliggoo",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Yoriyuki Ikegami",
+                "hp": 90,
+                "type": "Dragon"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693545,
+                "ptcgio_id": "me4-67",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-67/large"
+            }
+        },
+        {
+            "number": "068/086",
             "name": "Goodra",
             "attributes": {
                 "language": "en",
@@ -1096,12 +2150,30 @@
                 "type": "Dragon"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693495,
                 "ptcgio_id": "me4-68",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-68/large"
             }
         },
         {
-            "number": "69",
+            "number": "068/086",
+            "name": "Goodra",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "reverse_holo",
+                "illustrator": "Tonji Matsuno",
+                "hp": 160,
+                "type": "Dragon"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693495,
+                "ptcgio_id": "me4-68",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-68/large"
+            }
+        },
+        {
+            "number": "069/086",
             "name": "Tauros",
             "attributes": {
                 "language": "en",
@@ -1112,12 +2184,30 @@
                 "type": "Colorless"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693552,
                 "ptcgio_id": "me4-69",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-69/large"
             }
         },
         {
-            "number": "70",
+            "number": "069/086",
+            "name": "Tauros",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Satoshi Ito",
+                "hp": 130,
+                "type": "Colorless"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693552,
+                "ptcgio_id": "me4-69",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-69/large"
+            }
+        },
+        {
+            "number": "070/086",
             "name": "Patrat",
             "attributes": {
                 "language": "en",
@@ -1128,12 +2218,30 @@
                 "type": "Colorless"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693529,
                 "ptcgio_id": "me4-70",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-70/large"
             }
         },
         {
-            "number": "71",
+            "number": "070/086",
+            "name": "Patrat",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Souichirou Gunjima",
+                "hp": 70,
+                "type": "Colorless"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693529,
+                "ptcgio_id": "me4-70",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-70/large"
+            }
+        },
+        {
+            "number": "071/086",
             "name": "Watchog",
             "attributes": {
                 "language": "en",
@@ -1144,12 +2252,30 @@
                 "type": "Colorless"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693559,
                 "ptcgio_id": "me4-71",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-71/large"
             }
         },
         {
-            "number": "72",
+            "number": "071/086",
+            "name": "Watchog",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "Kouki Saitou",
+                "hp": 100,
+                "type": "Colorless"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693559,
+                "ptcgio_id": "me4-71",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-71/large"
+            }
+        },
+        {
+            "number": "072/086",
             "name": "Minccino",
             "attributes": {
                 "language": "en",
@@ -1160,12 +2286,30 @@
                 "type": "Colorless"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693525,
                 "ptcgio_id": "me4-72",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-72/large"
             }
         },
         {
-            "number": "73",
+            "number": "072/086",
+            "name": "Minccino",
+            "attributes": {
+                "language": "en",
+                "rarity": "Common",
+                "variant": "reverse_holo",
+                "illustrator": "ryoma uratsuka",
+                "hp": 70,
+                "type": "Colorless"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693525,
+                "ptcgio_id": "me4-72",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-72/large"
+            }
+        },
+        {
+            "number": "073/086",
             "name": "Cinccino ex",
             "attributes": {
                 "language": "en",
@@ -1176,12 +2320,13 @@
                 "type": "Colorless"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693463,
                 "ptcgio_id": "me4-73",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-73/large"
             }
         },
         {
-            "number": "74",
+            "number": "074/086",
             "name": "Adversity Policy",
             "attributes": {
                 "language": "en",
@@ -1190,12 +2335,28 @@
                 "illustrator": "Ayaka Yoshida"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693444,
                 "ptcgio_id": "me4-74",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-74/large"
             }
         },
         {
-            "number": "75",
+            "number": "074/086",
+            "name": "Adversity Policy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Ayaka Yoshida"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693444,
+                "ptcgio_id": "me4-74",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-74/large"
+            }
+        },
+        {
+            "number": "075/086",
             "name": "Ange Floette",
             "attributes": {
                 "language": "en",
@@ -1204,12 +2365,28 @@
                 "illustrator": "MARINA Chikazawa"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693447,
                 "ptcgio_id": "me4-75",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-75/large"
             }
         },
         {
-            "number": "76",
+            "number": "075/086",
+            "name": "Ange Floette",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "MARINA Chikazawa"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693447,
+                "ptcgio_id": "me4-75",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-75/large"
+            }
+        },
+        {
+            "number": "076/086",
             "name": "AZ's Tranquility",
             "attributes": {
                 "language": "en",
@@ -1218,12 +2395,28 @@
                 "illustrator": "GIDORA"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693449,
                 "ptcgio_id": "me4-76",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-76/large"
             }
         },
         {
-            "number": "77",
+            "number": "076/086",
+            "name": "AZ's Tranquility",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "GIDORA"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693449,
+                "ptcgio_id": "me4-76",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-76/large"
+            }
+        },
+        {
+            "number": "077/086",
             "name": "Emma",
             "attributes": {
                 "language": "en",
@@ -1232,12 +2425,28 @@
                 "illustrator": "Akira Komayama"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693479,
                 "ptcgio_id": "me4-77",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-77/large"
             }
         },
         {
-            "number": "78",
+            "number": "077/086",
+            "name": "Emma",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Akira Komayama"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693479,
+                "ptcgio_id": "me4-77",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-77/large"
+            }
+        },
+        {
+            "number": "078/086",
             "name": "Great Haul Net",
             "attributes": {
                 "language": "en",
@@ -1246,12 +2455,28 @@
                 "illustrator": "Toyste Beach"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693499,
                 "ptcgio_id": "me4-78",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-78/large"
             }
         },
         {
-            "number": "79",
+            "number": "078/086",
+            "name": "Great Haul Net",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Toyste Beach"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693499,
+                "ptcgio_id": "me4-78",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-78/large"
+            }
+        },
+        {
+            "number": "079/086",
             "name": "Philippe",
             "attributes": {
                 "language": "en",
@@ -1260,12 +2485,28 @@
                 "illustrator": "Souichirou Gunjima"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693532,
                 "ptcgio_id": "me4-79",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-79/large"
             }
         },
         {
-            "number": "80",
+            "number": "079/086",
+            "name": "Philippe",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Souichirou Gunjima"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693532,
+                "ptcgio_id": "me4-79",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-79/large"
+            }
+        },
+        {
+            "number": "080/086",
             "name": "Prism Tower",
             "attributes": {
                 "language": "en",
@@ -1274,12 +2515,28 @@
                 "illustrator": "MARINA Chikazawa"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693534,
                 "ptcgio_id": "me4-80",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-80/large"
             }
         },
         {
-            "number": "81",
+            "number": "080/086",
+            "name": "Prism Tower",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "MARINA Chikazawa"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693534,
+                "ptcgio_id": "me4-80",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-80/large"
+            }
+        },
+        {
+            "number": "081/086",
             "name": "Roxie's Performance",
             "attributes": {
                 "language": "en",
@@ -1288,12 +2545,28 @@
                 "illustrator": "Nobusawa/Mochipuyo"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693540,
                 "ptcgio_id": "me4-81",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-81/large"
             }
         },
         {
-            "number": "82",
+            "number": "081/086",
+            "name": "Roxie's Performance",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Nobusawa/Mochipuyo"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693540,
+                "ptcgio_id": "me4-81",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-81/large"
+            }
+        },
+        {
+            "number": "082/086",
             "name": "Special Red Card",
             "attributes": {
                 "language": "en",
@@ -1302,12 +2575,28 @@
                 "illustrator": "Studio Bora Inc."
             },
             "external_ids": {
+                "tcgplayer_product_id": 693547,
                 "ptcgio_id": "me4-82",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-82/large"
             }
         },
         {
-            "number": "83",
+            "number": "082/086",
+            "name": "Special Red Card",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Studio Bora Inc."
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693547,
+                "ptcgio_id": "me4-82",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-82/large"
+            }
+        },
+        {
+            "number": "083/086",
             "name": "Transformation Tome",
             "attributes": {
                 "language": "en",
@@ -1316,12 +2605,28 @@
                 "illustrator": "Toyste Beach"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693555,
                 "ptcgio_id": "me4-83",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-83/large"
             }
         },
         {
-            "number": "84",
+            "number": "083/086",
+            "name": "Transformation Tome",
+            "attributes": {
+                "language": "en",
+                "rarity": "Uncommon",
+                "variant": "reverse_holo",
+                "illustrator": "Toyste Beach"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693555,
+                "ptcgio_id": "me4-83",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-83/large"
+            }
+        },
+        {
+            "number": "084/086",
             "name": "Bubbly Water Energy",
             "attributes": {
                 "language": "en",
@@ -1329,12 +2634,27 @@
                 "variant": "holo"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693458,
                 "ptcgio_id": "me4-84",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-84/large"
             }
         },
         {
-            "number": "85",
+            "number": "084/086",
+            "name": "Bubbly Water Energy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "reverse_holo"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693458,
+                "ptcgio_id": "me4-84",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-84/large"
+            }
+        },
+        {
+            "number": "085/086",
             "name": "Magnetic Metal Energy",
             "attributes": {
                 "language": "en",
@@ -1342,12 +2662,27 @@
                 "variant": "holo"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693506,
                 "ptcgio_id": "me4-85",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-85/large"
             }
         },
         {
-            "number": "86",
+            "number": "085/086",
+            "name": "Magnetic Metal Energy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "reverse_holo"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693506,
+                "ptcgio_id": "me4-85",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-85/large"
+            }
+        },
+        {
+            "number": "086/086",
             "name": "Nitro Fire Energy",
             "attributes": {
                 "language": "en",
@@ -1355,12 +2690,27 @@
                 "variant": "holo"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693527,
                 "ptcgio_id": "me4-86",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-86/large"
             }
         },
         {
-            "number": "87",
+            "number": "086/086",
+            "name": "Nitro Fire Energy",
+            "attributes": {
+                "language": "en",
+                "rarity": "Rare",
+                "variant": "reverse_holo"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 693527,
+                "ptcgio_id": "me4-86",
+                "ptcgio_image": "https://images.scrydex.com/pokemon/me4-86/large"
+            }
+        },
+        {
+            "number": "087/086",
             "name": "Chespin",
             "attributes": {
                 "language": "en",
@@ -1371,12 +2721,13 @@
                 "type": "Grass"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693462,
                 "ptcgio_id": "me4-87",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-87/large"
             }
         },
         {
-            "number": "88",
+            "number": "088/086",
             "name": "Froakie",
             "attributes": {
                 "language": "en",
@@ -1387,12 +2738,13 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693489,
                 "ptcgio_id": "me4-88",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-88/large"
             }
         },
         {
-            "number": "89",
+            "number": "089/086",
             "name": "Frogadier",
             "attributes": {
                 "language": "en",
@@ -1403,12 +2755,13 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693491,
                 "ptcgio_id": "me4-89",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-89/large"
             }
         },
         {
-            "number": "90",
+            "number": "090/086",
             "name": "Ampharos",
             "attributes": {
                 "language": "en",
@@ -1419,12 +2772,13 @@
                 "type": "Lightning"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693446,
                 "ptcgio_id": "me4-90",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-90/large"
             }
         },
         {
-            "number": "91",
+            "number": "091/086",
             "name": "Xerneas",
             "attributes": {
                 "language": "en",
@@ -1435,12 +2789,13 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693564,
                 "ptcgio_id": "me4-91",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-91/large"
             }
         },
         {
-            "number": "92",
+            "number": "092/086",
             "name": "Claydol",
             "attributes": {
                 "language": "en",
@@ -1451,12 +2806,13 @@
                 "type": "Fighting"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693467,
                 "ptcgio_id": "me4-92",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-92/large"
             }
         },
         {
-            "number": "93",
+            "number": "093/086",
             "name": "Crobat",
             "attributes": {
                 "language": "en",
@@ -1467,12 +2823,13 @@
                 "type": "Darkness"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693471,
                 "ptcgio_id": "me4-93",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-93/large"
             }
         },
         {
-            "number": "94",
+            "number": "094/086",
             "name": "Metang",
             "attributes": {
                 "language": "en",
@@ -1483,12 +2840,13 @@
                 "type": "Metal"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693524,
                 "ptcgio_id": "me4-94",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-94/large"
             }
         },
         {
-            "number": "95",
+            "number": "095/086",
             "name": "Sliggoo",
             "attributes": {
                 "language": "en",
@@ -1499,12 +2857,13 @@
                 "type": "Dragon"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693546,
                 "ptcgio_id": "me4-95",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-95/large"
             }
         },
         {
-            "number": "96",
+            "number": "096/086",
             "name": "Tauros",
             "attributes": {
                 "language": "en",
@@ -1515,12 +2874,13 @@
                 "type": "Colorless"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693553,
                 "ptcgio_id": "me4-96",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-96/large"
             }
         },
         {
-            "number": "97",
+            "number": "097/086",
             "name": "Watchog",
             "attributes": {
                 "language": "en",
@@ -1531,12 +2891,13 @@
                 "type": "Colorless"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693560,
                 "ptcgio_id": "me4-97",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-97/large"
             }
         },
         {
-            "number": "98",
+            "number": "098/086",
             "name": "Beedrill ex",
             "attributes": {
                 "language": "en",
@@ -1547,12 +2908,13 @@
                 "type": "Grass"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693454,
                 "ptcgio_id": "me4-98",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-98/large"
             }
         },
         {
-            "number": "99",
+            "number": "099/086",
             "name": "Mega Pyroar ex",
             "attributes": {
                 "language": "en",
@@ -1563,12 +2925,13 @@
                 "type": "Fire"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693520,
                 "ptcgio_id": "me4-99",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-99/large"
             }
         },
         {
-            "number": "100",
+            "number": "100/086",
             "name": "Mega Greninja ex",
             "attributes": {
                 "language": "en",
@@ -1579,12 +2942,13 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693516,
                 "ptcgio_id": "me4-100",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-100/large"
             }
         },
         {
-            "number": "101",
+            "number": "101/086",
             "name": "Mega Floette ex",
             "attributes": {
                 "language": "en",
@@ -1595,12 +2959,13 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693512,
                 "ptcgio_id": "me4-101",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-101/large"
             }
         },
         {
-            "number": "102",
+            "number": "102/086",
             "name": "Gourgeist ex",
             "attributes": {
                 "language": "en",
@@ -1611,12 +2976,13 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693498,
                 "ptcgio_id": "me4-102",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-102/large"
             }
         },
         {
-            "number": "103",
+            "number": "103/086",
             "name": "Cobalion ex",
             "attributes": {
                 "language": "en",
@@ -1627,12 +2993,13 @@
                 "type": "Metal"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693469,
                 "ptcgio_id": "me4-103",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-103/large"
             }
         },
         {
-            "number": "104",
+            "number": "104/086",
             "name": "Mega Dragalge ex",
             "attributes": {
                 "language": "en",
@@ -1643,12 +3010,13 @@
                 "type": "Dragon"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693509,
                 "ptcgio_id": "me4-104",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-104/large"
             }
         },
         {
-            "number": "105",
+            "number": "105/086",
             "name": "Cinccino ex",
             "attributes": {
                 "language": "en",
@@ -1659,12 +3027,13 @@
                 "type": "Colorless"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693464,
                 "ptcgio_id": "me4-105",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-105/large"
             }
         },
         {
-            "number": "106",
+            "number": "106/086",
             "name": "AZ's Tranquility",
             "attributes": {
                 "language": "en",
@@ -1673,12 +3042,13 @@
                 "illustrator": "GIDORA"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693450,
                 "ptcgio_id": "me4-106",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-106/large"
             }
         },
         {
-            "number": "107",
+            "number": "107/086",
             "name": "Emma",
             "attributes": {
                 "language": "en",
@@ -1687,12 +3057,13 @@
                 "illustrator": "Akira Komayama"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693480,
                 "ptcgio_id": "me4-107",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-107/large"
             }
         },
         {
-            "number": "108",
+            "number": "108/086",
             "name": "Energy Retrieval",
             "attributes": {
                 "language": "en",
@@ -1701,12 +3072,13 @@
                 "illustrator": "Studio Bora Inc."
             },
             "external_ids": {
+                "tcgplayer_product_id": 693482,
                 "ptcgio_id": "me4-108",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-108/large"
             }
         },
         {
-            "number": "109",
+            "number": "109/086",
             "name": "Jumbo Ice Cream",
             "attributes": {
                 "language": "en",
@@ -1715,12 +3087,13 @@
                 "illustrator": "AYUMI ODASHIMA"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693501,
                 "ptcgio_id": "me4-109",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-109/large"
             }
         },
         {
-            "number": "110",
+            "number": "110/086",
             "name": "Philippe",
             "attributes": {
                 "language": "en",
@@ -1729,12 +3102,13 @@
                 "illustrator": "Souichirou Gunjima"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693533,
                 "ptcgio_id": "me4-110",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-110/large"
             }
         },
         {
-            "number": "111",
+            "number": "111/086",
             "name": "Prism Tower",
             "attributes": {
                 "language": "en",
@@ -1743,12 +3117,13 @@
                 "illustrator": "MARINA Chikazawa"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693535,
                 "ptcgio_id": "me4-111",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-111/large"
             }
         },
         {
-            "number": "112",
+            "number": "112/086",
             "name": "Roxie's Performance",
             "attributes": {
                 "language": "en",
@@ -1757,12 +3132,13 @@
                 "illustrator": "Nobusawa/Mochipuyo"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693541,
                 "ptcgio_id": "me4-112",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-112/large"
             }
         },
         {
-            "number": "113",
+            "number": "113/086",
             "name": "Special Red Card",
             "attributes": {
                 "language": "en",
@@ -1771,12 +3147,13 @@
                 "illustrator": "Studio Bora Inc."
             },
             "external_ids": {
+                "tcgplayer_product_id": 693548,
                 "ptcgio_id": "me4-113",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-113/large"
             }
         },
         {
-            "number": "114",
+            "number": "114/086",
             "name": "Surfing Beach",
             "attributes": {
                 "language": "en",
@@ -1785,12 +3162,13 @@
                 "illustrator": "AYUMI ODASHIMA"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693551,
                 "ptcgio_id": "me4-114",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-114/large"
             }
         },
         {
-            "number": "115",
+            "number": "115/086",
             "name": "Tool Scrapper",
             "attributes": {
                 "language": "en",
@@ -1799,12 +3177,13 @@
                 "illustrator": "Studio Bora Inc."
             },
             "external_ids": {
+                "tcgplayer_product_id": 693554,
                 "ptcgio_id": "me4-115",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-115/large"
             }
         },
         {
-            "number": "116",
+            "number": "116/086",
             "name": "Mega Greninja ex",
             "attributes": {
                 "language": "en",
@@ -1815,12 +3194,13 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693517,
                 "ptcgio_id": "me4-116",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-116/large"
             }
         },
         {
-            "number": "117",
+            "number": "117/086",
             "name": "Mega Floette ex",
             "attributes": {
                 "language": "en",
@@ -1831,12 +3211,13 @@
                 "type": "Psychic"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693513,
                 "ptcgio_id": "me4-117",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-117/large"
             }
         },
         {
-            "number": "118",
+            "number": "118/086",
             "name": "Mega Dragalge ex",
             "attributes": {
                 "language": "en",
@@ -1847,12 +3228,13 @@
                 "type": "Dragon"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693510,
                 "ptcgio_id": "me4-118",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-118/large"
             }
         },
         {
-            "number": "119",
+            "number": "119/086",
             "name": "Cinccino ex",
             "attributes": {
                 "language": "en",
@@ -1863,12 +3245,13 @@
                 "type": "Colorless"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693465,
                 "ptcgio_id": "me4-119",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-119/large"
             }
         },
         {
-            "number": "120",
+            "number": "120/086",
             "name": "AZ's Tranquility",
             "attributes": {
                 "language": "en",
@@ -1877,12 +3260,13 @@
                 "illustrator": "OKACHEKE"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693451,
                 "ptcgio_id": "me4-120",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-120/large"
             }
         },
         {
-            "number": "121",
+            "number": "121/086",
             "name": "Roxie's Performance",
             "attributes": {
                 "language": "en",
@@ -1891,12 +3275,13 @@
                 "illustrator": "Tomowaka"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693542,
                 "ptcgio_id": "me4-121",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-121/large"
             }
         },
         {
-            "number": "122",
+            "number": "122/086",
             "name": "Mega Greninja ex",
             "attributes": {
                 "language": "en",
@@ -1907,8 +3292,314 @@
                 "type": "Water"
             },
             "external_ids": {
+                "tcgplayer_product_id": 693518,
                 "ptcgio_id": "me4-122",
                 "ptcgio_image": "https://images.scrydex.com/pokemon/me4-122/large"
+            }
+        }
+    ],
+    "sealed": [
+        {
+            "name": "Chaos Rising Booster Box",
+            "attributes": {
+                "sealed_type": "booster_box",
+                "language": "en",
+                "pack_count": 36
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684444,
+                "upc": "0196214154186"
+            }
+        },
+        {
+            "name": "Chaos Rising Booster Box Case",
+            "attributes": {
+                "sealed_type": "booster_box_case",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684445,
+                "upc": "10196214154176"
+            }
+        },
+        {
+            "name": "Chaos Rising Booster Pack",
+            "attributes": {
+                "sealed_type": "booster_pack",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684446
+            }
+        },
+        {
+            "name": "Chaos Rising Booster Pack Art Bundle [Set of 4]",
+            "attributes": {
+                "sealed_type": "bundle",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684447
+            }
+        },
+        {
+            "name": "Chaos Rising Sleeved Booster Pack",
+            "attributes": {
+                "sealed_type": "sleeved_booster_pack",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684448,
+                "upc": "0196214140424"
+            }
+        },
+        {
+            "name": "Chaos Rising Sleeved Booster Pack Art Bundle [Set of 4]",
+            "attributes": {
+                "sealed_type": "bundle",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684449
+            }
+        },
+        {
+            "name": "Chaos Rising Elite Trainer Box",
+            "attributes": {
+                "sealed_type": "elite_trainer_box",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684450,
+                "upc": "0196214154117"
+            }
+        },
+        {
+            "name": "Chaos Rising Elite Trainer Box Case",
+            "attributes": {
+                "sealed_type": "elite_trainer_box",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684451,
+                "upc": "10196214154114"
+            }
+        },
+        {
+            "name": "Chaos Rising Pokemon Center Elite Trainer Box",
+            "attributes": {
+                "sealed_type": "elite_trainer_box",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684452
+            }
+        },
+        {
+            "name": "Chaos Rising Pokemon Center Elite Trainer Box Case",
+            "attributes": {
+                "sealed_type": "elite_trainer_box",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684453
+            }
+        },
+        {
+            "name": "Chaos Rising Build & Battle Box",
+            "attributes": {
+                "sealed_type": "build_and_battle",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684454,
+                "upc": "0196214154131"
+            }
+        },
+        {
+            "name": "Chaos Rising Build & Battle Display",
+            "attributes": {
+                "sealed_type": "build_and_battle",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684455,
+                "upc": "0196214154148"
+            }
+        },
+        {
+            "name": "Chaos Rising Booster Bundle",
+            "attributes": {
+                "sealed_type": "booster_bundle",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684456,
+                "upc": "0196214154162"
+            }
+        },
+        {
+            "name": "Chaos Rising Single Pack Blister [Toxel]",
+            "attributes": {
+                "sealed_type": "blister",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684457,
+                "upc": "10196214140551"
+            }
+        },
+        {
+            "name": "Chaos Rising 3-Pack Blister [Charmeleon]",
+            "attributes": {
+                "sealed_type": "blister",
+                "language": "en",
+                "pack_count": 3
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684458,
+                "upc": "0196214154155"
+            }
+        },
+        {
+            "name": "Chaos Rising Premium Checklane Blister [Pawmot Line]",
+            "attributes": {
+                "sealed_type": "blister",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684459,
+                "upc": "10196214140551"
+            }
+        },
+        {
+            "name": "Chaos Rising Premium Checklane Blister [Flygon Line]",
+            "attributes": {
+                "sealed_type": "blister",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 684460,
+                "upc": "10196214140551"
+            }
+        },
+        {
+            "name": "Chaos Rising Booster Bundle Case",
+            "attributes": {
+                "sealed_type": "booster_bundle",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 688949,
+                "upc": "10196214154169"
+            }
+        },
+        {
+            "name": "Chaos Rising Sleeved Booster Case",
+            "attributes": {
+                "sealed_type": "other",
+                "language": "en",
+                "pack_count": 144
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 690684,
+                "upc": "10196214140421"
+            }
+        },
+        {
+            "name": "Chaos Rising 3-Pack Blister Case",
+            "attributes": {
+                "sealed_type": "blister",
+                "language": "en",
+                "pack_count": 3
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 695118,
+                "upc": "196214154152"
+            }
+        },
+        {
+            "name": "Code Card - Chaos Rising Pokemon Center Elite Trainer Box Digital Bundle",
+            "attributes": {
+                "sealed_type": "other",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 695312
+            }
+        },
+        {
+            "name": "Code Card - Chaos Rising Booster Pack",
+            "attributes": {
+                "sealed_type": "other",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 695313
+            }
+        },
+        {
+            "name": "Chaos Rising Half Booster Box",
+            "attributes": {
+                "sealed_type": "booster_box",
+                "language": "en",
+                "pack_count": 18
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 695395,
+                "upc": "5060705221105"
+            }
+        },
+        {
+            "name": "Code Card - Chaos Rising Elite Trainer Box",
+            "attributes": {
+                "sealed_type": "other",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 695397
+            }
+        },
+        {
+            "name": "Code Card - Chaos Rising Build & Battle Box",
+            "attributes": {
+                "sealed_type": "other",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 695398
+            }
+        },
+        {
+            "name": "Code Card - Chaos Rising Booster Bundle",
+            "attributes": {
+                "sealed_type": "other",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 695399
+            }
+        },
+        {
+            "name": "Chaos Rising Single Pack Blister [Zacian/Mimikyu]",
+            "attributes": {
+                "sealed_type": "blister",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 696144,
+                "upc": "0196214140585"
+            }
+        },
+        {
+            "name": "Chaos Rising Single Pack Blister [Reshiram/Moltres]",
+            "attributes": {
+                "sealed_type": "blister",
+                "language": "en"
+            },
+            "external_ids": {
+                "tcgplayer_product_id": 696150,
+                "upc": "0196214140585"
             }
         }
     ]

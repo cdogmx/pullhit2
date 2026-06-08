@@ -83,6 +83,31 @@ test('a different language produces a distinct catalog item', function () {
     expect(CatalogItem::count())->toBe(2);
 });
 
+test('two printings of one card share a base_key but differ in identity_hash', function () {
+    $normal = createSingle(); // variant: reverse_holo (from createSingle)
+
+    $holo = ($this->action)(
+        vertical: $this->vertical,
+        productLine: $this->pokemon,
+        set: $this->set,
+        itemType: ItemType::Single,
+        name: 'Pikachu',
+        number: '173/165',
+        attributes: [
+            'language' => 'en',
+            'rarity' => 'Illustration Rare',
+            'variant' => 'holo', // only the variant differs
+        ],
+    );
+
+    expect($holo->id)->not->toBe($normal->id)
+        ->and($holo->identity_hash)->not->toBe($normal->identity_hash)
+        ->and($holo->base_key)->toBe($normal->base_key)
+        ->and($holo->base_key)->toHaveLength(64);
+
+    expect($normal->variants()->count())->toBe(2);
+});
+
 test('invalid attributes throw before anything is persisted', function () {
     expect(fn () => ($this->action)(
         vertical: $this->vertical,

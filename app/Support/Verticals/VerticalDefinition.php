@@ -48,4 +48,22 @@ readonly class VerticalDefinition
 
         return $this->attributes[$itemType];
     }
+
+    /**
+     * Facet keys that distinguish printings of the same card (e.g. variant, finish).
+     * These are excluded when computing a catalog_item's base_key so all printings
+     * of one card share a group.
+     *
+     * @return array<int, string>
+     */
+    public function variantDefiningKeys(string $itemType): array
+    {
+        return array_values(array_map(
+            fn (AttributeDefinition $definition): string => $definition->key,
+            array_filter(
+                $this->attributesFor($itemType),
+                fn (AttributeDefinition $definition): bool => $definition->variantDefining,
+            ),
+        ));
+    }
 }

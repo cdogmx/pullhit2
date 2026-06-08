@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Actions\Catalog\CreateCatalogItem;
 use App\Enums\ItemType;
+use App\Models\CatalogItem;
 use App\Models\ProductLine;
 use App\Models\Set;
 use App\Models\Vertical;
@@ -11,12 +12,13 @@ use Illuminate\Database\Seeder;
 use RuntimeException;
 
 /**
- * Seeds the Pokémon "Chaos Rising" (Mega Evolution series, English) set and its
- * full card list from a normalized fixture sourced from pokemontcg.io (set me4).
+ * Seeds the Pokémon "Chaos Rising" (Mega Evolution series, English) set at the
+ * printing/variant level: every TCGplayer printing of every card is its own
+ * catalog_item (grouped by base_key), plus the set's sealed products.
  *
- * The fixture (database/data/chaos-rising-en.json) is a hand-made manifest — the
- * same shape the Phase 2 importer will consume. Idempotent: re-running upserts
- * the set and dedups items on their identity_hash.
+ * Data: database/data/chaos-rising-en.json — a normalized manifest built from
+ * TCGCSV (authoritative printings) enriched by pokemontcg.io. Idempotent: items
+ * upsert on identity_hash, and stale rows for this set are reconciled away.
  */
 class ChaosRisingSeeder extends Seeder
 {
@@ -49,9 +51,10 @@ class ChaosRisingSeeder extends Seeder
         );
 
         $create = app(CreateCatalogItem::class);
+        $seenHashes = [];
 
-        foreach ($fixture['cards'] as $card) {
-            $create(
+        foreach ($fixture['singles'] as $card) {
+            $item = $create(
                 vertical: $vertical,
                 productLine: $pokemon,
                 set: $set,
@@ -61,13 +64,39 @@ class ChaosRisingSeeder extends Seeder
                 attributes: $card['attributes'],
                 externalIds: $card['external_ids'] ?? [],
             );
+            $seenHashes[] = $item->identity_hash;
         }
 
-        $this->command?->info("Chaos Rising: seeded {$set->catalogItems()->count()} cards.");
+        foreach ($fixture['sealed'] as $product) {
+            $item = $create(
+                vertical: $vertical,
+                productLine: $pokemon,
+                set: $set,
+                itemType: ItemType::Sealed,
+                name: $product['name'],
+                attributes: $product['attributes'],
+                externalIds: $product['external_ids'] ?? [],
+            );
+            $seenHashes[] = $item->identity_hash;
+        }
+
+        // Reconcile: drop any earlier rows for this set that are no longer in the
+        // manifest (e.g. the previous base-only singles), keeping the seeder idempotent.
+        $removed = CatalogItem::where('set_id', $set->id)
+            ->whereNotIn('identity_hash', $seenHashes)
+            ->delete();
+
+        $this->command?->info(sprintf(
+            'Chaos Rising: %d singles + %d sealed seeded (%d distinct base cards); %d stale rows removed.',
+            count($fixture['singles']),
+            count($fixture['sealed']),
+            CatalogItem::where('set_id', $set->id)->distinct('base_key')->count('base_key'),
+            $removed,
+        ));
     }
 
     /**
-     * @return array{set: array<string, mixed>, cards: array<int, array<string, mixed>>}
+     * @return array{set: array<string, mixed>, singles: array<int, array<string, mixed>>, sealed: array<int, array<string, mixed>>}
      */
     protected function loadFixture(): array
     {

@@ -17,6 +17,13 @@ final class TcgVertical
     /** Shared language options across TCG item types. */
     public const LANGUAGES = ['en', 'ja', 'ko', 'zh-CN', 'zh-TW', 'fr', 'de', 'it', 'es', 'pt'];
 
+    /** Sealed product categories (aligned to TCGplayer's sealed taxonomy). */
+    public const SEALED_TYPES = [
+        'booster_box', 'booster_box_case', 'booster_pack', 'sleeved_booster_pack',
+        'booster_bundle', 'elite_trainer_box', 'collection', 'bundle', 'tin',
+        'blister', 'build_and_battle', 'checklane', 'other',
+    ];
+
     public static function definition(): VerticalDefinition
     {
         return new VerticalDefinition(
@@ -26,14 +33,15 @@ final class TcgVertical
                 ItemType::Single->value => [
                     Attr::make('language', 'Language', Type::Enum, required: true, searchable: true, indexed: true, options: self::LANGUAGES),
                     Attr::make('rarity', 'Rarity', Type::String, required: true, searchable: true, indexed: true),
-                    Attr::make('variant', 'Variant', Type::Enum, required: true, searchable: true, indexed: true, options: ['normal', 'holo', 'reverse_holo', '1st_edition', 'unlimited']),
-                    Attr::make('finish', 'Finish', Type::String, searchable: true),
+                    // variant + finish distinguish printings of the same card.
+                    Attr::make('variant', 'Variant', Type::Enum, required: true, searchable: true, indexed: true, options: ['normal', 'holo', 'reverse_holo', '1st_edition', 'unlimited'], variantDefining: true),
+                    Attr::make('finish', 'Finish', Type::String, searchable: true, variantDefining: true),
                     Attr::make('illustrator', 'Illustrator', Type::String, searchable: true),
                     Attr::make('hp', 'HP', Type::Integer),
                     Attr::make('type', 'Type', Type::String, searchable: true),
                 ],
                 ItemType::Sealed->value => [
-                    Attr::make('sealed_type', 'Sealed Type', Type::Enum, required: true, searchable: true, indexed: true, options: ['booster_box', 'etb', 'booster_pack', 'booster_bundle', 'collection', 'bundle', 'tin']),
+                    Attr::make('sealed_type', 'Sealed Type', Type::Enum, required: true, searchable: true, indexed: true, options: self::SEALED_TYPES),
                     Attr::make('language', 'Language', Type::Enum, required: true, searchable: true, indexed: true, options: self::LANGUAGES),
                     Attr::make('pack_count', 'Pack Count', Type::Integer),
                 ],
