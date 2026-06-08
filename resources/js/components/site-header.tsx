@@ -17,6 +17,7 @@ import { dashboard, home, login, register } from '@/routes';
  * authenticated app keeps the sidebar layout; this header wraps public pages.
  */
 const marketingNav = [
+    { title: 'Browse', href: '/browse' },
     { title: 'Features', href: '/#features' },
     { title: 'How it works', href: '/#how-it-works' },
 ];

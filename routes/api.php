@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\PingController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,9 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->name('api.v1.')->group(function () {
     // Public liveness check.
     Route::get('ping', [PingController::class, 'show'])->name('ping');
+
+    // Public catalog browse/search.
+    Route::get('catalog', [CatalogController::class, 'index'])->name('catalog.index');
 
     // Token-protected probe — confirms Sanctum bearer auth.
     Route::middleware('auth:sanctum')->group(function () {

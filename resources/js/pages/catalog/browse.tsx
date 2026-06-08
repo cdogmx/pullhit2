@@ -1,0 +1,638 @@
+import { Head, router } from '@inertiajs/react';
+import {
+    ArrowDownUp,
+    LayoutGrid,
+    Layers,
+    List,
+    Search,
+    SlidersHorizontal,
+    X,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from '@/components/ui/sheet';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { cn } from '@/lib/utils';
+import type {
+    CatalogFilterOptions,
+    CatalogFilters,
+    CatalogItem,
+    Paginated,
+} from '@/types';
+
+type Props = {
+    items: Paginated<CatalogItem>;
+    options: CatalogFilterOptions;
+    filters: CatalogFilters;
+};
+
+const SORTS = [
+    { value: 'number', label: 'Number' },
+    { value: 'name', label: 'Name' },
+    { value: 'set', label: 'Set' },
+    { value: 'newest', label: 'Newest' },
+];
+
+const ALL = '__all__';
+
+const humanize = (value: string): string =>
+    value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+function buildQuery(filters: CatalogFilters): Record<string, string | number> {
+    const out: Record<string, string | number> = {};
+
+    if (filters.q) {
+        out.q = filters.q;
+    }
+
+    for (const key of [
+        'vertical',
+        'product_line',
+        'set',
+        'item_type',
+        'language',
+        'rarity',
+        'variant',
+    ] as const) {
+        const value = filters[key];
+
+        if (value) {
+            out[key] = value;
+        }
+    }
+
+    if (filters.sort && filters.sort !== 'number') {
+        out.sort = filters.sort;
+    }
+
+    if (filters.direction && filters.direction !== 'asc') {
+        out.direction = filters.direction;
+    }
+
+    if (filters.group) {
+        out.group = 1;
+    }
+
+    if (filters.per_page && filters.per_page !== 24) {
+        out.per_page = filters.per_page;
+    }
+
+    return out;
+}
+
+const ACTIVE_KEYS: (keyof CatalogFilters)[] = [
+    'q',
+    'vertical',
+    'product_line',
+    'set',
+    'item_type',
+    'language',
+    'rarity',
+    'variant',
+];
+
+export default function Browse({ items, options, filters }: Props) {
+    const [q, setQ] = useState(filters.q ?? '');
+    const [view, setView] = useState<'grid' | 'list'>(filters.view ?? 'grid');
+    const firstRender = useRef(true);
+
+    // Debounced search.
+    useEffect(() => {
+        if (firstRender.current) {
+            firstRender.current = false;
+
+            return;
+        }
+
+        const timer = setTimeout(() => update({ q: q || null }), 300);
+
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [q]);
+
+    function update(partial: Partial<CatalogFilters>) {
+        const next = buildQuery({ ...filters, ...partial });
+        router.get('/browse', next, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ['items', 'options', 'filters'],
+        });
+    }
+
+    function reset() {
+        setQ('');
+        router.get(
+            '/browse',
+            {},
+            { preserveScroll: true, only: ['items', 'options', 'filters'] },
+        );
+    }
+
+    const activeCount = ACTIVE_KEYS.filter((k) => filters[k]).length;
+
+    return (
+        <>
+            <Head title="Browse catalog" />
+
+            <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                <div className="mb-6">
+                    <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                        Browse the catalog
+                    </h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        {items.meta.total.toLocaleString()} items
+                    </p>
+                </div>
+
+                {/* Top bar: search + controls */}
+                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className="relative flex-1">
+                        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            value={q}
+                            onChange={(e) => setQ(e.target.value)}
+                            placeholder="Search by name or number…"
+                            className="pl-9"
+                            aria-label="Search catalog"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {/* Mobile filter sheet */}
+                        <Sheet>
+                            <SheetTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className="lg:hidden"
+                                    size="sm"
+                                >
+                                    <SlidersHorizontal className="size-4" />
+                                    Filters
+                                    {activeCount > 0 && (
+                                        <Badge
+                                            variant="secondary"
+                                            className="ml-1"
+                                        >
+                                            {activeCount}
+                                        </Badge>
+                                    )}
+                                </Button>
+                            </SheetTrigger>
+                            <SheetContent side="left" className="w-80">
+                                <SheetHeader>
+                                    <SheetTitle>Filters</SheetTitle>
+                                </SheetHeader>
+                                <div className="space-y-4 overflow-y-auto px-4 pb-6">
+                                    <FilterControls
+                                        options={options}
+                                        filters={filters}
+                                        onChange={update}
+                                    />
+                                </div>
+                            </SheetContent>
+                        </Sheet>
+
+                        {/* Sort */}
+                        <Select
+                            value={filters.sort}
+                            onValueChange={(value) => update({ sort: value })}
+                        >
+                            <SelectTrigger size="sm" className="w-[8.5rem]">
+                                <ArrowDownUp className="size-4" />
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {SORTS.map((s) => (
+                                    <SelectItem key={s.value} value={s.value}>
+                                        {s.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            aria-label="Toggle sort direction"
+                            onClick={() =>
+                                update({
+                                    direction:
+                                        filters.direction === 'asc'
+                                            ? 'desc'
+                                            : 'asc',
+                                })
+                            }
+                        >
+                            {filters.direction === 'asc' ? '↑' : '↓'}
+                        </Button>
+
+                        {/* Group by base */}
+                        <Button
+                            variant={filters.group ? 'default' : 'outline'}
+                            size="sm"
+                            aria-pressed={filters.group}
+                            onClick={() => update({ group: !filters.group })}
+                        >
+                            <Layers className="size-4" />
+                            <span className="hidden sm:inline">Group</span>
+                        </Button>
+
+                        {/* Grid / list view */}
+                        <ToggleGroup
+                            type="single"
+                            value={view}
+                            onValueChange={(v) =>
+                                v && setView(v as 'grid' | 'list')
+                            }
+                            variant="outline"
+                            size="sm"
+                        >
+                            <ToggleGroupItem
+                                value="grid"
+                                aria-label="Grid view"
+                            >
+                                <LayoutGrid className="size-4" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem
+                                value="list"
+                                aria-label="List view"
+                            >
+                                <List className="size-4" />
+                            </ToggleGroupItem>
+                        </ToggleGroup>
+                    </div>
+                </div>
+
+                <div className="flex gap-8">
+                    {/* Desktop filter rail */}
+                    <aside className="hidden w-60 shrink-0 lg:block">
+                        <div className="sticky top-20 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-sm font-semibold">
+                                    Filters
+                                </h2>
+                                {activeCount > 0 && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={reset}
+                                        className="h-auto p-1 text-xs"
+                                    >
+                                        Clear
+                                    </Button>
+                                )}
+                            </div>
+                            <FilterControls
+                                options={options}
+                                filters={filters}
+                                onChange={update}
+                            />
+                        </div>
+                    </aside>
+
+                    {/* Results */}
+                    <div className="min-w-0 flex-1">
+                        {activeCount > 0 && (
+                            <ActiveChips
+                                filters={filters}
+                                onClear={(key) =>
+                                    key === 'q'
+                                        ? (setQ(''), update({ q: null }))
+                                        : update({ [key]: null })
+                                }
+                                onReset={reset}
+                            />
+                        )}
+
+                        {items.data.length === 0 ? (
+                            <div className="rounded-lg border border-dashed border-border py-20 text-center">
+                                <p className="text-sm text-muted-foreground">
+                                    No items match your filters.
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-4"
+                                    onClick={reset}
+                                >
+                                    Clear filters
+                                </Button>
+                            </div>
+                        ) : view === 'grid' ? (
+                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                                {items.data.map((item) => (
+                                    <CardTile key={item.id} item={item} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+                                {items.data.map((item) => (
+                                    <ListRow key={item.id} item={item} />
+                                ))}
+                            </div>
+                        )}
+
+                        <Pagination items={items} />
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+}
+
+function FilterControls({
+    options,
+    filters,
+    onChange,
+}: {
+    options: CatalogFilterOptions;
+    filters: CatalogFilters;
+    onChange: (partial: Partial<CatalogFilters>) => void;
+}) {
+    const selects: {
+        key: keyof CatalogFilters;
+        label: string;
+        opts: { value: string; label: string }[];
+    }[] = [
+        {
+            key: 'item_type',
+            label: 'Type',
+            opts: options.item_types.map((v) => ({
+                value: v,
+                label: humanize(v),
+            })),
+        },
+        {
+            key: 'set',
+            label: 'Set',
+            opts: options.sets.map((s) => ({ value: s.slug, label: s.name })),
+        },
+        {
+            key: 'rarity',
+            label: 'Rarity',
+            opts: options.rarities.map((v) => ({ value: v, label: v })),
+        },
+        {
+            key: 'variant',
+            label: 'Variant',
+            opts: options.variants.map((v) => ({
+                value: v,
+                label: humanize(v),
+            })),
+        },
+        {
+            key: 'language',
+            label: 'Language',
+            opts: options.languages.map((v) => ({
+                value: v,
+                label: v.toUpperCase(),
+            })),
+        },
+    ];
+
+    return (
+        <div className="space-y-4">
+            {selects
+                .filter((s) => s.opts.length > 0)
+                .map((s) => (
+                    <div key={s.key} className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">
+                            {s.label}
+                        </label>
+                        <Select
+                            value={(filters[s.key] as string) || ALL}
+                            onValueChange={(value) =>
+                                onChange({
+                                    [s.key]: value === ALL ? null : value,
+                                })
+                            }
+                        >
+                            <SelectTrigger className="w-full">
+                                <SelectValue
+                                    placeholder={`All ${s.label.toLowerCase()}`}
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={ALL}>
+                                    All {s.label.toLowerCase()}
+                                </SelectItem>
+                                {s.opts.map((o) => (
+                                    <SelectItem key={o.value} value={o.value}>
+                                        {o.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                ))}
+        </div>
+    );
+}
+
+function ActiveChips({
+    filters,
+    onClear,
+    onReset,
+}: {
+    filters: CatalogFilters;
+    onClear: (key: keyof CatalogFilters) => void;
+    onReset: () => void;
+}) {
+    const chips = ACTIVE_KEYS.filter((k) => filters[k]).map((k) => ({
+        key: k,
+        label: `${k === 'q' ? 'Search' : humanize(k)}: ${filters[k]}`,
+    }));
+
+    return (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+            {chips.map((chip) => (
+                <Badge
+                    key={chip.key}
+                    variant="secondary"
+                    className="gap-1 py-1"
+                >
+                    {chip.label}
+                    <button
+                        type="button"
+                        onClick={() => onClear(chip.key)}
+                        aria-label={`Clear ${chip.key}`}
+                        className="ml-0.5 rounded-full hover:text-foreground"
+                    >
+                        <X className="size-3" />
+                    </button>
+                </Badge>
+            ))}
+            <Button
+                variant="ghost"
+                size="sm"
+                onClick={onReset}
+                className="h-auto p-1 text-xs"
+            >
+                Clear all
+            </Button>
+        </div>
+    );
+}
+
+function ItemImage({
+    item,
+    className,
+}: {
+    item: CatalogItem;
+    className?: string;
+}) {
+    if (!item.image_url) {
+        return (
+            <div
+                className={cn(
+                    'flex items-center justify-center bg-muted text-muted-foreground',
+                    className,
+                )}
+            >
+                <span className="text-xs">No image</span>
+            </div>
+        );
+    }
+
+    return (
+        <img
+            src={item.image_url}
+            alt={item.name}
+            loading="lazy"
+            className={className}
+        />
+    );
+}
+
+function VariantBadges({ item }: { item: CatalogItem }) {
+    return (
+        <div className="flex flex-wrap gap-1">
+            {item.rarity && (
+                <Badge variant="secondary" className="text-[10px]">
+                    {item.rarity}
+                </Badge>
+            )}
+            {item.variant && item.variant !== 'normal' && (
+                <Badge variant="outline" className="text-[10px]">
+                    {humanize(item.variant)}
+                </Badge>
+            )}
+            {item.variants_count && item.variants_count > 1 && (
+                <Badge className="text-[10px]">
+                    {item.variants_count} printings
+                </Badge>
+            )}
+        </div>
+    );
+}
+
+function CardTile({ item }: { item: CatalogItem }) {
+    return (
+        <div className="group overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring">
+            <div className="aspect-[3/4] overflow-hidden bg-muted">
+                <ItemImage
+                    item={item}
+                    className="size-full object-contain transition-transform group-hover:scale-105"
+                />
+            </div>
+            <div className="space-y-1.5 p-3">
+                <p className="truncate text-sm font-medium" title={item.name}>
+                    {item.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                    {item.set?.code ?? item.set?.name}
+                    {item.number ? ` · ${item.number}` : ''}
+                </p>
+                <VariantBadges item={item} />
+            </div>
+        </div>
+    );
+}
+
+function ListRow({ item }: { item: CatalogItem }) {
+    return (
+        <div className="flex items-center gap-3 bg-card p-3 hover:bg-accent/40">
+            <div className="h-16 w-12 shrink-0 overflow-hidden rounded bg-muted">
+                <ItemImage item={item} className="size-full object-contain" />
+            </div>
+            <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{item.name}</p>
+                <p className="text-xs text-muted-foreground">
+                    {item.set?.name}
+                    {item.number ? ` · ${item.number}` : ''}
+                    {item.language ? ` · ${item.language.toUpperCase()}` : ''}
+                </p>
+                <div className="mt-1">
+                    <VariantBadges item={item} />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function Pagination({ items }: { items: Paginated<CatalogItem> }) {
+    const { meta, links } = items;
+
+    if (meta.last_page <= 1) {
+        return null;
+    }
+
+    const go = (url: string | null) => {
+        if (url) {
+            router.get(
+                url,
+                {},
+                {
+                    preserveScroll: true,
+                    preserveState: true,
+                    only: ['items', 'options', 'filters'],
+                },
+            );
+        }
+    };
+
+    return (
+        <div className="mt-8 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+                {meta.from ?? 0}–{meta.to ?? 0} of {meta.total.toLocaleString()}
+            </p>
+            <div className="flex items-center gap-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!links.prev}
+                    onClick={() => go(links.prev)}
+                >
+                    Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                    Page {meta.current_page} of {meta.last_page}
+                </span>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!links.next}
+                    onClick={() => go(links.next)}
+                >
+                    Next
+                </Button>
+            </div>
+        </div>
+    );
+}

@@ -25,7 +25,7 @@ export function MobileTabBar() {
 
     const tabs: Tab[] = [
         { title: 'Home', href: home().url, icon: Home, match: '/' },
-        { title: 'Search', href: '#', icon: Search },
+        { title: 'Search', href: '/browse', icon: Search, match: '/browse' },
         { title: 'Scan', href: '#', icon: ScanLine },
         {
             title: 'Collection',
