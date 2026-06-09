@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, WhenVisible } from '@inertiajs/react';
 import {
     ArrowDownUp,
     LayoutGrid,
@@ -26,17 +26,26 @@ import {
     SheetTitle,
     SheetTrigger,
 } from '@/components/ui/sheet';
+import { Spinner } from '@/components/ui/spinner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
 import type {
     CatalogFilterOptions,
     CatalogFilters,
     CatalogItem,
-    Paginated,
 } from '@/types';
 
+type Pagination = {
+    page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    has_more: boolean;
+};
+
 type Props = {
-    items: Paginated<CatalogItem>;
+    items: CatalogItem[];
+    pagination: Pagination;
     options: CatalogFilterOptions;
     filters: CatalogFilters;
 };
@@ -106,7 +115,7 @@ const ACTIVE_KEYS: (keyof CatalogFilters)[] = [
     'variant',
 ];
 
-export default function Browse({ items, options, filters }: Props) {
+export default function Browse({ items, pagination, options, filters }: Props) {
     const [q, setQ] = useState(filters.q ?? '');
     const [view, setView] = useState<'grid' | 'list'>(filters.view ?? 'grid');
     const firstRender = useRef(true);
@@ -125,13 +134,14 @@ export default function Browse({ items, options, filters }: Props) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [q]);
 
+    // A filter/sort/group change resets the infinite-scroll list back to page 1.
     function update(partial: Partial<CatalogFilters>) {
         const next = buildQuery({ ...filters, ...partial });
         router.get('/browse', next, {
             preserveState: true,
-            preserveScroll: true,
             replace: true,
-            only: ['items', 'options', 'filters'],
+            reset: ['items'],
+            only: ['items', 'pagination', 'options', 'filters'],
         });
     }
 
@@ -140,7 +150,10 @@ export default function Browse({ items, options, filters }: Props) {
         router.get(
             '/browse',
             {},
-            { preserveScroll: true, only: ['items', 'options', 'filters'] },
+            {
+                reset: ['items'],
+                only: ['items', 'pagination', 'options', 'filters'],
+            },
         );
     }
 
@@ -163,7 +176,7 @@ export default function Browse({ items, options, filters }: Props) {
                         Browse the catalog
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        {items.meta.total.toLocaleString()} items
+                        {pagination.total.toLocaleString()} items
                     </p>
                 </div>
 
@@ -327,7 +340,7 @@ export default function Browse({ items, options, filters }: Props) {
                             />
                         )}
 
-                        {items.data.length === 0 ? (
+                        {items.length === 0 ? (
                             <div className="rounded-lg border border-dashed border-border py-20 text-center">
                                 <p className="text-sm text-muted-foreground">
                                     No items match your filters.
@@ -343,7 +356,7 @@ export default function Browse({ items, options, filters }: Props) {
                             </div>
                         ) : view === 'grid' ? (
                             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                                {items.data.map((item) => (
+                                {items.map((item) => (
                                     <CardTile
                                         key={item.id}
                                         item={item}
@@ -353,7 +366,7 @@ export default function Browse({ items, options, filters }: Props) {
                             </div>
                         ) : (
                             <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-                                {items.data.map((item) => (
+                                {items.map((item) => (
                                     <ListRow
                                         key={item.id}
                                         item={item}
@@ -363,7 +376,11 @@ export default function Browse({ items, options, filters }: Props) {
                             </div>
                         )}
 
-                        <Pagination items={items} />
+                        <InfiniteFooter
+                            pagination={pagination}
+                            filters={filters}
+                            hasItems={items.length > 0}
+                        />
                     </div>
                 </div>
             </div>
@@ -607,53 +624,45 @@ function ListRow({ item, returnTo }: { item: CatalogItem; returnTo: string }) {
     );
 }
 
-function Pagination({ items }: { items: Paginated<CatalogItem> }) {
-    const { meta, links } = items;
-
-    if (meta.last_page <= 1) {
-        return null;
+function InfiniteFooter({
+    pagination,
+    filters,
+    hasItems,
+}: {
+    pagination: Pagination;
+    filters: CatalogFilters;
+    hasItems: boolean;
+}) {
+    if (pagination.has_more) {
+        return (
+            <WhenVisible
+                always
+                buffer={400}
+                params={{
+                    only: ['items', 'pagination'],
+                    data: {
+                        ...buildQuery(filters),
+                        page: pagination.page + 1,
+                    },
+                    preserveUrl: true,
+                }}
+                fallback={null}
+            >
+                <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+                    <Spinner className="size-4" />
+                    Loading more…
+                </div>
+            </WhenVisible>
+        );
     }
 
-    const go = (url: string | null) => {
-        if (url) {
-            router.get(
-                url,
-                {},
-                {
-                    preserveScroll: true,
-                    preserveState: true,
-                    only: ['items', 'options', 'filters'],
-                },
-            );
-        }
-    };
-
-    return (
-        <div className="mt-8 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-                {meta.from ?? 0}–{meta.to ?? 0} of {meta.total.toLocaleString()}
+    if (hasItems && pagination.total > pagination.per_page) {
+        return (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+                That's all {pagination.total.toLocaleString()} items.
             </p>
-            <div className="flex items-center gap-2">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!links.prev}
-                    onClick={() => go(links.prev)}
-                >
-                    Previous
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                    Page {meta.current_page} of {meta.last_page}
-                </span>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!links.next}
-                    onClick={() => go(links.next)}
-                >
-                    Next
-                </Button>
-            </div>
-        </div>
-    );
+        );
+    }
+
+    return null;
 }

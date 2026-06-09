@@ -24,9 +24,21 @@ class CatalogController extends Controller
         CatalogFilterOptions $options,
     ): Response {
         $filters = $request->filters();
+        $paginator = $search($filters);
 
         return Inertia::render('catalog/browse', [
-            'items' => CatalogItemResource::collection($search($filters)),
+            // Merge so each scrolled-in page appends to the list (infinite scroll);
+            // a filter change resets it via the request's reset header.
+            'items' => Inertia::merge(
+                fn () => CatalogItemResource::collection($paginator->items())->resolve(),
+            ),
+            'pagination' => [
+                'page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'has_more' => $paginator->hasMorePages(),
+            ],
             'options' => $options($filters),
             'filters' => $filters,
         ]);

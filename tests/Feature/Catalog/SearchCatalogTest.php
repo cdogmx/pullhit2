@@ -43,9 +43,28 @@ test('the browse page renders for guests with catalog items', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('catalog/browse')
-            ->has('items.data', 4)
+            ->has('items', 4)
+            ->where('pagination.total', 4)
             ->has('options.rarities')
             ->where('filters.sort', 'number'));
+});
+
+test('the browse page exposes pagination for infinite scroll', function () {
+    // 4 seeded items, 2 per page -> 2 pages.
+    $this->get('/browse?per_page=2')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('items', 2)
+            ->where('pagination.page', 1)
+            ->where('pagination.last_page', 2)
+            ->where('pagination.has_more', true));
+
+    $this->get('/browse?per_page=2&page=2')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('items', 2)
+            ->where('pagination.page', 2)
+            ->where('pagination.has_more', false));
 });
 
 test('the api returns catalog items with pagination', function () {
