@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\CatalogController;
+use App\Http\Controllers\Api\V1\CollectionController;
 use App\Http\Controllers\Api\V1\PingController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,5 +31,11 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     // Token-protected probe — confirms Sanctum bearer auth.
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('user', [PingController::class, 'me'])->name('user');
+
+        // Collection + portfolio (native-app parity with the web controller).
+        Route::get('collection', [CollectionController::class, 'index'])->name('collection.index');
+        Route::post('collection', [CollectionController::class, 'store'])->name('collection.store');
+        Route::patch('collection/{collectionItem}', [CollectionController::class, 'update'])->name('collection.update');
+        Route::delete('collection/{collectionItem}', [CollectionController::class, 'destroy'])->name('collection.destroy');
     });
 });

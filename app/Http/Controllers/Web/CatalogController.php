@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Catalog\SearchCatalogRequest;
 use App\Http\Resources\CatalogItemResource;
 use App\Models\CatalogItem;
+use App\Models\GradingCompany;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -62,6 +63,9 @@ class CatalogController extends Controller
         // collection); the page reads props.item.data.
         return Inertia::render('catalog/show', [
             'item' => new CatalogItemResource($show($catalogItem)),
+            // Options for the "add to collection" graded picker.
+            'gradingCompanies' => GradingCompany::orderBy('name')
+                ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
         ]);
     }
 }

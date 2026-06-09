@@ -1,15 +1,19 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, BarChart3 } from 'lucide-react';
 import { useState } from 'react';
 import { PriceBreakdownDrawer } from '@/components/catalog/price-breakdown-drawer';
 import { PriceTag } from '@/components/catalog/price-tag';
+import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { confidenceVariant, formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { CatalogItem } from '@/types';
+import type { CatalogItem, GradingCompanyOption } from '@/types';
 
-type Props = { item: { data: CatalogItem } };
+type Props = {
+    item: { data: CatalogItem };
+    gradingCompanies: GradingCompanyOption[];
+};
 
 const humanize = (value?: string | null): string =>
     (value ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -25,7 +29,8 @@ const DETAIL_FACETS: { key: string; label: string }[] = [
     { key: 'pack_count', label: 'Packs' },
 ];
 
-export default function Show({ item: { data: item } }: Props) {
+export default function Show({ item: { data: item }, gradingCompanies }: Props) {
+    const user = usePage().props.auth?.user;
     const attributes = item.attributes ?? {};
     const printings = item.variants ?? [];
     const values = item.market_values ?? [];
@@ -113,6 +118,15 @@ export default function Show({ item: { data: item } }: Props) {
                                 <Badge>{humanize(item.variant)}</Badge>
                             )}
                         </div>
+
+                        {user && (
+                            <div className="mt-4">
+                                <AddToCollectionDialog
+                                    catalogItemId={item.id}
+                                    gradingCompanies={gradingCompanies}
+                                />
+                            </div>
+                        )}
 
                         {/* Market value (read from market_values; never computed live). */}
                         {headline ? (
