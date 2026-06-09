@@ -3,6 +3,7 @@
 use App\Actions\Valuation\MaybeRefreshEbay;
 use App\Jobs\RefreshEbaySoldComps;
 use App\Models\CatalogItem;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Queue;
 
 beforeEach(fn () => Queue::fake());
@@ -53,4 +54,19 @@ test('viewing a card increments popularity and queues a refresh when due', funct
 
     expect($item->fresh()->popularity)->toBe(1);
     Queue::assertPushed(RefreshEbaySoldComps::class);
+});
+
+test('viewing a card that was refreshed long ago re-reads the date and works', function () {
+    // Reproduces the live error: a DB-fetched item with a stored (string) date.
+    $item = CatalogItem::factory()->create([
+        'ebay_refreshed_at' => now()->subDays(30),
+        'popularity' => 0,
+    ]);
+
+    // Re-read so ebay_refreshed_at comes back through the cast (not in-memory Carbon).
+    $fresh = CatalogItem::find($item->id);
+    expect($fresh->ebay_refreshed_at)->toBeInstanceOf(CarbonInterface::class);
+
+    $this->get("/catalog/{$item->id}")->assertOk();
+    Queue::assertPushed(RefreshEbaySoldComps::class); // cold TTL 14d exceeded
 });

@@ -42,6 +42,9 @@ class CatalogItem extends Model
             'item_type' => ItemType::class,
             'attributes' => 'array',
             'external_ids' => 'array',
+            'popularity' => 'integer',
+            'last_viewed_at' => 'datetime',
+            'ebay_refreshed_at' => 'datetime',
         ];
     }
 
