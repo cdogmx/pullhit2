@@ -146,6 +146,13 @@ export default function Browse({ items, options, filters }: Props) {
 
     const activeCount = ACTIVE_KEYS.filter((k) => filters[k]).length;
 
+    // Thread the current browse query onto detail links so "Back to browse"
+    // (and printing hops) can return here with the same search/filters/page.
+    const returnTo =
+        typeof window !== 'undefined' && window.location.search
+            ? `?return=${encodeURIComponent(window.location.search)}`
+            : '';
+
     return (
         <>
             <Head title="Browse catalog" />
@@ -337,13 +344,21 @@ export default function Browse({ items, options, filters }: Props) {
                         ) : view === 'grid' ? (
                             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                                 {items.data.map((item) => (
-                                    <CardTile key={item.id} item={item} />
+                                    <CardTile
+                                        key={item.id}
+                                        item={item}
+                                        returnTo={returnTo}
+                                    />
                                 ))}
                             </div>
                         ) : (
                             <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
                                 {items.data.map((item) => (
-                                    <ListRow key={item.id} item={item} />
+                                    <ListRow
+                                        key={item.id}
+                                        item={item}
+                                        returnTo={returnTo}
+                                    />
                                 ))}
                             </div>
                         )}
@@ -542,10 +557,10 @@ function VariantBadges({ item }: { item: CatalogItem }) {
     );
 }
 
-function CardTile({ item }: { item: CatalogItem }) {
+function CardTile({ item, returnTo }: { item: CatalogItem; returnTo: string }) {
     return (
         <Link
-            href={`/catalog/${item.id}`}
+            href={`/catalog/${item.id}${returnTo}`}
             className="group overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring"
         >
             <div className="aspect-[3/4] overflow-hidden bg-muted">
@@ -568,10 +583,10 @@ function CardTile({ item }: { item: CatalogItem }) {
     );
 }
 
-function ListRow({ item }: { item: CatalogItem }) {
+function ListRow({ item, returnTo }: { item: CatalogItem; returnTo: string }) {
     return (
         <Link
-            href={`/catalog/${item.id}`}
+            href={`/catalog/${item.id}${returnTo}`}
             className="flex items-center gap-3 bg-card p-3 hover:bg-accent/40"
         >
             <div className="h-16 w-12 shrink-0 overflow-hidden rounded bg-muted">

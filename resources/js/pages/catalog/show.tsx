@@ -24,6 +24,16 @@ export default function Show({ item: { data: item } }: Props) {
     const attributes = item.attributes ?? {};
     const printings = item.variants ?? [];
 
+    // The browse query we came from (search/filters/page), threaded via ?return=.
+    const returnSearch =
+        typeof window !== 'undefined'
+            ? new URLSearchParams(window.location.search).get('return')
+            : null;
+    const backHref = `/browse${returnSearch ?? ''}`;
+    const carryReturn = returnSearch
+        ? `?return=${encodeURIComponent(returnSearch)}`
+        : '';
+
     const facetRows = DETAIL_FACETS.filter(
         (f) => attributes[f.key] !== undefined && attributes[f.key] !== null,
     ).map((f) => ({
@@ -40,7 +50,7 @@ export default function Show({ item: { data: item } }: Props) {
 
             <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
                 <Link
-                    href="/browse"
+                    href={backHref}
                     className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                     <ArrowLeft className="size-4" />
@@ -136,7 +146,7 @@ export default function Show({ item: { data: item } }: Props) {
                                 return (
                                     <Link
                                         key={printing.id}
-                                        href={`/catalog/${printing.id}`}
+                                        href={`/catalog/${printing.id}${carryReturn}`}
                                         className={cn(
                                             'flex items-center gap-3 p-3 transition-colors hover:bg-accent/40',
                                             isCurrent && 'bg-accent/60',
