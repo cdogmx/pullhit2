@@ -18,4 +18,16 @@ enum Condition: string
     case HeavilyPlayed = 'HP';
     case Damaged = 'DMG';
     case Sealed = 'SEALED';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::NearMint => 'Near Mint',
+            self::LightlyPlayed => 'Lightly Played',
+            self::ModeratelyPlayed => 'Moderately Played',
+            self::HeavilyPlayed => 'Heavily Played',
+            self::Damaged => 'Damaged',
+            self::Sealed => 'Sealed',
+        };
+    }
 }

@@ -1,0 +1,1642 @@
+{
+    "684444": [
+        {
+            "variant": "normal",
+            "low": 22500,
+            "market": 23331,
+            "high": 199900
+        }
+    ],
+    "684445": [
+        {
+            "variant": "normal",
+            "low": 132499,
+            "market": 140733,
+            "high": 170000
+        }
+    ],
+    "684446": [
+        {
+            "variant": "normal",
+            "low": 690,
+            "market": 776,
+            "high": 1350
+        }
+    ],
+    "684447": [
+        {
+            "variant": "normal",
+            "low": 2449,
+            "market": 3051,
+            "high": 4943
+        }
+    ],
+    "684448": [
+        {
+            "variant": "normal",
+            "low": 445,
+            "market": 747,
+            "high": 3300
+        }
+    ],
+    "684449": [
+        {
+            "variant": "normal",
+            "low": 1948,
+            "market": 3075,
+            "high": 7700
+        }
+    ],
+    "684450": [
+        {
+            "variant": "normal",
+            "low": 7499,
+            "market": 8342,
+            "high": 55500
+        }
+    ],
+    "684451": [
+        {
+            "variant": "normal",
+            "low": 77401,
+            "market": 84414,
+            "high": 120000
+        }
+    ],
+    "684452": [
+        {
+            "variant": "normal",
+            "low": 18000,
+            "market": 18825,
+            "high": 99900
+        }
+    ],
+    "684454": [
+        {
+            "variant": "normal",
+            "low": 3548,
+            "market": 4806,
+            "high": 6090
+        }
+    ],
+    "684455": [
+        {
+            "variant": "normal",
+            "low": 35000,
+            "market": 40216,
+            "high": 66900
+        }
+    ],
+    "684456": [
+        {
+            "variant": "normal",
+            "low": 3999,
+            "market": 4636,
+            "high": 15100
+        }
+    ],
+    "684457": [
+        {
+            "variant": "normal",
+            "low": 845,
+            "market": 857,
+            "high": 1999
+        }
+    ],
+    "684458": [
+        {
+            "variant": "normal",
+            "low": 2196,
+            "market": 2778,
+            "high": 6900
+        }
+    ],
+    "684459": [
+        {
+            "variant": "normal",
+            "low": 1500,
+            "market": 2047,
+            "high": 5500
+        }
+    ],
+    "684460": [
+        {
+            "variant": "normal",
+            "low": 1400,
+            "market": 2038,
+            "high": 5500
+        }
+    ],
+    "688949": [
+        {
+            "variant": "normal",
+            "low": 99885,
+            "market": 110756,
+            "high": 155000
+        }
+    ],
+    "690684": [
+        {
+            "variant": "normal",
+            "low": 97900,
+            "market": 103562,
+            "high": 99998
+        }
+    ],
+    "693444": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 16,
+            "high": 789
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 7,
+            "high": 768
+        }
+    ],
+    "693445": [
+        {
+            "variant": "holo",
+            "low": 1,
+            "market": 19,
+            "high": 1574
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 27,
+            "high": 1607
+        }
+    ],
+    "693446": [
+        {
+            "variant": "holo",
+            "low": 1289,
+            "market": 1415,
+            "high": 432100
+        }
+    ],
+    "693447": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 8,
+            "high": 772
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 19,
+            "high": 505
+        }
+    ],
+    "693448": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 10,
+            "high": 597
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 17,
+            "high": 610
+        }
+    ],
+    "693449": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 24,
+            "high": 399
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 11,
+            "high": 437
+        }
+    ],
+    "693450": [
+        {
+            "variant": "holo",
+            "low": 200,
+            "market": 377,
+            "high": 432100
+        }
+    ],
+    "693451": [
+        {
+            "variant": "holo",
+            "low": 4000,
+            "market": 4463,
+            "high": 34999
+        }
+    ],
+    "693452": [
+        {
+            "variant": "reverse_holo",
+            "low": 2,
+            "market": 22,
+            "high": 507
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 7,
+            "high": 597
+        }
+    ],
+    "693453": [
+        {
+            "variant": "holo",
+            "low": 50,
+            "market": 145,
+            "high": 2000
+        }
+    ],
+    "693454": [
+        {
+            "variant": "holo",
+            "low": 649,
+            "market": 789,
+            "high": 5000
+        }
+    ],
+    "693455": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 10,
+            "high": 770
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 19,
+            "high": 153
+        }
+    ],
+    "693456": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 9,
+            "high": 597
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 15,
+            "high": 1500
+        }
+    ],
+    "693457": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 13,
+            "high": 597
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 3,
+            "market": 18,
+            "high": 1000
+        }
+    ],
+    "693458": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 24,
+            "high": 2300
+        },
+        {
+            "variant": "holo",
+            "low": 1,
+            "market": 20,
+            "high": 2000
+        }
+    ],
+    "693459": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 9,
+            "high": 595
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 13,
+            "high": 605
+        }
+    ],
+    "693460": [
+        {
+            "variant": "holo",
+            "low": 1,
+            "market": 11,
+            "high": 1275
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 3,
+            "market": 20,
+            "high": 1215
+        }
+    ],
+    "693461": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 8,
+            "high": 388
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 15,
+            "high": 194
+        }
+    ],
+    "693462": [
+        {
+            "variant": "holo",
+            "low": 429,
+            "market": 839,
+            "high": 432100
+        }
+    ],
+    "693463": [
+        {
+            "variant": "holo",
+            "low": 19,
+            "market": 76,
+            "high": 8000
+        }
+    ],
+    "693464": [
+        {
+            "variant": "holo",
+            "low": 450,
+            "market": 603,
+            "high": 7700
+        }
+    ],
+    "693465": [
+        {
+            "variant": "holo",
+            "low": 8575,
+            "market": 9049,
+            "high": 99999
+        }
+    ],
+    "693466": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 8,
+            "high": 598
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 17,
+            "high": 503
+        }
+    ],
+    "693467": [
+        {
+            "variant": "holo",
+            "low": 314,
+            "market": 364,
+            "high": 2200
+        }
+    ],
+    "693468": [
+        {
+            "variant": "holo",
+            "low": 10,
+            "market": 43,
+            "high": 432100
+        }
+    ],
+    "693469": [
+        {
+            "variant": "holo",
+            "low": 169,
+            "market": 230,
+            "high": 1799
+        }
+    ],
+    "693470": [
+        {
+            "variant": "holo",
+            "low": 1,
+            "market": 14,
+            "high": 1506
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 19,
+            "high": 1575
+        }
+    ],
+    "693471": [
+        {
+            "variant": "holo",
+            "low": 399,
+            "market": 535,
+            "high": 6600
+        }
+    ],
+    "693472": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 22,
+            "high": 2500
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 4,
+            "high": 595
+        }
+    ],
+    "693473": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 18,
+            "high": 1070
+        },
+        {
+            "variant": "holo",
+            "low": 1,
+            "market": 17,
+            "high": 914
+        }
+    ],
+    "693474": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 26,
+            "high": 833
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 10,
+            "high": 641
+        }
+    ],
+    "693475": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 13,
+            "high": 158
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 3,
+            "market": 23,
+            "high": 2000
+        }
+    ],
+    "693476": [
+        {
+            "variant": "reverse_holo",
+            "low": 3,
+            "market": 21,
+            "high": 839
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 8,
+            "high": 1500
+        }
+    ],
+    "693477": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 12,
+            "high": 165
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 2,
+            "market": 27,
+            "high": 837
+        }
+    ],
+    "693478": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 9,
+            "high": 765
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 4,
+            "market": 24,
+            "high": 784
+        }
+    ],
+    "693479": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 11,
+            "high": 775
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 18,
+            "high": 316
+        }
+    ],
+    "693480": [
+        {
+            "variant": "holo",
+            "low": 449,
+            "market": 522,
+            "high": 1999
+        }
+    ],
+    "693481": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 5,
+            "high": 595
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 20,
+            "high": 532
+        }
+    ],
+    "693482": [
+        {
+            "variant": "holo",
+            "low": 200,
+            "market": 323,
+            "high": 5000
+        }
+    ],
+    "693483": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 20,
+            "high": 544
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 11,
+            "high": 597
+        }
+    ],
+    "693484": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 17,
+            "high": 1193
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 7,
+            "high": 165
+        }
+    ],
+    "693485": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 7,
+            "high": 772
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 10,
+            "high": 784
+        }
+    ],
+    "693486": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 14,
+            "high": 785
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 6,
+            "high": 772
+        }
+    ],
+    "693487": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 11,
+            "high": 595
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 17,
+            "high": 153
+        }
+    ],
+    "693488": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 8,
+            "high": 235
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 23,
+            "high": 337
+        }
+    ],
+    "693489": [
+        {
+            "variant": "holo",
+            "low": 1600,
+            "market": 1735,
+            "high": 24999
+        }
+    ],
+    "693490": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 11,
+            "high": 1200
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 5,
+            "market": 52,
+            "high": 873
+        }
+    ],
+    "693491": [
+        {
+            "variant": "holo",
+            "low": 1071,
+            "market": 1476,
+            "high": 432100
+        }
+    ],
+    "693492": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 6,
+            "high": 1900
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 20,
+            "high": 784
+        }
+    ],
+    "693493": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 8,
+            "high": 772
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 20,
+            "high": 782
+        }
+    ],
+    "693494": [
+        {
+            "variant": "reverse_holo",
+            "low": 3,
+            "market": 19,
+            "high": 605
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 6,
+            "high": 598
+        }
+    ],
+    "693495": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 22,
+            "high": 2073
+        },
+        {
+            "variant": "holo",
+            "low": 1,
+            "market": 11,
+            "high": 1560
+        }
+    ],
+    "693496": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 7,
+            "high": 670
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 12,
+            "high": 181
+        }
+    ],
+    "693497": [
+        {
+            "variant": "holo",
+            "low": 5,
+            "market": 59,
+            "high": 499
+        }
+    ],
+    "693498": [
+        {
+            "variant": "holo",
+            "low": 98,
+            "market": 212,
+            "high": 5000
+        }
+    ],
+    "693499": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 17,
+            "high": 245
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 24,
+            "high": 2331
+        }
+    ],
+    "693500": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 23,
+            "high": 1572
+        },
+        {
+            "variant": "holo",
+            "low": 1,
+            "market": 17,
+            "high": 1187
+        }
+    ],
+    "693501": [
+        {
+            "variant": "holo",
+            "low": 398,
+            "market": 493,
+            "high": 6946
+        }
+    ],
+    "693502": [
+        {
+            "variant": "reverse_holo",
+            "low": 2,
+            "market": 24,
+            "high": 153
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 9,
+            "high": 204
+        }
+    ],
+    "693503": [
+        {
+            "variant": "holo",
+            "low": 1,
+            "market": 9,
+            "high": 1208
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 20,
+            "high": 1595
+        }
+    ],
+    "693504": [
+        {
+            "variant": "holo",
+            "low": 10,
+            "market": 52,
+            "high": 2000
+        }
+    ],
+    "693505": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 10,
+            "high": 590
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 8,
+            "high": 605
+        }
+    ],
+    "693506": [
+        {
+            "variant": "holo",
+            "low": 1,
+            "market": 18,
+            "high": 927
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 16,
+            "high": 600
+        }
+    ],
+    "693507": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 16,
+            "high": 180
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 11,
+            "high": 590
+        }
+    ],
+    "693508": [
+        {
+            "variant": "holo",
+            "low": 5,
+            "market": 90,
+            "high": 6500
+        }
+    ],
+    "693509": [
+        {
+            "variant": "holo",
+            "low": 394,
+            "market": 585,
+            "high": 4999
+        }
+    ],
+    "693510": [
+        {
+            "variant": "holo",
+            "low": 6158,
+            "market": 6248,
+            "high": 49999
+        }
+    ],
+    "693511": [
+        {
+            "variant": "holo",
+            "low": 18,
+            "market": 72,
+            "high": 1999
+        }
+    ],
+    "693512": [
+        {
+            "variant": "holo",
+            "low": 500,
+            "market": 692,
+            "high": 2000
+        }
+    ],
+    "693513": [
+        {
+            "variant": "holo",
+            "low": 4919,
+            "market": 5167,
+            "high": 432100
+        }
+    ],
+    "693514": [
+        {
+            "variant": "holo",
+            "low": 10,
+            "market": 59,
+            "high": 432100
+        }
+    ],
+    "693515": [
+        {
+            "variant": "holo",
+            "low": 121,
+            "market": 236,
+            "high": 1999
+        }
+    ],
+    "693516": [
+        {
+            "variant": "holo",
+            "low": 2395,
+            "market": 2498,
+            "high": 432100
+        }
+    ],
+    "693517": [
+        {
+            "variant": "holo",
+            "low": 36990,
+            "market": 34481,
+            "high": 124999
+        }
+    ],
+    "693518": [
+        {
+            "variant": "holo",
+            "low": 26995,
+            "market": 29899,
+            "high": 100000
+        }
+    ],
+    "693519": [
+        {
+            "variant": "holo",
+            "low": 10,
+            "market": 61,
+            "high": 432100
+        }
+    ],
+    "693520": [
+        {
+            "variant": "holo",
+            "low": 371,
+            "market": 483,
+            "high": 1999
+        }
+    ],
+    "693521": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 18,
+            "high": 561
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 6,
+            "high": 1000
+        }
+    ],
+    "693522": [
+        {
+            "variant": "reverse_holo",
+            "low": 3,
+            "market": 27,
+            "high": 399
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 16,
+            "high": 498
+        }
+    ],
+    "693523": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 4,
+            "high": 772
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 17,
+            "high": 287
+        }
+    ],
+    "693524": [
+        {
+            "variant": "holo",
+            "low": 399,
+            "market": 498,
+            "high": 5000
+        }
+    ],
+    "693525": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 11,
+            "high": 772
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 24,
+            "high": 2500
+        }
+    ],
+    "693526": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 32,
+            "high": 1098
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 6,
+            "high": 449
+        }
+    ],
+    "693527": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 22,
+            "high": 2500
+        },
+        {
+            "variant": "holo",
+            "low": 1,
+            "market": 16,
+            "high": 956
+        }
+    ],
+    "693528": [
+        {
+            "variant": "reverse_holo",
+            "low": 2,
+            "market": 22,
+            "high": 2500
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 15,
+            "high": 2500
+        }
+    ],
+    "693529": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 15,
+            "high": 206
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 10,
+            "high": 678
+        }
+    ],
+    "693530": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 22,
+            "high": 156
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 10,
+            "high": 770
+        }
+    ],
+    "693531": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 26,
+            "high": 4800
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 8,
+            "high": 590
+        }
+    ],
+    "693532": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 23,
+            "high": 349
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 10,
+            "high": 464
+        }
+    ],
+    "693533": [
+        {
+            "variant": "holo",
+            "low": 191,
+            "market": 272,
+            "high": 1999
+        }
+    ],
+    "693534": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 18,
+            "high": 502
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 24,
+            "high": 350
+        }
+    ],
+    "693535": [
+        {
+            "variant": "holo",
+            "low": 150,
+            "market": 307,
+            "high": 4000
+        }
+    ],
+    "693536": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 19,
+            "high": 386
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 3,
+            "market": 21,
+            "high": 153
+        }
+    ],
+    "693537": [
+        {
+            "variant": "reverse_holo",
+            "low": 2,
+            "market": 27,
+            "high": 194
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 14,
+            "high": 464
+        }
+    ],
+    "693538": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 12,
+            "high": 767
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 27,
+            "high": 782
+        }
+    ],
+    "693539": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 12,
+            "high": 158
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 10,
+            "high": 595
+        }
+    ],
+    "693540": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 9,
+            "high": 780
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 3,
+            "market": 24,
+            "high": 2103
+        }
+    ],
+    "693541": [
+        {
+            "variant": "holo",
+            "low": 300,
+            "market": 385,
+            "high": 2000
+        }
+    ],
+    "693542": [
+        {
+            "variant": "holo",
+            "low": 3453,
+            "market": 3595,
+            "high": 9599
+        }
+    ],
+    "693543": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 13,
+            "high": 493
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 5,
+            "market": 23,
+            "high": 1900
+        }
+    ],
+    "693544": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 7,
+            "high": 770
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 19,
+            "high": 791
+        }
+    ],
+    "693545": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 21,
+            "high": 784
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 9,
+            "high": 772
+        }
+    ],
+    "693546": [
+        {
+            "variant": "holo",
+            "low": 383,
+            "market": 483,
+            "high": 432100
+        }
+    ],
+    "693547": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 19,
+            "high": 3900
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 96,
+            "high": 4000
+        }
+    ],
+    "693548": [
+        {
+            "variant": "holo",
+            "low": 784,
+            "market": 826,
+            "high": 3500
+        }
+    ],
+    "693549": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 22,
+            "high": 785
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 9,
+            "high": 774
+        }
+    ],
+    "693550": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 5,
+            "high": 768
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 2,
+            "market": 18,
+            "high": 787
+        }
+    ],
+    "693551": [
+        {
+            "variant": "holo",
+            "low": 750,
+            "market": 924,
+            "high": 432100
+        }
+    ],
+    "693552": [
+        {
+            "variant": "reverse_holo",
+            "low": 2,
+            "market": 17,
+            "high": 785
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 6,
+            "high": 165
+        }
+    ],
+    "693553": [
+        {
+            "variant": "holo",
+            "low": 499,
+            "market": 621,
+            "high": 5500
+        }
+    ],
+    "693554": [
+        {
+            "variant": "holo",
+            "low": 100,
+            "market": 219,
+            "high": 2200
+        }
+    ],
+    "693555": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 8,
+            "high": 2000
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 25,
+            "high": 806
+        }
+    ],
+    "693556": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 19,
+            "high": 2075
+        },
+        {
+            "variant": "holo",
+            "low": 1,
+            "market": 12,
+            "high": 1559
+        }
+    ],
+    "693557": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 9,
+            "high": 765
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 21,
+            "high": 784
+        }
+    ],
+    "693558": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 15,
+            "high": 2100
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 22,
+            "high": 194
+        }
+    ],
+    "693559": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 20,
+            "high": 784
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 12,
+            "high": 767
+        }
+    ],
+    "693560": [
+        {
+            "variant": "holo",
+            "low": 175,
+            "market": 250,
+            "high": 432100
+        }
+    ],
+    "693561": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 22,
+            "high": 222
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 8,
+            "high": 500
+        }
+    ],
+    "693562": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 10,
+            "high": 592
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 13,
+            "high": 605
+        }
+    ],
+    "693563": [
+        {
+            "variant": "holo",
+            "low": 1,
+            "market": 14,
+            "high": 1142
+        },
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 18,
+            "high": 2094
+        }
+    ],
+    "693564": [
+        {
+            "variant": "holo",
+            "low": 1400,
+            "market": 1488,
+            "high": 5500
+        }
+    ],
+    "693565": [
+        {
+            "variant": "reverse_holo",
+            "low": 1,
+            "market": 16,
+            "high": 784
+        },
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 8,
+            "high": 775
+        }
+    ],
+    "695118": [
+        {
+            "variant": "normal",
+            "low": 58995,
+            "market": 59993,
+            "high": 59993
+        }
+    ],
+    "695312": [
+        {
+            "variant": "normal",
+            "low": 100,
+            "market": 96,
+            "high": 110
+        }
+    ],
+    "695313": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 3,
+            "high": 99
+        }
+    ],
+    "695397": [
+        {
+            "variant": "normal",
+            "low": 15,
+            "market": 19,
+            "high": 40
+        }
+    ],
+    "695398": [
+        {
+            "variant": "normal",
+            "low": 1,
+            "market": 10,
+            "high": 40
+        }
+    ],
+    "695399": [
+        {
+            "variant": "normal",
+            "low": 3,
+            "market": 3,
+            "high": 3
+        }
+    ],
+    "696144": [
+        {
+            "variant": "normal",
+            "low": 1899,
+            "market": 2763,
+            "high": 3500
+        }
+    ],
+    "696150": [
+        {
+            "variant": "normal",
+            "low": 1399,
+            "market": 1886,
+            "high": 2300
+        }
+    ]
+}

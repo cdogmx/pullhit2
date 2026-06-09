@@ -13,11 +13,14 @@ class ShowCatalogItem
 {
     public function __invoke(CatalogItem $item): CatalogItem
     {
-        $item->load(['vertical', 'productLine', 'set']);
+        // All priced states for this item (raw + graded), with grading company.
+        $item->load(['vertical', 'productLine', 'set', 'marketValues.gradingCompany']);
 
+        // Sibling printings, each with its headline value for the printings list.
         $item->setRelation(
             'variants',
             $item->variants()
+                ->with('defaultMarketValue')
                 ->orderBy('number')
                 ->orderBy('id')
                 ->get(),

@@ -1,6 +1,8 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
+import { PriceTag } from '@/components/catalog/price-tag';
 import { Badge } from '@/components/ui/badge';
+import { confidenceVariant, formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CatalogItem } from '@/types';
 
@@ -23,6 +25,10 @@ const DETAIL_FACETS: { key: string; label: string }[] = [
 export default function Show({ item: { data: item } }: Props) {
     const attributes = item.attributes ?? {};
     const printings = item.variants ?? [];
+    const values = item.market_values ?? [];
+    const headline =
+        values.find((v) => v.state_key === 'NM' || v.state_key === 'SEALED') ??
+        values[0];
 
     // The browse query we came from (search/filters/page), threaded via ?return=.
     const returnSearch =
@@ -100,15 +106,55 @@ export default function Show({ item: { data: item } }: Props) {
                             )}
                         </div>
 
-                        {/* Price slot — populated by the valuation engine (Phase 3). */}
-                        <div className="mt-6 rounded-lg border border-dashed border-border p-4">
-                            <p className="text-xs font-medium text-muted-foreground">
-                                Market value
-                            </p>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                Pricing &amp; confidence coming soon.
-                            </p>
-                        </div>
+                        {/* Market value (read from market_values; never computed live). */}
+                        {headline ? (
+                            <div className="mt-6 rounded-lg border border-border p-4">
+                                <p className="mb-2 text-xs font-medium text-muted-foreground">
+                                    Market value · {headline.label}
+                                </p>
+                                <PriceTag value={headline} variant="full" />
+
+                                {values.length > 1 && (
+                                    <div className="mt-4 space-y-1.5 border-t border-border pt-3">
+                                        {values.map((mv) => (
+                                            <div
+                                                key={mv.state_key}
+                                                className="flex items-center justify-between text-sm"
+                                            >
+                                                <span className="text-muted-foreground">
+                                                    {mv.label}
+                                                </span>
+                                                <span className="flex items-center gap-2">
+                                                    <span className="font-medium">
+                                                        {formatMoney(
+                                                            mv.median,
+                                                            mv.currency,
+                                                        )}
+                                                    </span>
+                                                    <Badge
+                                                        variant={confidenceVariant(
+                                                            mv.confidence_label,
+                                                        )}
+                                                        className="text-[10px]"
+                                                    >
+                                                        {mv.confidence_label}
+                                                    </Badge>
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="mt-6 rounded-lg border border-dashed border-border p-4">
+                                <p className="text-xs font-medium text-muted-foreground">
+                                    Market value
+                                </p>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    No market data yet.
+                                </p>
+                            </div>
+                        )}
 
                         {/* Facet details */}
                         {facetRows.length > 0 && (
@@ -173,6 +219,16 @@ export default function Show({ item: { data: item } }: Props) {
                                                     : ''}
                                             </p>
                                         </div>
+                                        {printing.market_value && (
+                                            <span className="text-sm font-medium">
+                                                {formatMoney(
+                                                    printing.market_value
+                                                        .median,
+                                                    printing.market_value
+                                                        .currency,
+                                                )}
+                                            </span>
+                                        )}
                                         {isCurrent && (
                                             <Badge
                                                 variant="outline"

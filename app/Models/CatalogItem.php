@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * The value-bearing unit — generic across all verticals (§4.1). Vertical-specific
@@ -71,6 +72,36 @@ class CatalogItem extends Model
     public function variants(): HasMany
     {
         return $this->hasMany(self::class, 'base_key', 'base_key');
+    }
+
+    /** @return HasMany<SaleObservation, $this> */
+    public function saleObservations(): HasMany
+    {
+        return $this->hasMany(SaleObservation::class);
+    }
+
+    /**
+     * Every computed priced state (raw conditions + graded company/grade).
+     *
+     * @return HasMany<MarketValue, $this>
+     */
+    public function marketValues(): HasMany
+    {
+        return $this->hasMany(MarketValue::class);
+    }
+
+    /**
+     * The headline ungraded value for list display — near-mint single, or the
+     * sealed value for sealed product. Null when no observations exist.
+     *
+     * @return HasOne<MarketValue, $this>
+     */
+    public function defaultMarketValue(): HasOne
+    {
+        return $this->hasOne(MarketValue::class)
+            ->whereNull('grading_company_id')
+            ->orderByRaw("CASE WHEN state_key IN ('NM', 'SEALED') THEN 0 ELSE 1 END")
+            ->orderBy('id');
     }
 
     /**

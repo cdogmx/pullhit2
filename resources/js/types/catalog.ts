@@ -11,9 +11,31 @@ export type CatalogItem = {
     variants_count?: number;
     attributes?: Record<string, string | number | null>;
     variants?: CatalogItem[];
+    market_value?: MarketValue | null;
+    market_values?: MarketValue[];
     set?: { slug: string; name: string; code: string | null } | null;
     product_line?: { slug: string; name: string } | null;
     vertical?: { slug: string; name: string } | null;
+};
+
+export type MarketValue = {
+    state_key: string;
+    label: string;
+    condition: string | null;
+    grade: number | null;
+    grading_company?: { slug: string; name: string } | null;
+    /** Money fields are integer minor units (cents). */
+    median: number;
+    p25: number;
+    p75: number;
+    low: number;
+    high: number;
+    n_sales: number;
+    confidence: number;
+    confidence_label: string;
+    trend_30d: number | null;
+    currency: string;
+    computed_at: string | null;
 };
 
 export type CatalogFilterOptions = {

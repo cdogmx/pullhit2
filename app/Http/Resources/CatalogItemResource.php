@@ -34,6 +34,15 @@ class CatalogItemResource extends JsonResource
             'variants_count' => $this->whenCounted('variants'),
             // The card's printings (detail view); each is a lightweight sibling.
             'variants' => CatalogItemResource::collection($this->whenLoaded('variants')),
+            // Headline ungraded value for lists (null when no comps).
+            'market_value' => $this->whenLoaded(
+                'defaultMarketValue',
+                fn () => $this->defaultMarketValue
+                    ? new MarketValueResource($this->defaultMarketValue)
+                    : null,
+            ),
+            // Every priced state (raw + graded) for the detail page.
+            'market_values' => MarketValueResource::collection($this->whenLoaded('marketValues')),
             'set' => $this->whenLoaded('set', fn () => [
                 'slug' => $this->set->slug,
                 'name' => $this->set->name,

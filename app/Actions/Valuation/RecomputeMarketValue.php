@@ -1,0 +1,110 @@
+<?php
+
+namespace App\Actions\Valuation;
+
+use App\Models\CatalogItem;
+use App\Models\GradingCompany;
+use App\Models\MarketValue;
+use App\Models\SaleObservation;
+use App\Support\Valuation\Observation;
+use App\Support\Valuation\ValuationEngine;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
+
+/**
+ * Recompute the market_values row for ONE priced state of a catalog item:
+ * pull its observations within the lookback window, run the engine, flag
+ * outliers, and upsert the snapshot. Reads come only from market_values (§13).
+ */
+class RecomputeMarketValue
+{
+    public function __construct(
+        protected ValuationEngine $engine,
+    ) {}
+
+    public function __invoke(
+        CatalogItem $item,
+        ?string $condition,
+        ?int $gradingCompanyId,
+        ?float $grade,
+    ): ?MarketValue {
+        $cutoff = Carbon::now()->subDays((int) config('valuation.lookback_days'));
+
+        $rows = $this->stateQuery($item, $condition, $gradingCompanyId, $grade)
+            ->where('observed_at', '>=', $cutoff)
+            ->get();
+
+        $observations = $rows->map(fn ($o) => new Observation(
+            priceCents: $o->price,
+            venue: $o->venue->value,
+            observedAt: $o->observed_at,
+            key: $o->id,
+        ))->all();
+
+        $result = $this->engine->value($observations);
+
+        $stateKey = $this->stateKey($condition, $gradingCompanyId, $grade);
+
+        if ($result === null) {
+            // No usable data — drop any stale snapshot for this state.
+            $item->marketValues()->where('state_key', $stateKey)->delete();
+
+            return null;
+        }
+
+        // Persist outlier flags (current computation) for this state.
+        $outlierIds = array_filter($result->outlierKeys);
+        $this->stateQuery($item, $condition, $gradingCompanyId, $grade)
+            ->update(['is_outlier' => false]);
+        if ($outlierIds !== []) {
+            $item->saleObservations()->whereIn('id', $outlierIds)->update(['is_outlier' => true]);
+        }
+
+        return MarketValue::updateOrCreate(
+            ['catalog_item_id' => $item->id, 'state_key' => $stateKey],
+            [
+                'condition' => $condition,
+                'grading_company_id' => $gradingCompanyId,
+                'grade' => $grade,
+                'median' => $result->median,
+                'p25' => $result->p25,
+                'p75' => $result->p75,
+                'low' => $result->low,
+                'high' => $result->high,
+                'n_sales' => $result->nSales,
+                'confidence' => $result->confidence,
+                'half_life_days' => $result->halfLifeDays,
+                'trend_30d' => $result->trend30d,
+                'trend_90d' => $result->trend90d,
+                'currency' => $rows->first()->currency ?? 'USD',
+                'computed_at' => Carbon::now(),
+            ],
+        );
+    }
+
+    /**
+     * @return HasMany<SaleObservation, CatalogItem>
+     */
+    protected function stateQuery(CatalogItem $item, ?string $condition, ?int $gradingCompanyId, ?float $grade)
+    {
+        $query = $item->saleObservations();
+
+        $condition === null ? $query->whereNull('condition') : $query->where('condition', $condition);
+        $gradingCompanyId === null ? $query->whereNull('grading_company_id') : $query->where('grading_company_id', $gradingCompanyId);
+        $grade === null ? $query->whereNull('grade') : $query->where('grade', $grade);
+
+        return $query;
+    }
+
+    protected function stateKey(?string $condition, ?int $gradingCompanyId, ?float $grade): string
+    {
+        if ($gradingCompanyId !== null) {
+            $slug = GradingCompany::whereKey($gradingCompanyId)->value('slug') ?? "company{$gradingCompanyId}";
+            $g = $grade !== null ? rtrim(rtrim(sprintf('%.1f', $grade), '0'), '.') : '?';
+
+            return "{$slug}-{$g}";
+        }
+
+        return $condition ?? 'raw';
+    }
+}

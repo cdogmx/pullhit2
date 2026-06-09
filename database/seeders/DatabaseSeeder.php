@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             GradingCompaniesSeeder::class,
             PokemonCatalogSeeder::class,
             ChaosRisingSeeder::class,
+            SyntheticObservationsSeeder::class,
         ]);
 
         // User::factory(10)->create();

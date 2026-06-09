@@ -15,7 +15,7 @@ export default function AppSidebarLayout({
             {/* Bottom padding clears the fixed mobile tab bar (hidden ≥ lg). */}
             <AppContent
                 variant="sidebar"
-                className="bg-diagonal overflow-x-hidden pb-20 lg:pb-0"
+                className="overflow-x-hidden bg-diagonal pb-20 lg:pb-0"
             >
                 <AppSidebarHeader breadcrumbs={breadcrumbs} />
                 {children}

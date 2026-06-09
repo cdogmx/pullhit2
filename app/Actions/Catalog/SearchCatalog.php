@@ -27,7 +27,7 @@ class SearchCatalog
      */
     public function __invoke(array $filters): LengthAwarePaginator
     {
-        $query = CatalogItem::query()->with(['vertical', 'productLine', 'set']);
+        $query = CatalogItem::query()->with(['vertical', 'productLine', 'set', 'defaultMarketValue']);
 
         $this->applySearch($query, $filters['q'] ?? null);
         $this->applyFilters($query, $filters);

@@ -9,6 +9,7 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { PriceTag } from '@/components/catalog/price-tag';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -594,6 +595,7 @@ function CardTile({ item, returnTo }: { item: CatalogItem; returnTo: string }) {
                     {item.set?.code ?? item.set?.name}
                     {item.number ? ` · ${item.number}` : ''}
                 </p>
+                {item.market_value && <PriceTag value={item.market_value} />}
                 <VariantBadges item={item} />
             </div>
         </Link>
@@ -620,6 +622,9 @@ function ListRow({ item, returnTo }: { item: CatalogItem; returnTo: string }) {
                     <VariantBadges item={item} />
                 </div>
             </div>
+            {item.market_value && (
+                <PriceTag value={item.market_value} className="shrink-0" />
+            )}
         </Link>
     );
 }
