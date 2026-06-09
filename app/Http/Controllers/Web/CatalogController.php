@@ -34,6 +34,8 @@ class CatalogController extends Controller
 
     public function show(CatalogItem $catalogItem, ShowCatalogItem $show): Response
     {
+        // The resource wraps under `data` (consistent with the API + the browse
+        // collection); the page reads props.item.data.
         return Inertia::render('catalog/show', [
             'item' => new CatalogItemResource($show($catalogItem)),
         ]);

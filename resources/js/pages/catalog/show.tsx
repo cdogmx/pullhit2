@@ -4,10 +4,10 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { CatalogItem } from '@/types';
 
-type Props = { item: CatalogItem };
+type Props = { item: { data: CatalogItem } };
 
-const humanize = (value: string): string =>
-    value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+const humanize = (value?: string | null): string =>
+    (value ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 /** Facet keys surfaced as labelled detail rows, in display order. */
 const DETAIL_FACETS: { key: string; label: string }[] = [
@@ -20,7 +20,7 @@ const DETAIL_FACETS: { key: string; label: string }[] = [
     { key: 'pack_count', label: 'Packs' },
 ];
 
-export default function Show({ item }: Props) {
+export default function Show({ item: { data: item } }: Props) {
     const attributes = item.attributes ?? {};
     const printings = item.variants ?? [];
 
