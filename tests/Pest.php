@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 /*
@@ -47,4 +48,43 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/** A tiny real JPEG (base64) so vision/cropper tests run against actual image bytes. */
+function tinyJpeg(int $w = 120, int $h = 168): string
+{
+    $im = imagecreatetruecolor($w, $h);
+    ob_start();
+    imagejpeg($im);
+    $data = (string) ob_get_clean();
+    imagedestroy($im);
+
+    return base64_encode($data);
+}
+
+/** Faked Anthropic responses: detect → two boxes, identify → a fixed card. */
+function fakeAnthropic(array $identify = []): Closure
+{
+    $identify = array_merge([
+        'name' => 'Pikachu ex', 'number' => '276/217', 'set_name' => 'Chaos Rising',
+        'language' => 'en', 'is_graded' => false, 'confidence' => 0.9,
+    ], $identify);
+
+    return function ($request) use ($identify) {
+        $tool = $request->data()['tools'][0]['name'] ?? '';
+
+        if ($tool === 'record_detected_cards') {
+            return Http::response(['content' => [[
+                'type' => 'tool_use', 'name' => 'record_detected_cards',
+                'input' => ['cards' => [
+                    ['box' => ['x' => 0.0, 'y' => 0.0, 'width' => 0.5, 'height' => 1.0]],
+                    ['box' => ['x' => 0.5, 'y' => 0.0, 'width' => 0.5, 'height' => 1.0]],
+                ]],
+            ]]], 200);
+        }
+
+        return Http::response(['content' => [[
+            'type' => 'tool_use', 'name' => 'record_card', 'input' => $identify,
+        ]]], 200);
+    };
 }

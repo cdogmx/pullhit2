@@ -25,4 +25,20 @@ return [
         'premium' => ['name' => 'Premium'],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Admin emails
+    |--------------------------------------------------------------------------
+    |
+    | Users with these emails are auto-promoted to admin on sign-up (and can be
+    | promoted after the fact with `php artisan users:make-admin`). Admins bypass
+    | every entitlement gate and have an unlimited scan quota.
+    |
+    */
+
+    'admins' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('ADMIN_EMAILS', 'clint.r.chaney@gmail.com')),
+    ))),
+
 ];

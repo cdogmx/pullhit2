@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Support\Scanning\IdentifierStrategy;
+use App\Support\Scanning\PokemonIdentifierStrategy;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +17,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // The TCG vertical is the only scan identifier today (§3 seam).
+        $this->app->bind(IdentifierStrategy::class, PokemonIdentifierStrategy::class);
     }
 
     /**

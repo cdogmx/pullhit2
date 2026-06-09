@@ -29,14 +29,27 @@ class Entitlements
         return $this->user->isPremium();
     }
 
-    /** Monthly scan allowance (cards identified) for this user's tier. */
+    public function isAdmin(): bool
+    {
+        return $this->user->isAdmin();
+    }
+
+    /** Monthly scan allowance (cards identified). Admins are unlimited. */
     public function scanCap(): int
     {
+        if ($this->isAdmin()) {
+            return PHP_INT_MAX;
+        }
+
         return (int) config("membership.scan_caps.{$this->tier()->value}", 0);
     }
 
     public function can(string $feature): bool
     {
+        if ($this->isAdmin()) {
+            return true; // admins have unlimited access to all features
+        }
+
         return match ($feature) {
             // Always-free in Phase 4a.
             'collection', 'portfolio' => true,

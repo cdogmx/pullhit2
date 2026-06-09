@@ -42,4 +42,12 @@ return [
         'endpoint' => env('OXYLABS_ENDPOINT', 'https://realtime.oxylabs.io/v1/queries'),
     ],
 
+    // Anthropic Messages API — Claude vision for card scanning (Phase 4b).
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'endpoint' => env('ANTHROPIC_ENDPOINT', 'https://api.anthropic.com/v1/messages'),
+        'version' => env('ANTHROPIC_VERSION', '2023-06-01'),
+        'model' => env('SCAN_MODEL', 'claude-sonnet-4-6'),
+    ],
+
 ];

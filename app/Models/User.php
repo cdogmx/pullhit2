@@ -31,6 +31,7 @@ class User extends Authenticatable implements PasskeyUser
      */
     protected $attributes = [
         'membership_tier' => 'free',
+        'is_admin' => false,
     ];
 
     /**
@@ -45,17 +46,40 @@ class User extends Authenticatable implements PasskeyUser
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'membership_tier' => MembershipTier::class,
+            'is_admin' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Configured operator emails become admins automatically on sign-up.
+        static::creating(function (User $user) {
+            $admins = (array) config('membership.admins', []);
+            if ($user->email && in_array(strtolower($user->email), array_map('strtolower', $admins), true)) {
+                $user->is_admin = true;
+            }
+        });
     }
 
     public function isPremium(): bool
     {
-        return $this->membership_tier === MembershipTier::Premium;
+        return $this->is_admin || $this->membership_tier === MembershipTier::Premium;
+    }
+
+    public function isAdmin(): bool
+    {
+        return (bool) $this->is_admin;
     }
 
     /** @return HasMany<CollectionItem, $this> */
     public function collectionItems(): HasMany
     {
         return $this->hasMany(CollectionItem::class);
+    }
+
+    /** @return HasMany<ScanUsage, $this> */
+    public function scanUsages(): HasMany
+    {
+        return $this->hasMany(ScanUsage::class);
     }
 }

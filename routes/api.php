@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\CollectionController;
 use App\Http\Controllers\Api\V1\PingController;
+use App\Http\Controllers\Api\V1\ScanController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -37,5 +38,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('collection', [CollectionController::class, 'store'])->name('collection.store');
         Route::patch('collection/{collectionItem}', [CollectionController::class, 'update'])->name('collection.update');
         Route::delete('collection/{collectionItem}', [CollectionController::class, 'destroy'])->name('collection.destroy');
+
+        // Card scanner (Claude vision).
+        Route::post('scan', [ScanController::class, 'scan'])->name('scan.scan');
     });
 });
