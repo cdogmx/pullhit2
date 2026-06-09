@@ -176,3 +176,17 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Very faded diagonal hairline texture for page backgrounds. Adapts to the
+   theme via --foreground (dark lines on light, light lines on dark); opaque
+   surfaces (cards, header, footer, sidebar) sit on top. */
+@utility bg-diagonal {
+    background-image: repeating-linear-gradient(
+        -45deg,
+        color-mix(in oklch, var(--foreground) 4%, transparent) 0,
+        color-mix(in oklch, var(--foreground) 4%, transparent) 1px,
+        transparent 1px,
+        transparent 11px
+    );
+    background-attachment: fixed;
+}

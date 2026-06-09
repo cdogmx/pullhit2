@@ -14,7 +14,7 @@ export default function AppShellLayout({ children }: { children: ReactNode }) {
         <div className="flex min-h-svh flex-col bg-background text-foreground">
             <SiteHeader />
             {/* Bottom padding clears the fixed mobile tab bar (hidden ≥ lg). */}
-            <main className="flex-1 pb-20 lg:pb-0">{children}</main>
+            <main className="bg-diagonal flex-1 pb-20 lg:pb-0">{children}</main>
             <SiteFooter />
             <MobileTabBar />
         </div>
