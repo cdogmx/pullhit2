@@ -1,7 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, BarChart3 } from 'lucide-react';
+import { useState } from 'react';
+import { PriceBreakdownDrawer } from '@/components/catalog/price-breakdown-drawer';
 import { PriceTag } from '@/components/catalog/price-tag';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { confidenceVariant, formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CatalogItem } from '@/types';
@@ -29,6 +32,11 @@ export default function Show({ item: { data: item } }: Props) {
     const headline =
         values.find((v) => v.state_key === 'NM' || v.state_key === 'SEALED') ??
         values[0];
+
+    const [breakdown, setBreakdown] = useState<{
+        stateKey: string;
+        label: string;
+    } | null>(null);
 
     // The browse query we came from (search/filters/page), threaded via ?return=.
     const returnSearch =
@@ -114,12 +122,34 @@ export default function Show({ item: { data: item } }: Props) {
                                 </p>
                                 <PriceTag value={headline} variant="full" />
 
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-3"
+                                    onClick={() =>
+                                        setBreakdown({
+                                            stateKey: headline.state_key,
+                                            label: headline.label,
+                                        })
+                                    }
+                                >
+                                    <BarChart3 className="size-4" />
+                                    View breakdown
+                                </Button>
+
                                 {values.length > 1 && (
-                                    <div className="mt-4 space-y-1.5 border-t border-border pt-3">
+                                    <div className="mt-4 space-y-0.5 border-t border-border pt-3">
                                         {values.map((mv) => (
-                                            <div
+                                            <button
                                                 key={mv.state_key}
-                                                className="flex items-center justify-between text-sm"
+                                                type="button"
+                                                onClick={() =>
+                                                    setBreakdown({
+                                                        stateKey: mv.state_key,
+                                                        label: mv.label,
+                                                    })
+                                                }
+                                                className="flex w-full items-center justify-between rounded-md px-1 py-1.5 text-sm transition-colors hover:bg-accent/50"
                                             >
                                                 <span className="text-muted-foreground">
                                                     {mv.label}
@@ -140,7 +170,7 @@ export default function Show({ item: { data: item } }: Props) {
                                                         {mv.confidence_label}
                                                     </Badge>
                                                 </span>
-                                            </div>
+                                            </button>
                                         ))}
                                     </div>
                                 )}
@@ -244,6 +274,14 @@ export default function Show({ item: { data: item } }: Props) {
                     </section>
                 )}
             </div>
+
+            <PriceBreakdownDrawer
+                itemId={item.id}
+                stateKey={breakdown?.stateKey ?? null}
+                label={breakdown?.label ?? null}
+                open={breakdown !== null}
+                onOpenChange={(o) => !o && setBreakdown(null)}
+            />
         </>
     );
 }

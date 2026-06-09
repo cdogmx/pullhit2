@@ -24,6 +24,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
     // Public catalog browse/search.
     Route::get('catalog', [CatalogController::class, 'index'])->name('catalog.index');
+    Route::get('catalog/{catalogItem}/observations', [CatalogController::class, 'observations'])->name('catalog.observations');
     Route::get('catalog/{catalogItem}', [CatalogController::class, 'show'])->name('catalog.show');
 
     // Token-protected probe — confirms Sanctum bearer auth.

@@ -34,6 +34,7 @@ export type MarketValue = {
     confidence: number;
     confidence_label: string;
     is_estimated: boolean;
+    half_life_days: number;
     trend_30d: number | null;
     currency: string;
     computed_at: string | null;
@@ -63,6 +64,24 @@ export type CatalogFilters = {
     group: boolean;
     view: 'grid' | 'list';
     per_page: number;
+};
+
+export type SaleObservation = {
+    price: number;
+    currency: string;
+    venue: string;
+    observed_at: string | null;
+    sold_on: string | null;
+    title: string | null;
+    url: string | null;
+    is_outlier: boolean;
+    is_synthetic: boolean;
+};
+
+export type PriceBreakdown = {
+    value: MarketValue | null;
+    observations: SaleObservation[];
+    sources: Record<string, number>;
 };
 
 export type PaginationLink = {

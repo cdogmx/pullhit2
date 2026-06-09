@@ -23,4 +23,7 @@ test('it parses listings, skips the promo card, and strips the New Listing label
 
     expect($cands[1]->title)->toContain('PSA 10')
         ->and($cands[1]->priceCents)->toBe(380000);
+
+    // Each candidate carries a clean, tracking-free listing URL.
+    expect($cands[0]->url)->toBe('https://www.ebay.com/itm/355111222333');
 });

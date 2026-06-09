@@ -14,5 +14,6 @@ readonly class SoldCandidate
         public int $priceCents,
         public ?CarbonImmutable $soldAt,
         public ?string $itemId,
+        public ?string $url = null,
     ) {}
 }

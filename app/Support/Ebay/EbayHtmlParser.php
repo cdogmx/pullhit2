@@ -48,6 +48,9 @@ final class EbayHtmlParser
                 continue;
             }
 
+            // Canonical, tracking-free listing URL.
+            $url = "https://www.ebay.com/itm/{$idMatch[1]}";
+
             // Window from this card's link to the next card's link.
             $start = $m[0][$i][1];
             $end = $i + 1 < $count ? $m[0][$i + 1][1] : strlen($html);
@@ -71,7 +74,7 @@ final class EbayHtmlParser
                 }
             }
 
-            $out[] = new SoldCandidate($title, $priceCents, $soldAt, $idMatch[1]);
+            $out[] = new SoldCandidate($title, $priceCents, $soldAt, $idMatch[1], $url);
         }
 
         return $out;

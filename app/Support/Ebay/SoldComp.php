@@ -20,5 +20,6 @@ readonly class SoldComp
         public ?string $gradeLabel,
         public string $sourceListingId,
         public string $title,
+        public ?string $url = null,
     ) {}
 }
