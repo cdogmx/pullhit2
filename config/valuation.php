@@ -30,4 +30,30 @@ return [
         'recency_tau_days' => 30,    // exp(-days_since_newest / tau)
         'full_velocity_days' => 14,  // a sale at least this often => no velocity penalty
     ],
+
+    // Real eBay sold-comp ingestion via Oxylabs. Lazy + cost-capped.
+    'ebay' => [
+        'enabled' => env('EBAY_REFRESH_ENABLED', true),
+        'geo' => 'United States',
+        'daily_cap' => (int) env('EBAY_DAILY_CAP', 500), // max Oxylabs requests/day
+        'max_results' => 60,
+
+        // Freshness TTL chosen by the item's popularity tier.
+        'ttl' => ['hot_hours' => 8, 'warm_hours' => 24, 'cold_days' => 14],
+        'popularity' => ['hot' => 25, 'warm' => 5],
+
+        // Accept only prices within [min, max] × the anchor (TCGCSV/median).
+        'price_band' => [0.1, 5.0],
+
+        // Reject listings whose title contains any of these (mystery boxes, lots,
+        // proxies, codes, repacks, multi-qty, etc.) — they aren't a genuine
+        // single-card sale even when they name the card.
+        'blocklist' => [
+            'mystery', 'chance', 'random', 'grab bag', 'lot of', 'bundle',
+            'proxy', 'custom', 'fake', 'orica', 'repack', 'rip ', 'break',
+            'ptcgo', 'ptcg live', 'online code', 'code card', 'digital',
+            'sticker', 'jumbo', 'oversized', 'choose', 'pick your', 'you pick',
+            'you will receive', 'raffle', 'giveaway', 'spin', 'read description',
+        ],
+    ],
 ];

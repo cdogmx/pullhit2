@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Web;
 use App\Actions\Catalog\CatalogFilterOptions;
 use App\Actions\Catalog\SearchCatalog;
 use App\Actions\Catalog\ShowCatalogItem;
+use App\Actions\Valuation\MaybeRefreshEbay;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Catalog\SearchCatalogRequest;
 use App\Http\Resources\CatalogItemResource;
 use App\Models\CatalogItem;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -44,8 +46,18 @@ class CatalogController extends Controller
         ]);
     }
 
-    public function show(CatalogItem $catalogItem, ShowCatalogItem $show): Response
+    public function show(CatalogItem $catalogItem, ShowCatalogItem $show, MaybeRefreshEbay $maybeRefresh): Response
     {
+        // Record the view (popularity drives refresh cadence) and, if the eBay
+        // data is stale for this item's tier, queue a background refresh. The
+        // page renders the current cached value immediately.
+        $catalogItem->forceFill([
+            'popularity' => $catalogItem->popularity + 1,
+            'last_viewed_at' => Carbon::now(),
+        ])->save();
+
+        $maybeRefresh($catalogItem);
+
         // The resource wraps under `data` (consistent with the API + the browse
         // collection); the page reads props.item.data.
         return Inertia::render('catalog/show', [

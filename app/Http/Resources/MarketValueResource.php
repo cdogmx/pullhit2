@@ -33,6 +33,7 @@ class MarketValueResource extends JsonResource
             'n_sales' => $this->n_sales,
             'confidence' => round($this->confidence, 3),
             'confidence_label' => $this->confidenceLabel(),
+            'is_estimated' => (bool) $this->is_estimated,
             'trend_30d' => $this->trend_30d,
             'currency' => $this->currency,
             'computed_at' => $this->computed_at?->toIso8601String(),

@@ -33,6 +33,7 @@ export type MarketValue = {
     n_sales: number;
     confidence: number;
     confidence_label: string;
+    is_estimated: boolean;
     trend_30d: number | null;
     currency: string;
     computed_at: string | null;

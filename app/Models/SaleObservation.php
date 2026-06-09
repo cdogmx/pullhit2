@@ -26,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'observed_at',
     'source_listing_id',
     'is_outlier',
+    'is_synthetic',
     'raw',
 ])]
 class SaleObservation extends Model
@@ -42,6 +43,7 @@ class SaleObservation extends Model
             'price' => 'integer',
             'observed_at' => 'datetime',
             'is_outlier' => 'boolean',
+            'is_synthetic' => 'boolean',
             'raw' => 'array',
         ];
     }

@@ -3,10 +3,10 @@
 namespace App\Actions\Valuation;
 
 use App\Models\CatalogItem;
-use App\Models\GradingCompany;
 use App\Models\MarketValue;
 use App\Models\SaleObservation;
 use App\Support\Valuation\Observation;
+use App\Support\Valuation\PricedStateKey;
 use App\Support\Valuation\ValuationEngine;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
@@ -43,7 +43,7 @@ class RecomputeMarketValue
 
         $result = $this->engine->value($observations);
 
-        $stateKey = $this->stateKey($condition, $gradingCompanyId, $grade);
+        $stateKey = PricedStateKey::for($condition, $gradingCompanyId, $grade);
 
         if ($result === null) {
             // No usable data — drop any stale snapshot for this state.
@@ -73,6 +73,8 @@ class RecomputeMarketValue
                 'high' => $result->high,
                 'n_sales' => $result->nSales,
                 'confidence' => $result->confidence,
+                // Estimated when the comps are synthetic placeholders (no real sales yet).
+                'is_estimated' => $rows->contains(fn ($o) => $o->is_synthetic),
                 'half_life_days' => $result->halfLifeDays,
                 'trend_30d' => $result->trend30d,
                 'trend_90d' => $result->trend90d,
@@ -94,17 +96,5 @@ class RecomputeMarketValue
         $grade === null ? $query->whereNull('grade') : $query->where('grade', $grade);
 
         return $query;
-    }
-
-    protected function stateKey(?string $condition, ?int $gradingCompanyId, ?float $grade): string
-    {
-        if ($gradingCompanyId !== null) {
-            $slug = GradingCompany::whereKey($gradingCompanyId)->value('slug') ?? "company{$gradingCompanyId}";
-            $g = $grade !== null ? rtrim(rtrim(sprintf('%.1f', $grade), '0'), '.') : '?';
-
-            return "{$slug}-{$g}";
-        }
-
-        return $condition ?? 'raw';
     }
 }

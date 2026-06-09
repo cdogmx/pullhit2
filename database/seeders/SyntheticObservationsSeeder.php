@@ -120,6 +120,7 @@ class SyntheticObservationsSeeder extends Seeder
                 'observed_at' => $observedAt->toDateTimeString(),
                 'source_listing_id' => "syn-{$itemId}-".($companyId ?? 'raw').($grade ?? '')."-{$i}",
                 'is_outlier' => false,
+                'is_synthetic' => true,
                 'raw' => json_encode(['synthetic' => true]),
                 'created_at' => $now->toDateTimeString(),
                 'updated_at' => $now->toDateTimeString(),

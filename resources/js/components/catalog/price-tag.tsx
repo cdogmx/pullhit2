@@ -32,7 +32,7 @@ export function PriceTag({
                 </span>
                 <span
                     className="size-1.5 rounded-full bg-current opacity-60"
-                    title={`${value.confidence_label} confidence · ${value.n_sales} sales`}
+                    title={`${value.confidence_label} confidence · ${value.n_sales} sales${value.is_estimated ? ' · estimated' : ''}`}
                     aria-hidden
                 />
             </div>
@@ -61,7 +61,10 @@ export function PriceTag({
                 <Badge variant={confidenceVariant(value.confidence_label)}>
                     {value.confidence_label} confidence
                 </Badge>
-                <span>{value.n_sales} sales</span>
+                {value.is_estimated && <Badge variant="outline">Estimated</Badge>}
+                <span>
+                    {value.n_sales} {value.is_estimated ? 'est. comps' : 'sales'}
+                </span>
                 {value.computed_at && (
                     <span>· {relativeTime(value.computed_at)}</span>
                 )}

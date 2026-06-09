@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    // Oxylabs Web Scraper API — used to pull eBay sold comps.
+    'oxylabs' => [
+        'username' => env('OXYLABS_USERNAME'),
+        'password' => env('OXYLABS_PASSWORD'),
+        'endpoint' => env('OXYLABS_ENDPOINT', 'https://realtime.oxylabs.io/v1/queries'),
+    ],
+
 ];
