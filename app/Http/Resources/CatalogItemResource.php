@@ -28,8 +28,12 @@ class CatalogItemResource extends JsonResource
             'variant' => $attributes['variant'] ?? null,
             'image_url' => $this->primary_image_path ?? ($this->external_ids['ptcgio_image'] ?? null),
             'base_key' => $this->base_key,
+            // All vertical-specific facets (illustrator, hp, type, sealed_type, …).
+            'attributes' => $attributes,
             // Present only when grouping by base card (withCount('variants')).
             'variants_count' => $this->whenCounted('variants'),
+            // The card's printings (detail view); each is a lightweight sibling.
+            'variants' => CatalogItemResource::collection($this->whenLoaded('variants')),
             'set' => $this->whenLoaded('set', fn () => [
                 'slug' => $this->set->slug,
                 'name' => $this->set->name,

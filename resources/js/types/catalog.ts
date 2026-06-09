@@ -9,6 +9,8 @@ export type CatalogItem = {
     image_url: string | null;
     base_key: string | null;
     variants_count?: number;
+    attributes?: Record<string, string | number | null>;
+    variants?: CatalogItem[];
     set?: { slug: string; name: string; code: string | null } | null;
     product_line?: { slug: string; name: string } | null;
     vertical?: { slug: string; name: string } | null;

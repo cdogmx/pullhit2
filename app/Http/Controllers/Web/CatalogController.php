@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Web;
 
 use App\Actions\Catalog\CatalogFilterOptions;
 use App\Actions\Catalog\SearchCatalog;
+use App\Actions\Catalog\ShowCatalogItem;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Catalog\SearchCatalogRequest;
 use App\Http\Resources\CatalogItemResource;
+use App\Models\CatalogItem;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,6 +29,13 @@ class CatalogController extends Controller
             'items' => CatalogItemResource::collection($search($filters)),
             'options' => $options($filters),
             'filters' => $filters,
+        ]);
+    }
+
+    public function show(CatalogItem $catalogItem, ShowCatalogItem $show): Response
+    {
+        return Inertia::render('catalog/show', [
+            'item' => new CatalogItemResource($show($catalogItem)),
         ]);
     }
 }

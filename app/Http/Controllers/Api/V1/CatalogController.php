@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\Catalog\CatalogFilterOptions;
 use App\Actions\Catalog\SearchCatalog;
+use App\Actions\Catalog\ShowCatalogItem;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Catalog\SearchCatalogRequest;
 use App\Http\Resources\CatalogItemResource;
+use App\Models\CatalogItem;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
@@ -27,5 +29,10 @@ class CatalogController extends Controller
                 'options' => $options($filters),
                 'filters' => $filters,
             ]);
+    }
+
+    public function show(CatalogItem $catalogItem, ShowCatalogItem $show): CatalogItemResource
+    {
+        return new CatalogItemResource($show($catalogItem));
     }
 }

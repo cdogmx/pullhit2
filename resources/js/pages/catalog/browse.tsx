@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowDownUp,
     LayoutGrid,
@@ -544,7 +544,10 @@ function VariantBadges({ item }: { item: CatalogItem }) {
 
 function CardTile({ item }: { item: CatalogItem }) {
     return (
-        <div className="group overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring">
+        <Link
+            href={`/catalog/${item.id}`}
+            className="group overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring"
+        >
             <div className="aspect-[3/4] overflow-hidden bg-muted">
                 <ItemImage
                     item={item}
@@ -561,13 +564,16 @@ function CardTile({ item }: { item: CatalogItem }) {
                 </p>
                 <VariantBadges item={item} />
             </div>
-        </div>
+        </Link>
     );
 }
 
 function ListRow({ item }: { item: CatalogItem }) {
     return (
-        <div className="flex items-center gap-3 bg-card p-3 hover:bg-accent/40">
+        <Link
+            href={`/catalog/${item.id}`}
+            className="flex items-center gap-3 bg-card p-3 hover:bg-accent/40"
+        >
             <div className="h-16 w-12 shrink-0 overflow-hidden rounded bg-muted">
                 <ItemImage item={item} className="size-full object-contain" />
             </div>
@@ -582,7 +588,7 @@ function ListRow({ item }: { item: CatalogItem }) {
                     <VariantBadges item={item} />
                 </div>
             </div>
-        </div>
+        </Link>
     );
 }
 
