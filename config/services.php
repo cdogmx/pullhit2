@@ -64,4 +64,23 @@ return [
         'base_url' => env('POKEMONTCG_BASE_URL', 'https://api.pokemontcg.io/v2'),
     ],
 
+    // eBay Browse API (live active listings) + eBay Partner Network affiliate.
+    // The affiliate "Shop on eBay" link needs only campaign_id; inline live
+    // listings additionally need client_id/secret (OAuth). Degrades gracefully.
+    'ebay' => [
+        'client_id' => env('EBAY_CLIENT_ID'),
+        'client_secret' => env('EBAY_CLIENT_SECRET'),
+        'campaign_id' => env('EBAY_CAMPAIGN_ID'),
+        'marketplace_id' => env('EBAY_MARKETPLACE_ID', 'EBAY_US'),
+        'base_url' => env('EBAY_BASE_URL', 'https://api.ebay.com'),
+        // EPN rotation id for the eBay US marketplace (affiliate search links).
+        'rover_id' => env('EBAY_ROVER_ID', '711-53200-19255-0'),
+    ],
+
+    // TCGplayer affiliate (search links). Partner id is optional — without it
+    // the link is a plain TCGplayer search.
+    'tcgplayer' => [
+        'partner' => env('TCGPLAYER_PARTNER'),
+    ],
+
 ];

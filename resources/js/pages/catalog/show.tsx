@@ -1,14 +1,21 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, BarChart3, Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { BuyListings } from '@/components/catalog/buy-listings';
 import { PriceBreakdownDrawer } from '@/components/catalog/price-breakdown-drawer';
 import { PriceTag } from '@/components/catalog/price-tag';
+import { Sparkline } from '@/components/catalog/sparkline';
 import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { confidenceVariant, formatMoney, relativeTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { CatalogItem, GradingCompanyOption } from '@/types';
+import type {
+    CatalogItem,
+    GradingCompanyOption,
+    OwnedState,
+    PricePoint,
+} from '@/types';
 
 type Props = {
     item: { data: CatalogItem };
@@ -17,6 +24,10 @@ type Props = {
     refreshing: boolean;
     /** When the eBay sold data was last pulled (null = never). */
     refreshedAt: string | null;
+    /** Recent price-trend points for the sparkline. */
+    priceHistory: PricePoint[];
+    /** The viewer's owned copies of this card, or null. */
+    ownership: OwnedState[] | null;
 };
 
 /** Read Laravel's XSRF-TOKEN cookie for same-origin POSTs. */
@@ -45,11 +56,16 @@ export default function Show({
     gradingCompanies,
     refreshing,
     refreshedAt: initialRefreshedAt,
+    priceHistory,
+    ownership,
 }: Props) {
     const user = usePage().props.auth?.user;
     const isAdmin = Boolean(user?.is_admin);
     const attributes = item.attributes ?? {};
     const printings = item.variants ?? [];
+
+    const ownedQty = ownership?.reduce((s, o) => s + o.quantity, 0) ?? 0;
+    const ownedGain = ownership?.reduce((s, o) => s + (o.unrealized_gain ?? 0), 0) ?? 0;
 
     // Values + last-updated are stateful so a completed eBay refresh can be
     // swapped in live (no page reload).
@@ -203,11 +219,35 @@ export default function Show({
                         </div>
 
                         {user && (
-                            <div className="mt-4">
+                            <div className="mt-4 flex flex-wrap items-center gap-2">
                                 <AddToCollectionDialog
                                     catalogItemId={item.id}
                                     gradingCompanies={gradingCompanies}
                                 />
+                                {ownership && (
+                                    <Link
+                                        href="/collection"
+                                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-medium transition-colors hover:bg-muted"
+                                        title={ownership
+                                            .map((o) => `${o.state_label} ×${o.quantity}`)
+                                            .join(', ')}
+                                    >
+                                        In your collection · ×{ownedQty}
+                                        {ownedGain !== 0 && (
+                                            <span
+                                                className={cn(
+                                                    'font-semibold',
+                                                    ownedGain > 0
+                                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                                        : 'text-red-600 dark:text-red-400',
+                                                )}
+                                            >
+                                                {ownedGain > 0 ? '+' : ''}
+                                                {formatMoney(ownedGain)}
+                                            </span>
+                                        )}
+                                    </Link>
+                                )}
                             </div>
                         )}
 
@@ -232,6 +272,15 @@ export default function Show({
                                         ? `Sold data updated ${relativeTime(refreshedAt)}`
                                         : 'Estimated — no live sold data yet'}
                                 </p>
+
+                                {priceHistory.length > 1 && (
+                                    <div className="mt-3">
+                                        <Sparkline points={priceHistory} />
+                                        <p className="mt-1 text-[11px] text-muted-foreground">
+                                            90-day trend
+                                        </p>
+                                    </div>
+                                )}
 
                                 <div className="mt-3 flex flex-wrap gap-2">
                                     <Button
@@ -320,6 +369,9 @@ export default function Show({
                                 </div>
                             </div>
                         )}
+
+                        {/* Buy this card — live eBay listings + affiliate links. */}
+                        <BuyListings itemId={item.id} />
 
                         {/* Facet details */}
                         {facetRows.length > 0 && (

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\Catalog\CatalogFilterOptions;
+use App\Actions\Catalog\GetCardListings;
 use App\Actions\Catalog\GetPricedStateBreakdown;
 use App\Actions\Catalog\SearchCatalog;
 use App\Actions\Catalog\ShowCatalogItem;
@@ -61,6 +62,14 @@ class CatalogController extends Controller
             'refreshed_at' => $catalogItem->ebay_refreshed_at?->toIso8601String(),
             'refreshing' => $refreshing,
         ]);
+    }
+
+    /**
+     * Active "buy it now" listings + affiliate shop links (lazy-loaded, cached).
+     */
+    public function listings(CatalogItem $catalogItem, GetCardListings $listings): JsonResponse
+    {
+        return response()->json($listings($catalogItem->load('set')));
     }
 
     /**

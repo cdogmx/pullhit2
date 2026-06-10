@@ -1,3 +1,29 @@
+export type EbayListing = {
+    title: string;
+    price_cents: number;
+    currency: string;
+    image: string | null;
+    condition: string | null;
+    url: string;
+};
+
+export type CardListings = {
+    listings: EbayListing[];
+    ebay_url: string;
+    tcgplayer_url: string;
+    configured: boolean;
+};
+
+export type PricePoint = { t: string; price: number };
+
+export type OwnedState = {
+    state_label: string;
+    quantity: number;
+    market_value: number | null;
+    cost_basis: number;
+    unrealized_gain: number | null;
+};
+
 export type CatalogItem = {
     id: number;
     name: string;

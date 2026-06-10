@@ -6,11 +6,14 @@ use App\Actions\Catalog\CatalogFilterOptions;
 use App\Actions\Catalog\SearchCatalog;
 use App\Actions\Catalog\ShowCatalogItem;
 use App\Actions\Valuation\MaybeRefreshEbay;
+use App\Actions\Valuation\PriceHistory;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Catalog\SearchCatalogRequest;
 use App\Http\Resources\CatalogItemResource;
 use App\Models\CatalogItem;
+use App\Models\CollectionItem;
 use App\Models\GradingCompany;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -47,8 +50,13 @@ class CatalogController extends Controller
         ]);
     }
 
-    public function show(CatalogItem $catalogItem, ShowCatalogItem $show, MaybeRefreshEbay $maybeRefresh): Response
-    {
+    public function show(
+        Request $request,
+        CatalogItem $catalogItem,
+        ShowCatalogItem $show,
+        MaybeRefreshEbay $maybeRefresh,
+        PriceHistory $history,
+    ): Response {
         // Record the view (popularity drives refresh cadence) and, if the eBay
         // data is stale for this item's tier, queue a background refresh. The
         // page renders the current cached value immediately.
@@ -61,15 +69,55 @@ class CatalogController extends Controller
         // the page shows an "updating" indicator and polls for the new values.
         $refreshing = $maybeRefresh($catalogItem);
 
-        // The resource wraps under `data` (consistent with the API + the browse
-        // collection); the page reads props.item.data.
+        $model = $show($catalogItem); // has marketValues + relations loaded
+
         return Inertia::render('catalog/show', [
-            'item' => new CatalogItemResource($show($catalogItem)),
+            // The resource wraps under `data` (consistent with the API + the
+            // browse collection); the page reads props.item.data.
+            'item' => new CatalogItemResource($model),
             'refreshing' => $refreshing,
             'refreshedAt' => $catalogItem->ebay_refreshed_at?->toIso8601String(),
+            'priceHistory' => $history($catalogItem),
+            'ownership' => $this->ownership($request, $model),
             // Options for the "add to collection" graded picker.
             'gradingCompanies' => GradingCompany::orderBy('name')
                 ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
         ]);
+    }
+
+    /**
+     * The viewer's owned copies of this card (per priced state), or null.
+     *
+     * @return array<int, array<string, mixed>>|null
+     */
+    protected function ownership(Request $request, CatalogItem $model): ?array
+    {
+        if (! $request->user()) {
+            return null;
+        }
+
+        $items = CollectionItem::where('catalog_item_id', $model->id)
+            ->where('user_id', $request->user()->id)
+            ->with(['acquisitionLots', 'gradingCompany'])
+            ->get();
+
+        if ($items->isEmpty()) {
+            return null;
+        }
+
+        return $items->map(function (CollectionItem $ci) use ($model) {
+            $ci->setRelation('catalogItem', $model); // reuse loaded marketValues
+            $unit = $ci->currentUnitValue();
+            $market = $unit !== null ? $unit * $ci->quantity : null;
+            $cost = $ci->costBasisCents();
+
+            return [
+                'state_label' => $ci->stateLabel(),
+                'quantity' => $ci->quantity,
+                'market_value' => $market,
+                'cost_basis' => $cost,
+                'unrealized_gain' => $market !== null ? $market - $cost : null,
+            ];
+        })->all();
     }
 }
