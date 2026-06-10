@@ -1,3 +1,4 @@
+export type * from './admin';
 export type * from './auth';
 export type * from './catalog';
 export type * from './collection';

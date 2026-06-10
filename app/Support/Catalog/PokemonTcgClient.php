@@ -28,6 +28,27 @@ class PokemonTcgClient
     }
 
     /**
+     * Search sets by name (wildcard), for the admin "find a set to import" box.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function searchSets(string $query): array
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return [];
+        }
+
+        $response = $this->http()->get('sets', [
+            'q' => 'name:"*'.$query.'*"',
+            'orderBy' => '-releaseDate',
+            'pageSize' => 30,
+        ]);
+
+        return $response->successful() ? (array) $response->json('data', []) : [];
+    }
+
+    /**
      * All cards in a set, following pagination.
      *
      * @return array<int, array<string, mixed>>
