@@ -58,4 +58,10 @@ return [
         'premium_product_id' => env('DODO_PREMIUM_PRODUCT_ID'),
     ],
 
+    // pokemontcg.io — catalog + TCGplayer price source for set imports.
+    'pokemontcg' => [
+        'key' => env('POKEMONTCG_API_KEY'),
+        'base_url' => env('POKEMONTCG_BASE_URL', 'https://api.pokemontcg.io/v2'),
+    ],
+
 ];
