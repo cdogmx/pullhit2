@@ -33,8 +33,8 @@ export function BuyListings({ itemId }: { itemId: number }) {
     }
 
     return (
-        <div className="mt-6 rounded-lg border border-border p-4">
-            <p className="mb-3 text-xs font-medium text-muted-foreground">
+        <div className="rounded-xl border border-border bg-card p-5">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Buy this card
             </p>
 

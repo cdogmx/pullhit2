@@ -51,6 +51,11 @@ const DETAIL_FACETS: { key: string; label: string }[] = [
     { key: 'pack_count', label: 'Packs' },
 ];
 
+/** Shared section styling for a consistent, organized page rhythm. */
+const PANEL = 'rounded-xl border border-border bg-card p-5';
+const SECTION_LABEL =
+    'text-xs font-semibold uppercase tracking-wide text-muted-foreground';
+
 export default function Show({
     item: { data: item },
     gradingCompanies,
@@ -65,7 +70,8 @@ export default function Show({
     const printings = item.variants ?? [];
 
     const ownedQty = ownership?.reduce((s, o) => s + o.quantity, 0) ?? 0;
-    const ownedGain = ownership?.reduce((s, o) => s + (o.unrealized_gain ?? 0), 0) ?? 0;
+    const ownedGain =
+        ownership?.reduce((s, o) => s + (o.unrealized_gain ?? 0), 0) ?? 0;
 
     // Values + last-updated are stateful so a completed eBay refresh can be
     // swapped in live (no page reload).
@@ -75,6 +81,11 @@ export default function Show({
     const headline =
         values.find((v) => v.state_key === 'NM' || v.state_key === 'SEALED') ??
         values[0];
+
+    const [breakdown, setBreakdown] = useState<{
+        stateKey: string;
+        label: string;
+    } | null>(null);
 
     // Poll while an update is in flight; stop once refreshed_at advances past
     // where we started (covers both on-view auto-refresh and admin "Refresh now").
@@ -137,11 +148,6 @@ export default function Show({
         });
     };
 
-    const [breakdown, setBreakdown] = useState<{
-        stateKey: string;
-        label: string;
-    } | null>(null);
-
     // The browse query we came from (search/filters/page), threaded via ?return=.
     const returnSearch =
         typeof window !== 'undefined'
@@ -151,6 +157,14 @@ export default function Show({
     const carryReturn = returnSearch
         ? `?return=${encodeURIComponent(returnSearch)}`
         : '';
+
+    const eyebrow = [
+        item.set?.name,
+        item.number ? `#${item.number}` : null,
+        item.language?.toUpperCase(),
+    ]
+        .filter(Boolean)
+        .join('  ·  ');
 
     const facetRows = DETAIL_FACETS.filter(
         (f) => attributes[f.key] !== undefined && attributes[f.key] !== null,
@@ -175,10 +189,10 @@ export default function Show({
                     Back to browse
                 </Link>
 
-                <div className="grid gap-8 md:grid-cols-[minmax(0,360px)_1fr]">
-                    {/* Image */}
-                    <div className="mx-auto w-full max-w-[320px] md:mx-0">
-                        <div className="overflow-hidden rounded-xl border border-border bg-muted">
+                <div className="grid gap-8 md:grid-cols-[minmax(0,320px)_1fr]">
+                    {/* Image — sticky alongside the scrolling detail column */}
+                    <div className="md:sticky md:top-6 md:self-start">
+                        <div className="mx-auto w-full max-w-[300px] overflow-hidden rounded-xl border border-border bg-muted shadow-sm">
                             {item.image_url ? (
                                 <img
                                     src={item.image_url}
@@ -193,33 +207,32 @@ export default function Show({
                         </div>
                     </div>
 
-                    {/* Info */}
-                    <div className="min-w-0">
-                        <p className="text-sm text-muted-foreground">
-                            {item.set?.name}
-                            {item.number ? ` · ${item.number}` : ''}
-                            {item.language
-                                ? ` · ${item.language.toUpperCase()}`
-                                : ''}
-                        </p>
-                        <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-                            {item.name}
-                        </h1>
-
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                            <Badge variant="outline">
-                                {humanize(item.item_type)}
-                            </Badge>
-                            {item.rarity && (
-                                <Badge variant="secondary">{item.rarity}</Badge>
-                            )}
-                            {item.variant && (
-                                <Badge>{humanize(item.variant)}</Badge>
-                            )}
+                    {/* Detail column — one consistent vertical rhythm */}
+                    <div className="min-w-0 space-y-6">
+                        {/* Header */}
+                        <div>
+                            <p className={SECTION_LABEL}>{eyebrow}</p>
+                            <h1 className="mt-1.5 text-2xl font-bold tracking-tight sm:text-3xl">
+                                {item.name}
+                            </h1>
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                                <Badge variant="outline">
+                                    {humanize(item.item_type)}
+                                </Badge>
+                                {item.rarity && (
+                                    <Badge variant="secondary">
+                                        {item.rarity}
+                                    </Badge>
+                                )}
+                                {item.variant && (
+                                    <Badge>{humanize(item.variant)}</Badge>
+                                )}
+                            </div>
                         </div>
 
+                        {/* Owner actions */}
                         {user && (
-                            <div className="mt-4 flex flex-wrap items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <AddToCollectionDialog
                                     catalogItemId={item.id}
                                     gradingCompanies={gradingCompanies}
@@ -229,7 +242,10 @@ export default function Show({
                                         href="/collection"
                                         className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-medium transition-colors hover:bg-muted"
                                         title={ownership
-                                            .map((o) => `${o.state_label} ×${o.quantity}`)
+                                            .map(
+                                                (o) =>
+                                                    `${o.state_label} ×${o.quantity}`,
+                                            )
                                             .join(', ')}
                                     >
                                         In your collection · ×{ownedQty}
@@ -251,21 +267,24 @@ export default function Show({
                             </div>
                         )}
 
-                        {/* Market value (read from market_values; never computed live). */}
+                        {/* Market value (read from market_values; never live). */}
                         {headline ? (
-                            <div className="mt-6 rounded-lg border border-border p-4">
-                                <div className="mb-2 flex flex-wrap items-center gap-2">
-                                    <span className="text-xs font-medium text-muted-foreground">
+                            <div className={PANEL}>
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className={SECTION_LABEL}>
                                         Market value · {headline.label}
                                     </span>
                                     {updating && (
                                         <Badge className="gap-1 border-transparent bg-amber-500 text-white hover:bg-amber-500">
                                             <Loader2 className="size-3 animate-spin" />
-                                            Updating values…
+                                            Updating
                                         </Badge>
                                     )}
                                 </div>
-                                <PriceTag value={headline} variant="full" />
+
+                                <div className="mt-3">
+                                    <PriceTag value={headline} variant="full" />
+                                </div>
 
                                 <p className="mt-2 text-xs text-muted-foreground">
                                     {refreshedAt
@@ -274,7 +293,7 @@ export default function Show({
                                 </p>
 
                                 {priceHistory.length > 1 && (
-                                    <div className="mt-3">
+                                    <div className="mt-4 rounded-lg border border-border/60 bg-muted/30 p-3">
                                         <Sparkline points={priceHistory} />
                                         <p className="mt-1 text-[11px] text-muted-foreground">
                                             90-day trend
@@ -282,7 +301,7 @@ export default function Show({
                                     </div>
                                 )}
 
-                                <div className="mt-3 flex flex-wrap gap-2">
+                                <div className="mt-4 flex flex-wrap gap-2">
                                     <Button
                                         variant="outline"
                                         size="sm"
@@ -313,51 +332,11 @@ export default function Show({
                                         </Button>
                                     )}
                                 </div>
-
-                                {values.length > 1 && (
-                                    <div className="mt-4 space-y-0.5 border-t border-border pt-3">
-                                        {values.map((mv) => (
-                                            <button
-                                                key={mv.state_key}
-                                                type="button"
-                                                onClick={() =>
-                                                    setBreakdown({
-                                                        stateKey: mv.state_key,
-                                                        label: mv.label,
-                                                    })
-                                                }
-                                                className="flex w-full items-center justify-between rounded-md px-1 py-1.5 text-sm transition-colors hover:bg-accent/50"
-                                            >
-                                                <span className="text-muted-foreground">
-                                                    {mv.label}
-                                                </span>
-                                                <span className="flex items-center gap-2">
-                                                    <span className="font-medium">
-                                                        {formatMoney(
-                                                            mv.median,
-                                                            mv.currency,
-                                                        )}
-                                                    </span>
-                                                    <Badge
-                                                        variant={confidenceVariant(
-                                                            mv.confidence_label,
-                                                        )}
-                                                        className="text-[10px]"
-                                                    >
-                                                        {mv.confidence_label}
-                                                    </Badge>
-                                                </span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
                             </div>
                         ) : (
-                            <div className="mt-6 rounded-lg border border-dashed border-border p-4">
-                                <p className="text-xs font-medium text-muted-foreground">
-                                    Market value
-                                </p>
-                                <div className="mt-1 text-sm text-muted-foreground">
+                            <div className={cn(PANEL, 'border-dashed')}>
+                                <span className={SECTION_LABEL}>Market value</span>
+                                <div className="mt-2 text-sm text-muted-foreground">
                                     {updating ? (
                                         <Badge className="gap-1 border-transparent bg-amber-500 text-white hover:bg-amber-500">
                                             <Loader2 className="size-3 animate-spin" />
@@ -370,40 +349,87 @@ export default function Show({
                             </div>
                         )}
 
-                        {/* Buy this card — live eBay listings + affiliate links. */}
+                        {/* Prices by condition / grade */}
+                        {values.length > 1 && (
+                            <section>
+                                <h2 className={cn(SECTION_LABEL, 'mb-2')}>
+                                    Prices by condition
+                                </h2>
+                                <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+                                    {values.map((mv) => (
+                                        <button
+                                            key={mv.state_key}
+                                            type="button"
+                                            onClick={() =>
+                                                setBreakdown({
+                                                    stateKey: mv.state_key,
+                                                    label: mv.label,
+                                                })
+                                            }
+                                            className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-sm transition-colors hover:bg-accent/50"
+                                        >
+                                            <span className="text-muted-foreground">
+                                                {mv.label}
+                                            </span>
+                                            <span className="flex items-center gap-2">
+                                                <span className="font-semibold">
+                                                    {formatMoney(
+                                                        mv.median,
+                                                        mv.currency,
+                                                    )}
+                                                </span>
+                                                <Badge
+                                                    variant={confidenceVariant(
+                                                        mv.confidence_label,
+                                                    )}
+                                                    className="text-[10px]"
+                                                >
+                                                    {mv.confidence_label}
+                                                </Badge>
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+
+                        {/* Buy this card — live eBay listings + affiliate links */}
                         <BuyListings itemId={item.id} />
 
-                        {/* Facet details */}
+                        {/* Card details */}
                         {facetRows.length > 0 && (
-                            <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
-                                {facetRows.map((row) => (
-                                    <div key={row.label}>
-                                        <dt className="text-xs text-muted-foreground">
-                                            {row.label}
-                                        </dt>
-                                        <dd className="font-medium">
-                                            {row.value}
-                                        </dd>
-                                    </div>
-                                ))}
-                            </dl>
+                            <section>
+                                <h2 className={cn(SECTION_LABEL, 'mb-3')}>
+                                    Card details
+                                </h2>
+                                <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm sm:grid-cols-3">
+                                    {facetRows.map((row) => (
+                                        <div key={row.label}>
+                                            <dt className="text-xs text-muted-foreground">
+                                                {row.label}
+                                            </dt>
+                                            <dd className="mt-0.5 font-medium">
+                                                {row.value}
+                                            </dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            </section>
                         )}
                     </div>
                 </div>
 
-                {/* Printings of this card */}
+                {/* Other printings of this card */}
                 {printings.length > 1 && (
                     <section className="mt-12">
                         <h2 className="mb-3 text-lg font-semibold">
-                            Printings ({printings.length})
+                            Other printings ({printings.length})
                         </h2>
-                        <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+                        <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
                             {printings.map((printing) => {
                                 const isCurrent = printing.id === item.id;
                                 const variant = printing.attributes?.variant
-                                    ? humanize(
-                                          String(printing.attributes.variant),
-                                      )
+                                    ? humanize(String(printing.attributes.variant))
                                     : (printing.variant ?? '—');
 
                                 return (
@@ -439,10 +465,8 @@ export default function Show({
                                         {printing.market_value && (
                                             <span className="text-sm font-medium">
                                                 {formatMoney(
-                                                    printing.market_value
-                                                        .median,
-                                                    printing.market_value
-                                                        .currency,
+                                                    printing.market_value.median,
+                                                    printing.market_value.currency,
                                                 )}
                                             </span>
                                         )}
