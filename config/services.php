@@ -50,4 +50,12 @@ return [
         'model' => env('SCAN_MODEL', 'claude-sonnet-4-6'),
     ],
 
+    // Dodo Payments — premium subscriptions (merchant of record).
+    'dodo' => [
+        'key' => env('DODO_API_KEY'),
+        'base_url' => env('DODO_BASE_URL', 'https://test.dodopayments.com'),
+        'webhook_secret' => env('DODO_WEBHOOK_SECRET'),
+        'premium_product_id' => env('DODO_PREMIUM_PRODUCT_ID'),
+    ],
+
 ];

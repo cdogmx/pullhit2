@@ -47,6 +47,8 @@ class User extends Authenticatable implements PasskeyUser
             'two_factor_confirmed_at' => 'datetime',
             'membership_tier' => MembershipTier::class,
             'is_admin' => 'boolean',
+            'membership_renews_at' => 'datetime',
+            'membership_cancel_scheduled' => 'boolean',
         ];
     }
 

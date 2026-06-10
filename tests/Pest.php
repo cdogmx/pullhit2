@@ -88,3 +88,28 @@ function fakeAnthropic(array $identify = []): Closure
         ]]], 200);
     };
 }
+
+/**
+ * Build a Standard-Webhooks-signed Dodo payload for testing the webhook endpoint.
+ *
+ * @return array{body: string, headers: array<string, string>}
+ */
+function dodoSigned(array $payload, ?string $secret = null): array
+{
+    $secret ??= (string) config('services.dodo.webhook_secret');
+    $body = json_encode($payload);
+    $id = 'msg_'.bin2hex(random_bytes(6));
+    $ts = (string) time();
+
+    $key = base64_decode(str_starts_with($secret, 'whsec_') ? substr($secret, 6) : $secret);
+    $sig = base64_encode(hash_hmac('sha256', "{$id}.{$ts}.{$body}", $key, true));
+
+    return [
+        'body' => $body,
+        'headers' => [
+            'webhook-id' => $id,
+            'webhook-timestamp' => $ts,
+            'webhook-signature' => "v1,{$sig}",
+        ],
+    ];
+}

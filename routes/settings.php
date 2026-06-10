@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\BillingController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Auth\Middleware\RequirePassword;
@@ -24,4 +25,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('user-password.update');
 
     Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
+
+    // Premium billing (Dodo Payments).
+    Route::get('settings/billing', [BillingController::class, 'edit'])->name('billing.edit');
+    Route::post('settings/billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');
+    Route::delete('settings/billing', [BillingController::class, 'cancel'])->name('billing.cancel');
+    Route::get('billing/return', fn () => redirect()->route('billing.edit')
+        ->with('status', 'Your upgrade is processing — premium activates in a moment.'))->name('billing.return');
 });

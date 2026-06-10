@@ -20,6 +20,9 @@ return [
         'premium' => (int) env('PREMIUM_SCAN_CAP', 2000),
     ],
 
+    // Displayed premium price (the real charge comes from the Dodo product).
+    'premium_price_label' => env('PREMIUM_PRICE_LABEL', '$4.99/mo'),
+
     'tiers' => [
         'free' => ['name' => 'Free'],
         'premium' => ['name' => 'Premium'],

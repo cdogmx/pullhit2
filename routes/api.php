@@ -4,7 +4,11 @@ use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\CollectionController;
 use App\Http\Controllers\Api\V1\PingController;
 use App\Http\Controllers\Api\V1\ScanController;
+use App\Http\Controllers\Api\WebhookController;
 use Illuminate\Support\Facades\Route;
+
+// Provider webhooks — stateless, signature-verified (no CSRF/session/auth).
+Route::post('webhooks/dodo', [WebhookController::class, 'dodo'])->name('webhooks.dodo');
 
 /*
 |--------------------------------------------------------------------------
