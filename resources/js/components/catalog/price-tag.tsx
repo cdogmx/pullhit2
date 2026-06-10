@@ -25,13 +25,29 @@ export function PriceTag({
     const { currency } = value;
 
     if (variant === 'compact') {
+        const trend = formatTrend(value.trend_30d);
+        const up = (value.trend_30d ?? 0) > 0;
+
         return (
-            <div className={cn('flex items-baseline gap-1.5', className)}>
+            <div className={cn('flex items-center gap-1.5', className)}>
                 <span className="text-sm font-semibold">
                     {formatMoney(value.median, currency)}
                 </span>
+                {trend && (
+                    <span
+                        className={cn(
+                            'text-xs font-medium',
+                            up
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-red-600 dark:text-red-400',
+                        )}
+                        title="30-day change"
+                    >
+                        {trend}
+                    </span>
+                )}
                 <span
-                    className="size-1.5 rounded-full bg-current opacity-60"
+                    className="size-1.5 shrink-0 rounded-full bg-current opacity-60"
                     title={`${value.confidence_label} confidence · ${value.n_sales} sales${value.is_estimated ? ' · estimated' : ''}`}
                     aria-hidden
                 />
