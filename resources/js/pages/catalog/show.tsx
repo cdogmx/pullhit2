@@ -214,15 +214,17 @@ export default function Show({
                         {/* Market value (read from market_values; never computed live). */}
                         {headline ? (
                             <div className="mt-6 rounded-lg border border-border p-4">
-                                <p className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                                    <span>Market value · {headline.label}</span>
+                                <div className="mb-2 flex flex-wrap items-center gap-2">
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        Market value · {headline.label}
+                                    </span>
                                     {updating && (
-                                        <span className="inline-flex items-center gap-1 text-primary">
+                                        <Badge className="gap-1 border-transparent bg-amber-500 text-white hover:bg-amber-500">
                                             <Loader2 className="size-3 animate-spin" />
                                             Updating values…
-                                        </span>
+                                        </Badge>
                                     )}
-                                </p>
+                                </div>
                                 <PriceTag value={headline} variant="full" />
 
                                 <p className="mt-2 text-xs text-muted-foreground">
@@ -306,16 +308,16 @@ export default function Show({
                                 <p className="text-xs font-medium text-muted-foreground">
                                     Market value
                                 </p>
-                                <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                                <div className="mt-1 text-sm text-muted-foreground">
                                     {updating ? (
-                                        <>
+                                        <Badge className="gap-1 border-transparent bg-amber-500 text-white hover:bg-amber-500">
                                             <Loader2 className="size-3 animate-spin" />
                                             Fetching values…
-                                        </>
+                                        </Badge>
                                     ) : (
                                         'No market data yet.'
                                     )}
-                                </p>
+                                </div>
                             </div>
                         )}
 
