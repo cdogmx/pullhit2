@@ -16,6 +16,17 @@ test('the job skips (no Oxylabs call) when the card was refreshed within the win
     Http::assertNothingSent();
 });
 
+test('force bypasses the freshness window (admin override)', function () {
+    Http::fake([
+        'realtime.oxylabs.io/*' => Http::response(['results' => [['content' => '<ul></ul>']]], 200),
+    ]);
+    $item = CatalogItem::factory()->create(['ebay_refreshed_at' => now()->subHours(2)]);
+
+    (new RefreshEbaySoldComps($item->id, force: true))->handle(app(IngestEbaySoldComps::class));
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), 'oxylabs.io'));
+});
+
 test('the job fetches when the card is stale beyond the window', function () {
     Http::fake([
         'realtime.oxylabs.io/*' => Http::response(['results' => [['content' => '<ul></ul>']]], 200),

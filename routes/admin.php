@@ -25,6 +25,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
 
     // Cards
     Route::get('cards', [CardController::class, 'index'])->name('cards.index');
+    Route::post('cards/{catalogItem}/refresh', [CardController::class, 'refresh'])->name('cards.refresh');
     Route::patch('cards/{catalogItem}', [CardController::class, 'update'])->name('cards.update');
     Route::delete('cards/{catalogItem}', [CardController::class, 'destroy'])->name('cards.destroy');
 });

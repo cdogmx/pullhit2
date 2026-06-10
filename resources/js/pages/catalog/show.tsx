@@ -1,12 +1,12 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, BarChart3, Loader2 } from 'lucide-react';
+import { ArrowLeft, BarChart3, Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { PriceBreakdownDrawer } from '@/components/catalog/price-breakdown-drawer';
 import { PriceTag } from '@/components/catalog/price-tag';
 import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { confidenceVariant, formatMoney } from '@/lib/format';
+import { confidenceVariant, formatMoney, relativeTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CatalogItem, GradingCompanyOption } from '@/types';
 
@@ -15,7 +15,16 @@ type Props = {
     gradingCompanies: GradingCompanyOption[];
     /** A background eBay refresh is in flight; poll for the new values. */
     refreshing: boolean;
+    /** When the eBay sold data was last pulled (null = never). */
+    refreshedAt: string | null;
 };
+
+/** Read Laravel's XSRF-TOKEN cookie for same-origin POSTs. */
+function xsrfToken(): string {
+    const m = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+
+    return m ? decodeURIComponent(m[1]) : '';
+}
 
 const humanize = (value?: string | null): string =>
     (value ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -35,25 +44,30 @@ export default function Show({
     item: { data: item },
     gradingCompanies,
     refreshing,
+    refreshedAt: initialRefreshedAt,
 }: Props) {
     const user = usePage().props.auth?.user;
+    const isAdmin = Boolean(user?.is_admin);
     const attributes = item.attributes ?? {};
     const printings = item.variants ?? [];
 
-    // Values are stateful so a completed background eBay refresh can be swapped
-    // in live (no page reload).
+    // Values + last-updated are stateful so a completed eBay refresh can be
+    // swapped in live (no page reload).
     const [values, setValues] = useState(item.market_values ?? []);
+    const [refreshedAt, setRefreshedAt] = useState(initialRefreshedAt);
     const [updating, setUpdating] = useState(refreshing);
     const headline =
         values.find((v) => v.state_key === 'NM' || v.state_key === 'SEALED') ??
         values[0];
 
-    // Poll for the refreshed values while a background update is in flight.
+    // Poll while an update is in flight; stop once refreshed_at advances past
+    // where we started (covers both on-view auto-refresh and admin "Refresh now").
     useEffect(() => {
         if (!updating) {
             return;
         }
 
+        const baseline = refreshedAt;
         let active = true;
         let attempts = 0;
         let timer: ReturnType<typeof setTimeout>;
@@ -71,8 +85,9 @@ export default function Show({
                     return;
                 }
 
-                if (!body.refreshing) {
+                if (body.refreshed_at && body.refreshed_at !== baseline) {
                     setValues(body.market_values ?? []);
+                    setRefreshedAt(body.refreshed_at);
                     setUpdating(false);
 
                     return;
@@ -94,7 +109,17 @@ export default function Show({
             active = false;
             clearTimeout(timer);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [updating, item.id]);
+
+    const forceRefresh = () => {
+        setUpdating(true);
+        void fetch(`/admin/cards/${item.id}/refresh`, {
+            method: 'POST',
+            headers: { Accept: 'application/json', 'X-XSRF-TOKEN': xsrfToken() },
+            credentials: 'same-origin',
+        });
+    };
 
     const [breakdown, setBreakdown] = useState<{
         stateKey: string;
@@ -200,20 +225,43 @@ export default function Show({
                                 </p>
                                 <PriceTag value={headline} variant="full" />
 
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="mt-3"
-                                    onClick={() =>
-                                        setBreakdown({
-                                            stateKey: headline.state_key,
-                                            label: headline.label,
-                                        })
-                                    }
-                                >
-                                    <BarChart3 className="size-4" />
-                                    View breakdown
-                                </Button>
+                                <p className="mt-2 text-xs text-muted-foreground">
+                                    {refreshedAt
+                                        ? `Sold data updated ${relativeTime(refreshedAt)}`
+                                        : 'Estimated — no live sold data yet'}
+                                </p>
+
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                            setBreakdown({
+                                                stateKey: headline.state_key,
+                                                label: headline.label,
+                                            })
+                                        }
+                                    >
+                                        <BarChart3 className="size-4" />
+                                        View breakdown
+                                    </Button>
+                                    {isAdmin && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={forceRefresh}
+                                            disabled={updating}
+                                        >
+                                            <RefreshCw
+                                                className={cn(
+                                                    'size-4',
+                                                    updating && 'animate-spin',
+                                                )}
+                                            />
+                                            Refresh now
+                                        </Button>
+                                    )}
+                                </div>
 
                                 {values.length > 1 && (
                                     <div className="mt-4 space-y-0.5 border-t border-border pt-3">

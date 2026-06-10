@@ -23,7 +23,10 @@ class RefreshEbaySoldComps implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public int $catalogItemId) {}
+    public function __construct(
+        public int $catalogItemId,
+        public bool $force = false,
+    ) {}
 
     public function handle(IngestEbaySoldComps $ingest): void
     {
@@ -44,10 +47,12 @@ class RefreshEbaySoldComps implements ShouldQueue
         try {
             // Re-read under the lock: another job may have just refreshed this
             // item (duplicate dispatch from a burst of views). If it's fresh
-            // within the window, skip — no Oxylabs call, no cap spend.
+            // within the window, skip — no Oxylabs call, no cap spend. An admin
+            // "Refresh now" passes force to bypass this (but still honours the cap).
             $item->refresh();
             $hours = (int) config('valuation.ebay.view_refresh_hours', 12);
-            if ($item->ebay_refreshed_at !== null
+            if (! $this->force
+                && $item->ebay_refreshed_at !== null
                 && $item->ebay_refreshed_at->gt(Carbon::now()->subHours($hours))) {
                 return;
             }

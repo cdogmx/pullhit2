@@ -3,11 +3,13 @@
 use App\Actions\Catalog\CreateCatalogItem;
 use App\Actions\Catalog\UpdateCatalogItem;
 use App\Enums\ItemType;
+use App\Jobs\RefreshEbaySoldComps;
 use App\Models\MarketValue;
 use App\Models\ProductLine;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Vertical;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -70,6 +72,27 @@ test('the cards index filters by rarity and exposes filter options', function ()
             ->where('items.0.name', 'Charizard')
             ->has('options.rarities')
             ->where('filters.rarity', 'Rare'));
+});
+
+test('an admin can force an eBay refresh (bypasses the guard)', function () {
+    Queue::fake();
+    $item = adminTestCard($this, 'Pikachu', '1');
+
+    $this->actingAs($this->admin)->postJson("/admin/cards/{$item->id}/refresh")->assertOk();
+
+    Queue::assertPushed(
+        RefreshEbaySoldComps::class,
+        fn (RefreshEbaySoldComps $j) => $j->catalogItemId === $item->id && $j->force === true,
+    );
+});
+
+test('a non-admin cannot force a refresh', function () {
+    Queue::fake();
+    $user = User::factory()->create(['email_verified_at' => now()]);
+    $item = adminTestCard($this, 'Pikachu', '1');
+
+    $this->actingAs($user)->postJson("/admin/cards/{$item->id}/refresh")->assertForbidden();
+    Queue::assertNothingPushed();
 });
 
 test('the endpoint updates and deletes a card', function () {

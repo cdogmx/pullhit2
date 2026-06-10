@@ -6,9 +6,11 @@ use App\Actions\Catalog\CatalogFilterOptions;
 use App\Actions\Catalog\UpdateCatalogItem;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateCardRequest;
+use App\Jobs\RefreshEbaySoldComps;
 use App\Models\CatalogItem;
 use App\Models\CollectionItem;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -80,6 +82,14 @@ class CardController extends Controller
         $update($catalogItem, $request->validated());
 
         return back()->with('success', 'Card updated.');
+    }
+
+    /** Admin "Refresh now" — force an eBay pull, bypassing the 12h freshness guard. */
+    public function refresh(CatalogItem $catalogItem): JsonResponse
+    {
+        RefreshEbaySoldComps::dispatch($catalogItem->id, force: true);
+
+        return response()->json(['ok' => true]);
     }
 
     public function destroy(CatalogItem $catalogItem): RedirectResponse

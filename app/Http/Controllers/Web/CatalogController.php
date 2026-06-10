@@ -66,6 +66,7 @@ class CatalogController extends Controller
         return Inertia::render('catalog/show', [
             'item' => new CatalogItemResource($show($catalogItem)),
             'refreshing' => $refreshing,
+            'refreshedAt' => $catalogItem->ebay_refreshed_at?->toIso8601String(),
             // Options for the "add to collection" graded picker.
             'gradingCompanies' => GradingCompany::orderBy('name')
                 ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
