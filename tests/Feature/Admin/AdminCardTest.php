@@ -9,6 +9,7 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Vertical;
 use Illuminate\Validation\ValidationException;
+use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
     $this->admin = User::factory()->create(['is_admin' => true, 'email_verified_at' => now()]);
@@ -55,6 +56,20 @@ test('an edit that would collide with another card is rejected', function () {
 
     expect(fn () => app(UpdateCatalogItem::class)($b, ['number' => '1']))
         ->toThrow(ValidationException::class);
+});
+
+test('the cards index filters by rarity and exposes filter options', function () {
+    adminTestCard($this, 'Pikachu', '1');
+    ($this->create)($this->vertical, $this->pl, $this->set, ItemType::Single, 'Charizard', '4',
+        ['language' => 'en', 'rarity' => 'Rare', 'variant' => 'holo']);
+
+    $this->actingAs($this->admin)->get('/admin/cards?rarity=Rare')
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/cards')
+            ->has('items', 1)
+            ->where('items.0.name', 'Charizard')
+            ->has('options.rarities')
+            ->where('filters.rarity', 'Rare'));
 });
 
 test('the endpoint updates and deletes a card', function () {

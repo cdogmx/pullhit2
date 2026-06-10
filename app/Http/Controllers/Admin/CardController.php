@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Catalog\CatalogFilterOptions;
 use App\Actions\Catalog\UpdateCatalogItem;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateCardRequest;
 use App\Models\CatalogItem;
 use App\Models\CollectionItem;
-use App\Models\Set;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,20 +19,33 @@ use Inertia\Response;
  */
 class CardController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, CatalogFilterOptions $options): Response
     {
-        $q = trim((string) $request->query('q', ''));
-        $setSlug = (string) $request->query('set', '');
+        $f = [
+            'q' => trim((string) $request->query('q', '')),
+            'set' => (string) $request->query('set', ''),
+            'rarity' => (string) $request->query('rarity', ''),
+            'variant' => (string) $request->query('variant', ''),
+            'language' => (string) $request->query('language', ''),
+            'sort' => (string) $request->query('sort', 'name'),
+        ];
 
-        $paginator = CatalogItem::query()
+        $query = CatalogItem::query()
             ->with('set')
-            ->when($q !== '', fn (Builder $query) => $query->where(
-                fn (Builder $w) => $w->where('name', 'like', "%{$q}%")->orWhere('number', 'like', "%{$q}%"),
+            ->when($f['q'] !== '', fn (Builder $q) => $q->where(
+                fn (Builder $w) => $w->where('name', 'like', "%{$f['q']}%")->orWhere('number', 'like', "%{$f['q']}%"),
             ))
-            ->when($setSlug !== '', fn (Builder $query) => $query->whereHas('set', fn (Builder $s) => $s->where('slug', $setSlug)))
-            ->orderBy('name')
-            ->paginate(30)
-            ->withQueryString();
+            ->when($f['set'] !== '', fn (Builder $q) => $q->whereHas('set', fn (Builder $s) => $s->where('slug', $f['set'])))
+            ->when($f['rarity'] !== '', fn (Builder $q) => $q->where('attributes->rarity', $f['rarity']))
+            ->when($f['variant'] !== '', fn (Builder $q) => $q->where('attributes->variant', $f['variant']))
+            ->when($f['language'] !== '', fn (Builder $q) => $q->where('language', $f['language']));
+
+        $this->sort($query, $f['sort']);
+
+        $paginator = $query->paginate(30)->withQueryString();
+
+        // Rarities narrow to the selected set; sets/variants/languages are global.
+        $o = $options(['set' => $f['set']]);
 
         return Inertia::render('admin/cards', [
             'items' => collect($paginator->items())->map(fn (CatalogItem $i) => $this->row($i)),
@@ -41,9 +54,25 @@ class CardController extends Controller
                 'last_page' => $paginator->lastPage(),
                 'total' => $paginator->total(),
             ],
-            'sets' => Set::orderBy('name')->get(['slug', 'name']),
-            'filters' => ['q' => $q, 'set' => $setSlug],
+            'options' => [
+                'sets' => $o['sets'],
+                'rarities' => $o['rarities'],
+                'variants' => $o['variants'],
+                'languages' => $o['languages'],
+            ],
+            'filters' => $f,
         ]);
+    }
+
+    /** @param  Builder<CatalogItem>  $query */
+    protected function sort(Builder $query, string $sort): void
+    {
+        match ($sort) {
+            'views' => $query->orderByDesc('popularity')->orderBy('name'),
+            'updated' => $query->orderByDesc('updated_at'),
+            'number' => $query->orderByRaw('CAST(number AS UNSIGNED)')->orderBy('number'),
+            default => $query->orderBy('name'),
+        };
     }
 
     public function update(UpdateCardRequest $request, CatalogItem $catalogItem, UpdateCatalogItem $update): RedirectResponse
@@ -81,6 +110,7 @@ class CardController extends Controller
             'illustrator' => $a['illustrator'] ?? null,
             'hp' => $a['hp'] ?? null,
             'type' => $a['type'] ?? null,
+            'views' => (int) $item->popularity,
         ];
     }
 }

@@ -42,6 +42,23 @@ export type AdminCard = {
     illustrator: string | null;
     hp: number | null;
     type: string | null;
+    views: number;
+};
+
+export type AdminCardOptions = {
+    sets: { slug: string; name: string; code: string | null }[];
+    rarities: string[];
+    variants: string[];
+    languages: string[];
+};
+
+export type AdminCardFilters = {
+    q: string;
+    set: string;
+    rarity: string;
+    variant: string;
+    language: string;
+    sort: string;
 };
 
 export type MissingReport = {
