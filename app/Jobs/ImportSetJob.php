@@ -23,7 +23,10 @@ class ImportSetJob implements ShouldQueue
         public string $setId,
         public bool $withPrices = true,
         public bool $withImages = true,
-    ) {}
+    ) {
+        // Heavy/long-running — keep it off the fast `default` queue (eBay refresh).
+        $this->onQueue('imports');
+    }
 
     public function handle(ImportPokemonSet $import): void
     {
