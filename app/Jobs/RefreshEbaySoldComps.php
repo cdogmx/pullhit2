@@ -13,6 +13,8 @@ use Throwable;
 
 /**
  * Refreshes one catalog item's eBay sold comps via Oxylabs. Cost guards:
+ *  - skip if the item was already refreshed within the freshness window
+ *    (so a burst of views can't fire duplicate paid fetches),
  *  - per-item cache lock so concurrent views don't double-fetch,
  *  - a global daily request cap (Oxylabs bills per call),
  *  - failures are logged, never fatal — the cached value stands.
@@ -40,6 +42,16 @@ class RefreshEbaySoldComps implements ShouldQueue
         }
 
         try {
+            // Re-read under the lock: another job may have just refreshed this
+            // item (duplicate dispatch from a burst of views). If it's fresh
+            // within the window, skip — no Oxylabs call, no cap spend.
+            $item->refresh();
+            $hours = (int) config('valuation.ebay.view_refresh_hours', 12);
+            if ($item->ebay_refreshed_at !== null
+                && $item->ebay_refreshed_at->gt(Carbon::now()->subHours($hours))) {
+                return;
+            }
+
             $key = 'ebay:daily:'.Carbon::now()->toDateString();
             Cache::add($key, 0, Carbon::now()->endOfDay());
 
