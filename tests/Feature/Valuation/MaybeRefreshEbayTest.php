@@ -16,25 +16,21 @@ test('it dispatches a refresh when the card has never been pulled', function () 
     Queue::assertPushed(RefreshEbaySoldComps::class);
 });
 
-test('it does not dispatch when a cold card was refreshed recently', function () {
+test('it does not dispatch when refreshed within the last 12 hours', function () {
     $item = CatalogItem::factory()->create([
-        'popularity' => 0,                       // cold tier => 14-day TTL
-        'ebay_refreshed_at' => now()->subDay(),
+        'ebay_refreshed_at' => now()->subHours(3),
     ]);
 
-    app(MaybeRefreshEbay::class)($item);
-
+    expect(app(MaybeRefreshEbay::class)($item))->toBeFalse();
     Queue::assertNothingPushed();
 });
 
-test('a hot card refreshed a day ago is due again', function () {
+test('a card stale beyond 12 hours is refreshed (and reports refreshing)', function () {
     $item = CatalogItem::factory()->create([
-        'popularity' => 100,                     // hot tier => 8-hour TTL
-        'ebay_refreshed_at' => now()->subDay(),
+        'ebay_refreshed_at' => now()->subHours(13),
     ]);
 
-    app(MaybeRefreshEbay::class)($item);
-
+    expect(app(MaybeRefreshEbay::class)($item))->toBeTrue();
     Queue::assertPushed(RefreshEbaySoldComps::class);
 });
 
@@ -68,5 +64,5 @@ test('viewing a card that was refreshed long ago re-reads the date and works', f
     expect($fresh->ebay_refreshed_at)->toBeInstanceOf(CarbonInterface::class);
 
     $this->get("/catalog/{$item->id}")->assertOk();
-    Queue::assertPushed(RefreshEbaySoldComps::class); // cold TTL 14d exceeded
+    Queue::assertPushed(RefreshEbaySoldComps::class); // >12h stale
 });

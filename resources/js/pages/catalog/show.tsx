@@ -1,6 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, BarChart3 } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, BarChart3, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { PriceBreakdownDrawer } from '@/components/catalog/price-breakdown-drawer';
 import { PriceTag } from '@/components/catalog/price-tag';
 import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
@@ -13,6 +13,8 @@ import type { CatalogItem, GradingCompanyOption } from '@/types';
 type Props = {
     item: { data: CatalogItem };
     gradingCompanies: GradingCompanyOption[];
+    /** A background eBay refresh is in flight; poll for the new values. */
+    refreshing: boolean;
 };
 
 const humanize = (value?: string | null): string =>
@@ -29,14 +31,70 @@ const DETAIL_FACETS: { key: string; label: string }[] = [
     { key: 'pack_count', label: 'Packs' },
 ];
 
-export default function Show({ item: { data: item }, gradingCompanies }: Props) {
+export default function Show({
+    item: { data: item },
+    gradingCompanies,
+    refreshing,
+}: Props) {
     const user = usePage().props.auth?.user;
     const attributes = item.attributes ?? {};
     const printings = item.variants ?? [];
-    const values = item.market_values ?? [];
+
+    // Values are stateful so a completed background eBay refresh can be swapped
+    // in live (no page reload).
+    const [values, setValues] = useState(item.market_values ?? []);
+    const [updating, setUpdating] = useState(refreshing);
     const headline =
         values.find((v) => v.state_key === 'NM' || v.state_key === 'SEALED') ??
         values[0];
+
+    // Poll for the refreshed values while a background update is in flight.
+    useEffect(() => {
+        if (!updating) {
+            return;
+        }
+
+        let active = true;
+        let attempts = 0;
+        let timer: ReturnType<typeof setTimeout>;
+
+        const tick = async () => {
+            attempts += 1;
+
+            try {
+                const res = await fetch(`/api/v1/catalog/${item.id}/values`, {
+                    headers: { Accept: 'application/json' },
+                });
+                const body = await res.json();
+
+                if (!active) {
+                    return;
+                }
+
+                if (!body.refreshing) {
+                    setValues(body.market_values ?? []);
+                    setUpdating(false);
+
+                    return;
+                }
+            } catch {
+                // keep trying
+            }
+
+            if (active && attempts < 15) {
+                timer = setTimeout(tick, 4000);
+            } else if (active) {
+                setUpdating(false);
+            }
+        };
+
+        timer = setTimeout(tick, 4000);
+
+        return () => {
+            active = false;
+            clearTimeout(timer);
+        };
+    }, [updating, item.id]);
 
     const [breakdown, setBreakdown] = useState<{
         stateKey: string;
@@ -131,8 +189,14 @@ export default function Show({ item: { data: item }, gradingCompanies }: Props) 
                         {/* Market value (read from market_values; never computed live). */}
                         {headline ? (
                             <div className="mt-6 rounded-lg border border-border p-4">
-                                <p className="mb-2 text-xs font-medium text-muted-foreground">
-                                    Market value · {headline.label}
+                                <p className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                                    <span>Market value · {headline.label}</span>
+                                    {updating && (
+                                        <span className="inline-flex items-center gap-1 text-primary">
+                                            <Loader2 className="size-3 animate-spin" />
+                                            Updating values…
+                                        </span>
+                                    )}
                                 </p>
                                 <PriceTag value={headline} variant="full" />
 
@@ -194,8 +258,15 @@ export default function Show({ item: { data: item }, gradingCompanies }: Props) 
                                 <p className="text-xs font-medium text-muted-foreground">
                                     Market value
                                 </p>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    No market data yet.
+                                <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                                    {updating ? (
+                                        <>
+                                            <Loader2 className="size-3 animate-spin" />
+                                            Fetching values…
+                                        </>
+                                    ) : (
+                                        'No market data yet.'
+                                    )}
                                 </p>
                             </div>
                         )}

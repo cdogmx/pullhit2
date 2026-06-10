@@ -38,9 +38,9 @@ return [
         'daily_cap' => (int) env('EBAY_DAILY_CAP', 500), // max Oxylabs requests/day
         'max_results' => 60,
 
-        // Freshness TTL chosen by the item's popularity tier.
-        'ttl' => ['hot_hours' => 8, 'warm_hours' => 24, 'cold_days' => 14],
-        'popularity' => ['hot' => 25, 'warm' => 5],
+        // On a card view, refresh its eBay comps if they're older than this. The
+        // detail page shows an "updating" indicator and live-swaps the new values.
+        'view_refresh_hours' => (int) env('EBAY_VIEW_REFRESH_HOURS', 12),
 
         // Accept only prices within [min, max] × the anchor (TCGCSV/median).
         'price_band' => [0.1, 5.0],

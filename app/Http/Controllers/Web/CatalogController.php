@@ -57,12 +57,15 @@ class CatalogController extends Controller
             'last_viewed_at' => Carbon::now(),
         ])->save();
 
-        $maybeRefresh($catalogItem);
+        // When stale (>12h), this queues a background refresh and reports true so
+        // the page shows an "updating" indicator and polls for the new values.
+        $refreshing = $maybeRefresh($catalogItem);
 
         // The resource wraps under `data` (consistent with the API + the browse
         // collection); the page reads props.item.data.
         return Inertia::render('catalog/show', [
             'item' => new CatalogItemResource($show($catalogItem)),
+            'refreshing' => $refreshing,
             // Options for the "add to collection" graded picker.
             'gradingCompanies' => GradingCompany::orderBy('name')
                 ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),

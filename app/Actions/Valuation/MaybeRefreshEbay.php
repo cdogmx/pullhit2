@@ -7,40 +7,29 @@ use App\Models\CatalogItem;
 use Illuminate\Support\Carbon;
 
 /**
- * Decides whether a card's eBay data is stale enough to refresh, with the TTL
- * scaled by popularity (hot cards refresh more often). Dispatches the queued job
- * when due — non-blocking; the page renders the cached value.
+ * On a card view, refresh its eBay comps if they're stale (older than
+ * `view_refresh_hours`, default 12h). Dispatches the queued job — non-blocking;
+ * the page renders the cached value and shows an "updating" indicator. Returns
+ * whether a refresh is now in flight (so the page can poll for the new values).
  */
 class MaybeRefreshEbay
 {
-    public function __invoke(CatalogItem $item): void
+    public function __invoke(CatalogItem $item): bool
     {
-        if (! config('valuation.ebay.enabled')) {
-            return;
+        if (! config('valuation.ebay.enabled') || ! $this->isDue($item)) {
+            return false;
         }
 
-        if ($this->isDue($item)) {
-            RefreshEbaySoldComps::dispatch($item->id);
-        }
+        RefreshEbaySoldComps::dispatch($item->id);
+
+        return true;
     }
 
     public function isDue(CatalogItem $item): bool
     {
-        if ($item->ebay_refreshed_at === null) {
-            return true;
-        }
+        $hours = (int) config('valuation.ebay.view_refresh_hours', 12);
 
-        return $item->ebay_refreshed_at->lt(Carbon::now()->subHours($this->ttlHours($item)));
-    }
-
-    protected function ttlHours(CatalogItem $item): int
-    {
-        $ebay = config('valuation.ebay');
-
-        return match (true) {
-            $item->popularity >= $ebay['popularity']['hot'] => (int) $ebay['ttl']['hot_hours'],
-            $item->popularity >= $ebay['popularity']['warm'] => (int) $ebay['ttl']['warm_hours'],
-            default => (int) $ebay['ttl']['cold_days'] * 24,
-        };
+        return $item->ebay_refreshed_at === null
+            || $item->ebay_refreshed_at->lt(Carbon::now()->subHours($hours));
     }
 }

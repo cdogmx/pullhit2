@@ -42,6 +42,28 @@ class CatalogController extends Controller
     }
 
     /**
+     * Current market values + refresh status for a card — polled by the detail
+     * page to live-swap values once a background eBay refresh completes. Read-only
+     * (no popularity bump, no dispatch).
+     */
+    public function values(CatalogItem $catalogItem): JsonResponse
+    {
+        $catalogItem->load('marketValues.gradingCompany');
+
+        $hours = (int) config('valuation.ebay.view_refresh_hours', 12);
+        $refreshing = (bool) config('valuation.ebay.enabled') && (
+            $catalogItem->ebay_refreshed_at === null
+            || $catalogItem->ebay_refreshed_at->lt(now()->subHours($hours))
+        );
+
+        return response()->json([
+            'market_values' => MarketValueResource::collection($catalogItem->marketValues),
+            'refreshed_at' => $catalogItem->ebay_refreshed_at?->toIso8601String(),
+            'refreshing' => $refreshing,
+        ]);
+    }
+
+    /**
      * The comps/sources behind one priced state's value (price-breakdown drawer).
      */
     public function observations(Request $request, CatalogItem $catalogItem, GetPricedStateBreakdown $breakdown): JsonResponse
