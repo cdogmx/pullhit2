@@ -34,6 +34,33 @@
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
+        @php
+            $appName = config('app.name', 'CardFoo');
+            $description = 'Value your trading cards and collectibles with confidence-scored market prices — sealed product, raw singles, and graded items. Wax on.';
+            $ogTitle = $appName.' — Wax on.';
+            $ogImage = url('/og-image.png');
+        @endphp
+
+        <meta name="description" content="{{ $description }}">
+        <meta name="application-name" content="{{ $appName }}">
+        <meta name="apple-mobile-web-app-title" content="{{ $appName }}">
+        <meta name="theme-color" content="#111317">
+        <link rel="canonical" href="{{ url()->current() }}">
+
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="{{ $appName }}">
+        <meta property="og:title" content="{{ $ogTitle }}">
+        <meta property="og:description" content="{{ $description }}">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:image" content="{{ $ogImage }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="{{ $ogTitle }}">
+        <meta name="twitter:description" content="{{ $description }}">
+        <meta name="twitter:image" content="{{ $ogImage }}">
+
         @fonts
 
         @viteReactRefresh
