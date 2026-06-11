@@ -7,10 +7,11 @@ export type EbayListing = {
     url: string;
 };
 
+export type EbayOption = { label: string; group: string; url: string };
+
 export type CardListings = {
     listings: EbayListing[];
-    ebay_url: string;
-    tcgplayer_url: string;
+    ebay_options: EbayOption[];
     configured: boolean;
 };
 

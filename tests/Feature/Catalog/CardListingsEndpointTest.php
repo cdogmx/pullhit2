@@ -22,8 +22,8 @@ test('the listings endpoint returns listings + affiliate urls and caches the fet
         ->assertOk()
         ->assertJsonCount(1, 'listings')
         ->assertJsonPath('configured', true)
-        ->assertJsonPath('ebay_url', fn ($u) => str_contains($u, 'campid=5338'))
-        ->assertJsonPath('tcgplayer_url', fn ($u) => str_contains($u, 'tcgplayer.com'));
+        ->assertJsonPath('ebay_options.0.label', 'Near Mint')
+        ->assertJsonPath('ebay_options.0.url', fn ($u) => str_contains($u, 'campid=5338') && str_contains($u, 'Near+Mint'));
 
     // Second call is served from cache — only the original token + search went out.
     $this->getJson("/api/v1/catalog/{$item->id}/listings")->assertOk();
@@ -39,5 +39,5 @@ test('the listings endpoint works (affiliate links only) when Browse is unconfig
         ->assertOk()
         ->assertJsonPath('configured', false)
         ->assertJsonCount(0, 'listings')
-        ->assertJsonPath('ebay_url', fn ($u) => str_contains($u, 'campid=5338'));
+        ->assertJsonPath('ebay_options.0.url', fn ($u) => str_contains($u, 'campid=5338'));
 });
