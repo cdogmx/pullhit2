@@ -71,7 +71,7 @@ export default function Welcome() {
                 <div className="mx-auto max-w-3xl text-center">
                     <span className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
                         <ShieldCheck className="size-3.5" />
-                        Become a black belt in collecting
+                        Wax on.
                     </span>
                     <h1 className="mt-6 text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
                         Know what your collection is really worth.

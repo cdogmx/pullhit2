@@ -72,7 +72,7 @@ export default function Brand() {
                             <span className="text-muted-foreground">.com</span>
                         </h1>
                         <p className="mt-3 text-lg text-muted-foreground">
-                            Become a black belt in collecting.
+                            Wax on.
                         </p>
                     </div>
                 </div>

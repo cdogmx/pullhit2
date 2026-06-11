@@ -74,9 +74,8 @@ export function SiteFooter() {
                             </span>
                         </Link>
                         <p className="max-w-xs text-sm text-muted-foreground">
-                            Become a black belt in collecting.
-                            Confidence-scored market values for sealed product,
-                            raw singles, and graded collectibles.
+                            Wax on. Confidence-scored market values for sealed
+                            product, raw singles, and graded collectibles.
                         </p>
                     </div>
 
