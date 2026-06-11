@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 Route::inertia('brand', 'brand')->name('brand');
+Route::inertia('terms', 'terms')->name('terms');
+Route::inertia('privacy', 'privacy')->name('privacy');
 
 // Public catalog browse/search.
 Route::get('browse', [CatalogController::class, 'index'])->name('catalog.browse');

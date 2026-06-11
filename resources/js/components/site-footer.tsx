@@ -36,8 +36,8 @@ const footerNav: {
     {
         heading: 'Legal',
         links: [
-            { title: 'Privacy', href: '#' },
-            { title: 'Terms', href: '#' },
+            { title: 'Privacy', href: '/privacy' },
+            { title: 'Terms', href: '/terms' },
         ],
     },
 ];
@@ -103,7 +103,38 @@ export function SiteFooter() {
                     ))}
                 </div>
 
-                <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 sm:flex-row">
+                <div className="mt-10 border-t border-border pt-6">
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                        <span className="font-medium text-foreground">
+                            Valuation disclaimer.
+                        </span>{' '}
+                        Values shown on CardFoo are estimates for informational
+                        purposes only — not appraisals, offers, or financial
+                        advice. A card is only worth what a buyer will actually
+                        pay; prices are subjective and change constantly. Our
+                        figures are derived from past and listed sales that may
+                        be incomplete, delayed, or inaccurate, and should not be
+                        relied on for buying, selling, insurance, or tax
+                        decisions. You are solely responsible for your own
+                        transactions. See our{' '}
+                        <a
+                            href="/terms"
+                            className="underline underline-offset-4 hover:text-foreground"
+                        >
+                            Terms of Use
+                        </a>{' '}
+                        and{' '}
+                        <a
+                            href="/privacy"
+                            className="underline underline-offset-4 hover:text-foreground"
+                        >
+                            Privacy Policy
+                        </a>
+                        .
+                    </p>
+                </div>
+
+                <div className="mt-6 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 sm:flex-row">
                     <p className="text-sm text-muted-foreground">
                         &copy; {year} CardFoo. All rights reserved.
                     </p>
