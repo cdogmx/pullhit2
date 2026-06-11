@@ -8,6 +8,14 @@ export type AdminStats = {
     admins: number;
 };
 
+export type SetHealth = {
+    name: string;
+    code: string | null;
+    items: number;
+    valued: number;
+    images: number;
+};
+
 export type AdminSet = {
     id: number;
     name: string;

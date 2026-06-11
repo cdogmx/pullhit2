@@ -28,6 +28,29 @@ class DashboardController extends Controller
                 'premium' => User::where('membership_tier', MembershipTier::Premium)->count(),
                 'admins' => User::where('is_admin', true)->count(),
             ],
+            'health' => $this->health(),
         ]);
+    }
+
+    /**
+     * Per-set valuation/image coverage — confirms an environment is populated.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function health(): array
+    {
+        return Set::orderBy('name')->get()->map(function (Set $set) {
+            $itemIds = $set->catalogItems()->pluck('id');
+            $items = $itemIds->count();
+
+            return [
+                'name' => $set->name,
+                'code' => $set->code,
+                'items' => $items,
+                'valued' => $items === 0 ? 0 : MarketValue::whereIn('catalog_item_id', $itemIds)
+                    ->distinct('catalog_item_id')->count('catalog_item_id'),
+                'images' => $set->catalogItems()->whereNotNull('primary_image_path')->count(),
+            ];
+        })->all();
     }
 }
