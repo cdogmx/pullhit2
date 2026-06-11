@@ -12,7 +12,11 @@ use Illuminate\Console\Command;
  */
 class RefreshEbayCommand extends Command
 {
-    protected $signature = 'valuation:refresh-ebay {--item= : A catalog_item id} {--set= : A set slug} {--limit=25 : Max items}';
+    protected $signature = 'valuation:refresh-ebay
+        {--item= : A catalog_item id}
+        {--set= : A set slug}
+        {--exclude-rarity= : Comma-separated rarities to skip (e.g. "Common,Uncommon")}
+        {--limit=25 : Max items}';
 
     protected $description = 'Pull eBay sold comps (via Oxylabs) and recompute market values';
 
@@ -28,6 +32,12 @@ class RefreshEbayCommand extends Command
             $this->error('Provide --item or --set.');
 
             return self::FAILURE;
+        }
+
+        // Skip low-value rarities (e.g. Common/Uncommon) to conserve Oxylabs calls.
+        if ($exclude = $this->option('exclude-rarity')) {
+            $skip = array_filter(array_map('trim', explode(',', $exclude)));
+            $query->whereNotIn('attributes->rarity', $skip);
         }
 
         $items = $query->limit((int) $this->option('limit'))->get();

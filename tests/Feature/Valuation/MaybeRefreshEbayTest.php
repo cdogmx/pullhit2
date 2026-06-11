@@ -6,7 +6,33 @@ use App\Models\CatalogItem;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Queue;
 
-beforeEach(fn () => Queue::fake());
+beforeEach(function () {
+    Queue::fake();
+    // These tests exercise staleness/dispatch logic — not the rarity gate.
+    config(['valuation.ebay.skip_rarities' => []]);
+});
+
+test('it skips a low-value rarity even when stale', function () {
+    config(['valuation.ebay.skip_rarities' => ['Common', 'Uncommon']]);
+    $item = CatalogItem::factory()->create([
+        'ebay_refreshed_at' => null,
+        'attributes' => ['language' => 'en', 'rarity' => 'Common', 'variant' => 'normal'],
+    ]);
+
+    expect(app(MaybeRefreshEbay::class)($item))->toBeFalse();
+    Queue::assertNothingPushed();
+});
+
+test('it still refreshes a chase rarity', function () {
+    config(['valuation.ebay.skip_rarities' => ['Common', 'Uncommon']]);
+    $item = CatalogItem::factory()->create([
+        'ebay_refreshed_at' => null,
+        'attributes' => ['language' => 'en', 'rarity' => 'Special Illustration Rare', 'variant' => 'holo'],
+    ]);
+
+    expect(app(MaybeRefreshEbay::class)($item))->toBeTrue();
+    Queue::assertPushed(RefreshEbaySoldComps::class);
+});
 
 test('it dispatches a refresh when the card has never been pulled', function () {
     $item = CatalogItem::factory()->create(['ebay_refreshed_at' => null]);

@@ -42,6 +42,13 @@ return [
         // detail page shows an "updating" indicator and live-swaps the new values.
         'view_refresh_hours' => (int) env('EBAY_VIEW_REFRESH_HOURS', 12),
 
+        // Don't spend Oxylabs calls on low-value rarities — the on-view refresh
+        // skips these (admin "Refresh now" + the CLI still work). Comma-separated.
+        'skip_rarities' => array_filter(array_map(
+            'trim',
+            explode(',', (string) env('EBAY_SKIP_RARITIES', 'Common,Uncommon')),
+        )),
+
         // Accept only prices within [min, max] × the anchor (TCGCSV/median).
         'price_band' => [0.1, 5.0],
 
