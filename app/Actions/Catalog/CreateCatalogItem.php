@@ -72,7 +72,9 @@ class CreateCatalogItem
             'number' => $number,
             'attributes' => $validated,
             'external_ids' => $externalIds === [] ? null : $externalIds,
-            'primary_image_path' => $primaryImagePath,
+            // Preserve an existing image on re-import when none is supplied (e.g.
+            // a `--no-images` revalue run) — don't null out a stored S3 path.
+            'primary_image_path' => $primaryImagePath ?? $item->primary_image_path,
             'identity_hash' => $identityHash,
             'base_key' => $baseKey,
         ])->save();

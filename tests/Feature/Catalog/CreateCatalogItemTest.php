@@ -120,3 +120,24 @@ test('invalid attributes throw before anything is persisted', function () {
 
     expect(CatalogItem::count())->toBe(0);
 });
+
+test('re-import without an image preserves the existing image path', function () {
+    $args = [
+        'vertical' => $this->vertical,
+        'productLine' => $this->pokemon,
+        'set' => $this->set,
+        'itemType' => ItemType::Single,
+        'name' => 'Pikachu',
+        'number' => '173/165',
+        'attributes' => ['language' => 'en', 'rarity' => 'Illustration Rare', 'variant' => 'reverse_holo'],
+    ];
+
+    $created = ($this->action)(...$args, primaryImagePath: 'https://s3/phb/pokemon/mew/1.png');
+    expect($created->primary_image_path)->toBe('https://s3/phb/pokemon/mew/1.png');
+
+    // A --no-images revalue pass passes null — the stored image must survive.
+    $again = ($this->action)(...$args, primaryImagePath: null);
+
+    expect($again->id)->toBe($created->id)
+        ->and($again->primary_image_path)->toBe('https://s3/phb/pokemon/mew/1.png');
+});
