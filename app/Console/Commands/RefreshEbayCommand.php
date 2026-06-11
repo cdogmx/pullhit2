@@ -22,6 +22,10 @@ class RefreshEbayCommand extends Command
 
     public function handle(IngestEbaySoldComps $ingest): int
     {
+        // Each card pulls a large eBay HTML page through Oxylabs; backfilling a
+        // whole set accumulates well past the default 128M.
+        @ini_set('memory_limit', '1024M');
+
         $query = CatalogItem::query();
 
         if ($item = $this->option('item')) {
