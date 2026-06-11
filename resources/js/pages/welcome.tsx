@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { BadgeCheck, LineChart, ScanLine, Search, Store } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
+import AppLogoIcon from '@/components/app-logo-icon';
 import { dashboard, register } from '@/routes';
 
 /**
@@ -75,7 +76,8 @@ export default function Welcome() {
             <section className="bg-primary text-primary-foreground">
                 <div className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
                     <div className="mx-auto max-w-2xl text-center">
-                        <h1 className="font-script text-7xl leading-tight sm:text-8xl">
+                        <AppLogoIcon className="mx-auto block size-24 fill-current sm:size-28" />
+                        <h1 className="mt-2 font-script text-7xl leading-tight sm:text-8xl">
                             Wax on.
                         </h1>
                         <p className="mx-auto mt-5 max-w-xl text-lg font-medium text-primary-foreground/80">
