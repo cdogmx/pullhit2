@@ -74,8 +74,11 @@ export function SiteFooter() {
                             </span>
                         </Link>
                         <p className="max-w-xs text-sm text-muted-foreground">
-                            Wax on. Confidence-scored market values for sealed
-                            product, raw singles, and graded collectibles.
+                            <span className="font-script text-base text-foreground">
+                                Wax on.
+                            </span>{' '}
+                            Confidence-scored market values for sealed product,
+                            raw singles, and graded collectibles.
                         </p>
                     </div>
 

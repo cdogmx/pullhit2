@@ -1,18 +1,14 @@
-import { Head, Link, usePage } from '@inertiajs/react';
-import {
-    BadgeCheck,
-    LineChart,
-    ScanLine,
-    ShieldCheck,
-    Store,
-} from 'lucide-react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { BadgeCheck, LineChart, ScanLine, Search, Store } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { dashboard, login, register } from '@/routes';
+import { useState } from 'react';
+import { dashboard, register } from '@/routes';
 
 /**
  * Marketing landing page. Chrome (header/footer/mobile tabs) is provided by the
- * AppShell layout — this page renders content only.
+ * AppShell layout — this page renders content only. The hero is a full-bleed
+ * gold band with the "Wax on." slogan and a catalog search that submits to
+ * /browse.
  */
 const features: { title: string; description: string; icon: LucideIcon }[] = [
     {
@@ -59,45 +55,89 @@ const steps: { title: string; description: string }[] = [
     },
 ];
 
+const popularSearches = ['Charizard', 'Pikachu', 'PSA 10', 'Booster box'];
+
 export default function Welcome() {
     const { auth } = usePage().props;
+    const [query, setQuery] = useState('');
+
+    const onSearch = (event: React.FormEvent) => {
+        event.preventDefault();
+        const term = query.trim();
+        router.get('/browse', term ? { q: term } : {});
+    };
 
     return (
         <>
-            <Head title="Welcome" />
+            <Head title="Wax on." />
 
             {/* Hero */}
-            <section className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-                <div className="mx-auto max-w-3xl text-center">
-                    <span className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
-                        <ShieldCheck className="size-3.5" />
-                        Wax on.
-                    </span>
-                    <h1 className="mt-6 text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-                        Know what your collection is really worth.
-                    </h1>
-                    <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-                        Track, value, and sell TCG, sports cards, and other
-                        collectibles — with market values that carry a range, a
-                        sample size, and a confidence score.
-                    </p>
-                    <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                        {auth.user ? (
-                            <Button asChild size="lg">
-                                <Link href={dashboard()}>Go to dashboard</Link>
-                            </Button>
-                        ) : (
-                            <>
-                                <Button asChild size="lg">
-                                    <Link href={register()}>
-                                        Start your collection
-                                    </Link>
-                                </Button>
-                                <Button asChild size="lg" variant="outline">
-                                    <Link href={login()}>Log in</Link>
-                                </Button>
-                            </>
-                        )}
+            <section className="bg-primary text-primary-foreground">
+                <div className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+                    <div className="mx-auto max-w-2xl text-center">
+                        <h1 className="font-script text-7xl leading-tight sm:text-8xl">
+                            Wax on.
+                        </h1>
+                        <p className="mx-auto mt-5 max-w-xl text-lg font-medium text-primary-foreground/80">
+                            Search any card and see what it&rsquo;s really worth
+                            — sealed, raw, or graded, with a confidence score.
+                        </p>
+
+                        <form
+                            onSubmit={onSearch}
+                            className="mx-auto mt-8 flex w-full max-w-xl items-center gap-2 rounded-full bg-white p-1.5 shadow-xl ring-1 ring-black/5"
+                        >
+                            <Search className="ml-3 size-5 shrink-0 text-neutral-400" />
+                            <input
+                                type="search"
+                                value={query}
+                                onChange={(event) =>
+                                    setQuery(event.target.value)
+                                }
+                                placeholder="Search cards, sets, or players…"
+                                aria-label="Search the catalog"
+                                className="min-w-0 flex-1 bg-transparent py-2 text-base text-neutral-900 outline-none placeholder:text-neutral-500"
+                            />
+                            <button
+                                type="submit"
+                                className="shrink-0 rounded-full bg-[#111317] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#111317]/90"
+                            >
+                                Search
+                            </button>
+                        </form>
+
+                        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
+                            <span className="text-primary-foreground/70">
+                                Popular:
+                            </span>
+                            {popularSearches.map((term) => (
+                                <Link
+                                    key={term}
+                                    href={`/browse?q=${encodeURIComponent(term)}`}
+                                    className="rounded-full bg-black/10 px-3 py-1 font-medium transition-colors hover:bg-black/20"
+                                >
+                                    {term}
+                                </Link>
+                            ))}
+                        </div>
+
+                        <div className="mt-8">
+                            {auth.user ? (
+                                <Link
+                                    href={dashboard()}
+                                    className="text-sm font-semibold underline-offset-4 hover:underline"
+                                >
+                                    Go to your dashboard &rarr;
+                                </Link>
+                            ) : (
+                                <Link
+                                    href={register()}
+                                    className="text-sm font-semibold underline-offset-4 hover:underline"
+                                >
+                                    or start your collection &rarr;
+                                </Link>
+                            )}
+                        </div>
                     </div>
                 </div>
             </section>

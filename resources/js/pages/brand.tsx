@@ -71,7 +71,7 @@ export default function Brand() {
                             CardFoo
                             <span className="text-muted-foreground">.com</span>
                         </h1>
-                        <p className="mt-3 text-lg text-muted-foreground">
+                        <p className="mt-3 font-script text-3xl text-primary">
                             Wax on.
                         </p>
                     </div>
