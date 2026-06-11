@@ -5,17 +5,38 @@ import { Button } from '@/components/ui/button';
 
 /**
  * Brand assets page — public showcase of the CardFoo mark and wordmark at
- * larger sizes, with usage variants and downloadable icon files. Chrome
- * (header/footer) is provided by the AppShell layout.
+ * larger sizes, with usage variants, the brand palette, and downloadable
+ * icon files. Chrome (header/footer) is provided by the AppShell layout.
  */
+const BRAND_GOLD = '#CBB601';
 const BELT_BLACK = '#111317';
 
-const markSizes = [
-    { px: 24, label: '24px' },
-    { px: 32, label: '32px' },
-    { px: 48, label: '48px' },
-    { px: 64, label: '64px' },
-    { px: 96, label: '96px' },
+const markSizes = [24, 32, 48, 64, 96];
+
+const variants = [
+    {
+        label: 'Primary',
+        bg: BRAND_GOLD,
+        mark: BELT_BLACK,
+        className: '',
+    },
+    {
+        label: 'Inverse',
+        bg: BELT_BLACK,
+        mark: BRAND_GOLD,
+        className: '',
+    },
+    {
+        label: 'On light',
+        bg: '#ffffff',
+        mark: BELT_BLACK,
+        className: '',
+    },
+];
+
+const colors = [
+    { name: 'Brand Gold', hex: BRAND_GOLD, note: 'Primary accent' },
+    { name: 'Belt Black', hex: BELT_BLACK, note: 'Mark + dark surfaces' },
 ];
 
 const downloads = [
@@ -40,14 +61,15 @@ export default function Brand() {
                 </p>
                 <div className="mt-8 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-8">
                     <span
-                        className="flex aspect-square size-24 shrink-0 items-center justify-center rounded-2xl text-white sm:size-32"
-                        style={{ backgroundColor: BELT_BLACK }}
+                        className="flex aspect-square size-24 shrink-0 items-center justify-center rounded-2xl sm:size-32"
+                        style={{ backgroundColor: BRAND_GOLD, color: BELT_BLACK }}
                     >
                         <AppLogoIcon className="size-16 fill-current sm:size-20" />
                     </span>
                     <div>
                         <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
-                            CardFoo<span className="text-muted-foreground">.com</span>
+                            CardFoo
+                            <span className="text-muted-foreground">.com</span>
                         </h1>
                         <p className="mt-3 text-lg text-muted-foreground">
                             Become a black belt in collecting.
@@ -64,29 +86,27 @@ export default function Brand() {
                         A ninja mask — a tied headband over focused eyes.
                     </p>
                     <div className="mt-6 flex flex-wrap items-end gap-8">
-                        {markSizes.map((size) => (
+                        {markSizes.map((px) => (
                             <div
-                                key={size.px}
+                                key={px}
                                 className="flex flex-col items-center gap-2"
                             >
                                 <span
-                                    className="flex items-center justify-center rounded-xl text-white"
+                                    className="flex items-center justify-center rounded-xl"
                                     style={{
-                                        backgroundColor: BELT_BLACK,
-                                        width: size.px * 1.6,
-                                        height: size.px * 1.6,
+                                        backgroundColor: BRAND_GOLD,
+                                        color: BELT_BLACK,
+                                        width: px * 1.6,
+                                        height: px * 1.6,
                                     }}
                                 >
                                     <AppLogoIcon
                                         className="fill-current"
-                                        style={{
-                                            width: size.px,
-                                            height: size.px,
-                                        }}
+                                        style={{ width: px, height: px }}
                                     />
                                 </span>
                                 <span className="text-xs text-muted-foreground">
-                                    {size.label}
+                                    {px}px
                                 </span>
                             </div>
                         ))}
@@ -98,34 +118,39 @@ export default function Brand() {
             <section className="border-t border-border">
                 <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
                     <h2 className="text-sm font-semibold">Variants</h2>
-                    <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                        {/* On belt black */}
-                        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-border p-10">
-                            <span
-                                className="flex aspect-square size-20 items-center justify-center rounded-2xl text-white"
-                                style={{ backgroundColor: BELT_BLACK }}
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Gold on black is primary. Keep the mark monochrome —
+                        never recolor the ninja outside these pairings.
+                    </p>
+                    <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {variants.map((v) => (
+                            <div
+                                key={v.label}
+                                className="flex flex-col items-center justify-center gap-4 rounded-xl border border-border p-10"
                             >
-                                <AppLogoIcon className="size-12 fill-current" />
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                                On belt black
-                            </span>
-                        </div>
-                        {/* On white */}
-                        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-border bg-white p-10">
-                            <span className="flex aspect-square size-20 items-center justify-center text-neutral-900">
-                                <AppLogoIcon className="size-12 fill-current" />
-                            </span>
-                            <span className="text-xs text-neutral-500">
-                                On white
-                            </span>
-                        </div>
-                        {/* Mark + wordmark */}
+                                <span
+                                    className="flex aspect-square size-20 items-center justify-center rounded-2xl"
+                                    style={{
+                                        backgroundColor: v.bg,
+                                        color: v.mark,
+                                    }}
+                                >
+                                    <AppLogoIcon className="size-12 fill-current" />
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    {v.label}
+                                </span>
+                            </div>
+                        ))}
+                        {/* Horizontal lockup */}
                         <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-border p-10">
                             <span className="flex items-center gap-2">
                                 <span
-                                    className="flex aspect-square size-9 items-center justify-center rounded-md text-white"
-                                    style={{ backgroundColor: BELT_BLACK }}
+                                    className="flex aspect-square size-9 items-center justify-center rounded-md"
+                                    style={{
+                                        backgroundColor: BRAND_GOLD,
+                                        color: BELT_BLACK,
+                                    }}
                                 >
                                     <AppLogoIcon className="size-6 fill-current" />
                                 </span>
@@ -146,17 +171,26 @@ export default function Brand() {
                 <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-2 lg:px-8">
                     <div>
                         <h2 className="text-sm font-semibold">Color</h2>
-                        <div className="mt-4 flex items-center gap-4">
-                            <span
-                                className="size-14 rounded-lg border border-border"
-                                style={{ backgroundColor: BELT_BLACK }}
-                            />
-                            <div>
-                                <p className="text-sm font-medium">Belt Black</p>
-                                <p className="text-sm text-muted-foreground">
-                                    {BELT_BLACK}
-                                </p>
-                            </div>
+                        <div className="mt-4 space-y-4">
+                            {colors.map((c) => (
+                                <div
+                                    key={c.hex}
+                                    className="flex items-center gap-4"
+                                >
+                                    <span
+                                        className="size-14 shrink-0 rounded-lg border border-border"
+                                        style={{ backgroundColor: c.hex }}
+                                    />
+                                    <div>
+                                        <p className="text-sm font-medium">
+                                            {c.name}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {c.hex} · {c.note}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
