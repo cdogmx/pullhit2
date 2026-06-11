@@ -69,10 +69,11 @@ export function SiteFooter() {
                                 <AppLogoIcon className="size-5 fill-current" />
                             </span>
                             <span className="text-base font-semibold tracking-tight">
-                                tcg-platform
+                                CardFoo
                             </span>
                         </Link>
                         <p className="max-w-xs text-sm text-muted-foreground">
+                            Become a black belt in collecting.
                             Confidence-scored market values for sealed product,
                             raw singles, and graded collectibles.
                         </p>
@@ -101,7 +102,7 @@ export function SiteFooter() {
 
                 <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 sm:flex-row">
                     <p className="text-sm text-muted-foreground">
-                        &copy; {year} tcg-platform. All rights reserved.
+                        &copy; {year} CardFoo. All rights reserved.
                     </p>
                     <div className="inline-flex items-center gap-1 rounded-lg border border-border p-1">
                         {appearanceOptions.map((option) => {

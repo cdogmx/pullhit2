@@ -39,7 +39,7 @@ export function SiteHeader() {
                             <AppLogoIcon className="size-5 fill-current" />
                         </span>
                         <span className="text-base font-semibold tracking-tight">
-                            tcg-platform
+                            CardFoo
                         </span>
                     </Link>
                     <nav className="hidden items-center gap-1 md:flex">
