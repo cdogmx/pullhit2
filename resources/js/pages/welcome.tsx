@@ -73,8 +73,34 @@ export default function Welcome() {
             <Head title="Wax on." />
 
             {/* Hero */}
-            <section className="bg-primary text-primary-foreground">
-                <div className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+            <section className="relative overflow-hidden bg-primary text-primary-foreground">
+                <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-y-0 left-0 hidden w-40 md:block lg:w-60"
+                    style={{
+                        backgroundImage:
+                            'radial-gradient(rgba(17,19,23,0.16) 1.5px, transparent 1.6px)',
+                        backgroundSize: '18px 18px',
+                        maskImage:
+                            'linear-gradient(to right, black, transparent)',
+                        WebkitMaskImage:
+                            'linear-gradient(to right, black, transparent)',
+                    }}
+                />
+                <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-y-0 right-0 hidden w-40 md:block lg:w-60"
+                    style={{
+                        backgroundImage:
+                            'radial-gradient(rgba(17,19,23,0.16) 1.5px, transparent 1.6px)',
+                        backgroundSize: '18px 18px',
+                        maskImage:
+                            'linear-gradient(to left, black, transparent)',
+                        WebkitMaskImage:
+                            'linear-gradient(to left, black, transparent)',
+                    }}
+                />
+                <div className="relative mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
                     <div className="mx-auto max-w-2xl text-center">
                         <AppLogoIcon className="mx-auto block size-24 fill-current sm:size-28" />
                         <h1 className="mt-2 font-script text-7xl leading-tight sm:text-8xl">
