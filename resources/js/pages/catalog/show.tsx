@@ -1,7 +1,8 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, BarChart3, Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { BuyListings } from '@/components/catalog/buy-listings';
+import { EbayListings } from '@/components/catalog/ebay-listings';
+import { EbayShopButton } from '@/components/catalog/ebay-shop-button';
 import { PriceBreakdownDrawer } from '@/components/catalog/price-breakdown-drawer';
 import { PriceTag } from '@/components/catalog/price-tag';
 import { Sparkline } from '@/components/catalog/sparkline';
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { confidenceVariant, formatMoney, relativeTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type {
+    CardListings,
     CatalogItem,
     GradingCompanyOption,
     OwnedState,
@@ -86,6 +88,22 @@ export default function Show({
         stateKey: string;
         label: string;
     } | null>(null);
+
+    // Buy links + live listings (lazy — drives the prominent "Shop on eBay" CTA).
+    const [listings, setListings] = useState<CardListings | null>(null);
+    useEffect(() => {
+        let active = true;
+        fetch(`/api/v1/catalog/${item.id}/listings`, {
+            headers: { Accept: 'application/json' },
+        })
+            .then((r) => r.json())
+            .then((d: CardListings) => active && setListings(d))
+            .catch(() => {});
+
+        return () => {
+            active = false;
+        };
+    }, [item.id]);
 
     // Poll while an update is in flight; stop once refreshed_at advances past
     // where we started (covers both on-view auto-refresh and admin "Refresh now").
@@ -301,10 +319,17 @@ export default function Show({
                                     </div>
                                 )}
 
-                                <div className="mt-4 flex flex-wrap gap-2">
+                                {/* Primary actions — prominent, side by side */}
+                                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                                    {listings && (
+                                        <EbayShopButton
+                                            options={listings.ebay_options}
+                                            className="sm:flex-1"
+                                        />
+                                    )}
                                     <Button
-                                        variant="outline"
-                                        size="sm"
+                                        variant="secondary"
+                                        className="sm:flex-1"
                                         onClick={() =>
                                             setBreakdown({
                                                 stateKey: headline.state_key,
@@ -315,6 +340,22 @@ export default function Show({
                                         <BarChart3 className="size-4" />
                                         View breakdown
                                     </Button>
+                                </div>
+
+                                {listings && listings.listings.length > 0 && (
+                                    <div className="mt-4 border-t border-border pt-3">
+                                        <p className={cn(SECTION_LABEL, 'mb-2')}>
+                                            Available on eBay
+                                        </p>
+                                        <EbayListings listings={listings.listings} />
+                                    </div>
+                                )}
+
+                                <div className="mt-3 flex items-center justify-between gap-2">
+                                    <p className="text-[11px] text-muted-foreground">
+                                        As an eBay Partner, we may be compensated
+                                        for qualifying purchases.
+                                    </p>
                                     {isAdmin && (
                                         <Button
                                             variant="ghost"
@@ -328,7 +369,7 @@ export default function Show({
                                                     updating && 'animate-spin',
                                                 )}
                                             />
-                                            Refresh now
+                                            Refresh
                                         </Button>
                                     )}
                                 </div>
@@ -392,9 +433,6 @@ export default function Show({
                                 </div>
                             </section>
                         )}
-
-                        {/* Buy this card — live eBay listings + affiliate links */}
-                        <BuyListings itemId={item.id} />
 
                         {/* Card details */}
                         {facetRows.length > 0 && (
