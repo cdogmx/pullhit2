@@ -6,6 +6,7 @@ use App\Http\Controllers\Web\ScanController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
+Route::inertia('brand', 'brand')->name('brand');
 
 // Public catalog browse/search.
 Route::get('browse', [CatalogController::class, 'index'])->name('catalog.browse');

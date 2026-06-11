@@ -29,6 +29,7 @@ const footerNav: {
         heading: 'Company',
         links: [
             { title: 'About', href: '#' },
+            { title: 'Brand', href: '/brand' },
             { title: 'Contact', href: '#' },
         ],
     },
