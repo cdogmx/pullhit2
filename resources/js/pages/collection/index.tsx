@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Download, Trash2 } from 'lucide-react';
+import { Download, Trash2, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -63,14 +63,22 @@ export default function CollectionIndex({
                     <h1 className="text-2xl font-bold tracking-tight">
                         Your collection
                     </h1>
-                    {holdings.length > 0 && (
+                    <div className="flex items-center gap-2">
                         <Button asChild variant="outline" size="sm">
-                            <a href="/collection/export">
-                                <Download className="size-4" />
-                                Export CSV
-                            </a>
+                            <Link href="/collection/import">
+                                <Upload className="size-4" />
+                                Import
+                            </Link>
                         </Button>
-                    )}
+                        {holdings.length > 0 && (
+                            <Button asChild variant="outline" size="sm">
+                                <a href="/collection/export">
+                                    <Download className="size-4" />
+                                    Export CSV
+                                </a>
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Summary */}

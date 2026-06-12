@@ -7,6 +7,8 @@ use App\Actions\Collection\BuildPortfolio;
 use App\Actions\Collection\ExportCollectionCsv;
 use App\Actions\Collection\RemoveFromCollection;
 use App\Actions\Collection\UpdateCollectionItem;
+use App\Actions\Import\BuildImportPreview;
+use App\Actions\Import\ImportCollection;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Collection\StoreCollectionItemRequest;
 use App\Http\Resources\CollectionItemResource;
@@ -51,6 +53,42 @@ class CollectionController extends Controller
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function importForm(): Response
+    {
+        return Inertia::render('collection/import');
+    }
+
+    public function importPreview(Request $request, BuildImportPreview $build): Response
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ]);
+
+        $csv = (string) file_get_contents($request->file('file')->getRealPath());
+
+        return Inertia::render('collection/import', $build($csv));
+    }
+
+    public function importStore(Request $request, ImportCollection $import): RedirectResponse
+    {
+        $data = $request->validate([
+            'rows' => ['required', 'array', 'min:1'],
+            'rows.*.catalog_item_id' => ['required', 'integer', 'exists:catalog_items,id'],
+            'rows.*.condition' => ['nullable', 'string', 'max:8'],
+            'rows.*.grading_company_id' => ['nullable', 'integer', 'exists:grading_companies,id'],
+            'rows.*.grade' => ['nullable', 'numeric', 'min:1', 'max:10'],
+            'rows.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
+            'rows.*.unit_cost' => ['nullable', 'integer', 'min:0'],
+            'rows.*.acquired_at' => ['nullable', 'date'],
+            'rows.*.folder' => ['nullable', 'string', 'max:255'],
+            'rows.*.notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $count = $import($request->user(), $data['rows']);
+
+        return redirect('/collection')->with('success', "Imported {$count} cards from PriceCharting.");
     }
 
     public function store(StoreCollectionItemRequest $request, AddToCollection $add): RedirectResponse

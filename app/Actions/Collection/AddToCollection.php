@@ -36,6 +36,7 @@ class AddToCollection
                     'quantity' => 0, // the lot below sets the real quantity
                     'is_for_sale' => $attrs['is_for_sale'] ?? false,
                     'notes' => $attrs['notes'] ?? null,
+                    'folder' => $attrs['folder'] ?? null,
                 ],
             );
 
