@@ -10,6 +10,7 @@ use App\Models\Vertical;
 use App\Support\Catalog\CardImageStore;
 use App\Support\Catalog\PokemonCardMapper;
 use App\Support\Catalog\PokemonTcgClient;
+use Illuminate\Support\Str;
 
 /**
  * Import a real Pokémon set from pokemontcg.io into the catalog: upsert the Set,
@@ -86,17 +87,35 @@ class ImportPokemonSet
     /** @param  array<string, mixed>  $data */
     protected function upsertSet(int $productLineId, string $setId, array $data): Set
     {
-        return Set::updateOrCreate(
-            ['product_line_id' => $productLineId, 'slug' => "{$setId}-en"],
-            [
-                'name' => $data['name'] ?? $setId,
-                'code' => $data['ptcgoCode'] ?? null,
-                'language' => 'en',
-                'series' => $data['series'] ?? null,
-                'set_family' => $data['series'] ?? null,
-                'released_at' => isset($data['releaseDate']) ? str_replace('/', '-', $data['releaseDate']) : null,
-                'external_ids' => ['ptcgio_id' => $setId],
-            ],
-        );
+        $name = $data['name'] ?? $setId;
+        $language = 'en'; // pokemontcg.io is English-only
+
+        // Human-readable, SEO-friendly slug from the set name (e.g. "surging-
+        // sparks"); non-English sets get a language suffix to stay unique.
+        $slug = Str::slug($name) ?: $setId;
+        if ($language !== 'en') {
+            $slug .= "-{$language}";
+        }
+
+        // Match on the stable source id, never the slug — so renaming a slug can
+        // never duplicate a set on re-import (the slug feeds the identity hash).
+        $set = Set::query()
+            ->where('product_line_id', $productLineId)
+            ->where('external_ids->ptcgio_id', $setId)
+            ->first() ?? new Set;
+
+        $set->forceFill([
+            'product_line_id' => $productLineId,
+            'slug' => $slug,
+            'name' => $name,
+            'code' => $data['ptcgoCode'] ?? null,
+            'language' => $language,
+            'series' => $data['series'] ?? null,
+            'set_family' => $data['series'] ?? null,
+            'released_at' => isset($data['releaseDate']) ? str_replace('/', '-', $data['releaseDate']) : null,
+            'external_ids' => ['ptcgio_id' => $setId],
+        ])->save();
+
+        return $set;
     }
 }

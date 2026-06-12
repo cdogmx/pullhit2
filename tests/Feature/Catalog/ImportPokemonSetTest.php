@@ -38,7 +38,7 @@ test('it imports a set: catalog items, images, and estimated values', function (
 
     expect($r)->toMatchArray(['set' => 'Surging Sparks', 'items' => 2, 'valued' => 2, 'images' => 1]);
 
-    $set = Set::where('slug', 'sv8-en')->first();
+    $set = Set::where('slug', 'surging-sparks')->first();
     expect($set)->not->toBeNull()
         ->and($set->code)->toBe('SSP')
         ->and($set->series)->toBe('Scarlet & Violet');
@@ -57,7 +57,7 @@ test('it is idempotent on re-run (no duplicates, no re-download)', function () {
     app(ImportPokemonSet::class)('sv8');
     app(ImportPokemonSet::class)('sv8');
 
-    $set = Set::where('slug', 'sv8-en')->first();
+    $set = Set::where('slug', 'surging-sparks')->first();
     expect(CatalogItem::where('set_id', $set->id)->count())->toBe(2);
 });
 
@@ -66,7 +66,7 @@ test('--no-prices and --no-images skip those steps', function () {
 
     expect($r['valued'])->toBe(0)->and($r['images'])->toBe(0);
 
-    $set = Set::where('slug', 'sv8-en')->first();
+    $set = Set::where('slug', 'surging-sparks')->first();
     $ids = CatalogItem::where('set_id', $set->id)->pluck('id');
     expect(CatalogItem::where('set_id', $set->id)->first()->primary_image_path)->toBeNull()
         ->and(MarketValue::whereIn('catalog_item_id', $ids)->exists())->toBeFalse();
@@ -75,5 +75,5 @@ test('--no-prices and --no-images skip those steps', function () {
 test('the import command runs', function () {
     $this->artisan('catalog:import-set', ['ids' => ['sv8']])->assertSuccessful();
 
-    expect(Set::where('slug', 'sv8-en')->exists())->toBeTrue();
+    expect(Set::where('slug', 'surging-sparks')->exists())->toBeTrue();
 });
