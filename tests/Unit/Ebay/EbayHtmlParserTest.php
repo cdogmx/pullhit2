@@ -14,7 +14,7 @@ HTML;
 // Real eBay "s-card" markup (quoted attributes, seller in the secondary
 // attributes block) — the live shape, captured from a sold-search result.
 const EBAY_REAL_CARD = <<<'HTML'
-<li class="s-card s-card--horizontal" data-listingid="287379458210"><div class="su-card-container__content"><div class="su-card-container__header"><a class="s-card__link" target="_blank" tabindex="-1" href="https://www.ebay.com/itm/287379458210?_skw=x&amp;hash=item42e92688a2"><div role="heading" aria-level="3" class="s-card__title"><span class="su-styled-text primary default">Keldeo EX 167/086 Special Illustration Rare SIR Pokemon SV White Flare Near Mint</span><span class="clipped">Opens in a new window or tab</span></div></a></div><div class="su-card-container__attributes"><div class="s-card__attribute-row"><span class="su-styled-text positive bold large-1 s-card__price">$84.59</span></div><div class="su-card-container__attributes__secondary"><div class="s-card__attribute-row"><span class="su-styled-text primary large">vozavu-live </span><span class="su-styled-text primary large">100% positive (159)</span></div></div></div></div></li>
+<li class="s-card s-card--horizontal" data-listingid="287379458210"><div class="su-card-container__content"><div class="su-card-container__header"><div class="s-card__caption"><span class="su-styled-text positive default" aria-label="Sold Item">Sold  Jun 11, 2026</span></div><a class="s-card__link" target="_blank" tabindex="-1" href="https://www.ebay.com/itm/287379458210?_skw=x&amp;hash=item42e92688a2"><div role="heading" aria-level="3" class="s-card__title"><span class="su-styled-text primary default">Keldeo EX 167/086 Special Illustration Rare SIR Pokemon SV White Flare Near Mint</span><span class="clipped">Opens in a new window or tab</span></div></a></div><div class="su-card-container__attributes"><div class="s-card__attribute-row"><span class="su-styled-text positive bold large-1 s-card__price">$84.59</span></div><div class="su-card-container__attributes__secondary"><div class="s-card__attribute-row"><span class="su-styled-text primary large">vozavu-live </span><span class="su-styled-text primary large">100% positive (159)</span></div></div></div></div></li>
 HTML;
 
 test('it parses listings, skips the promo card, and strips the New Listing label', function () {
@@ -45,5 +45,8 @@ test('it parses live (quoted) s-card markup and extracts the seller', function (
     )
         ->and($cands[0]->priceCents)->toBe(8459)
         ->and($cands[0]->itemId)->toBe('287379458210')
-        ->and($cands[0]->seller)->toBe('vozavu-live');
+        ->and($cands[0]->seller)->toBe('vozavu-live')
+        // The sold-date caption precedes the title link; the <li>-anchored
+        // parser still attributes it to this card.
+        ->and($cands[0]->soldAt?->toDateString())->toBe('2026-06-11');
 });
