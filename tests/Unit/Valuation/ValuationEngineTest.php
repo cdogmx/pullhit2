@@ -12,8 +12,21 @@ function engine(): ValuationEngine
         'mad_k' => 3.0,
         'venue_priors' => ['tcgplayer' => 1.0, 'ebay' => 0.90, 'whatnot' => 1.0, 'own_marketplace' => 1.0, 'other' => 1.0],
         'half_life' => ['min_days' => 14, 'max_days' => 90, 'constant' => 7.0],
-        'confidence' => ['target_n' => 12, 'recency_tau_days' => 30, 'full_velocity_days' => 14],
+        'confidence' => [
+            'target_n' => 12,
+            'recency_tau_days' => 30,
+            'full_velocity_days' => 14,
+            'concentration_min_n' => 3,
+            'concentration_threshold' => 0.5,
+            'concentration_floor' => 0.6,
+        ],
     ]);
+}
+
+/** An observation tagged with a seller, for concentration tests. */
+function obsBy(string $seller, int $price, int $daysAgo, int $key): Observation
+{
+    return new Observation($price, 'tcgplayer', CarbonImmutable::now()->subDays($daysAgo), $key, $seller);
 }
 
 function obs(int $price, string $venue = 'tcgplayer', int $daysAgo = 10, int $key = 0): Observation
@@ -71,6 +84,35 @@ test('a thin, stale, dispersed market yields lower confidence than a thick recen
 
     expect($thin->confidence)->toBeLessThan(0.4)
         ->and($thickResult->confidence)->toBeGreaterThan($thin->confidence);
+});
+
+test('single-seller dominance lowers confidence vs the same comps from many sellers', function () {
+    // Eight tight, recent sales — strong on every axis except who is selling.
+    $prices = [1000, 1010, 990, 1005, 995, 1000, 1008, 992];
+
+    $oneSeller = [];
+    $manySellers = [];
+    foreach ($prices as $i => $p) {
+        $oneSeller[] = obsBy('pump_account', $p, $i + 1, $i + 1);
+        $manySellers[] = obsBy('seller'.$i, $p, $i + 1, $i + 1);
+    }
+
+    $dominated = engine()->value($oneSeller);
+    $diverse = engine()->value($manySellers);
+
+    expect($dominated->topSellerShare)->toBe(1.0)
+        ->and($diverse->topSellerShare)->toBeLessThan(0.3)
+        ->and($dominated->confidence)->toBeLessThan($diverse->confidence);
+});
+
+test('seller concentration is not judged below the minimum sample', function () {
+    // Two seller-tagged comps — below concentration_min_n, so no share, no penalty.
+    $result = engine()->value([
+        obsBy('solo', 1000, 1, 1),
+        obsBy('solo', 1010, 2, 2),
+    ]);
+
+    expect($result->topSellerShare)->toBeNull();
 });
 
 test('it produces an ordered distribution', function () {

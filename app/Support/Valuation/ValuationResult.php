@@ -23,5 +23,7 @@ readonly class ValuationResult
         public ?float $trend30d,
         public ?float $trend90d,
         public array $outlierKeys = [],
+        /** Share of seller-tagged comps held by the single most-frequent seller (null = too few to judge). */
+        public ?float $topSellerShare = null,
     ) {}
 }

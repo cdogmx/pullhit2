@@ -60,6 +60,8 @@ export type MarketValue = {
     n_sales: number;
     confidence: number;
     confidence_label: string;
+    /** Share of comps from the single most-frequent seller (null = too few to judge). */
+    top_seller_share?: number | null;
     is_estimated: boolean;
     half_life_days: number;
     trend_30d: number | null;

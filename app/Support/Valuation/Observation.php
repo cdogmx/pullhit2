@@ -16,5 +16,6 @@ readonly class Observation
         public string $venue,
         public CarbonInterface $observedAt,
         public int|string|null $key = null,
+        public ?string $seller = null,
     ) {}
 }

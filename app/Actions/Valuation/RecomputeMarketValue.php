@@ -39,6 +39,7 @@ class RecomputeMarketValue
             venue: $o->venue->value,
             observedAt: $o->observed_at,
             key: $o->id,
+            seller: $o->seller,
         ))->all();
 
         $result = $this->engine->value($observations);
@@ -73,6 +74,7 @@ class RecomputeMarketValue
                 'high' => $result->high,
                 'n_sales' => $result->nSales,
                 'confidence' => $result->confidence,
+                'top_seller_share' => $result->topSellerShare,
                 // Estimated when the comps are synthetic placeholders (no real sales yet).
                 'is_estimated' => $rows->contains(fn ($o) => $o->is_synthetic),
                 'half_life_days' => $result->halfLifeDays,

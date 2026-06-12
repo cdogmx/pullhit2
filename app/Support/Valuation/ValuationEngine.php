@@ -76,8 +76,9 @@ class ValuationEngine
         $p25 = Stats::weightedQuantile($norm, $weights, 0.25);
         $p75 = Stats::weightedQuantile($norm, $weights, 0.75);
 
-        // 5) Confidence + 6) trend.
-        $confidence = $this->confidence(count($kept), min($ages), $median, $p25, $p75, $velocity);
+        // 5) Source concentration (single-seller dominance) + confidence + 6) trend.
+        $topSellerShare = $this->topSellerShare($kept);
+        $confidence = $this->confidence(count($kept), min($ages), $median, $p25, $p75, $velocity, $topSellerShare);
 
         return new ValuationResult(
             median: (int) round($median),
@@ -91,7 +92,31 @@ class ValuationEngine
             trend30d: $this->trend($kept, $priors, $asOfTs, 30),
             trend90d: $this->trend($kept, $priors, $asOfTs, 90),
             outlierKeys: $outlierKeys,
+            topSellerShare: $topSellerShare !== null ? round($topSellerShare, 3) : null,
         );
+    }
+
+    /**
+     * Share of the seller-tagged kept observations held by the single most
+     * frequent seller, or null when too few carry a seller to judge. A high
+     * share means one account is propping the "market" — a shill/wash signal.
+     *
+     * @param  array<int, Observation>  $kept
+     */
+    protected function topSellerShare(array $kept): ?float
+    {
+        $minN = (int) ($this->config['confidence']['concentration_min_n'] ?? 3);
+
+        $counts = [];
+        foreach ($kept as $o) {
+            if ($o->seller !== null && $o->seller !== '') {
+                $counts[$o->seller] = ($counts[$o->seller] ?? 0) + 1;
+            }
+        }
+
+        $known = array_sum($counts);
+
+        return $known >= $minN ? max($counts) / $known : null;
     }
 
     protected function halfLife(float $velocity): int
@@ -107,7 +132,7 @@ class ValuationEngine
         return (int) round(max((float) $hl['min_days'], min((float) $hl['max_days'], $days)));
     }
 
-    protected function confidence(int $n, float $daysSinceNewest, float $median, float $p25, float $p75, float $velocity): float
+    protected function confidence(int $n, float $daysSinceNewest, float $median, float $p25, float $p75, float $velocity, ?float $topSellerShare): float
     {
         $c = $this->config['confidence'];
 
@@ -116,8 +141,29 @@ class ValuationEngine
         $dispersion = $median > 0 ? max(0.0, ($p75 - $p25) / $median) : 1.0;
         $dispersionFactor = 1.0 / (1.0 + $dispersion);
         $velocityPenalty = min(1.0, $velocity * (float) $c['full_velocity_days']);
+        $concentration = $this->concentrationFactor($topSellerShare);
 
-        return max(0.0, min(1.0, $sample * $recency * $dispersionFactor * $velocityPenalty));
+        return max(0.0, min(1.0, $sample * $recency * $dispersionFactor * $velocityPenalty * $concentration));
+    }
+
+    /**
+     * Confidence multiplier for single-seller dominance: 1.0 below the threshold,
+     * sliding down to `concentration_floor` when a single seller is behind every
+     * comp. Null share (too few seller-tagged comps) means no penalty.
+     */
+    protected function concentrationFactor(?float $topSellerShare): float
+    {
+        $c = $this->config['confidence'];
+        $threshold = (float) ($c['concentration_threshold'] ?? 0.5);
+        $floor = (float) ($c['concentration_floor'] ?? 0.6);
+
+        if ($topSellerShare === null || $topSellerShare <= $threshold) {
+            return 1.0;
+        }
+
+        $normalized = min(1.0, ($topSellerShare - $threshold) / max(1e-9, 1.0 - $threshold));
+
+        return max($floor, 1.0 - $normalized * (1.0 - $floor));
     }
 
     /**

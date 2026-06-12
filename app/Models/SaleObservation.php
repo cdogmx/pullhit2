@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'currency',
     'observed_at',
     'source_listing_id',
+    'seller',
     'is_outlier',
     'is_synthetic',
     'raw',

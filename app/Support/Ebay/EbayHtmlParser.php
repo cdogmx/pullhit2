@@ -19,8 +19,10 @@ final class EbayHtmlParser
     {
         // Each listing: <a class=s-card__link ... href=...itm/{id}...>
         //   <div ... class=s-card__title>[<span>New Listing</span>]<span>TITLE</span></div></a>
+        // Attribute quotes are optional (eBay's live markup quotes them; older
+        // captured fixtures don't) — `["']?` matches both.
         $matched = preg_match_all(
-            '#<a class=s-card__link[^>]*\bhref=([^\s>]+)[^>]*>\s*<div[^>]*class=s-card__title[^>]*>(.*?)</div>\s*</a>#s',
+            '#<a class=["\']?s-card__link[^>]*\bhref=["\']?([^\s"\'>]+)[^>]*>\s*<div[^>]*class=["\']?s-card__title[^>]*>(.*?)</div>\s*</a>#s',
             $html,
             $m,
             PREG_OFFSET_CAPTURE,
@@ -74,7 +76,16 @@ final class EbayHtmlParser
                 }
             }
 
-            $out[] = new SoldCandidate($title, $priceCents, $soldAt, $idMatch[1], $url);
+            // Seller: eBay renders "<username> <pct>% positive (<feedback>)" in
+            // the card's secondary attributes. Anchor on the distinctive
+            // "% positive" feedback span and take the username span before it.
+            // Captured so the engine can down-weight single-seller-dominated comps.
+            $seller = null;
+            if (preg_match('#<span[^>]*>\s*([A-Za-z0-9][A-Za-z0-9_.\-*]{2,})\s*</span>\s*<span[^>]*>\s*[\d.]+%\s+positive#i', $window, $sellerMatch)) {
+                $seller = $sellerMatch[1];
+            }
+
+            $out[] = new SoldCandidate($title, $priceCents, $soldAt, $idMatch[1], $url, $seller);
         }
 
         return $out;

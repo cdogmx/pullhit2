@@ -29,6 +29,13 @@ return [
         'target_n' => 12,            // n at which the sample factor saturates
         'recency_tau_days' => 30,    // exp(-days_since_newest / tau)
         'full_velocity_days' => 14,  // a sale at least this often => no velocity penalty
+
+        // Single-seller dominance penalty — shill/wash resistance on public eBay
+        // data (we can see the seller, never the buyer). When one seller is
+        // behind most comps, lower confidence: a market of one isn't a market.
+        'concentration_min_n' => 3,      // need >= this many seller-tagged comps to judge
+        'concentration_threshold' => 0.5, // share above which the penalty kicks in
+        'concentration_floor' => 0.6,    // confidence multiplier at 100% single-seller
     ],
 
     // Real eBay sold-comp ingestion via Oxylabs. Lazy + cost-capped.

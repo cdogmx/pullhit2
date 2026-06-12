@@ -64,9 +64,10 @@ class IngestEbaySoldComps
                 'price' => $comp->priceCents,
                 'currency' => 'USD',
                 'observed_at' => $comp->soldAt ?? Carbon::now(),
+                'seller' => $comp->seller,
                 'is_outlier' => false,
                 'is_synthetic' => false,
-                'raw' => ['title' => $comp->title, 'url' => $comp->url, 'source' => 'ebay'],
+                'raw' => ['title' => $comp->title, 'url' => $comp->url, 'seller' => $comp->seller, 'source' => 'ebay'],
             ],
         );
     }

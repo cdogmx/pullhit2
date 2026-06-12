@@ -15,5 +15,6 @@ readonly class SoldCandidate
         public ?CarbonImmutable $soldAt,
         public ?string $itemId,
         public ?string $url = null,
+        public ?string $seller = null,
     ) {}
 }

@@ -97,6 +97,15 @@ export function PriceTag({
                     {value.confidence_label} confidence
                 </Badge>
                 {value.is_estimated && <Badge variant="outline">Estimated</Badge>}
+                {value.top_seller_share != null && value.top_seller_share > 0.5 && (
+                    <Badge
+                        variant="outline"
+                        className="border-amber-500/40 text-amber-600 dark:text-amber-400"
+                        title={`One seller accounts for ${Math.round(value.top_seller_share * 100)}% of these comps — treat with caution.`}
+                    >
+                        Single seller
+                    </Badge>
+                )}
                 <span>
                     {value.n_sales} {value.is_estimated ? 'est. comps' : 'sales'}
                 </span>

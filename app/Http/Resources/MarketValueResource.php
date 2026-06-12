@@ -33,6 +33,8 @@ class MarketValueResource extends JsonResource
             'n_sales' => $this->n_sales,
             'confidence' => round($this->confidence, 3),
             'confidence_label' => $this->confidenceLabel(),
+            // Single-seller dominance of the comps (null = too few to judge).
+            'top_seller_share' => $this->top_seller_share !== null ? round($this->top_seller_share, 3) : null,
             'is_estimated' => (bool) $this->is_estimated,
             'half_life_days' => $this->half_life_days,
             'trend_30d' => $this->trend_30d,
