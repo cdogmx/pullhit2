@@ -12,7 +12,12 @@ Route::inertia('privacy', 'privacy')->name('privacy');
 
 // Public catalog browse/search.
 Route::get('browse', [CatalogController::class, 'index'])->name('catalog.browse');
+// SEO landings: /browse/pokemon, /browse/pokemon/surging-sparks.
+Route::get('browse/{productLine}', [CatalogController::class, 'browseLine'])->name('catalog.browse.line');
+Route::get('browse/{productLine}/{set}', [CatalogController::class, 'browseSet'])->name('catalog.browse.set');
 Route::get('catalog/{catalogItem}', [CatalogController::class, 'show'])->name('catalog.show');
+
+Route::get('sitemap.xml', \App\Http\Controllers\Web\SitemapController::class)->name('sitemap');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');

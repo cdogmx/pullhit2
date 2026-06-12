@@ -13,6 +13,8 @@ use App\Http\Resources\CatalogItemResource;
 use App\Models\CatalogItem;
 use App\Models\CollectionItem;
 use App\Models\GradingCompany;
+use App\Models\ProductLine;
+use App\Models\Set;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -29,7 +31,54 @@ class CatalogController extends Controller
         SearchCatalog $search,
         CatalogFilterOptions $options,
     ): Response {
-        $filters = $request->filters();
+        return $this->renderBrowse($request->filters(), $search, $options);
+    }
+
+    /** SEO landing for a product line, e.g. /browse/pokemon. */
+    public function browseLine(
+        SearchCatalogRequest $request,
+        SearchCatalog $search,
+        CatalogFilterOptions $options,
+        string $productLine,
+    ): Response {
+        $line = ProductLine::where('slug', $productLine)->firstOrFail();
+
+        $filters = array_merge($request->filters(), ['product_line' => $line->slug]);
+
+        return $this->renderBrowse($filters, $search, $options, seo: [
+            'title' => "{$line->name} cards & prices",
+            'heading' => "{$line->name}",
+        ]);
+    }
+
+    /** SEO landing for a set, e.g. /browse/pokemon/surging-sparks. */
+    public function browseSet(
+        SearchCatalogRequest $request,
+        SearchCatalog $search,
+        CatalogFilterOptions $options,
+        string $productLine,
+        string $set,
+    ): Response {
+        $line = ProductLine::where('slug', $productLine)->firstOrFail();
+        $setModel = Set::where('slug', $set)->where('product_line_id', $line->id)->firstOrFail();
+
+        $filters = array_merge($request->filters(), [
+            'product_line' => $line->slug,
+            'set' => $setModel->slug,
+        ]);
+
+        return $this->renderBrowse($filters, $search, $options, seo: [
+            'title' => "{$setModel->name} — {$line->name} cards & prices",
+            'heading' => $setModel->name,
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @param  array{title: string, heading: string}|null  $seo
+     */
+    private function renderBrowse(array $filters, SearchCatalog $search, CatalogFilterOptions $options, ?array $seo = null): Response
+    {
         $paginator = $search($filters);
 
         return Inertia::render('catalog/browse', [
@@ -50,6 +99,7 @@ class CatalogController extends Controller
             // Options for the inline "add to collection" graded picker on each card.
             'gradingCompanies' => GradingCompany::orderBy('name')
                 ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
+            'seo' => $seo,
         ]);
     }
 

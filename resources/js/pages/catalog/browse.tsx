@@ -53,6 +53,7 @@ type Props = {
     options: CatalogFilterOptions;
     filters: CatalogFilters;
     gradingCompanies: GradingCompanyOption[];
+    seo?: { title: string; heading: string } | null;
 };
 
 const SORTS = [
@@ -126,6 +127,7 @@ export default function Browse({
     options,
     filters,
     gradingCompanies,
+    seo,
 }: Props) {
     const { auth } = usePage().props;
     const canAdd = Boolean(auth.user);
@@ -181,12 +183,12 @@ export default function Browse({
 
     return (
         <>
-            <Head title="Browse catalog" />
+            <Head title={seo?.title ?? 'Browse catalog'} />
 
             <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                        Browse the catalog
+                        {seo?.heading ?? 'Browse the catalog'}
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {pagination.total.toLocaleString()} items
