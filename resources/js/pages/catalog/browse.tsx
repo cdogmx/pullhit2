@@ -156,7 +156,7 @@ export default function Browse({
             preserveState: true,
             replace: true,
             reset: ['items'],
-            only: ['items', 'pagination', 'options', 'filters'],
+            only: ['items', 'pagination', 'options', 'filters', 'seo'],
         });
     }
 
@@ -167,7 +167,7 @@ export default function Browse({
             {},
             {
                 reset: ['items'],
-                only: ['items', 'pagination', 'options', 'filters'],
+                only: ['items', 'pagination', 'options', 'filters', 'seo'],
             },
         );
     }
