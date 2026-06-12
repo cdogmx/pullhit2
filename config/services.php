@@ -64,6 +64,12 @@ return [
         'base_url' => env('POKEMONTCG_BASE_URL', 'https://api.pokemontcg.io/v2'),
     ],
 
+    // TCGCSV — free public JSON mirror of TCGplayer. Source for Japanese Pokémon
+    // (category 85), which pokemontcg.io doesn't carry.
+    'tcgcsv' => [
+        'base_url' => env('TCGCSV_BASE_URL', 'https://tcgcsv.com'),
+    ],
+
     // eBay Browse API (live active listings) + eBay Partner Network affiliate.
     // The affiliate "Shop on eBay" link needs only campaign_id; inline live
     // listings additionally need client_id/secret (OAuth). Degrades gracefully.
