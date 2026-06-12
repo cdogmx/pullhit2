@@ -1,15 +1,17 @@
-import { Head, Link, router, WhenVisible } from '@inertiajs/react';
+import { Head, Link, router, usePage, WhenVisible } from '@inertiajs/react';
 import {
     ArrowDownUp,
     LayoutGrid,
     Layers,
     List,
+    Plus,
     Search,
     SlidersHorizontal,
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { PriceTag } from '@/components/catalog/price-tag';
+import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +36,7 @@ import type {
     CatalogFilterOptions,
     CatalogFilters,
     CatalogItem,
+    GradingCompanyOption,
 } from '@/types';
 
 type Pagination = {
@@ -49,6 +52,7 @@ type Props = {
     pagination: Pagination;
     options: CatalogFilterOptions;
     filters: CatalogFilters;
+    gradingCompanies: GradingCompanyOption[];
 };
 
 const SORTS = [
@@ -116,7 +120,15 @@ const ACTIVE_KEYS: (keyof CatalogFilters)[] = [
     'variant',
 ];
 
-export default function Browse({ items, pagination, options, filters }: Props) {
+export default function Browse({
+    items,
+    pagination,
+    options,
+    filters,
+    gradingCompanies,
+}: Props) {
+    const { auth } = usePage().props;
+    const canAdd = Boolean(auth.user);
     const [q, setQ] = useState(filters.q ?? '');
     const [view, setView] = useState<'grid' | 'list'>(filters.view ?? 'grid');
     const firstRender = useRef(true);
@@ -362,6 +374,8 @@ export default function Browse({ items, pagination, options, filters }: Props) {
                                         key={item.id}
                                         item={item}
                                         returnTo={returnTo}
+                                        canAdd={canAdd}
+                                        gradingCompanies={gradingCompanies}
                                     />
                                 ))}
                             </div>
@@ -372,6 +386,8 @@ export default function Browse({ items, pagination, options, filters }: Props) {
                                         key={item.id}
                                         item={item}
                                         returnTo={returnTo}
+                                        canAdd={canAdd}
+                                        gradingCompanies={gradingCompanies}
                                     />
                                 ))}
                             </div>
@@ -575,57 +591,129 @@ function VariantBadges({ item }: { item: CatalogItem }) {
     );
 }
 
-function CardTile({ item, returnTo }: { item: CatalogItem; returnTo: string }) {
+function AddButton({
+    item,
+    gradingCompanies,
+    className,
+}: {
+    item: CatalogItem;
+    gradingCompanies: GradingCompanyOption[];
+    className?: string;
+}) {
     return (
-        <Link
-            href={`/catalog/${item.id}${returnTo}`}
-            className="group overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring"
-        >
-            <div className="aspect-[3/4] overflow-hidden bg-muted">
-                <ItemImage
-                    item={item}
-                    className="size-full object-contain transition-transform group-hover:scale-105"
-                />
-            </div>
-            <div className="space-y-1.5 p-3">
-                <p className="truncate text-sm font-medium" title={item.name}>
-                    {item.name}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                    {item.set?.code ?? item.set?.name}
-                    {item.number ? ` · ${item.number}` : ''}
-                </p>
-                {item.market_value && <PriceTag value={item.market_value} />}
-                <VariantBadges item={item} />
-            </div>
-        </Link>
+        <AddToCollectionDialog
+            catalogItemId={item.id}
+            gradingCompanies={gradingCompanies}
+            postOptions={{ preserveScroll: true, reset: ['items'] }}
+            trigger={
+                <button
+                    type="button"
+                    aria-label={`Add ${item.name} to collection`}
+                    title="Add to collection"
+                    className={cn(
+                        'flex size-8 items-center justify-center rounded-full bg-background/85 text-foreground ring-1 ring-border backdrop-blur transition-colors hover:bg-primary hover:text-primary-foreground hover:ring-primary',
+                        className,
+                    )}
+                >
+                    <Plus className="size-4" />
+                </button>
+            }
+        />
     );
 }
 
-function ListRow({ item, returnTo }: { item: CatalogItem; returnTo: string }) {
+function CardTile({
+    item,
+    returnTo,
+    canAdd,
+    gradingCompanies,
+}: {
+    item: CatalogItem;
+    returnTo: string;
+    canAdd: boolean;
+    gradingCompanies: GradingCompanyOption[];
+}) {
     return (
-        <Link
-            href={`/catalog/${item.id}${returnTo}`}
-            className="flex items-center gap-3 bg-card p-3 hover:bg-accent/40"
-        >
-            <div className="h-16 w-12 shrink-0 overflow-hidden rounded bg-muted">
-                <ItemImage item={item} className="size-full object-contain" />
-            </div>
-            <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{item.name}</p>
-                <p className="text-xs text-muted-foreground">
-                    {item.set?.name}
-                    {item.number ? ` · ${item.number}` : ''}
-                    {item.language ? ` · ${item.language.toUpperCase()}` : ''}
-                </p>
-                <div className="mt-1">
+        <div className="group relative overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring">
+            <Link href={`/catalog/${item.id}${returnTo}`} className="block">
+                <div className="aspect-[3/4] overflow-hidden bg-muted">
+                    <ItemImage
+                        item={item}
+                        className="size-full object-contain transition-transform group-hover:scale-105"
+                    />
+                </div>
+                <div className="space-y-1.5 p-3">
+                    <p
+                        className="truncate text-sm font-medium"
+                        title={item.name}
+                    >
+                        {item.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        {item.set?.code ?? item.set?.name}
+                        {item.number ? ` · ${item.number}` : ''}
+                    </p>
+                    {item.market_value && (
+                        <PriceTag value={item.market_value} />
+                    )}
                     <VariantBadges item={item} />
                 </div>
-            </div>
-            {item.market_value && (
-                <PriceTag value={item.market_value} className="shrink-0" />
+            </Link>
+            {canAdd && (
+                <div className="absolute top-2 right-2">
+                    <AddButton item={item} gradingCompanies={gradingCompanies} />
+                </div>
             )}
-        </Link>
+        </div>
+    );
+}
+
+function ListRow({
+    item,
+    returnTo,
+    canAdd,
+    gradingCompanies,
+}: {
+    item: CatalogItem;
+    returnTo: string;
+    canAdd: boolean;
+    gradingCompanies: GradingCompanyOption[];
+}) {
+    return (
+        <div className="flex items-center bg-card hover:bg-accent/40">
+            <Link
+                href={`/catalog/${item.id}${returnTo}`}
+                className="flex min-w-0 flex-1 items-center gap-3 p-3"
+            >
+                <div className="h-16 w-12 shrink-0 overflow-hidden rounded bg-muted">
+                    <ItemImage
+                        item={item}
+                        className="size-full object-contain"
+                    />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                        {item.set?.name}
+                        {item.number ? ` · ${item.number}` : ''}
+                        {item.language
+                            ? ` · ${item.language.toUpperCase()}`
+                            : ''}
+                    </p>
+                    <div className="mt-1">
+                        <VariantBadges item={item} />
+                    </div>
+                </div>
+                {item.market_value && (
+                    <PriceTag value={item.market_value} className="shrink-0" />
+                )}
+            </Link>
+            {canAdd && (
+                <div className="pr-3">
+                    <AddButton item={item} gradingCompanies={gradingCompanies} />
+                </div>
+            )}
+        </div>
     );
 }
 

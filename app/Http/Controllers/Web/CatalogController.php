@@ -47,6 +47,9 @@ class CatalogController extends Controller
             ],
             'options' => $options($filters),
             'filters' => $filters,
+            // Options for the inline "add to collection" graded picker on each card.
+            'gradingCompanies' => GradingCompany::orderBy('name')
+                ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
         ]);
     }
 
