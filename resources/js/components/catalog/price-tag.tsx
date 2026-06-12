@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import {
+    confidenceDotClass,
     confidenceVariant,
     formatMoney,
     formatTrend,
@@ -27,10 +28,19 @@ export function PriceTag({
     if (variant === 'compact') {
         const trend = formatTrend(value.trend_30d);
         const up = (value.trend_30d ?? 0) > 0;
+        // Low-confidence values recede ("~" + muted) so a thin-market price is
+        // never mistaken for a trusted one when scanning a list.
+        const low = value.confidence_label === 'Low';
 
         return (
             <div className={cn('flex items-center gap-1.5', className)}>
-                <span className="text-sm font-semibold">
+                <span
+                    className={cn(
+                        'text-sm font-semibold',
+                        low && 'font-medium text-muted-foreground',
+                    )}
+                >
+                    {low ? '~' : ''}
                     {formatMoney(value.median, currency)}
                 </span>
                 {trend && (
@@ -47,7 +57,10 @@ export function PriceTag({
                     </span>
                 )}
                 <span
-                    className="size-1.5 shrink-0 rounded-full bg-current opacity-60"
+                    className={cn(
+                        'size-1.5 shrink-0 rounded-full bg-current',
+                        confidenceDotClass(value.confidence_label),
+                    )}
                     title={`${value.confidence_label} confidence · ${value.n_sales} sales${value.is_estimated ? ' · estimated' : ''}`}
                     aria-hidden
                 />
@@ -74,7 +87,13 @@ export function PriceTag({
                 )}
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant={confidenceVariant(value.confidence_label)}>
+                <Badge
+                    variant={confidenceVariant(value.confidence_label)}
+                    className={cn(
+                        value.confidence_label === 'Low' &&
+                            'border-amber-500/40 text-amber-600 dark:text-amber-400',
+                    )}
+                >
                     {value.confidence_label} confidence
                 </Badge>
                 {value.is_estimated && <Badge variant="outline">Estimated</Badge>}

@@ -58,6 +58,22 @@ export function confidenceVariant(
     return 'outline';
 }
 
+/**
+ * Tailwind text-color class for the confidence dot, by label. Pairs with
+ * `bg-current` so a thin-market (Low) value is visibly distinct from a trusted
+ * one in compact list tiles — the differentiator vs a bare number.
+ */
+export function confidenceDotClass(label: string): string {
+    switch (label) {
+        case 'High':
+            return 'text-emerald-500';
+        case 'Medium':
+            return 'text-amber-500';
+        default:
+            return 'text-muted-foreground';
+    }
+}
+
 /** Signed percent trend, e.g. "↑1.9%" / "↓3.0%"; "" when null. */
 export function formatTrend(pct: number | null | undefined): string {
     if (pct == null || pct === 0) {
