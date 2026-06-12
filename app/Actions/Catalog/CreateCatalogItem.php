@@ -44,7 +44,11 @@ class CreateCatalogItem
         $hashArgs = [
             'verticalSlug' => $vertical->slug,
             'productLineSlug' => $productLine->slug,
-            'setKey' => $set?->code ?? $set?->slug,
+            // The set's stable, language-specific slug — never `code`, which is
+            // pulled from a mutable ptcgoCode (often added/changed after release)
+            // and is shared across languages. Using it would re-hash a whole set
+            // on a routine re-import (silent duplication) and collide EN/JP.
+            'setKey' => $set?->slug,
             'itemType' => $itemType->value,
             'name' => $name,
             'number' => $number,
@@ -61,6 +65,10 @@ class CreateCatalogItem
 
         $item = CatalogItem::firstOrNew(['identity_hash' => $identityHash]);
 
+        // Merge external ids so a re-import from one source never erases ids set
+        // by another (e.g. a tcgplayer_product_id attached elsewhere).
+        $mergedExternalIds = array_merge($item->external_ids ?? [], $externalIds);
+
         // forceFill: identity_hash is guarded (Action-controlled), and we set the
         // full payload deterministically so re-running is a clean upsert.
         $item->forceFill([
@@ -71,7 +79,7 @@ class CreateCatalogItem
             'name' => $name,
             'number' => $number,
             'attributes' => $validated,
-            'external_ids' => $externalIds === [] ? null : $externalIds,
+            'external_ids' => $mergedExternalIds === [] ? null : $mergedExternalIds,
             // Preserve an existing image on re-import when none is supplied (e.g.
             // a `--no-images` revalue run) — don't null out a stored S3 path.
             'primary_image_path' => $primaryImagePath ?? $item->primary_image_path,

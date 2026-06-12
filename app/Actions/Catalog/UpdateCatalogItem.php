@@ -44,7 +44,7 @@ class UpdateCatalogItem
         $hashArgs = [
             'verticalSlug' => $item->vertical->slug,
             'productLineSlug' => $item->productLine->slug,
-            'setKey' => $item->set?->code ?? $item->set?->slug,
+            'setKey' => $item->set?->slug, // stable slug, never mutable `code` (see CreateCatalogItem)
             'itemType' => $item->item_type->value,
             'name' => $name,
             'number' => $number,
