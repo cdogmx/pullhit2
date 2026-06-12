@@ -19,6 +19,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Collection + portfolio (always free for logged-in users).
     Route::get('collection', [CollectionController::class, 'index'])->name('collection.index');
+    Route::get('collection/export', [CollectionController::class, 'export'])->name('collection.export');
     Route::post('collection', [CollectionController::class, 'store'])->name('collection.store');
     Route::patch('collection/{collectionItem}', [CollectionController::class, 'update'])->name('collection.update');
     Route::delete('collection/{collectionItem}', [CollectionController::class, 'destroy'])->name('collection.destroy');

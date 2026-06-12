@@ -1,6 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Trash2 } from 'lucide-react';
+import { Download, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -58,6 +59,20 @@ export default function CollectionIndex({
             <Head title="Collection" />
 
             <div className="flex flex-1 flex-col gap-6 p-4">
+                <div className="flex items-center justify-between gap-4">
+                    <h1 className="text-2xl font-bold tracking-tight">
+                        Your collection
+                    </h1>
+                    {holdings.length > 0 && (
+                        <Button asChild variant="outline" size="sm">
+                            <a href="/collection/export">
+                                <Download className="size-4" />
+                                Export CSV
+                            </a>
+                        </Button>
+                    )}
+                </div>
+
                 {/* Summary */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <SummaryCard label="Portfolio value">
