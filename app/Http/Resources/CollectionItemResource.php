@@ -32,6 +32,7 @@ class CollectionItemResource extends JsonResource
             'quantity' => $this->quantity,
             'is_for_sale' => $this->is_for_sale,
             'notes' => $this->notes,
+            'folder' => $this->folder,
             // Money in integer minor units (cents).
             'unit_value' => $unit,
             'market_value' => $marketValue,

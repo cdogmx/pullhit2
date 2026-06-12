@@ -26,7 +26,7 @@ class ExportCollectionCsv
         $headers = [
             'Catalog ID', 'Name', 'Set', 'Number', 'Language', 'State',
             'Quantity', 'Unit value', 'Market value', 'Cost basis',
-            'Unrealized gain', 'Currency', 'Notes',
+            'Unrealized gain', 'Currency', 'Folder', 'Notes',
         ];
 
         $rows = $items->map(function (CollectionItem $item) {
@@ -48,6 +48,7 @@ class ExportCollectionCsv
                 self::dollars($cost),
                 self::dollars($market !== null ? $market - $cost : null),
                 'USD',
+                $item->folder ?? '',
                 $item->notes ?? '',
             ];
         })->all();

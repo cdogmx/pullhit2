@@ -8,6 +8,7 @@ export type Holding = {
     quantity: number;
     is_for_sale: boolean;
     notes: string | null;
+    folder: string | null;
     /** Money fields are integer minor units (cents); null = no computed value. */
     unit_value: number | null;
     market_value: number | null;

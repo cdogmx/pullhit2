@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'quantity',
     'is_for_sale',
     'notes',
+    'folder',
 ])]
 class CollectionItem extends Model
 {
