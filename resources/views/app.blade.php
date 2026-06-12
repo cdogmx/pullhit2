@@ -34,6 +34,9 @@
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
+        {{-- Impact (Target affiliate program) link-tracking + impression script --}}
+        <script type="text/javascript">(function(i,m,p,a,c,t){c.ire_o=p;c[p]=c[p]||function(){(c[p].a=c[p].a||[]).push(arguments)};t=a.createElement(m);var z=a.getElementsByTagName(m)[0];t.async=1;t.src=i;z.parentNode.insertBefore(t,z)})('https://utt.impactcdn.com/P-A7404766-d1a2-4f10-b166-8a6757e16b5f1.js','script','impactStat',document,window);impactStat('transformLinks');impactStat('trackImpression');</script>
+
         @php
             $appName = config('app.name', 'CardFoo');
             $description = 'Value your trading cards and collectibles with confidence-scored market prices — sealed product, raw singles, and graded items. Wax on.';
