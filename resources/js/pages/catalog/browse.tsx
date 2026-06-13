@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { languageLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type {
     CatalogFilterOptions,
@@ -452,7 +453,7 @@ function FilterControls({
             label: 'Language',
             opts: options.languages.map((v) => ({
                 value: v,
-                label: v.toUpperCase(),
+                label: languageLabel(v),
             })),
         },
     ];
@@ -699,7 +700,7 @@ function ListRow({
                         {item.set?.name}
                         {item.number ? ` · ${item.number}` : ''}
                         {item.language
-                            ? ` · ${item.language.toUpperCase()}`
+                            ? ` · ${languageLabel(item.language)}`
                             : ''}
                     </p>
                     <div className="mt-1">

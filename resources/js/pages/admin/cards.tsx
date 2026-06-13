@@ -3,6 +3,7 @@ import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { EditCardDialog } from '@/components/admin/edit-card-dialog';
+import { languageLabel } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -93,7 +94,7 @@ export default function AdminCards({ items, pagination, options, filters }: Prop
                         placeholder="All languages"
                         value={filters.language}
                         onChange={(v) => onFilter('language', v)}
-                        options={options.languages.map((l) => ({ value: l, label: l.toUpperCase() }))}
+                        options={options.languages.map((l) => ({ value: l, label: languageLabel(l) }))}
                     />
 
                     <Select value={filters.sort} onValueChange={(v) => onFilter('sort', v)}>
@@ -164,7 +165,7 @@ export default function AdminCards({ items, pagination, options, filters }: Prop
                                                     <p className="font-medium">{c.name}</p>
                                                     <p className="text-xs text-muted-foreground">
                                                         {c.number}
-                                                        {c.language ? ` · ${c.language.toUpperCase()}` : ''}
+                                                        {c.language ? ` · ${languageLabel(c.language)}` : ''}
                                                     </p>
                                                 </div>
                                             </div>

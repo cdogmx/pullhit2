@@ -10,10 +10,14 @@ use App\Models\CatalogItem;
  */
 readonly class MatchResult
 {
+    /**
+     * @param  array<int, CatalogItem>  $candidates  surviving items (>1 when ambiguous)
+     */
     public function __construct(
         public PricechartingRow $row,
         public ?CatalogItem $catalogItem,
         public string $status,
         public string $reason,
+        public array $candidates = [],
     ) {}
 }

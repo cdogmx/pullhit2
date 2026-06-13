@@ -2,7 +2,9 @@
 
 namespace App\Actions\Import;
 
+use App\Models\CatalogItem;
 use App\Models\GradingCompany;
+use Illuminate\Support\Str;
 
 /**
  * Parse a PriceCharting CSV and match every row to the catalog, returning a
@@ -34,17 +36,20 @@ class BuildImportPreview
             $result = ($this->match)($row);
             $counts[$result->status] = ($counts[$result->status] ?? 0) + 1;
 
-            if ($result->status === 'matched' && $result->catalogItem !== null) {
-                $item = $result->catalogItem;
+            if (($result->status === 'matched' || $result->status === 'ambiguous') && $result->candidates !== []) {
+                $candidates = collect($result->candidates);
+                // Default to the base (normal) printing when one is present.
+                $chosen = $candidates->first(fn (CatalogItem $i) => ($i->attributes['variant'] ?? 'normal') === 'normal')
+                    ?? $candidates->first();
+
                 $companyId = $row->gradingCompany ? ($companyIds[$row->gradingCompany] ?? null) : null;
                 $graded = $companyId !== null && $row->grade !== null;
-                $unitCost = intdiv($row->costBasisCents, max(1, $row->quantity));
 
                 $importable[] = [
-                    'catalog_item_id' => $item->id,
-                    'name' => $item->name,
-                    'set' => $item->set?->name,
-                    'number' => $item->number,
+                    'catalog_item_id' => $chosen->id,
+                    'name' => $chosen->name,
+                    'set' => $chosen->set?->name,
+                    'number' => $chosen->number,
                     'condition' => $graded ? null : ($row->condition ?? 'NM'),
                     'grading_company_id' => $graded ? $companyId : null,
                     'grade' => $graded ? $row->grade : null,
@@ -52,10 +57,16 @@ class BuildImportPreview
                         ? strtoupper((string) $row->gradingCompany).' '.rtrim(rtrim(sprintf('%.1f', (float) $row->grade), '0'), '.')
                         : ($row->condition ?? 'NM'),
                     'quantity' => $row->quantity,
-                    'unit_cost' => $unitCost,
+                    'unit_cost' => intdiv($row->costBasisCents, max(1, $row->quantity)),
                     'acquired_at' => $row->acquiredAt,
                     'folder' => $row->folder,
                     'notes' => $row->notes,
+                    // When >1, the UI shows a printing picker so the user resolves it.
+                    'ambiguous' => $candidates->count() > 1,
+                    'candidates' => $candidates->map(fn (CatalogItem $i) => [
+                        'catalog_item_id' => $i->id,
+                        'label' => self::printingLabel($i),
+                    ])->values()->all(),
                 ];
             } elseif ($result->status === 'unmatched') {
                 $bucket = $row->language.' · '.$row->setName;
@@ -70,5 +81,15 @@ class BuildImportPreview
         }
 
         return ['importable' => $importable, 'counts' => $counts, 'skipped' => $skippedList];
+    }
+
+    /** A human label for a printing, e.g. "Reverse Holo · Double Rare". */
+    private static function printingLabel(CatalogItem $item): string
+    {
+        $variant = (string) ($item->attributes['variant'] ?? 'normal');
+        $label = Str::headline(str_replace('_', ' ', $variant));
+        $rarity = $item->attributes['rarity'] ?? null;
+
+        return $rarity ? "{$label} · {$rarity}" : $label;
     }
 }

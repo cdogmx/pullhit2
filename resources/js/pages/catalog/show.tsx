@@ -9,7 +9,12 @@ import { Sparkline } from '@/components/catalog/sparkline';
 import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { confidenceVariant, formatMoney, relativeTime } from '@/lib/format';
+import {
+    confidenceVariant,
+    formatMoney,
+    languageLabel,
+    relativeTime,
+} from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type {
     CardListings,
@@ -179,7 +184,7 @@ export default function Show({
     const eyebrow = [
         item.set?.name,
         item.number ? `#${item.number}` : null,
-        item.language?.toUpperCase(),
+        languageLabel(item.language),
     ]
         .filter(Boolean)
         .join('  ·  ');

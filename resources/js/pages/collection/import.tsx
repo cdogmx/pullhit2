@@ -23,6 +23,8 @@ type ImportableRow = {
     acquired_at: string | null;
     folder: string | null;
     notes: string | null;
+    ambiguous?: boolean;
+    candidates?: { catalog_item_id: number; label: string }[];
 };
 
 type Props = {
@@ -52,6 +54,17 @@ export default function ImportCollection({
     const submitImport = () => {
         commit.post('/collection/import');
     };
+
+    // Resolve an ambiguous row by choosing its printing (catalog item).
+    const setRowCard = (index: number, id: number) =>
+        commit.setData(
+            'rows',
+            commit.data.rows.map((r, i) =>
+                i === index ? { ...r, catalog_item_id: id } : r,
+            ),
+        );
+
+    const importableCount = importable?.length ?? 0;
 
     return (
         <>
@@ -108,18 +121,21 @@ export default function ImportCollection({
                             <Stat label="Rows" value={counts.parsed} />
                             <Stat
                                 label="Importable"
-                                value={counts.matched}
+                                value={importableCount}
                                 emphasis
                             />
-                            <Stat label="Ambiguous" value={counts.ambiguous} />
+                            <Stat
+                                label="Needs review"
+                                value={counts.ambiguous}
+                            />
                             <Stat label="Unmatched" value={counts.unmatched} />
                         </div>
 
                         <p className="text-sm text-muted-foreground">
-                            We import the {counts.matched} confident matches.
-                            Ambiguous printings and cards from sets we don&rsquo;t
-                            carry yet are skipped — re-import after they&rsquo;re
-                            added.
+                            We&rsquo;ll import {importableCount} cards.
+                            {counts.ambiguous > 0 &&
+                                ` ${counts.ambiguous} matched more than one printing — confirm each (highlighted) before importing.`}{' '}
+                            Cards from sets we don&rsquo;t carry yet are skipped.
                         </p>
 
                         {importable && importable.length > 0 && (
@@ -143,10 +159,17 @@ export default function ImportCollection({
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border">
-                                            {importable.map((row, i) => (
+                                            {commit.data.rows.map((row, i) => (
                                                 <tr key={i}>
                                                     <td className="px-3 py-2">
-                                                        <div className="font-medium">
+                                                        <div className="flex items-center gap-1.5 font-medium">
+                                                            {row.ambiguous && (
+                                                                <span
+                                                                    className="size-1.5 shrink-0 rounded-full bg-amber-500"
+                                                                    title="Confirm the printing"
+                                                                    aria-hidden
+                                                                />
+                                                            )}
                                                             {row.name}
                                                         </div>
                                                         <div className="text-xs text-muted-foreground">
@@ -160,7 +183,47 @@ export default function ImportCollection({
                                                         </div>
                                                     </td>
                                                     <td className="px-3 py-2 text-muted-foreground">
-                                                        {row.state_label}
+                                                        <div>
+                                                            {row.state_label}
+                                                        </div>
+                                                        {row.ambiguous &&
+                                                            row.candidates && (
+                                                                <select
+                                                                    value={
+                                                                        row.catalog_item_id
+                                                                    }
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setRowCard(
+                                                                            i,
+                                                                            Number(
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                            ),
+                                                                        )
+                                                                    }
+                                                                    className="mt-1 w-full max-w-[12rem] rounded-md border border-amber-500/40 bg-background px-2 py-1 text-xs text-foreground"
+                                                                >
+                                                                    {row.candidates.map(
+                                                                        (c) => (
+                                                                            <option
+                                                                                key={
+                                                                                    c.catalog_item_id
+                                                                                }
+                                                                                value={
+                                                                                    c.catalog_item_id
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    c.label
+                                                                                }
+                                                                            </option>
+                                                                        ),
+                                                                    )}
+                                                                </select>
+                                                            )}
                                                     </td>
                                                     <td className="px-3 py-2 text-right">
                                                         {row.quantity}
@@ -207,7 +270,7 @@ export default function ImportCollection({
                                     commit.processing
                                 }
                             >
-                                Import {counts.matched} cards
+                                Import {importableCount} cards
                             </Button>
                             <Button asChild variant="ghost">
                                 <Link href="/collection/import">

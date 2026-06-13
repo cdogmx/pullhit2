@@ -13,7 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { formatMoney } from '@/lib/format';
+import { formatMoney, languageLabel } from '@/lib/format';
 import type { GradingCompanyOption, ScanDetected } from '@/types';
 
 const CONDITIONS = [
@@ -93,7 +93,7 @@ export function ScanConfirmCard({
                     <span className="text-muted-foreground">
                         {id.number}
                         {id.set_name ? ` · ${id.set_name}` : ''}
-                        {id.language ? ` · ${id.language.toUpperCase()}` : ''}
+                        {id.language ? ` · ${languageLabel(id.language)}` : ''}
                     </span>
                     <Badge variant="outline" className="ml-2 text-[10px]">
                         {Math.round(id.confidence * 100)}% read

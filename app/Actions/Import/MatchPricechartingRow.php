@@ -39,6 +39,7 @@ class MatchPricechartingRow
 
         $items = CatalogItem::query()
             ->whereIn('set_id', $setIds)
+            ->with('set:id,name')
             ->get(['id', 'name', 'number', 'attributes', 'set_id', 'base_key']);
 
         // Narrow by collector number (normalized: case-fold, strip punctuation + leading zeros).
@@ -65,7 +66,7 @@ class MatchPricechartingRow
 
         // Prefer the matching printing when the row names a variant (e.g. reverse).
         if ($row->variant !== null) {
-            $byVariant = $items->filter(fn (CatalogItem $i) => ($i->attributes['variant'] ?? null) === $row->variant);
+            $byVariant = $items->filter(fn (CatalogItem $i) => self::variantMatches($i->attributes['variant'] ?? null, $row->variant));
             if ($byVariant->isNotEmpty()) {
                 $items = $byVariant;
             }
@@ -83,11 +84,27 @@ class MatchPricechartingRow
             return new MatchResult($row, null, 'unmatched', 'no_item');
         }
 
+        $candidates = $items->values()->all();
+
         if ($items->count() > 1) {
-            return new MatchResult($row, $items->first(), 'ambiguous', 'multiple_items');
+            return new MatchResult($row, $items->first(), 'ambiguous', 'multiple_items', $candidates);
         }
 
-        return new MatchResult($row, $items->first(), 'matched', 'ok');
+        return new MatchResult($row, $items->first(), 'matched', 'ok', $candidates);
+    }
+
+    /** PriceCharting's "reverse" tag matches our `reverse` or `reverse_holo`. */
+    private static function variantMatches(?string $catalog, string $rowVariant): bool
+    {
+        if ($catalog === null) {
+            return false;
+        }
+
+        if ($rowVariant === 'reverse') {
+            return in_array($catalog, ['reverse', 'reverse_holo'], true);
+        }
+
+        return $catalog === $rowVariant;
     }
 
     private static function norm(string $s): string

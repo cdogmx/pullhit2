@@ -74,6 +74,27 @@ export function confidenceDotClass(label: string): string {
     }
 }
 
+/** Display label for a language code, e.g. "ja" → "JPN", "en" → "ENG". */
+const LANGUAGE_LABELS: Record<string, string> = {
+    en: 'ENG',
+    ja: 'JPN',
+    zh: 'CHN',
+    ko: 'KOR',
+    de: 'DEU',
+    fr: 'FRA',
+    it: 'ITA',
+    es: 'ESP',
+    pt: 'POR',
+};
+
+export function languageLabel(code: string | null | undefined): string {
+    if (!code) {
+        return '';
+    }
+
+    return LANGUAGE_LABELS[code.toLowerCase()] ?? code.toUpperCase();
+}
+
 /** Signed percent trend, e.g. "↑1.9%" / "↓3.0%"; "" when null. */
 export function formatTrend(pct: number | null | undefined): string {
     if (pct == null || pct === 0) {
