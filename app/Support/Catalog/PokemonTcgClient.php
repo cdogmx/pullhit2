@@ -28,6 +28,22 @@ class PokemonTcgClient
     }
 
     /**
+     * Every set in the API, newest first (173 sets fit one page of 250).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function allSets(): array
+    {
+        $response = $this->http()->get('sets', ['pageSize' => 250, 'orderBy' => '-releaseDate']);
+
+        if (! $response->successful()) {
+            throw new RuntimeException("pokemontcg.io sets list failed: HTTP {$response->status()}");
+        }
+
+        return (array) $response->json('data', []);
+    }
+
+    /**
      * Search sets by name (wildcard), for the admin "find a set to import" box.
      *
      * @return array<int, array<string, mixed>>
