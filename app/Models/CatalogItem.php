@@ -30,6 +30,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'attributes',
     'primary_image_path',
     'external_ids',
+    'msrp',
+    'released_at',
+    'retailer_links',
 ])]
 class CatalogItem extends Model
 {
@@ -42,6 +45,9 @@ class CatalogItem extends Model
             'item_type' => ItemType::class,
             'attributes' => 'array',
             'external_ids' => 'array',
+            'msrp' => 'integer',
+            'released_at' => 'date',
+            'retailer_links' => 'array',
             'popularity' => 'integer',
             'last_viewed_at' => 'datetime',
             'ebay_refreshed_at' => 'datetime',

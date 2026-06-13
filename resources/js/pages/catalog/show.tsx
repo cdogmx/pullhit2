@@ -1,5 +1,11 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, BarChart3, Loader2, RefreshCw } from 'lucide-react';
+import {
+    ArrowLeft,
+    BarChart3,
+    ExternalLink,
+    Loader2,
+    RefreshCw,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { EbayListings } from '@/components/catalog/ebay-listings';
 import { EbayShopButton } from '@/components/catalog/ebay-shop-button';
@@ -392,6 +398,59 @@ export default function Show({
                                         'No market data yet.'
                                     )}
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Where to buy — retailer links (each with its price),
+                            MSRP, and release date (mainly sealed products). */}
+                        {(item.retailer_links?.length ||
+                            item.msrp ||
+                            item.released_at) && (
+                            <div className={PANEL}>
+                                <span className={SECTION_LABEL}>
+                                    Where to buy
+                                </span>
+                                {(item.msrp || item.released_at) && (
+                                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                        {item.msrp ? (
+                                            <span>
+                                                MSRP {formatMoney(item.msrp)}
+                                            </span>
+                                        ) : null}
+                                        {item.released_at ? (
+                                            <span>
+                                                Released {item.released_at}
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                )}
+                                {item.retailer_links?.length ? (
+                                    <div className="mt-3 space-y-2">
+                                        {item.retailer_links.map((link, i) => (
+                                            <a
+                                                key={i}
+                                                href={link.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer sponsored"
+                                                className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:border-ring hover:bg-accent/40"
+                                            >
+                                                <span className="font-medium">
+                                                    {link.retailer}
+                                                </span>
+                                                <span className="flex items-center gap-2 text-muted-foreground">
+                                                    {link.price_cents != null && (
+                                                        <span className="font-semibold text-foreground">
+                                                            {formatMoney(
+                                                                link.price_cents,
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                    <ExternalLink className="size-4" />
+                                                </span>
+                                            </a>
+                                        ))}
+                                    </div>
+                                ) : null}
                             </div>
                         )}
 

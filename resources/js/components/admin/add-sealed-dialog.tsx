@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { Plus, X } from 'lucide-react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,20 @@ import type { AdminSet } from '@/types';
 const humanize = (s: string) =>
     s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
+const MAJOR_RETAILERS = [
+    'Target',
+    'Walmart',
+    'Costco',
+    'Amazon',
+    'Best Buy',
+    'GameStop',
+    "Sam's Club",
+    'Pokémon Center',
+    'Other',
+];
+
+type RetailerLink = { retailer: string; url: string; price: string };
+
 /** Admin: add a sealed product (booster box, ETB, …) to a set. */
 export function AddSealedDialog({
     set,
@@ -45,6 +60,9 @@ export function AddSealedDialog({
         language: 'en',
         pack_count: '' as number | string,
         price: '' as number | string,
+        msrp: '' as number | string,
+        released_at: '',
+        retailer_links: [] as RetailerLink[],
         image_url: '',
     });
 
@@ -56,12 +74,32 @@ export function AddSealedDialog({
                 language: set.language ?? 'en',
                 pack_count: '',
                 price: '',
+                msrp: '',
+                released_at: set.released_at ?? '',
+                retailer_links: [],
                 image_url: '',
             });
             form.reset();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [set?.id]);
+
+    const links = form.data.retailer_links;
+    const addLink = () =>
+        form.setData('retailer_links', [
+            ...links,
+            { retailer: 'Target', url: '', price: '' },
+        ]);
+    const updateLink = (i: number, key: keyof RetailerLink, value: string) =>
+        form.setData(
+            'retailer_links',
+            links.map((l, idx) => (idx === i ? { ...l, [key]: value } : l)),
+        );
+    const removeLink = (i: number) =>
+        form.setData(
+            'retailer_links',
+            links.filter((_, idx) => idx !== i),
+        );
 
     if (!set) {
         return null;
@@ -176,6 +214,101 @@ export function AddSealedDialog({
                                     placeholder="129.99"
                                 />
                             </Field>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <Field label="MSRP ($, optional)" error={form.errors.msrp}>
+                                <Input
+                                    type="number"
+                                    min={0}
+                                    step="0.01"
+                                    value={form.data.msrp}
+                                    onChange={(e) =>
+                                        form.setData('msrp', e.target.value)
+                                    }
+                                    placeholder="161.64"
+                                />
+                            </Field>
+                            <Field
+                                label="Release date (optional)"
+                                error={form.errors.released_at}
+                            >
+                                <Input
+                                    type="date"
+                                    value={form.data.released_at}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'released_at',
+                                            e.target.value,
+                                        )
+                                    }
+                                />
+                            </Field>
+                        </div>
+
+                        <div className="grid gap-1.5">
+                            <Label className="text-xs">
+                                Retailer links (each with its own price)
+                            </Label>
+                            {links.map((link, i) => (
+                                <div key={i} className="flex items-center gap-2">
+                                    <Select
+                                        value={link.retailer}
+                                        onValueChange={(v) =>
+                                            updateLink(i, 'retailer', v)
+                                        }
+                                    >
+                                        <SelectTrigger className="w-32 shrink-0">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {MAJOR_RETAILERS.map((r) => (
+                                                <SelectItem key={r} value={r}>
+                                                    {r}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Input
+                                        placeholder="https://…"
+                                        value={link.url}
+                                        onChange={(e) =>
+                                            updateLink(i, 'url', e.target.value)
+                                        }
+                                        className="min-w-0 flex-1"
+                                    />
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        step="0.01"
+                                        placeholder="$"
+                                        value={link.price}
+                                        onChange={(e) =>
+                                            updateLink(i, 'price', e.target.value)
+                                        }
+                                        className="w-20 shrink-0"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="shrink-0"
+                                        onClick={() => removeLink(i)}
+                                        aria-label="Remove link"
+                                    >
+                                        <X className="size-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={addLink}
+                                className="justify-self-start"
+                            >
+                                <Plus className="size-4" /> Add retailer link
+                            </Button>
                         </div>
 
                         <Field

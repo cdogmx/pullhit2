@@ -24,6 +24,14 @@ test('an admin can add a sealed product to a set', function () {
             'language' => 'en',
             'pack_count' => 36,
             'price' => 129.99,
+            'msrp' => 161.64,
+            'released_at' => '2024-11-08',
+            'retailer_links' => [
+                ['retailer' => 'Target', 'url' => 'https://target.com/x', 'price' => 159.99],
+                ['retailer' => 'Walmart', 'url' => 'https://walmart.com/y', 'price' => 149.99],
+                // Incomplete row (no url) should be dropped.
+                ['retailer' => 'Costco', 'url' => '', 'price' => 139.99],
+            ],
         ])
         ->assertRedirect();
 
@@ -33,7 +41,13 @@ test('an admin can add a sealed product to a set', function () {
         ->and($item->name)->toBe('Surging Sparks Booster Box')
         ->and($item->attributes['sealed_type'])->toBe('booster_box')
         ->and($item->attributes['language'])->toBe('en')
-        ->and($item->attributes['pack_count'])->toBe(36);
+        ->and($item->attributes['pack_count'])->toBe(36)
+        ->and($item->msrp)->toBe(16164) // cents
+        ->and($item->released_at->toDateString())->toBe('2024-11-08')
+        ->and($item->retailer_links)->toHaveCount(2); // Costco dropped
+
+    expect($item->retailer_links[0])
+        ->toMatchArray(['retailer' => 'Target', 'url' => 'https://target.com/x', 'price_cents' => 15999]);
 
     // The price seeded an estimated SEALED-state market value.
     expect(MarketValue::where('catalog_item_id', $item->id)->where('condition', 'SEALED')->exists())
