@@ -37,5 +37,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('scan', [ScanController::class, 'scan'])->name('scan.scan');
 });
 
+// Public, shareable collection page. Registered AFTER the auth routes above so
+// /collection, /collection/export, /collection/import keep precedence; only an
+// unmatched handle (/collection/{username}) falls through to here.
+Route::get('collection/{username}', [CollectionController::class, 'publicShow'])->name('collection.public');
+
 require __DIR__.'/settings.php';
 require __DIR__.'/admin.php';

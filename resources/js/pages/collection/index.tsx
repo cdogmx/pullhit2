@@ -23,6 +23,7 @@ type Props = {
     allocation: Allocation[];
     gainers: PortfolioMover[];
     decliners: PortfolioMover[];
+    publicUrl: string | null;
 };
 
 const gainClass = (n: number | null | undefined) =>
@@ -51,6 +52,7 @@ export default function CollectionIndex({
     allocation,
     gainers,
     decliners,
+    publicUrl,
 }: Props) {
     const c = summary.currency;
 
@@ -60,9 +62,28 @@ export default function CollectionIndex({
 
             <div className="flex flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center justify-between gap-4">
-                    <h1 className="text-2xl font-bold tracking-tight">
-                        Your collection
-                    </h1>
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight">
+                            Your collection
+                        </h1>
+                        {publicUrl ? (
+                            <a
+                                href={publicUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                            >
+                                Public · {publicUrl.replace(/^https?:\/\//, '')}
+                            </a>
+                        ) : (
+                            <Link
+                                href="/settings/profile"
+                                className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                            >
+                                Private · make it public
+                            </Link>
+                        )}
+                    </div>
                     <div className="flex items-center gap-2">
                         <Button asChild variant="outline" size="sm">
                             <Link href="/collection/import">

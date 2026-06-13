@@ -7,8 +7,10 @@ use App\Actions\Collection\BuildPortfolio;
 use App\Actions\Collection\ExportCollectionCsv;
 use App\Actions\Collection\RemoveFromCollection;
 use App\Actions\Collection\UpdateCollectionItem;
+use App\Actions\Collection\PublicCollection;
 use App\Actions\Import\BuildImportPreview;
 use App\Actions\Import\ImportCollection;
+use App\Models\User;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Collection\StoreCollectionItemRequest;
 use App\Http\Resources\CollectionItemResource;
@@ -28,7 +30,8 @@ class CollectionController extends Controller
 {
     public function index(Request $request, BuildPortfolio $build): Response
     {
-        $portfolio = $build($request->user());
+        $user = $request->user();
+        $portfolio = $build($user);
 
         return Inertia::render('collection/index', [
             'holdings' => CollectionItemResource::collection($portfolio['items'])->resolve(),
@@ -36,6 +39,9 @@ class CollectionController extends Controller
             'allocation' => $portfolio['allocation'],
             'gainers' => $portfolio['gainers'],
             'decliners' => $portfolio['decliners'],
+            'publicUrl' => $user->is_collection_public && $user->username
+                ? url("/collection/{$user->username}")
+                : null,
         ]);
     }
 
@@ -53,6 +59,16 @@ class CollectionController extends Controller
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    /** Public, shareable collection page — only when the owner opted in. */
+    public function publicShow(string $username, PublicCollection $build): Response
+    {
+        $user = User::where('username', $username)->first();
+
+        abort_unless($user && $user->is_collection_public, 404);
+
+        return Inertia::render('collection/public', $build($user));
     }
 
     public function importForm(): Response

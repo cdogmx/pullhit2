@@ -1,10 +1,11 @@
-import { Form, Head, usePage } from '@inertiajs/react';
+import { Form, Head, useForm, usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/delete-user';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/profile';
@@ -18,11 +19,25 @@ type PageProps = {
 export default function Profile({
     mustVerifyEmail,
     status,
+    username,
+    isCollectionPublic,
 }: {
     mustVerifyEmail: boolean;
     status?: string;
+    username: string | null;
+    isCollectionPublic: boolean;
 }) {
     const { auth } = usePage<PageProps>().props;
+
+    const collection = useForm({
+        username: username ?? '',
+        is_collection_public: isCollectionPublic,
+    });
+
+    const saveCollection = (e: React.FormEvent) => {
+        e.preventDefault();
+        collection.patch('/settings/collection', { preserveScroll: true });
+    };
 
     return (
         <>
@@ -121,6 +136,59 @@ export default function Profile({
                         </>
                     )}
                 </Form>
+            </div>
+
+            <div className="space-y-6">
+                <Heading
+                    variant="small"
+                    title="Public collection"
+                    description="Pick a username and share your collection at a public URL."
+                />
+
+                <form onSubmit={saveCollection} className="space-y-6">
+                    <div className="grid gap-2">
+                        <Label htmlFor="username">Username</Label>
+                        <Input
+                            id="username"
+                            value={collection.data.username}
+                            onChange={(e) =>
+                                collection.setData('username', e.target.value)
+                            }
+                            placeholder="your-handle"
+                            autoComplete="off"
+                        />
+                        <InputError message={collection.errors.username} />
+                        {collection.data.username.trim() && (
+                            <p className="text-xs text-muted-foreground">
+                                Public URL:{' '}
+                                <span className="font-medium text-foreground">
+                                    /collection/
+                                    {collection.data.username.trim()}
+                                </span>
+                            </p>
+                        )}
+                    </div>
+
+                    <label className="flex items-center gap-2">
+                        <Checkbox
+                            checked={collection.data.is_collection_public}
+                            onCheckedChange={(v) =>
+                                collection.setData(
+                                    'is_collection_public',
+                                    Boolean(v),
+                                )
+                            }
+                        />
+                        <span className="text-sm">
+                            Make my collection public
+                        </span>
+                    </label>
+                    <InputError
+                        message={collection.errors.is_collection_public}
+                    />
+
+                    <Button disabled={collection.processing}>Save</Button>
+                </form>
             </div>
 
             <DeleteUser />
