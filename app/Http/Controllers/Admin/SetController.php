@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Actions\Catalog\AddSealedProduct;
 use App\Actions\Catalog\MissingCardsReport;
+use App\Actions\Catalog\UpdateSealedProduct;
+use App\Enums\ItemType;
 use App\Http\Controllers\Controller;
 use App\Jobs\ImportSetJob;
+use App\Models\CatalogItem;
 use App\Models\MarketValue;
 use App\Models\Set;
 use App\Support\Catalog\PokemonTcgClient;
@@ -51,6 +54,27 @@ class SetController extends Controller
 
     public function storeSealed(Request $request, Set $set, AddSealedProduct $add): RedirectResponse
     {
+        $add($set, $this->sealedData($request));
+
+        return back()->with('success', "Added sealed product to {$set->name}.");
+    }
+
+    public function updateSealed(Request $request, CatalogItem $catalogItem, UpdateSealedProduct $update): RedirectResponse
+    {
+        abort_unless($catalogItem->item_type === ItemType::Sealed, 404);
+
+        $update($catalogItem, $this->sealedData($request));
+
+        return back()->with('success', 'Sealed product updated.');
+    }
+
+    /**
+     * Validate + normalize the sealed-product form (shared by store + update).
+     *
+     * @return array<string, mixed>
+     */
+    protected function sealedData(Request $request): array
+    {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sealed_type' => ['required', Rule::in(TcgVertical::SEALED_TYPES)],
@@ -82,9 +106,7 @@ class SetController extends Controller
             ->values()
             ->all();
 
-        $add($set, $data);
-
-        return back()->with('success', "Added sealed product to {$set->name}.");
+        return $data;
     }
 
     public function search(Request $request, PokemonTcgClient $client): JsonResponse

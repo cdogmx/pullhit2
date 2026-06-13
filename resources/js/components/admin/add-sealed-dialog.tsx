@@ -21,7 +21,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { languageLabel } from '@/lib/format';
-import type { AdminSet } from '@/types';
+import type { AdminSet, CatalogItem } from '@/types';
 
 const humanize = (s: string) =>
     s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -40,20 +40,30 @@ const MAJOR_RETAILERS = [
 
 type RetailerLink = { retailer: string; url: string; price: string };
 
-/** Admin: add a sealed product (booster box, ETB, …) to a set. */
+const dollars = (cents: number | null | undefined): string =>
+    cents != null ? (cents / 100).toString() : '';
+
+/**
+ * Admin: add a sealed product to a set (pass `set`), or edit an existing one
+ * (pass `item`). Same form, posts to create or patches to update.
+ */
 export function AddSealedDialog({
     set,
+    item,
     sealedTypes,
     languages,
     open,
     onOpenChange,
 }: {
-    set: AdminSet | null;
+    set?: AdminSet | null;
+    item?: CatalogItem | null;
     sealedTypes: string[];
     languages: string[];
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
+    const editing = Boolean(item);
+
     const form = useForm({
         name: '',
         sealed_type: 'booster_box',
@@ -67,7 +77,24 @@ export function AddSealedDialog({
     });
 
     useEffect(() => {
-        if (set) {
+        if (item) {
+            form.setDefaults({
+                name: item.name,
+                sealed_type: String(item.attributes?.sealed_type ?? 'booster_box'),
+                language: String(item.attributes?.language ?? 'en'),
+                pack_count: (item.attributes?.pack_count as number) ?? '',
+                price: '',
+                msrp: dollars(item.msrp),
+                released_at: item.released_at ?? '',
+                retailer_links: (item.retailer_links ?? []).map((l) => ({
+                    retailer: l.retailer,
+                    url: l.url,
+                    price: dollars(l.price_cents),
+                })),
+                image_url: item.image_url ?? '',
+            });
+            form.reset();
+        } else if (set) {
             form.setDefaults({
                 name: `${set.name} Booster Box`,
                 sealed_type: 'booster_box',
@@ -82,7 +109,7 @@ export function AddSealedDialog({
             form.reset();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [set?.id]);
+    }, [set?.id, item?.id]);
 
     const links = form.data.retailer_links;
     const addLink = () =>
@@ -101,19 +128,32 @@ export function AddSealedDialog({
             links.filter((_, idx) => idx !== i),
         );
 
-    if (!set) {
+    if (!set && !item) {
         return null;
     }
 
+    const contextName = item ? (item.set?.name ?? '') : (set?.name ?? '');
+    const contextLang = item
+        ? (item.attributes?.language as string | undefined)
+        : set?.language;
+
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        form.post(`/admin/sets/${set.id}/sealed`, {
+        const opts = {
             preserveScroll: true,
             onSuccess: () => {
-                toast.success('Sealed product added.');
+                toast.success(
+                    editing ? 'Sealed product updated.' : 'Sealed product added.',
+                );
                 onOpenChange(false);
             },
-        });
+        };
+
+        if (item) {
+            form.patch(`/admin/sealed/${item.id}`, opts);
+        } else if (set) {
+            form.post(`/admin/sets/${set.id}/sealed`, opts);
+        }
     };
 
     return (
@@ -121,11 +161,13 @@ export function AddSealedDialog({
             <DialogContent className="max-h-[85vh] overflow-y-auto">
                 <form onSubmit={submit}>
                     <DialogHeader>
-                        <DialogTitle>Add sealed product</DialogTitle>
+                        <DialogTitle>
+                            {editing ? 'Edit sealed product' : 'Add sealed product'}
+                        </DialogTitle>
                         <DialogDescription>
-                            {set.name}
-                            {set.language
-                                ? ` · ${languageLabel(set.language)}`
+                            {contextName}
+                            {contextLang
+                                ? ` · ${languageLabel(contextLang)}`
                                 : ''}
                         </DialogDescription>
                     </DialogHeader>
@@ -327,7 +369,7 @@ export function AddSealedDialog({
 
                     <DialogFooter>
                         <Button type="submit" disabled={form.processing}>
-                            Add sealed product
+                            {editing ? 'Save changes' : 'Add sealed product'}
                         </Button>
                     </DialogFooter>
                 </form>

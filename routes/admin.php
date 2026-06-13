@@ -22,6 +22,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('sets/import', [SetController::class, 'import'])->name('sets.import');
     Route::post('sets/{set}/resync', [SetController::class, 'resync'])->name('sets.resync');
     Route::post('sets/{set}/sealed', [SetController::class, 'storeSealed'])->name('sets.sealed');
+    Route::patch('sealed/{catalogItem}', [SetController::class, 'updateSealed'])->name('sealed.update');
     Route::get('sets/{set}/missing', [SetController::class, 'missing'])->name('sets.missing');
 
     // Cards

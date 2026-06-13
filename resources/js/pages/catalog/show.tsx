@@ -4,6 +4,7 @@ import {
     BarChart3,
     ExternalLink,
     Loader2,
+    Pencil,
     RefreshCw,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -12,6 +13,7 @@ import { EbayShopButton } from '@/components/catalog/ebay-shop-button';
 import { PriceBreakdownDrawer } from '@/components/catalog/price-breakdown-drawer';
 import { PriceTag } from '@/components/catalog/price-tag';
 import { Sparkline } from '@/components/catalog/sparkline';
+import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
 import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -41,6 +43,9 @@ type Props = {
     priceHistory: PricePoint[];
     /** The viewer's owned copies of this card, or null. */
     ownership: OwnedState[] | null;
+    /** Sealed-product editor options (admin). */
+    sealedTypes: string[];
+    languages: string[];
 };
 
 /** Read Laravel's XSRF-TOKEN cookie for same-origin POSTs. */
@@ -76,6 +81,8 @@ export default function Show({
     refreshedAt: initialRefreshedAt,
     priceHistory,
     ownership,
+    sealedTypes,
+    languages,
 }: Props) {
     const user = usePage().props.auth?.user;
     const isAdmin = Boolean(user?.is_admin);
@@ -99,6 +106,8 @@ export default function Show({
         stateKey: string;
         label: string;
     } | null>(null);
+    const [editingSealed, setEditingSealed] = useState(false);
+    const isSealed = item.item_type === 'sealed';
 
     // Buy links + live listings (lazy — drives the prominent "Shop on eBay" CTA).
     const [listings, setListings] = useState<CardListings | null>(null);
@@ -405,11 +414,25 @@ export default function Show({
                             MSRP, and release date (mainly sealed products). */}
                         {(item.retailer_links?.length ||
                             item.msrp ||
-                            item.released_at) && (
+                            item.released_at ||
+                            (isAdmin && isSealed)) && (
                             <div className={PANEL}>
-                                <span className={SECTION_LABEL}>
-                                    Where to buy
-                                </span>
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className={SECTION_LABEL}>
+                                        Where to buy
+                                    </span>
+                                    {isAdmin && isSealed && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() =>
+                                                setEditingSealed(true)
+                                            }
+                                        >
+                                            <Pencil className="size-4" /> Edit
+                                        </Button>
+                                    )}
+                                </div>
                                 {(item.msrp || item.released_at) && (
                                     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                                         {item.msrp ? (
@@ -450,6 +473,11 @@ export default function Show({
                                             </a>
                                         ))}
                                     </div>
+                                ) : isAdmin && isSealed ? (
+                                    <p className="mt-3 text-sm text-muted-foreground">
+                                        No retailer links yet — click Edit to add
+                                        MSRP, release date, and store links.
+                                    </p>
                                 ) : null}
                             </div>
                         )}
@@ -595,6 +623,16 @@ export default function Show({
                 open={breakdown !== null}
                 onOpenChange={(o) => !o && setBreakdown(null)}
             />
+
+            {isAdmin && isSealed && (
+                <AddSealedDialog
+                    item={item}
+                    sealedTypes={sealedTypes}
+                    languages={languages}
+                    open={editingSealed}
+                    onOpenChange={setEditingSealed}
+                />
+            )}
         </>
     );
 }

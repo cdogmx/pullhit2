@@ -15,6 +15,7 @@ use App\Models\CollectionItem;
 use App\Models\GradingCompany;
 use App\Models\ProductLine;
 use App\Models\Set;
+use App\Support\Verticals\Definitions\TcgVertical;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -135,6 +136,9 @@ class CatalogController extends Controller
             // Options for the "add to collection" graded picker.
             'gradingCompanies' => GradingCompany::orderBy('name')
                 ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
+            // Sealed-product editor options (admin only, but cheap to ship).
+            'sealedTypes' => TcgVertical::SEALED_TYPES,
+            'languages' => TcgVertical::LANGUAGES,
         ]);
     }
 
