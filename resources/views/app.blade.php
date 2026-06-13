@@ -41,7 +41,7 @@
             $appName = config('app.name', 'CardFoo');
             $description = 'Value your trading cards and collectibles with confidence-scored market prices — sealed product, raw singles, and graded items. Wax on.';
             $ogTitle = $appName.' — Wax on.';
-            $ogImage = url('/og-image.png');
+            $ogImage = \Illuminate\Support\Facades\Storage::disk('s3')->url('phb/og/cardfoo-wax-on.jpg');
         @endphp
 
         <meta name="description" content="{{ $description }}">
@@ -56,8 +56,8 @@
         <meta property="og:description" content="{{ $description }}">
         <meta property="og:url" content="{{ url()->current() }}">
         <meta property="og:image" content="{{ $ogImage }}">
-        <meta property="og:image:width" content="1200">
-        <meta property="og:image:height" content="630">
+        <meta property="og:image:width" content="1500">
+        <meta property="og:image:height" content="500">
 
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:title" content="{{ $ogTitle }}">

@@ -84,7 +84,7 @@ export function AddSealedDialog({
         }
 
         if (item) {
-            form.setDefaults({
+            form.setData({
                 name: item.name,
                 sealed_type: String(item.attributes?.sealed_type ?? 'booster_box'),
                 language: String(item.attributes?.language ?? 'en'),
@@ -99,9 +99,8 @@ export function AddSealedDialog({
                 })),
                 image_url: item.image_url ?? '',
             });
-            form.reset();
         } else if (set) {
-            form.setDefaults({
+            form.setData({
                 name: `${set.name} Booster Box`,
                 sealed_type: 'booster_box',
                 language: set.language ?? 'en',
@@ -112,7 +111,6 @@ export function AddSealedDialog({
                 retailer_links: [],
                 image_url: '',
             });
-            form.reset();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, set?.id, item?.id]);

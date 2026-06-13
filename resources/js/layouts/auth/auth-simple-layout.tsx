@@ -31,6 +31,24 @@ export default function AuthSimpleLayout({
                         </div>
                     </div>
                     {children}
+
+                    <div className="rounded-lg border border-dashed border-border bg-muted/40 p-4 text-center text-xs leading-relaxed text-muted-foreground">
+                        <span className="font-medium text-foreground">
+                            Beta:
+                        </span>{' '}
+                        a lot may work, a lot may not. Features are being added
+                        and improved daily. Want something specific? Let us know
+                        on{' '}
+                        <a
+                            href="https://x.com/cardfoo"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
+                        >
+                            X
+                        </a>
+                        .
+                    </div>
                 </div>
             </div>
         </div>
