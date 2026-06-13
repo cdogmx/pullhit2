@@ -1,10 +1,12 @@
 import { Link, usePage } from '@inertiajs/react';
+import { ChevronDown } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
+    DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { UserMenuContent } from '@/components/user-menu-content';
@@ -20,6 +22,19 @@ const marketingNav = [
     { title: 'Browse', href: '/browse' },
     { title: 'Features', href: '/#features' },
     { title: 'How it works', href: '/#how-it-works' },
+];
+
+// Catalog dropdowns by vertical/product line. Languages link into the SEO
+// product-line landing with a language filter (e.g. /browse/pokemon?language=ja).
+const catalogMenus = [
+    {
+        title: 'Pokémon',
+        items: [
+            { label: 'All Pokémon', href: '/browse/pokemon' },
+            { label: 'English', href: '/browse/pokemon?language=en' },
+            { label: 'Japanese', href: '/browse/pokemon?language=ja' },
+        ],
+    },
 ];
 
 export function SiteHeader() {
@@ -43,6 +58,28 @@ export function SiteHeader() {
                         </span>
                     </Link>
                     <nav className="hidden items-center gap-1 md:flex">
+                        {catalogMenus.map((menu) => (
+                            <DropdownMenu key={menu.title}>
+                                <DropdownMenuTrigger asChild>
+                                    <button
+                                        type="button"
+                                        className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+                                    >
+                                        {menu.title}
+                                        <ChevronDown className="size-4" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-44">
+                                    {menu.items.map((item) => (
+                                        <DropdownMenuItem key={item.href} asChild>
+                                            <Link href={item.href}>
+                                                {item.label}
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ))}
                         {marketingNav.map((item) => (
                             <a
                                 key={item.href}
