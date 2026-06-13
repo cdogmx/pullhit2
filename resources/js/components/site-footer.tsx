@@ -20,7 +20,7 @@ const footerNav: {
     {
         heading: 'Product',
         links: [
-            { title: 'Catalog', href: '#' },
+            { title: 'Catalog', href: '/browse' },
             { title: 'Valuation', href: '#' },
             { title: 'Marketplace', href: '#' },
         ],

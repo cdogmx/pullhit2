@@ -1,14 +1,14 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Home, Layers, ScanLine, Search, Store } from 'lucide-react';
+import { Home, LibraryBig, ScanLine, Search, Store } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { dashboard, home, login } from '@/routes';
+import { home, login } from '@/routes';
 
 /**
  * Persistent mobile bottom tab bar (hidden ≥ lg). Renders across both the
  * public chrome and the authenticated app so mobile users always have the five
- * primary destinations. Sections not yet built (Search/Scan/Marketplace) link
- * to '#' placeholders and are wired in Phases 4–5.
+ * primary destinations. Auth-only tabs (Scan/Collection) send guests to login;
+ * Marketplace is a '#' placeholder until Phase 5.
  */
 type Tab = {
     title: string;
@@ -26,12 +26,17 @@ export function MobileTabBar() {
     const tabs: Tab[] = [
         { title: 'Home', href: home().url, icon: Home, match: '/' },
         { title: 'Search', href: '/browse', icon: Search, match: '/browse' },
-        { title: 'Scan', href: '#', icon: ScanLine },
+        {
+            title: 'Scan',
+            href: auth.user ? '/scan' : login().url,
+            icon: ScanLine,
+            match: '/scan',
+        },
         {
             title: 'Collection',
-            href: auth.user ? dashboard().url : login().url,
-            icon: Layers,
-            match: '/dashboard',
+            href: auth.user ? '/collection' : login().url,
+            icon: LibraryBig,
+            match: '/collection',
         },
         { title: 'Marketplace', href: '#', icon: Store },
     ];

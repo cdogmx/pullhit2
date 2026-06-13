@@ -1,7 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
-    BookOpen,
-    FolderGit2,
+    Globe,
+    Languages,
     LayoutGrid,
     LibraryBig,
     Library,
@@ -11,7 +11,6 @@ import {
     Shield,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -49,17 +48,11 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-    },
+// Catalog by product line + language, linking the SEO landings.
+const pokemonNavItems: NavItem[] = [
+    { title: 'All Pokémon', href: '/browse/pokemon', icon: Globe },
+    { title: 'English', href: '/browse/pokemon?language=en', icon: Languages },
+    { title: 'Japanese', href: '/browse/pokemon?language=ja', icon: Languages },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -87,11 +80,11 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
+                <NavMain items={pokemonNavItems} label="Pokémon" />
                 {isAdmin && <NavMain items={adminNavItems} label="Admin" />}
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
