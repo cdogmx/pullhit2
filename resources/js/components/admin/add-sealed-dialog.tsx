@@ -20,6 +20,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { ImageUploadField } from '@/components/admin/image-upload-field';
 import { languageLabel } from '@/lib/format';
 import type { AdminSet, CatalogItem } from '@/types';
 
@@ -354,15 +355,12 @@ export function AddSealedDialog({
                         </div>
 
                         <Field
-                            label="Image URL (optional)"
+                            label="Image (optional)"
                             error={form.errors.image_url}
                         >
-                            <Input
+                            <ImageUploadField
                                 value={form.data.image_url}
-                                onChange={(e) =>
-                                    form.setData('image_url', e.target.value)
-                                }
-                                placeholder="https://…"
+                                onChange={(u) => form.setData('image_url', u)}
                             />
                         </Field>
                     </div>

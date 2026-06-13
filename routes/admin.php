@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CardController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ImageController;
 use App\Http\Controllers\Admin\SetController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,6 +16,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Image intake (file upload or URL → stored in our bucket, never hot-linked).
+    Route::post('images', [ImageController::class, 'store'])->name('images.store');
 
     // Sets
     Route::get('sets', [SetController::class, 'index'])->name('sets.index');

@@ -1,6 +1,7 @@
 import { useForm } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
+import { ImageUploadField } from '@/components/admin/image-upload-field';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -144,11 +145,11 @@ export function EditCardDialog({
                                 />
                             </Field>
                         </div>
-                        <Field label="Image URL" error={form.errors.primary_image_path}>
-                            <Input
+                        <Field label="Image" error={form.errors.primary_image_path}>
+                            <ImageUploadField
                                 value={form.data.primary_image_path}
-                                onChange={(e) =>
-                                    form.setData('primary_image_path', e.target.value)
+                                onChange={(u) =>
+                                    form.setData('primary_image_path', u)
                                 }
                             />
                         </Field>
