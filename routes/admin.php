@@ -21,6 +21,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('sets/search', [SetController::class, 'search'])->name('sets.search');
     Route::post('sets/import', [SetController::class, 'import'])->name('sets.import');
     Route::post('sets/{set}/resync', [SetController::class, 'resync'])->name('sets.resync');
+    Route::post('sets/{set}/sealed', [SetController::class, 'storeSealed'])->name('sets.sealed');
     Route::get('sets/{set}/missing', [SetController::class, 'missing'])->name('sets.missing');
 
     // Cards

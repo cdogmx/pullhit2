@@ -21,6 +21,7 @@ export type AdminSet = {
     name: string;
     code: string | null;
     series: string | null;
+    language: string | null;
     released_at: string | null;
     ptcgio_id: string | null;
     items: number;

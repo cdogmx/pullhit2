@@ -1,7 +1,8 @@
 import { Head, router } from '@inertiajs/react';
-import { Loader2, RefreshCw, Search } from 'lucide-react';
+import { Loader2, Package, RefreshCw, Search } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,14 +15,15 @@ import {
 import { Input } from '@/components/ui/input';
 import type { AdminSet, MissingReport, SetSearchResult } from '@/types';
 
-type Props = { sets: AdminSet[] };
+type Props = { sets: AdminSet[]; sealedTypes: string[]; languages: string[] };
 
-export default function AdminSets({ sets }: Props) {
+export default function AdminSets({ sets, sealedTypes, languages }: Props) {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SetSearchResult[] | null>(null);
     const [searching, setSearching] = useState(false);
     const [missing, setMissing] = useState<{ name: string; report: MissingReport } | null>(null);
     const [checking, setChecking] = useState<number | null>(null);
+    const [sealedSet, setSealedSet] = useState<AdminSet | null>(null);
 
     const search = async () => {
         if (!query.trim()) {
@@ -167,6 +169,13 @@ export default function AdminSets({ sets }: Props) {
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
+                                                onClick={() => setSealedSet(s)}
+                                            >
+                                                <Package className="size-4" /> Add sealed
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
                                                 onClick={() => resync(s)}
                                             >
                                                 <RefreshCw className="size-4" /> Re-sync
@@ -179,6 +188,14 @@ export default function AdminSets({ sets }: Props) {
                     </CardContent>
                 </Card>
             </div>
+
+            <AddSealedDialog
+                set={sealedSet}
+                sealedTypes={sealedTypes}
+                languages={languages}
+                open={sealedSet !== null}
+                onOpenChange={(o) => !o && setSealedSet(null)}
+            />
 
             <Dialog open={missing !== null} onOpenChange={(o) => !o && setMissing(null)}>
                 <DialogContent className="max-h-[80vh] overflow-y-auto">

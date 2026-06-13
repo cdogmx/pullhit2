@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Catalog\AddSealedProduct;
 use App\Actions\Catalog\MissingCardsReport;
 use App\Http\Controllers\Controller;
 use App\Jobs\ImportSetJob;
 use App\Models\MarketValue;
 use App\Models\Set;
 use App\Support\Catalog\PokemonTcgClient;
+use App\Support\Verticals\Definitions\TcgVertical;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,6 +33,7 @@ class SetController extends Controller
                 'name' => $set->name,
                 'code' => $set->code,
                 'series' => $set->series,
+                'language' => $set->language,
                 'released_at' => $set->released_at?->toDateString(),
                 'ptcgio_id' => $set->external_ids['ptcgio_id'] ?? null,
                 'items' => $itemIds->count(),
@@ -38,7 +42,29 @@ class SetController extends Controller
             ];
         });
 
-        return Inertia::render('admin/sets', ['sets' => $sets]);
+        return Inertia::render('admin/sets', [
+            'sets' => $sets,
+            'sealedTypes' => TcgVertical::SEALED_TYPES,
+            'languages' => TcgVertical::LANGUAGES,
+        ]);
+    }
+
+    public function storeSealed(Request $request, Set $set, AddSealedProduct $add): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'sealed_type' => ['required', Rule::in(TcgVertical::SEALED_TYPES)],
+            'language' => ['required', Rule::in(TcgVertical::LANGUAGES)],
+            'pack_count' => ['nullable', 'integer', 'min:1', 'max:10000'],
+            'price' => ['nullable', 'numeric', 'min:0'],
+            'image_url' => ['nullable', 'url', 'max:1000'],
+        ]);
+
+        $data['price_cents'] = isset($data['price']) ? (int) round((float) $data['price'] * 100) : null;
+
+        $add($set, $data);
+
+        return back()->with('success', "Added sealed product to {$set->name}.");
     }
 
     public function search(Request $request, PokemonTcgClient $client): JsonResponse
