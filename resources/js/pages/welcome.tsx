@@ -70,7 +70,7 @@ export default function Welcome() {
 
     return (
         <>
-            <Head title="Wax on." />
+            <Head title="Trading card prices, values & collection tracker" />
 
             {/* Hero */}
             <section className="relative overflow-hidden bg-primary text-primary-foreground">
@@ -102,6 +102,13 @@ export default function Welcome() {
                 />
                 <div className="relative mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
                     <div className="mx-auto max-w-2xl text-center">
+                        <span className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full bg-black/10 px-3 py-1 text-xs font-semibold text-primary-foreground">
+                            <span
+                                className="size-1.5 rounded-full bg-current"
+                                aria-hidden
+                            />
+                            Beta — values &amp; features are still improving
+                        </span>
                         <AppLogoIcon className="mx-auto block size-24 fill-current sm:size-28" />
                         <h1 className="mt-2 font-script text-7xl leading-tight sm:text-8xl">
                             Wax on.

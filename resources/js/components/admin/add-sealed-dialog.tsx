@@ -78,6 +78,11 @@ export function AddSealedDialog({
     });
 
     useEffect(() => {
+        // Prefill each time the dialog opens (it stays mounted on the card page).
+        if (!open) {
+            return;
+        }
+
         if (item) {
             form.setDefaults({
                 name: item.name,
@@ -110,7 +115,7 @@ export function AddSealedDialog({
             form.reset();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [set?.id, item?.id]);
+    }, [open, set?.id, item?.id]);
 
     const links = form.data.retailer_links;
     const addLink = () =>
