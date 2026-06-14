@@ -108,6 +108,34 @@ test('two printings of one card share a base_key but differ in identity_hash', f
     expect($normal->variants()->count())->toBe(2);
 });
 
+test('editions are distinct printings that share a base_key', function () {
+    $unlimited = ($this->action)(
+        vertical: $this->vertical, productLine: $this->pokemon, set: $this->set,
+        itemType: ItemType::Single, name: 'Charizard', number: '4',
+        attributes: ['language' => 'en', 'rarity' => 'Rare Holo', 'variant' => 'holo', 'edition' => 'unlimited'],
+    );
+
+    $firstEd = ($this->action)(
+        vertical: $this->vertical, productLine: $this->pokemon, set: $this->set,
+        itemType: ItemType::Single, name: 'Charizard', number: '4',
+        attributes: ['language' => 'en', 'rarity' => 'Rare Holo', 'variant' => 'holo', 'edition' => 'first_edition'],
+    );
+
+    expect($firstEd->id)->not->toBe($unlimited->id)
+        ->and($firstEd->identity_hash)->not->toBe($unlimited->identity_hash)
+        ->and($firstEd->base_key)->toBe($unlimited->base_key) // same base card
+        ->and($unlimited->variants()->count())->toBe(2);
+});
+
+test('the edition axis no longer lives on variant', function () {
+    // variant="1st_edition" was removed from the enum — edition carries it now.
+    expect(fn () => ($this->action)(
+        vertical: $this->vertical, productLine: $this->pokemon, set: $this->set,
+        itemType: ItemType::Single, name: 'Charizard', number: '4',
+        attributes: ['language' => 'en', 'rarity' => 'Rare Holo', 'variant' => '1st_edition'],
+    ))->toThrow(ValidationException::class);
+});
+
 test('invalid attributes throw before anything is persisted', function () {
     expect(fn () => ($this->action)(
         vertical: $this->vertical,

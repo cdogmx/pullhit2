@@ -33,8 +33,13 @@ final class TcgVertical
                 ItemType::Single->value => [
                     Attr::make('language', 'Language', Type::Enum, required: true, searchable: true, indexed: true, options: self::LANGUAGES),
                     Attr::make('rarity', 'Rarity', Type::String, required: true, searchable: true, indexed: true),
-                    // variant + finish distinguish printings of the same card.
-                    Attr::make('variant', 'Variant', Type::Enum, required: true, searchable: true, indexed: true, options: ['normal', 'holo', 'reverse_holo', '1st_edition', 'unlimited'], variantDefining: true),
+                    // variant (holo-ness), edition (print run), and finish (error/
+                    // promo tag) each distinguish printings of the same card.
+                    Attr::make('variant', 'Variant', Type::Enum, required: true, searchable: true, indexed: true, options: ['normal', 'holo', 'reverse_holo'], variantDefining: true),
+                    // Print run — distinct market values per edition (1st Ed Charizard
+                    // ≫ Shadowless ≫ Unlimited). Optional: only set where it applies.
+                    Attr::make('edition', 'Edition', Type::Enum, searchable: true, indexed: true, options: ['unlimited', 'shadowless', 'first_edition'], variantDefining: true),
+                    // Error/promo printing tag (black_dot_error, trainer_deck_a, …).
                     Attr::make('finish', 'Finish', Type::String, searchable: true, variantDefining: true),
                     Attr::make('illustrator', 'Illustrator', Type::String, searchable: true),
                     Attr::make('hp', 'HP', Type::Integer),
