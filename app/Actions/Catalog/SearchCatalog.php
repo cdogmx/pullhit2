@@ -4,7 +4,6 @@ namespace App\Actions\Catalog;
 
 use App\Models\CatalogItem;
 use App\Models\Set;
-use App\Support\Catalog\Subsets;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -75,9 +74,8 @@ class SearchCatalog
             ->when($filters['rarity'] ?? null, fn (Builder $q, $rarity) => $q->where('attributes->rarity', $rarity))
             ->when($filters['variant'] ?? null, fn (Builder $q, $variant) => $q->where('attributes->variant', $variant));
 
-        if (! empty($filters['subset'])) {
-            Subsets::applyFilter($query, $filters['subset']);
-        }
+        // `subset` (only ever 'main' in URLs) is a UI sentinel that drops a parent
+        // set to its own cards; a child gallery is browsed by its own set slug.
     }
 
     /**

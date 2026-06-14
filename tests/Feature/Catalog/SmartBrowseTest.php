@@ -117,49 +117,79 @@ test('choosing a series shows its sets', function () {
         );
 });
 
-test('a set with named subsets shows subset tiles (main first)', function () {
-    $set = Set::factory()->for($this->line)->create([
-        'slug' => 'brilliant-stars', 'language' => 'en',
+test('a parent set with a gallery child shows subset tiles, child nested', function () {
+    // pokemontcg.io ships the gallery as its own set; we nest it as a subset.
+    $parent = Set::factory()->for($this->line)->create([
+        'slug' => 'astral-radiance', 'name' => 'Astral Radiance', 'language' => 'en',
+        'released_at' => '2022-05-27',
+    ]);
+    $child = Set::factory()->for($this->line)->create([
+        'slug' => 'astral-radiance-trainer-gallery',
+        'name' => 'Astral Radiance Trainer Gallery', 'language' => 'en',
+        'released_at' => '2022-05-27',
     ]);
     foreach (['1', '2'] as $n) {
-        CatalogItem::factory()->for($this->vertical)->for($this->line)->for($set)
-            ->create(['number' => $n, 'primary_image_path' => 'https://img/m.png']);
+        CatalogItem::factory()->for($this->vertical)->for($this->line)->for($parent)
+            ->create(['number' => $n]);
     }
-    CatalogItem::factory()->for($this->vertical)->for($this->line)->for($set)
-        ->create(['number' => 'TG01', 'primary_image_path' => 'https://img/tg.png']);
+    CatalogItem::factory()->for($this->vertical)->for($this->line)->for($child)
+        ->create(['number' => 'TG01', 'name' => 'Gallery Card']);
 
-    $this->get('/browse?product_line=pokemon&set=brilliant-stars')
+    $this->get('/browse?product_line=pokemon&set=astral-radiance')
         ->assertInertia(fn (Assert $page) => $page
             ->where('mode', 'subsets')
             ->where('tiles.0.slug', 'main')
             ->where('tiles.0.name', 'Main set')
-            ->where('tiles.1.slug', 'TG')
-            ->where('tiles.1.name', 'Trainer Gallery'),
+            ->where('tiles.0.count', 2)
+            ->where('tiles.1.name', 'Trainer Gallery')
+            ->where('tiles.1.set_slug', 'astral-radiance-trainer-gallery')
+            ->where('tiles.1.count', 1),
         );
 });
 
-test('choosing a subset filters to its cards', function () {
-    $set = Set::factory()->for($this->line)->create([
-        'slug' => 'brilliant-stars', 'language' => 'en',
+test('the gallery child is hidden from the sibling set list', function () {
+    $parent = Set::factory()->for($this->line)->create([
+        'slug' => 'astral-radiance', 'name' => 'Astral Radiance',
+        'series' => 'Sword & Shield', 'language' => 'en',
     ]);
-    foreach (['1', '2'] as $n) {
-        CatalogItem::factory()->for($this->vertical)->for($this->line)->for($set)
-            ->create(['number' => $n]);
-    }
-    CatalogItem::factory()->for($this->vertical)->for($this->line)->for($set)
-        ->create(['number' => 'TG01', 'name' => 'Gallery Card']);
+    $child = Set::factory()->for($this->line)->create([
+        'slug' => 'astral-radiance-trainer-gallery',
+        'name' => 'Astral Radiance Trainer Gallery',
+        'series' => 'Sword & Shield', 'language' => 'en',
+    ]);
+    CatalogItem::factory()->for($this->vertical)->for($this->line)->for($parent)->create(['number' => '1']);
+    CatalogItem::factory()->for($this->vertical)->for($this->line)->for($child)->create(['number' => 'TG01']);
 
-    $this->get('/browse?product_line=pokemon&set=brilliant-stars&subset=TG')
+    $this->get('/browse?product_line=pokemon&series='.urlencode('Sword & Shield'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('mode', 'cards')
-            ->has('items', 1)
-            ->where('items.0.number', 'TG01'),
+            ->where('mode', 'sets')
+            ->where('tiles', fn ($tiles) => collect($tiles)->pluck('slug')->all() === ['astral-radiance']),
         );
+});
 
-    $this->get('/browse?product_line=pokemon&set=brilliant-stars&subset=main')
+test('the main subset shows only the parent set cards', function () {
+    $parent = Set::factory()->for($this->line)->create([
+        'slug' => 'astral-radiance', 'name' => 'Astral Radiance', 'language' => 'en',
+    ]);
+    $child = Set::factory()->for($this->line)->create([
+        'slug' => 'astral-radiance-trainer-gallery',
+        'name' => 'Astral Radiance Trainer Gallery', 'language' => 'en',
+    ]);
+    CatalogItem::factory()->for($this->vertical)->for($this->line)->for($parent)->create(['number' => '1']);
+    CatalogItem::factory()->for($this->vertical)->for($this->line)->for($parent)->create(['number' => '2']);
+    CatalogItem::factory()->for($this->vertical)->for($this->line)->for($child)->create(['number' => 'TG01']);
+
+    $this->get('/browse?product_line=pokemon&set=astral-radiance&subset=main')
         ->assertInertia(fn (Assert $page) => $page
             ->where('mode', 'cards')
             ->has('items', 2),
+        );
+
+    // The gallery child, browsed by its own set slug, shows its one card.
+    $this->get('/browse?product_line=pokemon&set=astral-radiance-trainer-gallery')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('mode', 'cards')
+            ->has('items', 1),
         );
 });
 

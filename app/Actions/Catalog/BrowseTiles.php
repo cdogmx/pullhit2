@@ -78,7 +78,7 @@ class BrowseTiles
             return [];
         }
 
-        return Set::query()
+        $sets = Set::query()
             ->where('product_line_id', $line->id)
             ->when($filters['series'] ?? null, fn (Builder $q, $series) => $q->where('series', $series))
             ->when($filters['language'] ?? null, fn (Builder $q, $lang) => $q->where('language', $lang))
@@ -86,7 +86,18 @@ class BrowseTiles
             ->addSelect(['item_count' => CatalogItem::query()->selectRaw('count(*)')->whereColumn('set_id', 'sets.id')])
             ->orderByDesc('released_at')
             ->orderBy('name')
-            ->get()
+            ->get();
+
+        // Hide gallery child sets (e.g. "… Trainer Gallery") whose parent is also
+        // present — they nest under the parent as subsets instead.
+        $names = $sets->pluck('name')->all();
+
+        return $sets
+            ->reject(function (Set $set) use ($names) {
+                [$parent] = Subsets::split($set->name);
+
+                return $parent !== null && in_array($parent, $names, true);
+            })
             ->map(fn (Set $set) => [
                 'kind' => 'set',
                 'slug' => $set->slug,
@@ -149,9 +160,9 @@ class BrowseTiles
     }
 
     /**
-     * Subset tiles within a set (Main set, Trainer Gallery, …) derived from card
-     * numbers. Returns [] when the set has only a main subset — the caller then
-     * shows the cards directly.
+     * Subset tiles for a parent set: "Main set" (its own cards) plus any gallery
+     * child sets (Trainer Gallery, …). Returns [] when the set has no children —
+     * the caller then shows the set's cards directly.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -163,39 +174,45 @@ class BrowseTiles
             return [];
         }
 
-        $groups = CatalogItem::query()
-            ->where('set_id', $set->id)
-            ->pluck('number')
-            ->groupBy(fn (?string $number) => Subsets::keyFor($number));
+        $childNames = array_map(fn (string $suffix) => $set->name.' '.$suffix, Subsets::SUFFIXES);
 
-        if ($groups->count() <= 1) {
+        $children = Set::query()
+            ->where('product_line_id', $set->product_line_id)
+            ->where('language', $set->language)
+            ->whereIn('name', $childNames)
+            ->addSelect(['thumb' => $this->thumb('set_id', 'sets.id')])
+            ->addSelect(['item_count' => CatalogItem::query()->selectRaw('count(*)')->whereColumn('set_id', 'sets.id')])
+            ->orderBy('name')
+            ->get();
+
+        if ($children->isEmpty()) {
             return [];
         }
 
-        return $groups
-            ->map(fn ($numbers, string $key) => [
+        // Main set first, then each gallery child.
+        $tiles = [[
+            'kind' => 'subset',
+            'slug' => 'main',
+            'set_slug' => null,
+            'name' => 'Main set',
+            'count' => CatalogItem::where('set_id', $set->id)->count(),
+            'thumb' => $set->logo_path ?: CatalogItem::where('set_id', $set->id)
+                ->whereNotNull('primary_image_path')->orderBy('id')->value('primary_image_path'),
+        ]];
+
+        foreach ($children as $child) {
+            [, $suffix] = Subsets::split($child->name);
+            $tiles[] = [
                 'kind' => 'subset',
-                'slug' => $key,
-                'name' => Subsets::label($key),
-                'count' => $numbers->count(),
-                'thumb' => $this->subsetThumb($set->id, $key),
-            ])
-            // Main set first, then the named galleries alphabetically.
-            ->sortBy(fn (array $t) => $t['slug'] === 'main' ? '' : $t['slug'])
-            ->values()
-            ->all();
-    }
+                'slug' => $child->slug,
+                'set_slug' => $child->slug,
+                'name' => $suffix ?? $child->name,
+                'count' => (int) $child->getAttribute('item_count'),
+                'thumb' => $child->logo_path ?: $child->getAttribute('thumb'),
+            ];
+        }
 
-    /** A representative image for one subset of a set. */
-    private function subsetThumb(int $setId, string $key): ?string
-    {
-        $query = CatalogItem::query()
-            ->where('set_id', $setId)
-            ->whereNotNull('primary_image_path');
-
-        Subsets::applyFilter($query, $key);
-
-        return $query->orderBy('id')->value('primary_image_path');
+        return $tiles;
     }
 
     /** One representative card image for the parent (brand/set). */

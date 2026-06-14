@@ -51,6 +51,8 @@ type Pagination = {
 type BrowseTile = {
     kind: 'brand' | 'series' | 'set' | 'subset';
     slug: string;
+    /** Set a subset tile navigates to (a gallery child set); null = the main set. */
+    set_slug?: string | null;
     name: string;
     code?: string | null;
     language?: string | null;
@@ -83,17 +85,9 @@ const SORTS = [
 
 const ALL = '__all__';
 
-/** Friendly labels for derived subset keys (mirrors App\Support\Catalog\Subsets). */
-const SUBSET_LABELS: Record<string, string> = {
-    main: 'Main set',
-    TG: 'Trainer Gallery',
-    GG: 'Galarian Gallery',
-    SV: 'Shiny Vault',
-    RC: 'Radiant Collection',
-    GP: 'Galaxy Pack',
-    H: 'Holo',
-};
-const subsetLabel = (key: string): string => SUBSET_LABELS[key] ?? key;
+/** The only subset value that appears as a filter is the parent's own "main" set. */
+const subsetLabel = (key: string): string =>
+    key === 'main' ? 'Main set' : key;
 
 const humanize = (value: string): string =>
     value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -649,7 +643,12 @@ function TilesView({
                                           ? { series: tile.slug }
                                           : tile.kind === 'set'
                                             ? { set: tile.slug }
-                                            : { subset: tile.slug },
+                                            : tile.set_slug
+                                              ? {
+                                                    set: tile.set_slug,
+                                                    subset: null,
+                                                }
+                                              : { subset: tile.slug },
                                 )
                             }
                         />
