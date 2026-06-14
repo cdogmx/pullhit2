@@ -42,6 +42,12 @@ return [
         'endpoint' => env('OXYLABS_ENDPOINT', 'https://realtime.oxylabs.io/v1/queries'),
     ],
 
+    // PriceCharting Legendary — full price-guide CSV (catalog reconciliation).
+    'pricecharting' => [
+        'token' => env('PRICECHARTING_API_KEY'),
+        'base_url' => env('PRICECHARTING_BASE_URL', 'https://www.pricecharting.com'),
+    ],
+
     // Anthropic Messages API — Claude vision for card scanning (Phase 4b).
     'anthropic' => [
         'key' => env('ANTHROPIC_API_KEY'),
