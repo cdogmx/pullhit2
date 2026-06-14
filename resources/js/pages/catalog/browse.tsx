@@ -118,6 +118,7 @@ function buildQuery(filters: CatalogFilters): Record<string, string | number> {
         'language',
         'rarity',
         'variant',
+        'edition',
     ] as const) {
         const value = filters[key];
 
@@ -153,6 +154,7 @@ const ACTIVE_KEYS: (keyof CatalogFilters)[] = [
     'language',
     'rarity',
     'variant',
+    'edition',
 ];
 
 export default function Browse({
@@ -754,6 +756,17 @@ function FilterControls({
             })),
         },
         {
+            key: 'edition',
+            label: 'Edition',
+            opts: options.editions.map((v) => ({
+                value: v,
+                label:
+                    v === 'first_edition'
+                        ? '1st Edition'
+                        : humanize(v),
+            })),
+        },
+        {
             key: 'language',
             label: 'Language',
             opts: options.languages.map((v) => ({
@@ -953,9 +966,9 @@ function CardTile({
                 <div className="space-y-1.5 p-3">
                     <p
                         className="truncate text-sm font-medium"
-                        title={item.name}
+                        title={item.display_name ?? item.name}
                     >
-                        {item.name}
+                        {item.display_name ?? item.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
                         {item.set?.code ?? item.set?.name}
@@ -1000,7 +1013,9 @@ function ListRow({
                     />
                 </div>
                 <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{item.name}</p>
+                    <p className="truncate text-sm font-medium">
+                        {item.display_name ?? item.name}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                         {item.set?.name}
                         {item.number ? ` · ${item.number}` : ''}

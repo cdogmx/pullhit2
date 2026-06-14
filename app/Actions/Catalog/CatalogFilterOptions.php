@@ -46,7 +46,30 @@ class CatalogFilterOptions
                 ->pluck('language'),
             'rarities' => $this->raritiesPresent($filters),
             'variants' => $this->variantOptions(),
+            'editions' => $this->editionsPresent($filters),
         ];
+    }
+
+    /**
+     * Distinct editions present in the (optionally set-scoped) catalog, so the
+     * filter only offers Unlimited/Shadowless/1st Edition where they exist.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<int, string>
+     */
+    protected function editionsPresent(array $filters): array
+    {
+        return CatalogItem::query()
+            ->where('item_type', ItemType::Single->value)
+            ->when($filters['set'] ?? null, fn (Builder $q, $slug) => $q->whereHas('set', fn (Builder $s) => $s->where('slug', $slug)))
+            ->whereNotNull('attributes->edition')
+            ->get(['attributes'])
+            ->pluck('attributes.edition')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
     }
 
     /**

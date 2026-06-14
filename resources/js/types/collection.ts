@@ -18,6 +18,7 @@ export type Holding = {
     catalog_item?: {
         id: number;
         name: string;
+        display_name?: string;
         number: string | null;
         image_url: string | null;
         set: { name: string; code: string | null } | null;

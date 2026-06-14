@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ItemType;
+use App\Support\Catalog\CardDisplayName;
 use Database\Factories\CatalogItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -97,6 +98,14 @@ class CatalogItem extends Model
     public function marketValues(): HasMany
     {
         return $this->hasMany(MarketValue::class);
+    }
+
+    /** Human display name that distinguishes printings (edition/variant/error). */
+    public function getDisplayNameAttribute(): string
+    {
+        // NB: read via getAttribute — the JSON column is named `attributes`, which
+        // collides with Eloquent's internal bag when accessed as $this->attributes.
+        return CardDisplayName::for($this->name, $this->getAttribute('attributes') ?? []);
     }
 
     /**

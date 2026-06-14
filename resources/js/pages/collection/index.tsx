@@ -228,7 +228,10 @@ export default function CollectionIndex({
                                                                     href={`/catalog/${h.catalog_item.id}`}
                                                                     className="font-medium hover:underline"
                                                                 >
-                                                                    {h.catalog_item.name}
+                                                                    {h.catalog_item
+                                                                        .display_name ??
+                                                                        h.catalog_item
+                                                                            .name}
                                                                 </Link>
                                                             ) : (
                                                                 <span className="font-medium">

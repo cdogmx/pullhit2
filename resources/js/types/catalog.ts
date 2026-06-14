@@ -34,6 +34,8 @@ export type RetailerLink = {
 export type CatalogItem = {
     id: number;
     name: string;
+    /** Display name with edition/variant/error qualifiers, e.g. "Charizard (1st Edition)". */
+    display_name?: string;
     number: string | null;
     item_type: string;
     language: string | null;
@@ -87,6 +89,7 @@ export type CatalogFilterOptions = {
     languages: string[];
     rarities: string[];
     variants: string[];
+    editions: string[];
 };
 
 export type CatalogFilters = {
@@ -100,6 +103,7 @@ export type CatalogFilters = {
     language: string | null;
     rarity: string | null;
     variant: string | null;
+    edition: string | null;
     sort: string;
     direction: string;
     group: boolean;

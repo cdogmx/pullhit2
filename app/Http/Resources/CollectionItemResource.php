@@ -42,6 +42,7 @@ class CollectionItemResource extends JsonResource
             'catalog_item' => $this->whenLoaded('catalogItem', fn () => [
                 'id' => $this->catalogItem->id,
                 'name' => $this->catalogItem->name,
+                'display_name' => $this->catalogItem->display_name,
                 'number' => $this->catalogItem->number,
                 'image_url' => $this->catalogItem->primary_image_path
                     ?? ($this->catalogItem->external_ids['ptcgio_image'] ?? null),

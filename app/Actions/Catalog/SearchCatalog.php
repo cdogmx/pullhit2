@@ -73,7 +73,8 @@ class SearchCatalog
             ->when($filters['item_type'] ?? null, fn (Builder $q, $type) => $q->where('item_type', $type))
             ->when($filters['language'] ?? null, fn (Builder $q, $lang) => $q->where('language', $lang))
             ->when($filters['rarity'] ?? null, fn (Builder $q, $rarity) => $q->where('attributes->rarity', $rarity))
-            ->when($filters['variant'] ?? null, fn (Builder $q, $variant) => $q->where('attributes->variant', $variant));
+            ->when($filters['variant'] ?? null, fn (Builder $q, $variant) => $q->where('attributes->variant', $variant))
+            ->when($filters['edition'] ?? null, fn (Builder $q, $edition) => $q->where('attributes->edition', $edition));
 
         // `subset` (only ever 'main' in URLs) is a UI sentinel that drops a parent
         // set to its own cards; a child gallery is browsed by its own set slug.

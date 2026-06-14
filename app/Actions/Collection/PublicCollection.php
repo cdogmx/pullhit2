@@ -30,7 +30,7 @@ class PublicCollection
                 'value' => $value,
                 'holding' => [
                     'catalog_item_id' => $catalog?->id,
-                    'name' => $catalog?->name,
+                    'name' => $catalog?->display_name,
                     'number' => $catalog?->number,
                     'image_url' => $catalog?->primary_image_path
                         ?? ($catalog?->external_ids['ptcgio_image'] ?? null),

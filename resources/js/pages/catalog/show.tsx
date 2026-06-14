@@ -216,7 +216,7 @@ export default function Show({
 
     return (
         <>
-            <Head title={item.name} />
+            <Head title={item.display_name ?? item.name} />
 
             <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
                 <Link
@@ -251,7 +251,7 @@ export default function Show({
                         <div>
                             <p className={SECTION_LABEL}>{eyebrow}</p>
                             <h1 className="mt-1.5 text-2xl font-bold tracking-tight sm:text-3xl">
-                                {item.name}
+                                {item.display_name ?? item.name}
                             </h1>
                             <div className="mt-3 flex flex-wrap gap-1.5">
                                 <Badge variant="outline">
