@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Actions\Reconcile\ApplySet;
 use App\Actions\Reconcile\ReconcileSet;
 use App\Models\PricechartingProduct;
 use App\Models\Set;
@@ -16,13 +17,16 @@ class ReconcileCommand extends Command
 {
     protected $signature = 'catalog:reconcile
         {--set= : a single set slug (default: every set with PriceCharting products)}
-        {--samples=10 : sample rows to show per add type for a single set}';
+        {--apply : apply high-confidence changes (and queue the rest); default is dry-run}
+        {--samples=10 : sample rows to show per add type for a single set (dry-run)}';
 
-    protected $description = 'Diff catalog sets against PriceCharting and report proposed changes (dry-run).';
+    protected $description = 'Diff catalog sets against PriceCharting; report (dry-run) or --apply.';
 
-    public function handle(ReconcileSet $reconcile): int
+    public function handle(ReconcileSet $reconcile, ApplySet $apply): int
     {
+        @ini_set('memory_limit', '1024M');
         $single = $this->option('set');
+        $doApply = (bool) $this->option('apply');
 
         $sets = $single
             ? Set::where('slug', $single)->get()
@@ -37,6 +41,17 @@ class ReconcileCommand extends Command
 
         $grand = [];
         foreach ($sets as $set) {
+            if ($doApply) {
+                $r = $apply($set);
+                if ($r['applied'] || $r['queued']) {
+                    $this->line(sprintf('%-34s applied %-4d  queued %-4d', \Illuminate\Support\Str::limit($set->name, 33), $r['applied'], $r['queued']));
+                    $grand['applied'] = ($grand['applied'] ?? 0) + $r['applied'];
+                    $grand['queued'] = ($grand['queued'] ?? 0) + $r['queued'];
+                }
+
+                continue;
+            }
+
             $changes = $reconcile($set);
             if ($changes === []) {
                 continue;
@@ -64,7 +79,7 @@ class ReconcileCommand extends Command
         }
 
         $this->newLine();
-        $this->info('Grand totals across '.$sets->count().' sets:');
+        $this->info(($doApply ? 'Applied' : 'Proposed').' across '.$sets->count().' sets:');
         foreach ($grand as $action => $count) {
             $this->line("  {$action}: {$count}");
         }
