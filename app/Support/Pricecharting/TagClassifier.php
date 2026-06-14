@@ -33,14 +33,26 @@ final class TagClassifier
             $t = str_replace('shadowless', ' ', $t);
         }
 
-        if (str_contains($t, 'reverse')) {
+        $hasReverse = str_contains($t, 'reverse');
+        if ($hasReverse) {
             $out['variant'] = 'reverse_holo';
             $t = str_replace('reverse', ' ', $t);
         }
 
-        // Whatever remains is an error/promo descriptor (e.g. "red cheeks",
-        // "black dot error", "1999-2000", "trainer deck a", "ghost stamp").
         $rest = trim((string) preg_replace('/\s+/', ' ', $t));
+
+        // A standalone "[Holo]" is holo-ness, not an error tag. (A compound like
+        // "Cosmos Holo" stays a finish.) "Reverse Holo" → the redundant "holo"
+        // after peeling "reverse" is dropped.
+        if ($rest === 'holo') {
+            if (! $hasReverse) {
+                $out['variant'] = 'holo';
+            }
+            $rest = '';
+        }
+
+        // Whatever remains is an error/promo descriptor (e.g. "red cheeks",
+        // "black dot error", "1999-2000", "master ball", "cosmos holo").
         if ($rest !== '') {
             $out['finish'] = Str::slug($rest, '_');
         }

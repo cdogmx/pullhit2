@@ -12,6 +12,9 @@ test('the tag classifier peels edition/variant and leaves the rest as finish', f
     expect(TagClassifier::classify('1st Edition'))->toMatchArray(['edition' => 'first_edition', 'variant' => null, 'finish' => null]);
     expect(TagClassifier::classify('Shadowless'))->toMatchArray(['edition' => 'shadowless']);
     expect(TagClassifier::classify('Reverse'))->toMatchArray(['variant' => 'reverse_holo']);
+    expect(TagClassifier::classify('Holo'))->toMatchArray(['variant' => 'holo', 'finish' => null]);
+    expect(TagClassifier::classify('Reverse Holo'))->toMatchArray(['variant' => 'reverse_holo', 'finish' => null]);
+    expect(TagClassifier::classify('Cosmos Holo'))->toMatchArray(['variant' => null, 'finish' => 'cosmos_holo']);
     expect(TagClassifier::classify('1st Edition Red Cheeks'))->toMatchArray(['edition' => 'first_edition', 'finish' => 'red_cheeks']);
     expect(TagClassifier::classify('Black Dot Error'))->toMatchArray(['edition' => null, 'finish' => 'black_dot_error']);
     expect(TagClassifier::classify(null))->toMatchArray(['edition' => null, 'variant' => null, 'finish' => null]);
