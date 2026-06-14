@@ -103,6 +103,30 @@ test('search lifts edition keywords out of the query', function () {
     $this->getJson('/api/v1/catalog?q=charizard')->assertJsonCount(2, 'data');
 });
 
+test('search matches name + card number together', function () {
+    // Pikachu ex is number 050/086 (from beforeEach).
+    $this->getJson('/api/v1/catalog?q='.urlencode('pikachu 050/086'))
+        ->assertOk()->assertJsonCount(1, 'data');
+
+    // The numerator alone resolves the number too.
+    $this->getJson('/api/v1/catalog?q='.urlencode('weedle 1'))
+        ->assertOk()->assertJsonCount(2, 'data'); // both Weedle printings are #001/086
+});
+
+test('search matches name + set name', function () {
+    $base = Set::factory()->create(['product_line_id' => $this->pokemon->id, 'slug' => 'base', 'name' => 'Base', 'language' => 'en']);
+    app(CreateCatalogItem::class)(
+        vertical: $this->vertical, productLine: $this->pokemon, set: $base,
+        itemType: ItemType::Single, name: 'Charizard', number: '4',
+        attributes: ['language' => 'en', 'rarity' => 'Rare Holo', 'variant' => 'holo'],
+    );
+
+    // "set" is a stopword; "charizard" → name, "base" → set name.
+    $res = $this->getJson('/api/v1/catalog?q='.urlencode('charizard base set'))->assertOk();
+    expect($res->json('data'))->toHaveCount(1)
+        ->and($res->json('data.0.name'))->toBe('Charizard');
+});
+
 test('filtering by rarity, variant, and item_type each narrows results', function () {
     $this->getJson('/api/v1/catalog?rarity=Common')->assertJsonCount(2, 'data');
     $this->getJson('/api/v1/catalog?variant=holo')->assertJsonCount(1, 'data');

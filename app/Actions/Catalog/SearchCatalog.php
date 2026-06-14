@@ -58,7 +58,15 @@ class SearchCatalog
         'reverse' => ['variant', 'reverse_holo'],
     ];
 
+    /** Filler words people add that aren't in any card/set name. */
+    private const STOPWORDS = ['set', 'sets', 'card', 'cards', 'the'];
+
     /**
+     * Free-text search that mirrors how people actually type — name + number
+     * ("charizard 4/102"), name + set ("charizard base set"), name + edition
+     * ("charizard 1st edition"). We lift edition/variant phrases to facets, then
+     * AND the remaining tokens, each matched across name OR set name OR number.
+     *
      * @param  Builder<CatalogItem>  $query
      */
     protected function applySearch(Builder $query, ?string $q): void
@@ -67,8 +75,8 @@ class SearchCatalog
             return;
         }
 
-        // Lift "1st edition", "shadowless", "reverse", … out of the text and match
-        // them as edition/variant facets — they aren't in the card's stored name.
+        // 1) Lift "1st edition", "shadowless", "reverse", … into edition/variant
+        //    facets — they live in attributes, not the stored name.
         $text = ' '.strtolower(trim($q)).' ';
         foreach (self::SEARCH_FACETS as $phrase => [$facet, $value]) {
             if (str_contains($text, " {$phrase} ")) {
@@ -77,15 +85,25 @@ class SearchCatalog
             }
         }
 
-        $clean = trim((string) preg_replace('/\s+/', ' ', $text));
-        if ($clean === '') {
-            return;
-        }
+        // 2) Each remaining token must match somewhere (AND across tokens).
+        $tokens = array_filter(
+            preg_split('/\s+/', trim($text)) ?: [],
+            fn (string $t) => $t !== '' && ! in_array($t, self::STOPWORDS, true),
+        );
 
-        $query->where(function (Builder $w) use ($clean): void {
-            $w->where('name', 'like', "%{$clean}%")
-                ->orWhere('number', 'like', "%{$clean}%");
-        });
+        foreach ($tokens as $token) {
+            $query->where(function (Builder $w) use ($token): void {
+                $w->where('name', 'like', "%{$token}%")
+                    ->orWhereHas('set', fn (Builder $s) => $s->where('name', 'like', "%{$token}%"));
+
+                // A number token, possibly written "4/102" or "025".
+                if (preg_match('/\d/', $token)) {
+                    $numerator = ltrim(explode('/', $token)[0], '0');
+                    $w->orWhere('number', 'like', "%{$token}%")
+                        ->orWhere('number', $numerator === '' ? '0' : $numerator);
+                }
+            });
+        }
     }
 
     /**
