@@ -49,7 +49,7 @@ type Pagination = {
 };
 
 type BrowseTile = {
-    kind: 'brand' | 'set';
+    kind: 'brand' | 'series' | 'set' | 'subset';
     slug: string;
     name: string;
     code?: string | null;
@@ -66,8 +66,8 @@ type Props = {
     filters: CatalogFilters;
     gradingCompanies: GradingCompanyOption[];
     seo?: { title: string; heading: string } | null;
-    /** Smart browse: brands → sets → cards. */
-    mode: 'brands' | 'sets' | 'cards';
+    /** Smart browse: brands → series → sets → subsets → cards. */
+    mode: 'brands' | 'series' | 'sets' | 'subsets' | 'cards';
     tiles: BrowseTile[];
     tileLanguages: string[];
     /** Admin-authored description for the current brand/set. */
@@ -83,6 +83,18 @@ const SORTS = [
 
 const ALL = '__all__';
 
+/** Friendly labels for derived subset keys (mirrors App\Support\Catalog\Subsets). */
+const SUBSET_LABELS: Record<string, string> = {
+    main: 'Main set',
+    TG: 'Trainer Gallery',
+    GG: 'Galarian Gallery',
+    SV: 'Shiny Vault',
+    RC: 'Radiant Collection',
+    GP: 'Galaxy Pack',
+    H: 'Holo',
+};
+const subsetLabel = (key: string): string => SUBSET_LABELS[key] ?? key;
+
 const humanize = (value: string): string =>
     value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -96,7 +108,9 @@ function buildQuery(filters: CatalogFilters): Record<string, string | number> {
     for (const key of [
         'vertical',
         'product_line',
+        'series',
         'set',
+        'subset',
         'item_type',
         'language',
         'rarity',
@@ -128,11 +142,10 @@ function buildQuery(filters: CatalogFilters): Record<string, string | number> {
     return out;
 }
 
+// Refinement chips shown in cards view. The brand→series→set→subset path is the
+// breadcrumb's job, so those navigational keys are intentionally excluded here.
 const ACTIVE_KEYS: (keyof CatalogFilters)[] = [
     'q',
-    'vertical',
-    'product_line',
-    'set',
     'item_type',
     'language',
     'rarity',
@@ -227,64 +240,112 @@ export default function Browse({
     const brandName =
         options.product_lines.find((p) => p.slug === filters.product_line)
             ?.name ?? null;
+    const seriesName = filters.series ?? null;
     const setName =
         options.sets.find((s) => s.slug === filters.set)?.name ?? null;
+    const subsetName = filters.subset ? subsetLabel(filters.subset) : null;
+
     const heading =
         seo?.heading ??
         (mode === 'brands'
             ? 'Browse the catalog'
-            : mode === 'sets'
+            : mode === 'series'
               ? (brandName ?? 'Browse')
-              : (setName ??
-                brandName ??
-                (filters.q ? `“${filters.q}”` : 'Browse the catalog')));
+              : mode === 'sets'
+                ? (seriesName ?? brandName ?? 'Browse')
+                : mode === 'subsets'
+                  ? (setName ?? 'Browse')
+                  : (subsetName
+                    ? `${setName ?? ''}${setName ? ' · ' : ''}${subsetName}`
+                    : (setName ??
+                      brandName ??
+                      (filters.q
+                          ? `“${filters.q}”`
+                          : 'Browse the catalog'))));
+
+    const countNoun =
+        mode === 'series'
+            ? 'series'
+            : mode === 'sets'
+              ? 'sets'
+              : mode === 'subsets'
+                ? 'subsets'
+                : 'brands';
     const countLabel = isCards
         ? `${pagination.total.toLocaleString()} items`
-        : `${tiles.length.toLocaleString()} ${mode === 'brands' ? 'brands' : 'sets'}`;
-    const showCrumb = Boolean(filters.product_line || filters.set);
+        : `${tiles.length.toLocaleString()} ${countNoun}`;
+
+    // Breadcrumb up the brand → series → set → subset path. Each crumb clears the
+    // deeper filters; the last (current location) is rendered as plain text.
+    const crumbs: { label: string; go?: () => void }[] = [];
+    if (
+        filters.product_line ||
+        filters.series ||
+        filters.set ||
+        filters.subset
+    ) {
+        crumbs.push({ label: 'All brands', go: reset });
+        if (brandName) {
+            crumbs.push({
+                label: brandName,
+                go: () =>
+                    update({
+                        series: null,
+                        set: null,
+                        subset: null,
+                        q: null,
+                    }),
+            });
+        }
+        if (seriesName) {
+            crumbs.push({
+                label: seriesName,
+                go: () => update({ set: null, subset: null, q: null }),
+            });
+        }
+        if (setName) {
+            crumbs.push({
+                label: setName,
+                go: () => update({ subset: null, q: null }),
+            });
+        }
+        if (subsetName) {
+            crumbs.push({ label: subsetName });
+        }
+    }
 
     return (
         <>
             <Head title={seo?.title ?? 'Browse catalog'} />
 
             <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-                {showCrumb && (
+                {crumbs.length > 0 && (
                     <nav className="mb-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-                        <button
-                            type="button"
-                            onClick={reset}
-                            className="hover:text-foreground"
-                        >
-                            All brands
-                        </button>
-                        {brandName && (
-                            <>
-                                <span>/</span>
-                                {isCards && filters.set ? (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            update({ set: null, q: null })
-                                        }
-                                        className="hover:text-foreground"
-                                    >
-                                        {brandName}
-                                    </button>
-                                ) : (
-                                    <span className="text-foreground">
-                                        {brandName}
-                                    </span>
-                                )}
-                            </>
-                        )}
-                        {isCards && setName && (
-                            <>
-                                <span>/</span>
-                                <span className="text-foreground">
-                                    {setName}
+                        {crumbs.map((crumb, i) => {
+                            const isLast = i === crumbs.length - 1;
+
+                            return (
+                                <span
+                                    key={i}
+                                    className="flex items-center gap-1.5"
+                                >
+                                    {i > 0 && <span>/</span>}
+                                    {crumb.go && !isLast ? (
+                                        <button
+                                            type="button"
+                                            onClick={crumb.go}
+                                            className="hover:text-foreground"
+                                        >
+                                            {crumb.label}
+                                        </button>
+                                    ) : (
+                                        <span className="text-foreground">
+                                            {crumb.label}
+                                        </span>
+                                    )}
                                 </span>
-                            </>
-                        )}
+                            );
+                        })}
                     </nav>
                 )}
 
@@ -535,7 +596,7 @@ function TilesView({
     filters,
     onChange,
 }: {
-    mode: 'brands' | 'sets' | 'cards';
+    mode: 'brands' | 'series' | 'sets' | 'subsets' | 'cards';
     tiles: BrowseTile[];
     tileLanguages: string[];
     filters: CatalogFilters;
@@ -543,7 +604,8 @@ function TilesView({
 }) {
     return (
         <div>
-            {mode === 'sets' && tileLanguages.length > 1 && (
+            {(mode === 'series' || mode === 'sets') &&
+                tileLanguages.length > 1 && (
                 <div className="mb-6 flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">
                         Language
@@ -583,7 +645,11 @@ function TilesView({
                                 onChange(
                                     tile.kind === 'brand'
                                         ? { product_line: tile.slug }
-                                        : { set: tile.slug },
+                                        : tile.kind === 'series'
+                                          ? { series: tile.slug }
+                                          : tile.kind === 'set'
+                                            ? { set: tile.slug }
+                                            : { subset: tile.slug },
                                 )
                             }
                         />
@@ -623,7 +689,8 @@ function TileCard({ tile, onOpen }: { tile: BrowseTile; onOpen: () => void }) {
                     {tile.kind === 'set' && tile.released_at
                         ? `${tile.released_at.slice(0, 4)} · `
                         : ''}
-                    {tile.count.toLocaleString()} cards
+                    {tile.count.toLocaleString()}{' '}
+                    {tile.kind === 'series' ? 'sets' : 'cards'}
                     {tile.kind === 'set' && tile.language
                         ? ` · ${languageLabel(tile.language)}`
                         : ''}

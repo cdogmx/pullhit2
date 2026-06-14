@@ -5,13 +5,15 @@ namespace App\Actions\Catalog;
 use App\Models\CatalogItem;
 use App\Models\ProductLine;
 use App\Models\Set;
+use App\Support\Catalog\Subsets;
 use Illuminate\Contracts\Database\Eloquent\Builder as BuilderContract;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * "Smart browse" navigation tiles: brand tiles when nothing is selected, set
- * tiles (counts + a representative card thumbnail) once a brand is chosen. Lets
- * browse drill brand → set → card instead of dumping the whole catalog up front.
+ * "Smart browse" navigation tiles. Drills brand → series → set → subset → card
+ * instead of dumping the whole catalog up front; each level only appears when it
+ * adds a choice (a brand with one series skips to sets; a set with no named
+ * subsets skips to cards — resolved by the controller on tile count).
  */
 class BrowseTiles
 {
@@ -21,7 +23,12 @@ class BrowseTiles
      */
     public function __invoke(string $mode, array $filters): array
     {
-        return $mode === 'sets' ? $this->sets($filters) : $this->brands($filters);
+        return match ($mode) {
+            'series' => $this->series($filters),
+            'sets' => $this->sets($filters),
+            'subsets' => $this->subsets($filters),
+            default => $this->brands($filters),
+        };
     }
 
     /**
@@ -73,6 +80,7 @@ class BrowseTiles
 
         return Set::query()
             ->where('product_line_id', $line->id)
+            ->when($filters['series'] ?? null, fn (Builder $q, $series) => $q->where('series', $series))
             ->when($filters['language'] ?? null, fn (Builder $q, $lang) => $q->where('language', $lang))
             ->addSelect(['thumb' => $this->thumb('set_id', 'sets.id')])
             ->addSelect(['item_count' => CatalogItem::query()->selectRaw('count(*)')->whereColumn('set_id', 'sets.id')])
@@ -93,6 +101,101 @@ class BrowseTiles
             ->filter(fn (array $t) => $t['count'] > 0)
             ->values()
             ->all();
+    }
+
+    /**
+     * Series tiles for a brand — the era grouping (Scarlet & Violet, etc.),
+     * newest first, with a representative card image.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function series(array $filters): array
+    {
+        $line = ProductLine::where('slug', $filters['product_line'] ?? null)->first();
+
+        if (! $line) {
+            return [];
+        }
+
+        $lang = $filters['language'] ?? null;
+
+        // One representative card image per series (joined through sets).
+        $thumbs = CatalogItem::query()
+            ->join('sets', 'sets.id', '=', 'catalog_items.set_id')
+            ->where('sets.product_line_id', $line->id)
+            ->when($lang, fn (Builder $q, $l) => $q->where('sets.language', $l))
+            ->whereNotNull('sets.series')
+            ->whereNotNull('catalog_items.primary_image_path')
+            ->groupBy('sets.series')
+            ->selectRaw('sets.series as series, min(catalog_items.primary_image_path) as thumb')
+            ->pluck('thumb', 'series');
+
+        return Set::query()
+            ->where('product_line_id', $line->id)
+            ->when($lang, fn (Builder $q, $l) => $q->where('language', $l))
+            ->whereNotNull('series')
+            ->groupBy('series')
+            ->selectRaw('series, count(*) as set_count, max(released_at) as newest')
+            ->orderByRaw('max(released_at) desc')
+            ->get()
+            ->map(fn (Set $row) => [
+                'kind' => 'series',
+                'slug' => $row->series,
+                'name' => $row->series,
+                'count' => (int) $row->getAttribute('set_count'),
+                'thumb' => $thumbs[$row->series] ?? null,
+            ])
+            ->all();
+    }
+
+    /**
+     * Subset tiles within a set (Main set, Trainer Gallery, …) derived from card
+     * numbers. Returns [] when the set has only a main subset — the caller then
+     * shows the cards directly.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function subsets(array $filters): array
+    {
+        $set = Set::where('slug', $filters['set'] ?? null)->first();
+
+        if (! $set) {
+            return [];
+        }
+
+        $groups = CatalogItem::query()
+            ->where('set_id', $set->id)
+            ->pluck('number')
+            ->groupBy(fn (?string $number) => Subsets::keyFor($number));
+
+        if ($groups->count() <= 1) {
+            return [];
+        }
+
+        return $groups
+            ->map(fn ($numbers, string $key) => [
+                'kind' => 'subset',
+                'slug' => $key,
+                'name' => Subsets::label($key),
+                'count' => $numbers->count(),
+                'thumb' => $this->subsetThumb($set->id, $key),
+            ])
+            // Main set first, then the named galleries alphabetically.
+            ->sortBy(fn (array $t) => $t['slug'] === 'main' ? '' : $t['slug'])
+            ->values()
+            ->all();
+    }
+
+    /** A representative image for one subset of a set. */
+    private function subsetThumb(int $setId, string $key): ?string
+    {
+        $query = CatalogItem::query()
+            ->where('set_id', $setId)
+            ->whereNotNull('primary_image_path');
+
+        Subsets::applyFilter($query, $key);
+
+        return $query->orderBy('id')->value('primary_image_path');
     }
 
     /** One representative card image for the parent (brand/set). */

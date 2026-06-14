@@ -93,7 +93,9 @@ export type CatalogFilters = {
     q: string | null;
     vertical: string | null;
     product_line: string | null;
+    series: string | null;
     set: string | null;
+    subset: string | null;
     item_type: string | null;
     language: string | null;
     rarity: string | null;

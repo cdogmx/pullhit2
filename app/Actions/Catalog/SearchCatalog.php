@@ -4,6 +4,7 @@ namespace App\Actions\Catalog;
 
 use App\Models\CatalogItem;
 use App\Models\Set;
+use App\Support\Catalog\Subsets;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -67,11 +68,16 @@ class SearchCatalog
         $query
             ->when($filters['vertical'] ?? null, fn (Builder $q, $slug) => $q->whereHas('vertical', fn (Builder $v) => $v->where('slug', $slug)))
             ->when($filters['product_line'] ?? null, fn (Builder $q, $slug) => $q->whereHas('productLine', fn (Builder $p) => $p->where('slug', $slug)))
+            ->when($filters['series'] ?? null, fn (Builder $q, $series) => $q->whereHas('set', fn (Builder $s) => $s->where('series', $series)))
             ->when($filters['set'] ?? null, fn (Builder $q, $slug) => $q->whereHas('set', fn (Builder $s) => $s->where('slug', $slug)))
             ->when($filters['item_type'] ?? null, fn (Builder $q, $type) => $q->where('item_type', $type))
             ->when($filters['language'] ?? null, fn (Builder $q, $lang) => $q->where('language', $lang))
             ->when($filters['rarity'] ?? null, fn (Builder $q, $rarity) => $q->where('attributes->rarity', $rarity))
             ->when($filters['variant'] ?? null, fn (Builder $q, $variant) => $q->where('attributes->variant', $variant));
+
+        if (! empty($filters['subset'])) {
+            Subsets::applyFilter($query, $filters['subset']);
+        }
     }
 
     /**

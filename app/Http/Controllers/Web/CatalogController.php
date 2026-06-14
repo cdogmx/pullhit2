@@ -81,14 +81,34 @@ class CatalogController extends Controller
      */
     private function renderBrowse(array $filters, SearchCatalog $search, CatalogFilterOptions $options, ?array $seo = null): Response
     {
-        $mode = $this->browseMode($filters);
         $tiles = app(BrowseTiles::class);
 
-        // The admin-authored description for the current brand (sets view) or set
-        // (cards view), shown under the heading.
+        // Resolve the drill-down level. A tier collapses when it adds no choice:
+        // a brand with ≤1 series jumps straight to its sets; a set with no named
+        // subsets jumps straight to its cards.
+        $mode = $this->browseMode($filters);
+        $tileData = [];
+
+        if ($mode === 'series') {
+            $tileData = $tiles('series', $filters);
+            if (count($tileData) <= 1) {
+                $mode = 'sets';
+                $tileData = $tiles('sets', $filters);
+            }
+        } elseif ($mode === 'subsets') {
+            $tileData = $tiles('subsets', $filters);
+            if (count($tileData) <= 1) {
+                $mode = 'cards';
+            }
+        } elseif ($mode !== 'cards') {
+            $tileData = $tiles($mode, $filters);
+        }
+
+        // The admin-authored description for the current brand (series view) or
+        // set (subset/cards view), shown under the heading.
         $blurb = match (true) {
-            $mode === 'sets' && ! empty($filters['product_line']) => ProductLine::where('slug', $filters['product_line'])->value('description'),
-            $mode === 'cards' && ! empty($filters['set']) => Set::where('slug', $filters['set'])->value('description'),
+            $mode === 'series' && ! empty($filters['product_line']) => ProductLine::where('slug', $filters['product_line'])->value('description'),
+            in_array($mode, ['subsets', 'cards'], true) && ! empty($filters['set']) => Set::where('slug', $filters['set'])->value('description'),
             default => null,
         };
 
@@ -101,17 +121,18 @@ class CatalogController extends Controller
             'gradingCompanies' => GradingCompany::orderBy('name')
                 ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
             'seo' => $seo,
+            // Language selector shows while browsing a brand's series/sets.
+            'tileLanguages' => in_array($mode, ['series', 'sets'], true) && ! empty($filters['product_line'])
+                ? $tiles->languagesFor($filters['product_line'])
+                : [],
         ];
 
-        // Smart browse: with no set chosen, show navigation tiles (brands, then
-        // sets) instead of dumping every card. A set (or a search) drops to cards.
+        // Tile views (brands/series/sets/subsets) show navigation cards instead of
+        // dumping every catalog item. A search or a leaf selection drops to cards.
         if ($mode !== 'cards') {
             return Inertia::render('catalog/browse', [
                 ...$common,
-                'tiles' => $tiles($mode, $filters),
-                'tileLanguages' => $mode === 'sets' && ! empty($filters['product_line'])
-                    ? $tiles->languagesFor($filters['product_line'])
-                    : [],
+                'tiles' => $tileData,
                 'items' => [],
                 'pagination' => ['page' => 1, 'last_page' => 1, 'per_page' => 0, 'total' => 0, 'has_more' => false],
             ]);
@@ -122,7 +143,6 @@ class CatalogController extends Controller
         return Inertia::render('catalog/browse', [
             ...$common,
             'tiles' => [],
-            'tileLanguages' => [],
             // Merge so each scrolled-in page appends to the list (infinite scroll);
             // a filter change resets it via the request's reset header.
             'items' => Inertia::merge(
@@ -139,22 +159,21 @@ class CatalogController extends Controller
     }
 
     /**
-     * Which browse view to render: a search or a chosen set shows cards; a chosen
-     * brand shows its sets; nothing chosen shows the brands.
+     * The deepest drill-down level implied by the filters: a search/subset shows
+     * cards; a set shows its subsets; a series shows its sets; a brand shows its
+     * series; nothing shows the brands. (series/subsets may collapse — see above.)
      *
      * @param  array<string, mixed>  $filters
      */
     private function browseMode(array $filters): string
     {
-        if (! empty($filters['q']) || ! empty($filters['set'])) {
-            return 'cards';
-        }
-
-        if (! empty($filters['product_line'])) {
-            return 'sets';
-        }
-
-        return 'brands';
+        return match (true) {
+            ! empty($filters['q']) || ! empty($filters['subset']) => 'cards',
+            ! empty($filters['set']) => 'subsets',
+            ! empty($filters['series']) => 'sets',
+            ! empty($filters['product_line']) => 'series',
+            default => 'brands',
+        };
     }
 
     public function show(
