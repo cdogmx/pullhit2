@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     Boxes,
+    GitCompare,
     Globe,
     Languages,
     LayoutGrid,
@@ -61,6 +62,7 @@ const adminNavItems: NavItem[] = [
     { title: 'Brands', href: '/admin/brands', icon: Boxes },
     { title: 'Sets', href: '/admin/sets', icon: Library },
     { title: 'Cards', href: '/admin/cards', icon: PencilRuler },
+    { title: 'Reconcile', href: '/admin/reconcile', icon: GitCompare },
 ];
 
 export function AppSidebar() {

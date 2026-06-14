@@ -2,6 +2,7 @@
 
 namespace App\Actions\Reconcile;
 
+use App\Actions\Catalog\AddSealedProduct;
 use App\Actions\Catalog\CreateCatalogItem;
 use App\Actions\Valuation\SeedSyntheticValuation;
 use App\Enums\ItemType;
@@ -30,8 +31,46 @@ class ApplySet
         protected ReconcileSet $reconcile,
         protected CreateCatalogItem $create,
         protected SeedSyntheticValuation $seed,
+        protected AddSealedProduct $addSealed,
         protected VerticalRegistry $registry,
     ) {}
+
+    /** Approve a single queued change (admin review). Returns the affected item id. */
+    public function applyStored(ChangeRecord $record): ?int
+    {
+        $set = $record->set;
+        if (! $set) {
+            return null;
+        }
+        $set->loadMissing('productLine.vertical');
+
+        $p = $record->payload ?? [];
+        $change = new ReconcileChange(
+            action: $record->action, pcId: $record->pc_id, label: $p['label'] ?? '',
+            confidence: $record->confidence, reason: $record->reason,
+            baseItemId: $p['base_item_id'] ?? null,
+            name: $p['name'] ?? null, number: $p['number'] ?? null,
+            attributes: $p['attributes'] ?? [], prices: $p['prices'] ?? [],
+        );
+
+        $itemId = match ($record->action) {
+            ReconcileChange::ADD_PRINTING, ReconcileChange::ADD_ERROR_VARIANT => $this->applyAdd($change, $set),
+            ReconcileChange::ADD_CARD => $this->applyNewCard($change, $set),
+            ReconcileChange::ADD_SEALED => $this->applySealed($change, $set),
+            ReconcileChange::FIX_LABEL => $this->applyFix($change),
+            ReconcileChange::LINK => $this->applyLink($change),
+            default => null,
+        };
+
+        $record->forceFill(['status' => 'applied', 'catalog_item_id' => $itemId, 'applied_at' => Carbon::now()])->save();
+
+        return $itemId;
+    }
+
+    public function skip(ChangeRecord $record): void
+    {
+        $record->forceFill(['status' => 'skipped'])->save();
+    }
 
     /**
      * @return array{applied: int, queued: int}
@@ -129,6 +168,58 @@ class ApplySet
         }
 
         return $item->id;
+    }
+
+    private function applyNewCard(ReconcileChange $change, Set $set): ?int
+    {
+        $attributes = array_merge([
+            'language' => $set->language ?? 'en',
+            'rarity' => 'Unknown',
+            'variant' => 'normal',
+        ], $change->attributes);
+
+        $item = ($this->create)(
+            vertical: $set->productLine->vertical, productLine: $set->productLine, set: $set,
+            itemType: ItemType::Single, name: (string) $change->name, number: $change->number,
+            attributes: $attributes, externalIds: ['pricecharting_id' => $change->pcId],
+        );
+
+        if (($change->prices['ungraded'] ?? 0) > 0) {
+            ($this->seed)($item, (int) $change->prices['ungraded']);
+        }
+
+        return $item->id;
+    }
+
+    private function applySealed(ReconcileChange $change, Set $set): ?int
+    {
+        $item = ($this->addSealed)($set, [
+            'name' => (string) $change->name,
+            'sealed_type' => self::sealedType((string) $change->name),
+            'language' => $set->language ?? 'en',
+            'price_cents' => $change->prices['ungraded'] ?? null,
+        ]);
+
+        $item->forceFill(['external_ids' => array_merge($item->external_ids ?? [], ['pricecharting_id' => $change->pcId])])->save();
+
+        return $item->id;
+    }
+
+    private static function sealedType(string $name): string
+    {
+        $n = strtolower($name);
+
+        return match (true) {
+            str_contains($n, 'elite trainer') => 'elite_trainer_box',
+            str_contains($n, 'booster box') => 'booster_box',
+            str_contains($n, 'booster bundle') => 'booster_bundle',
+            str_contains($n, 'booster pack') => 'booster_pack',
+            str_contains($n, 'blister') => 'blister',
+            str_contains($n, 'bundle') => 'bundle',
+            str_contains($n, 'tin') => 'tin',
+            str_contains($n, 'collection') => 'collection',
+            default => 'other',
+        };
     }
 
     /** Recompute identity_hash/base_key after an attribute change. */

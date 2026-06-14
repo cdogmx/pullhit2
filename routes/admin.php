@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CardController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ImageController;
+use App\Http\Controllers\Admin\ReconcileController;
 use App\Http\Controllers\Admin\SetController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,6 +35,13 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('sets/{set}/sealed', [SetController::class, 'storeSealed'])->name('sets.sealed');
     Route::patch('sealed/{catalogItem}', [SetController::class, 'updateSealed'])->name('sealed.update');
     Route::get('sets/{set}/missing', [SetController::class, 'missing'])->name('sets.missing');
+
+    // PriceCharting reconciliation review queue
+    Route::get('reconcile', [ReconcileController::class, 'index'])->name('reconcile.index');
+    Route::get('reconcile/{set}/changes', [ReconcileController::class, 'changes'])->name('reconcile.changes');
+    Route::post('reconcile/approve-batch', [ReconcileController::class, 'approveBatch'])->name('reconcile.approveBatch');
+    Route::post('reconcile/{change}/approve', [ReconcileController::class, 'approve'])->name('reconcile.approve');
+    Route::post('reconcile/{change}/skip', [ReconcileController::class, 'skip'])->name('reconcile.skip');
 
     // Cards
     Route::get('cards', [CardController::class, 'index'])->name('cards.index');
