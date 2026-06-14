@@ -34,7 +34,7 @@ class SearchCatalogRequest extends FormRequest
             'language' => ['nullable', 'string', 'max:16'],
             'rarity' => ['nullable', 'string', 'max:64'],
             'variant' => ['nullable', 'string', 'max:64'],
-            'sort' => ['nullable', Rule::in(['number', 'name', 'newest', 'set'])],
+            'sort' => ['nullable', Rule::in(['number', 'name', 'newest', 'set', 'price', 'change'])],
             'direction' => ['nullable', Rule::in(['asc', 'desc'])],
             'group' => ['nullable', 'boolean'],
             'view' => ['nullable', Rule::in(['grid', 'list'])],

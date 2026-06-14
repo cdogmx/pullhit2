@@ -3,6 +3,7 @@
 namespace App\Actions\Catalog;
 
 use App\Models\CatalogItem;
+use App\Models\MarketValue;
 use App\Models\Set;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -111,11 +112,40 @@ class SearchCatalog
             return;
         }
 
+        // Sort by the card's headline value (price) or its 30-day % change. Both
+        // read the ungraded NM/SEALED market value; cards without one sort last
+        // when descending (the usual "highest first" / "biggest gainers" view).
+        if ($sort === 'price' || $sort === 'change') {
+            $query
+                ->orderBy($this->headlineValueSub($sort === 'price' ? 'median' : 'trend_30d'), $direction)
+                ->orderBy('name');
+
+            return;
+        }
+
         $column = self::SORTS[$sort] ?? 'number';
         $query->orderBy($column, $direction);
 
         if ($column !== 'name') {
             $query->orderBy('name'); // stable tiebreak
         }
+    }
+
+    /**
+     * Subquery selecting one column from a card's headline market value — the
+     * ungraded NM (or SEALED) row, same one the lists display. Used to order by
+     * price (median) or 30-day % change (trend_30d).
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<MarketValue>
+     */
+    protected function headlineValueSub(string $column): \Illuminate\Database\Eloquent\Builder
+    {
+        return MarketValue::query()
+            ->select($column)
+            ->whereColumn('market_values.catalog_item_id', 'catalog_items.id')
+            ->whereNull('grading_company_id')
+            ->orderByRaw("CASE WHEN state_key IN ('NM', 'SEALED') THEN 0 ELSE 1 END")
+            ->orderBy('id')
+            ->limit(1);
     }
 }

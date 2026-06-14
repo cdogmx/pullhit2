@@ -2,6 +2,8 @@
 
 use App\Actions\Catalog\CreateCatalogItem;
 use App\Enums\ItemType;
+use App\Models\CatalogItem;
+use App\Models\MarketValue;
 use App\Models\ProductLine;
 use App\Models\Set;
 use App\Models\Vertical;
@@ -104,6 +106,39 @@ test('sorting by name orders results alphabetically', function () {
         ->pluck('name');
 
     expect($names->first())->toBe('Chaos Rising Booster Box');
+});
+
+test('sorting by price orders by the headline market value', function () {
+    $cheap = CatalogItem::factory()->create(['name' => 'Cheap Card']);
+    $pricey = CatalogItem::factory()->create(['name' => 'Pricey Card']);
+    MarketValue::factory()->for($cheap)->create([
+        'state_key' => 'NM', 'condition' => 'NM', 'grading_company_id' => null, 'median' => 500,
+    ]);
+    MarketValue::factory()->for($pricey)->create([
+        'state_key' => 'NM', 'condition' => 'NM', 'grading_company_id' => null, 'median' => 9000,
+    ]);
+
+    $names = collect($this->getJson('/api/v1/catalog?sort=price&direction=desc')->json('data'))
+        ->pluck('name')->values();
+
+    expect($names->first())->toBe('Pricey Card')
+        ->and($names->search('Pricey Card'))->toBeLessThan($names->search('Cheap Card'));
+});
+
+test('sorting by % change orders by 30-day trend', function () {
+    $riser = CatalogItem::factory()->create(['name' => 'Riser']);
+    $faller = CatalogItem::factory()->create(['name' => 'Faller']);
+    MarketValue::factory()->for($riser)->create([
+        'state_key' => 'NM', 'condition' => 'NM', 'grading_company_id' => null, 'trend_30d' => 25.0,
+    ]);
+    MarketValue::factory()->for($faller)->create([
+        'state_key' => 'NM', 'condition' => 'NM', 'grading_company_id' => null, 'trend_30d' => -10.0,
+    ]);
+
+    $names = collect($this->getJson('/api/v1/catalog?sort=change&direction=desc')->json('data'))
+        ->pluck('name')->values();
+
+    expect($names->search('Riser'))->toBeLessThan($names->search('Faller'));
 });
 
 test('per_page paginates results', function () {

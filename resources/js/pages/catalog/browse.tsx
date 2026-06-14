@@ -81,7 +81,16 @@ const SORTS = [
     { value: 'name', label: 'Name' },
     { value: 'set', label: 'Set' },
     { value: 'newest', label: 'Newest' },
+    { value: 'price', label: 'Price' },
+    { value: 'change', label: '% Change' },
 ];
+
+// Sorts that read best high-to-low by default (the toggle can still flip them).
+const DESC_BY_DEFAULT: Record<string, 'asc' | 'desc'> = {
+    price: 'desc',
+    change: 'desc',
+    newest: 'desc',
+};
 
 const ALL = '__all__';
 
@@ -409,7 +418,12 @@ export default function Browse({
                         {/* Sort */}
                         <Select
                             value={filters.sort}
-                            onValueChange={(value) => update({ sort: value })}
+                            onValueChange={(value) =>
+                                update({
+                                    sort: value,
+                                    direction: DESC_BY_DEFAULT[value] ?? 'asc',
+                                })
+                            }
                         >
                             <SelectTrigger size="sm" className="w-[8.5rem]">
                                 <ArrowDownUp className="size-4" />
