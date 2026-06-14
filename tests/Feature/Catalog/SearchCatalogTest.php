@@ -84,6 +84,25 @@ test('search narrows by name', function () {
         ->assertJsonCount(2, 'data');
 });
 
+test('search lifts edition keywords out of the query', function () {
+    $create = app(CreateCatalogItem::class);
+    foreach (['first_edition', 'unlimited'] as $edition) {
+        $create(
+            vertical: $this->vertical, productLine: $this->pokemon, set: $this->set,
+            itemType: ItemType::Single, name: 'Charizard', number: '4',
+            attributes: ['language' => 'en', 'rarity' => 'Rare Holo', 'variant' => 'holo', 'edition' => $edition],
+        );
+    }
+
+    // "charizard 1st edition" → name match "charizard" + edition=first_edition.
+    $res = $this->getJson('/api/v1/catalog?q='.urlencode('charizard 1st edition'))->assertOk();
+    expect($res->json('data'))->toHaveCount(1)
+        ->and($res->json('data.0.attributes.edition'))->toBe('first_edition');
+
+    // Plain "charizard" still returns both printings.
+    $this->getJson('/api/v1/catalog?q=charizard')->assertJsonCount(2, 'data');
+});
+
 test('filtering by rarity, variant, and item_type each narrows results', function () {
     $this->getJson('/api/v1/catalog?rarity=Common')->assertJsonCount(2, 'data');
     $this->getJson('/api/v1/catalog?variant=holo')->assertJsonCount(1, 'data');

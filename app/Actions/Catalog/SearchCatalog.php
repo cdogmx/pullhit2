@@ -45,6 +45,20 @@ class SearchCatalog
     }
 
     /**
+     * Edition/variant phrases that may appear in a free-text query — these live in
+     * `attributes`, not `name`, so we lift them out and match them as facets.
+     * Longest phrases first so "reverse holo" wins over "reverse".
+     */
+    private const SEARCH_FACETS = [
+        '1st edition' => ['edition', 'first_edition'],
+        'first edition' => ['edition', 'first_edition'],
+        'shadowless' => ['edition', 'shadowless'],
+        'unlimited' => ['edition', 'unlimited'],
+        'reverse holo' => ['variant', 'reverse_holo'],
+        'reverse' => ['variant', 'reverse_holo'],
+    ];
+
+    /**
      * @param  Builder<CatalogItem>  $query
      */
     protected function applySearch(Builder $query, ?string $q): void
@@ -53,9 +67,24 @@ class SearchCatalog
             return;
         }
 
-        $query->where(function (Builder $w) use ($q): void {
-            $w->where('name', 'like', "%{$q}%")
-                ->orWhere('number', 'like', "%{$q}%");
+        // Lift "1st edition", "shadowless", "reverse", … out of the text and match
+        // them as edition/variant facets — they aren't in the card's stored name.
+        $text = ' '.strtolower(trim($q)).' ';
+        foreach (self::SEARCH_FACETS as $phrase => [$facet, $value]) {
+            if (str_contains($text, " {$phrase} ")) {
+                $query->where("attributes->{$facet}", $value);
+                $text = str_replace(" {$phrase} ", ' ', $text);
+            }
+        }
+
+        $clean = trim((string) preg_replace('/\s+/', ' ', $text));
+        if ($clean === '') {
+            return;
+        }
+
+        $query->where(function (Builder $w) use ($clean): void {
+            $w->where('name', 'like', "%{$clean}%")
+                ->orWhere('number', 'like', "%{$clean}%");
         });
     }
 
