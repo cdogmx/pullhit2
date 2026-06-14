@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Boxes,
     Globe,
     Languages,
     LayoutGrid,
@@ -57,6 +58,7 @@ const pokemonNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
     { title: 'Admin', href: '/admin', icon: Shield },
+    { title: 'Brands', href: '/admin/brands', icon: Boxes },
     { title: 'Sets', href: '/admin/sets', icon: Library },
     { title: 'Cards', href: '/admin/cards', icon: PencilRuler },
 ];

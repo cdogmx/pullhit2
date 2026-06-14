@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CardController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ImageController;
@@ -20,8 +21,13 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     // Image intake (file upload or URL → stored in our bucket, never hot-linked).
     Route::post('images', [ImageController::class, 'store'])->name('images.store');
 
+    // Brands (product lines) — logo + description.
+    Route::get('brands', [BrandController::class, 'index'])->name('brands.index');
+    Route::patch('brands/{productLine}', [BrandController::class, 'update'])->name('brands.update');
+
     // Sets
     Route::get('sets', [SetController::class, 'index'])->name('sets.index');
+    Route::patch('sets/{set}', [SetController::class, 'update'])->name('sets.update');
     Route::get('sets/search', [SetController::class, 'search'])->name('sets.search');
     Route::post('sets/import', [SetController::class, 'import'])->name('sets.import');
     Route::post('sets/{set}/resync', [SetController::class, 'resync'])->name('sets.resync');

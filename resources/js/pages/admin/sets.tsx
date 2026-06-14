@@ -1,8 +1,9 @@
 import { Head, router } from '@inertiajs/react';
-import { Loader2, Package, RefreshCw, Search } from 'lucide-react';
+import { Loader2, Package, Pencil, RefreshCw, Search } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
+import { EditSetDialog } from '@/components/admin/edit-set-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,6 +25,7 @@ export default function AdminSets({ sets, sealedTypes, languages }: Props) {
     const [missing, setMissing] = useState<{ name: string; report: MissingReport } | null>(null);
     const [checking, setChecking] = useState<number | null>(null);
     const [sealedSet, setSealedSet] = useState<AdminSet | null>(null);
+    const [editingSet, setEditingSet] = useState<AdminSet | null>(null);
 
     const search = async () => {
         if (!query.trim()) {
@@ -158,6 +160,14 @@ export default function AdminSets({ sets, sealedTypes, languages }: Props) {
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
+                                                onClick={() => setEditingSet(s)}
+                                            >
+                                                <Pencil className="size-4" />{' '}
+                                                Edit
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
                                                 onClick={() => checkMissing(s)}
                                                 disabled={checking === s.id}
                                             >
@@ -195,6 +205,12 @@ export default function AdminSets({ sets, sealedTypes, languages }: Props) {
                 languages={languages}
                 open={sealedSet !== null}
                 onOpenChange={(o) => !o && setSealedSet(null)}
+            />
+
+            <EditSetDialog
+                set={editingSet}
+                open={editingSet !== null}
+                onOpenChange={(o) => !o && setEditingSet(null)}
             />
 
             <Dialog open={missing !== null} onOpenChange={(o) => !o && setMissing(null)}>

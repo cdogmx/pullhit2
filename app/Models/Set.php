@@ -17,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'product_line_id',
     'slug',
     'name',
+    'logo_path',
+    'description',
     'code',
     'language',
     'series',

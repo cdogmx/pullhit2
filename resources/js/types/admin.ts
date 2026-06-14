@@ -24,9 +24,22 @@ export type AdminSet = {
     language: string | null;
     released_at: string | null;
     ptcgio_id: string | null;
+    logo_url: string | null;
+    description: string | null;
     items: number;
     valued: number;
     images: number;
+};
+
+export type AdminBrand = {
+    id: number;
+    slug: string;
+    name: string;
+    vertical: string | null;
+    logo_url: string | null;
+    description: string | null;
+    sets: number;
+    items: number;
 };
 
 export type SetSearchResult = {

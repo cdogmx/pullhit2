@@ -118,6 +118,12 @@ export default function AdminDashboard({ stats, health }: Props) {
 
                 <div className="flex gap-3 text-sm">
                     <Link
+                        href="/admin/brands"
+                        className="font-medium text-primary hover:underline"
+                    >
+                        Manage brands →
+                    </Link>
+                    <Link
                         href="/admin/sets"
                         className="font-medium text-primary hover:underline"
                     >

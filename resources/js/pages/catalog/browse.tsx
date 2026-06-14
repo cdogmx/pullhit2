@@ -70,6 +70,8 @@ type Props = {
     mode: 'brands' | 'sets' | 'cards';
     tiles: BrowseTile[];
     tileLanguages: string[];
+    /** Admin-authored description for the current brand/set. */
+    blurb: string | null;
 };
 
 const SORTS = [
@@ -147,6 +149,7 @@ export default function Browse({
     mode,
     tiles,
     tileLanguages,
+    blurb,
 }: Props) {
     const { auth } = usePage().props;
     const canAdd = Boolean(auth.user);
@@ -182,6 +185,7 @@ export default function Browse({
                 'filters',
                 'seo',
                 'mode',
+                'blurb',
                 'tiles',
                 'tileLanguages',
             ],
@@ -202,6 +206,7 @@ export default function Browse({
                 'filters',
                 'seo',
                 'mode',
+                'blurb',
                 'tiles',
                 'tileLanguages',
             ],
@@ -290,6 +295,11 @@ export default function Browse({
                     <p className="mt-1 text-sm text-muted-foreground">
                         {countLabel}
                     </p>
+                    {blurb && (
+                        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+                            {blurb}
+                        </p>
+                    )}
                 </div>
 
                 {/* Top bar: search + controls */}

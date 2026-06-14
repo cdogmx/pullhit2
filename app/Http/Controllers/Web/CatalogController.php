@@ -84,8 +84,17 @@ class CatalogController extends Controller
         $mode = $this->browseMode($filters);
         $tiles = app(BrowseTiles::class);
 
+        // The admin-authored description for the current brand (sets view) or set
+        // (cards view), shown under the heading.
+        $blurb = match (true) {
+            $mode === 'sets' && ! empty($filters['product_line']) => ProductLine::where('slug', $filters['product_line'])->value('description'),
+            $mode === 'cards' && ! empty($filters['set']) => Set::where('slug', $filters['set'])->value('description'),
+            default => null,
+        };
+
         $common = [
             'mode' => $mode,
+            'blurb' => $blurb,
             'options' => $options($filters),
             'filters' => $filters,
             // Options for the inline "add to collection" graded picker on each card.

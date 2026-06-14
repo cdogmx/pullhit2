@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * A product line within a vertical (TCG: Pokémon, MTG; Sports: Basketball).
  */
-#[Fillable(['vertical_id', 'slug', 'name', 'metadata'])]
+#[Fillable(['vertical_id', 'slug', 'name', 'logo_path', 'description', 'metadata'])]
 class ProductLine extends Model
 {
     /** @use HasFactory<ProductLineFactory> */

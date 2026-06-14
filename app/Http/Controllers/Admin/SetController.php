@@ -39,6 +39,8 @@ class SetController extends Controller
                 'language' => $set->language,
                 'released_at' => $set->released_at?->toDateString(),
                 'ptcgio_id' => $set->external_ids['ptcgio_id'] ?? null,
+                'logo_url' => $set->logo_path,
+                'description' => $set->description,
                 'items' => $itemIds->count(),
                 'valued' => MarketValue::whereIn('catalog_item_id', $itemIds)->distinct('catalog_item_id')->count('catalog_item_id'),
                 'images' => $set->catalogItems()->whereNotNull('primary_image_path')->count(),
@@ -50,6 +52,27 @@ class SetController extends Controller
             'sealedTypes' => TcgVertical::SEALED_TYPES,
             'languages' => TcgVertical::LANGUAGES,
         ]);
+    }
+
+    public function update(Request $request, Set $set): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'code' => ['nullable', 'string', 'max:50'],
+            'released_at' => ['nullable', 'date'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'logo_url' => ['nullable', 'url', 'max:1000'],
+        ]);
+
+        $set->update([
+            'name' => $data['name'],
+            'code' => $data['code'] ?: null,
+            'released_at' => $data['released_at'] ?: null,
+            'description' => $data['description'] ?: null,
+            'logo_path' => $data['logo_url'] ?: null,
+        ]);
+
+        return back()->with('success', "Updated {$set->name}.");
     }
 
     public function storeSealed(Request $request, Set $set, AddSealedProduct $add): RedirectResponse

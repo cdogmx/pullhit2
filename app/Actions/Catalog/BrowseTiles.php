@@ -54,7 +54,8 @@ class BrowseTiles
                 'slug' => $line->slug,
                 'name' => $line->name,
                 'count' => (int) $line->getAttribute('item_count'),
-                'thumb' => $line->getAttribute('thumb'),
+                // Admin-set brand logo wins; otherwise a representative card.
+                'thumb' => $line->logo_path ?: $line->getAttribute('thumb'),
             ])
             ->filter(fn (array $t) => $t['count'] > 0)
             ->values()
@@ -86,7 +87,8 @@ class BrowseTiles
                 'language' => $set->language,
                 'released_at' => $set->released_at?->toDateString(),
                 'count' => (int) $set->getAttribute('item_count'),
-                'thumb' => $set->getAttribute('thumb'),
+                // Admin-set set logo wins; otherwise a representative card.
+                'thumb' => $set->logo_path ?: $set->getAttribute('thumb'),
             ])
             ->filter(fn (array $t) => $t['count'] > 0)
             ->values()
