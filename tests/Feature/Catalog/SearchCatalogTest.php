@@ -38,11 +38,13 @@ beforeEach(function () {
     );
 });
 
-test('the browse page renders for guests with catalog items', function () {
-    $this->get('/browse')
+test('the browse page renders cards once a set is chosen', function () {
+    // Smart browse drops to the card list when a set is selected.
+    $this->get('/browse?set=chaos-rising-en')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('catalog/browse')
+            ->where('mode', 'cards')
             ->has('items', 4)
             ->where('pagination.total', 4)
             ->has('options.rarities')
@@ -51,7 +53,7 @@ test('the browse page renders for guests with catalog items', function () {
 
 test('the browse page exposes pagination for infinite scroll', function () {
     // 4 seeded items, 2 per page -> 2 pages.
-    $this->get('/browse?per_page=2')
+    $this->get('/browse?set=chaos-rising-en&per_page=2')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->has('items', 2)
@@ -59,7 +61,7 @@ test('the browse page exposes pagination for infinite scroll', function () {
             ->where('pagination.last_page', 2)
             ->where('pagination.has_more', true));
 
-    $this->get('/browse?per_page=2&page=2')
+    $this->get('/browse?set=chaos-rising-en&per_page=2&page=2')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->has('items', 2)

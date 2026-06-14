@@ -48,6 +48,17 @@ type Pagination = {
     has_more: boolean;
 };
 
+type BrowseTile = {
+    kind: 'brand' | 'set';
+    slug: string;
+    name: string;
+    code?: string | null;
+    language?: string | null;
+    released_at?: string | null;
+    count: number;
+    thumb: string | null;
+};
+
 type Props = {
     items: CatalogItem[];
     pagination: Pagination;
@@ -55,6 +66,10 @@ type Props = {
     filters: CatalogFilters;
     gradingCompanies: GradingCompanyOption[];
     seo?: { title: string; heading: string } | null;
+    /** Smart browse: brands → sets → cards. */
+    mode: 'brands' | 'sets' | 'cards';
+    tiles: BrowseTile[];
+    tileLanguages: string[];
 };
 
 const SORTS = [
@@ -129,6 +144,9 @@ export default function Browse({
     filters,
     gradingCompanies,
     seo,
+    mode,
+    tiles,
+    tileLanguages,
 }: Props) {
     const { auth } = usePage().props;
     const canAdd = Boolean(auth.user);
@@ -157,7 +175,16 @@ export default function Browse({
             preserveState: true,
             replace: true,
             reset: ['items'],
-            only: ['items', 'pagination', 'options', 'filters', 'seo'],
+            only: [
+                'items',
+                'pagination',
+                'options',
+                'filters',
+                'seo',
+                'mode',
+                'tiles',
+                'tileLanguages',
+            ],
         });
     }
 
@@ -168,7 +195,16 @@ export default function Browse({
             {},
             {
                 reset: ['items'],
-                only: ['items', 'pagination', 'options', 'filters', 'seo'],
+                only: [
+                'items',
+                'pagination',
+                'options',
+                'filters',
+                'seo',
+                'mode',
+                'tiles',
+                'tileLanguages',
+            ],
             },
         );
     }
@@ -182,17 +218,77 @@ export default function Browse({
             ? `?return=${encodeURIComponent(window.location.search)}`
             : '';
 
+    const isCards = mode === 'cards';
+    const brandName =
+        options.product_lines.find((p) => p.slug === filters.product_line)
+            ?.name ?? null;
+    const setName =
+        options.sets.find((s) => s.slug === filters.set)?.name ?? null;
+    const heading =
+        seo?.heading ??
+        (mode === 'brands'
+            ? 'Browse the catalog'
+            : mode === 'sets'
+              ? (brandName ?? 'Browse')
+              : (setName ??
+                brandName ??
+                (filters.q ? `“${filters.q}”` : 'Browse the catalog')));
+    const countLabel = isCards
+        ? `${pagination.total.toLocaleString()} items`
+        : `${tiles.length.toLocaleString()} ${mode === 'brands' ? 'brands' : 'sets'}`;
+    const showCrumb = Boolean(filters.product_line || filters.set);
+
     return (
         <>
             <Head title={seo?.title ?? 'Browse catalog'} />
 
             <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                {showCrumb && (
+                    <nav className="mb-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+                        <button
+                            type="button"
+                            onClick={reset}
+                            className="hover:text-foreground"
+                        >
+                            All brands
+                        </button>
+                        {brandName && (
+                            <>
+                                <span>/</span>
+                                {isCards && filters.set ? (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            update({ set: null, q: null })
+                                        }
+                                        className="hover:text-foreground"
+                                    >
+                                        {brandName}
+                                    </button>
+                                ) : (
+                                    <span className="text-foreground">
+                                        {brandName}
+                                    </span>
+                                )}
+                            </>
+                        )}
+                        {isCards && setName && (
+                            <>
+                                <span>/</span>
+                                <span className="text-foreground">
+                                    {setName}
+                                </span>
+                            </>
+                        )}
+                    </nav>
+                )}
+
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                        {seo?.heading ?? 'Browse the catalog'}
+                        {heading}
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        {pagination.total.toLocaleString()} items
+                        {countLabel}
                     </p>
                 </div>
 
@@ -209,6 +305,7 @@ export default function Browse({
                         />
                     </div>
 
+                    {isCards && (
                     <div className="flex items-center gap-2">
                         {/* Mobile filter sheet */}
                         <Sheet>
@@ -313,8 +410,20 @@ export default function Browse({
                             </ToggleGroupItem>
                         </ToggleGroup>
                     </div>
+                    )}
                 </div>
 
+                {!isCards && (
+                    <TilesView
+                        mode={mode}
+                        tiles={tiles}
+                        tileLanguages={tileLanguages}
+                        filters={filters}
+                        onChange={update}
+                    />
+                )}
+
+                {isCards && (
                 <div className="flex gap-8">
                     {/* Desktop filter rail */}
                     <aside className="hidden w-60 shrink-0 lg:block">
@@ -403,8 +512,114 @@ export default function Browse({
                         />
                     </div>
                 </div>
+                )}
             </div>
         </>
+    );
+}
+
+function TilesView({
+    mode,
+    tiles,
+    tileLanguages,
+    filters,
+    onChange,
+}: {
+    mode: 'brands' | 'sets' | 'cards';
+    tiles: BrowseTile[];
+    tileLanguages: string[];
+    filters: CatalogFilters;
+    onChange: (partial: Partial<CatalogFilters>) => void;
+}) {
+    return (
+        <div>
+            {mode === 'sets' && tileLanguages.length > 1 && (
+                <div className="mb-6 flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                        Language
+                    </span>
+                    <Select
+                        value={filters.language ?? ALL}
+                        onValueChange={(v) =>
+                            onChange({ language: v === ALL ? null : v })
+                        }
+                    >
+                        <SelectTrigger size="sm" className="w-44">
+                            <SelectValue placeholder="All languages" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value={ALL}>All languages</SelectItem>
+                            {tileLanguages.map((l) => (
+                                <SelectItem key={l} value={l}>
+                                    {languageLabel(l)}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            )}
+
+            {tiles.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border py-20 text-center text-sm text-muted-foreground">
+                    Nothing here yet.
+                </div>
+            ) : (
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                    {tiles.map((tile) => (
+                        <TileCard
+                            key={`${tile.kind}-${tile.slug}`}
+                            tile={tile}
+                            onOpen={() =>
+                                onChange(
+                                    tile.kind === 'brand'
+                                        ? { product_line: tile.slug }
+                                        : { set: tile.slug },
+                                )
+                            }
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function TileCard({ tile, onOpen }: { tile: BrowseTile; onOpen: () => void }) {
+    return (
+        <button
+            type="button"
+            onClick={onOpen}
+            className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card text-left transition-colors hover:border-ring"
+        >
+            <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted p-4">
+                {tile.thumb ? (
+                    <img
+                        src={tile.thumb}
+                        alt={tile.name}
+                        loading="lazy"
+                        className="size-full object-contain transition-transform group-hover:scale-105"
+                    />
+                ) : (
+                    <span className="text-xs text-muted-foreground">
+                        No image
+                    </span>
+                )}
+            </div>
+            <div className="space-y-0.5 p-3">
+                <p className="truncate text-sm font-medium" title={tile.name}>
+                    {tile.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                    {tile.kind === 'set' && tile.released_at
+                        ? `${tile.released_at.slice(0, 4)} · `
+                        : ''}
+                    {tile.count.toLocaleString()} cards
+                    {tile.kind === 'set' && tile.language
+                        ? ` · ${languageLabel(tile.language)}`
+                        : ''}
+                </p>
+            </div>
+        </button>
     );
 }
 

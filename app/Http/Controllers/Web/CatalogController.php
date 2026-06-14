@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Actions\Catalog\BrowseTiles;
 use App\Actions\Catalog\CatalogFilterOptions;
 use App\Actions\Catalog\SearchCatalog;
 use App\Actions\Catalog\ShowCatalogItem;
@@ -80,9 +81,39 @@ class CatalogController extends Controller
      */
     private function renderBrowse(array $filters, SearchCatalog $search, CatalogFilterOptions $options, ?array $seo = null): Response
     {
+        $mode = $this->browseMode($filters);
+        $tiles = app(BrowseTiles::class);
+
+        $common = [
+            'mode' => $mode,
+            'options' => $options($filters),
+            'filters' => $filters,
+            // Options for the inline "add to collection" graded picker on each card.
+            'gradingCompanies' => GradingCompany::orderBy('name')
+                ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
+            'seo' => $seo,
+        ];
+
+        // Smart browse: with no set chosen, show navigation tiles (brands, then
+        // sets) instead of dumping every card. A set (or a search) drops to cards.
+        if ($mode !== 'cards') {
+            return Inertia::render('catalog/browse', [
+                ...$common,
+                'tiles' => $tiles($mode, $filters),
+                'tileLanguages' => $mode === 'sets' && ! empty($filters['product_line'])
+                    ? $tiles->languagesFor($filters['product_line'])
+                    : [],
+                'items' => [],
+                'pagination' => ['page' => 1, 'last_page' => 1, 'per_page' => 0, 'total' => 0, 'has_more' => false],
+            ]);
+        }
+
         $paginator = $search($filters);
 
         return Inertia::render('catalog/browse', [
+            ...$common,
+            'tiles' => [],
+            'tileLanguages' => [],
             // Merge so each scrolled-in page appends to the list (infinite scroll);
             // a filter change resets it via the request's reset header.
             'items' => Inertia::merge(
@@ -95,13 +126,26 @@ class CatalogController extends Controller
                 'total' => $paginator->total(),
                 'has_more' => $paginator->hasMorePages(),
             ],
-            'options' => $options($filters),
-            'filters' => $filters,
-            // Options for the inline "add to collection" graded picker on each card.
-            'gradingCompanies' => GradingCompany::orderBy('name')
-                ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
-            'seo' => $seo,
         ]);
+    }
+
+    /**
+     * Which browse view to render: a search or a chosen set shows cards; a chosen
+     * brand shows its sets; nothing chosen shows the brands.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function browseMode(array $filters): string
+    {
+        if (! empty($filters['q']) || ! empty($filters['set'])) {
+            return 'cards';
+        }
+
+        if (! empty($filters['product_line'])) {
+            return 'sets';
+        }
+
+        return 'brands';
     }
 
     public function show(
