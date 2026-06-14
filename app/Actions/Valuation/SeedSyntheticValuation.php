@@ -24,34 +24,55 @@ class SeedSyntheticValuation
         protected RecomputeCatalogItem $recompute,
     ) {}
 
-    public function __invoke(CatalogItem $item, int $anchorCents, ?int $lowCents = null, ?int $highCents = null): void
+    /**
+     * @param  array<int, array{company: string, grade: float, label: string, cents: int}>  $gradedAnchors
+     *         Explicit graded prices (e.g. PriceCharting PSA 10/9/8, BGS 10) — used
+     *         in place of the synthetic graded multipliers when provided.
+     */
+    public function __invoke(CatalogItem $item, int $anchorCents, ?int $lowCents = null, ?int $highCents = null, array $gradedAnchors = []): void
     {
-        if ($anchorCents <= 0) {
+        if ($anchorCents <= 0 && $gradedAnchors === []) {
             return;
         }
 
         // Deterministic per item so re-imports are stable.
         mt_srand(crc32((string) $item->identity_hash));
 
-        $low = $lowCents && $lowCents > 0 ? $lowCents : (int) round($anchorCents * 0.7);
-        $high = $highCents && $highCents > 0 ? $highCents : (int) round($anchorCents * 1.6);
-
         $now = Carbon::now();
         $psaId = GradingCompany::where('slug', 'psa')->value('id');
         $sealed = $item->item_type === ItemType::Sealed;
-        $variant = $item->attributes['variant'] ?? null;
+        $variant = $item->getAttribute('attributes')['variant'] ?? null;
 
         $batch = [];
-        $this->makeComps(
-            $batch, $item->id,
-            condition: $sealed ? Condition::Sealed->value : Condition::NearMint->value,
-            companyId: null, grade: null, gradeLabel: null,
-            market: $anchorCents, low: $low, high: $high,
-            n: $this->tierCount($anchorCents), now: $now,
-        );
 
-        // Graded comps for chase holo singles (> $50).
-        if (! $sealed && $variant === 'holo' && $anchorCents > 5000 && $psaId) {
+        if ($anchorCents > 0) {
+            $low = $lowCents && $lowCents > 0 ? $lowCents : (int) round($anchorCents * 0.7);
+            $high = $highCents && $highCents > 0 ? $highCents : (int) round($anchorCents * 1.6);
+
+            $this->makeComps(
+                $batch, $item->id,
+                condition: $sealed ? Condition::Sealed->value : Condition::NearMint->value,
+                companyId: null, grade: null, gradeLabel: null,
+                market: $anchorCents, low: $low, high: $high,
+                n: $this->tierCount($anchorCents), now: $now,
+            );
+        }
+
+        if ($gradedAnchors !== []) {
+            // Real graded prices (PriceCharting) — anchor each tier directly.
+            foreach ($gradedAnchors as $g) {
+                $cents = (int) ($g['cents'] ?? 0);
+                $companyId = $this->companyId((string) ($g['company'] ?? ''));
+                if ($cents <= 0 || ! $companyId) {
+                    continue;
+                }
+                $this->makeComps($batch, $item->id, condition: null, companyId: $companyId,
+                    grade: (float) $g['grade'], gradeLabel: $g['label'], market: $cents,
+                    low: (int) round($cents * 0.8), high: (int) round($cents * 1.35),
+                    n: mt_rand(3, 6), now: $now);
+            }
+        } elseif (! $sealed && $variant === 'holo' && $anchorCents > 5000 && $psaId) {
+            // Synthetic graded comps for chase holo singles (> $50) with no source.
             $this->makeComps($batch, $item->id, condition: null, companyId: $psaId, grade: 10.0,
                 gradeLabel: 'PSA 10', market: (int) round($anchorCents * 3.0),
                 low: (int) round($anchorCents * 2.2), high: (int) round($anchorCents * 5.0),
@@ -105,6 +126,14 @@ class SeedSyntheticValuation
                 'updated_at' => $now->toDateTimeString(),
             ];
         }
+    }
+
+    /** @var array<string, int|null> */
+    private array $companyIds = [];
+
+    private function companyId(string $slug): ?int
+    {
+        return $this->companyIds[$slug] ??= GradingCompany::where('slug', $slug)->value('id');
     }
 
     private function tierCount(int $marketCents): int

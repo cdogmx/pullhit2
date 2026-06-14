@@ -162,10 +162,7 @@ class ApplySet
             primaryImagePath: $base->primary_image_path,
         );
 
-        // Anchor a value to PriceCharting's ungraded price (estimated until real comps land).
-        if (($change->prices['ungraded'] ?? 0) > 0) {
-            ($this->seed)($item, (int) $change->prices['ungraded']);
-        }
+        $this->seedFrom($item, $change->prices);
 
         return $item->id;
     }
@@ -184,11 +181,33 @@ class ApplySet
             attributes: $attributes, externalIds: ['pricecharting_id' => $change->pcId],
         );
 
-        if (($change->prices['ungraded'] ?? 0) > 0) {
-            ($this->seed)($item, (int) $change->prices['ungraded']);
-        }
+        $this->seedFrom($item, $change->prices);
 
         return $item->id;
+    }
+
+    /** Seed an item from PriceCharting's ungraded + graded (PSA 10/9/8, BGS 10) prices. */
+    private function seedFrom(CatalogItem $item, array $prices): void
+    {
+        $map = [
+            ['key' => 'psa10', 'company' => 'psa', 'grade' => 10.0, 'label' => 'PSA 10'],
+            ['key' => 'grade9', 'company' => 'psa', 'grade' => 9.0, 'label' => 'PSA 9'],
+            ['key' => 'grade8', 'company' => 'psa', 'grade' => 8.0, 'label' => 'PSA 8'],
+            ['key' => 'bgs10', 'company' => 'bgs', 'grade' => 10.0, 'label' => 'BGS 10'],
+        ];
+
+        $graded = [];
+        foreach ($map as $m) {
+            $cents = (int) ($prices[$m['key']] ?? 0);
+            if ($cents > 0) {
+                $graded[] = ['company' => $m['company'], 'grade' => $m['grade'], 'label' => $m['label'], 'cents' => $cents];
+            }
+        }
+
+        $ungraded = (int) ($prices['ungraded'] ?? 0);
+        if ($ungraded > 0 || $graded !== []) {
+            ($this->seed)($item, $ungraded, null, null, $graded);
+        }
     }
 
     private function applySealed(ReconcileChange $change, Set $set): ?int
