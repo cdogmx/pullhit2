@@ -42,8 +42,27 @@ final class TcgVertical
                     // Error/promo printing tag (black_dot_error, trainer_deck_a, …).
                     Attr::make('finish', 'Finish', Type::String, searchable: true, variantDefining: true),
                     Attr::make('illustrator', 'Illustrator', Type::String, searchable: true),
+                    // Pokémon stat. Lorcana reuses `type` (Character/Action/Item/
+                    // Location) and `illustrator` (artist) above.
                     Attr::make('hp', 'HP', Type::Integer),
                     Attr::make('type', 'Type', Type::String, searchable: true),
+
+                    // Lorcana facets (product line `lorcana`). Optional at the
+                    // vertical level — Pokémon never sets them, Lorcana never sets
+                    // hp. Lorcana has no holo/edition axis, so `variant` is always
+                    // 'normal' and alt-arts (Enchanted/Iconic) are distinct cards.
+                    Attr::make('ink_color', 'Ink', Type::String, searchable: true, indexed: true),
+                    Attr::make('franchise', 'Franchise', Type::String, searchable: true, indexed: true),
+                    Attr::make('classifications', 'Classifications', Type::String, searchable: true),
+                    Attr::make('cost', 'Ink Cost', Type::Integer),
+                    Attr::make('lore', 'Lore', Type::Integer),
+                    Attr::make('strength', 'Strength', Type::Integer),
+                    Attr::make('willpower', 'Willpower', Type::Integer),
+                    Attr::make('move_cost', 'Move Cost', Type::Integer),
+                    Attr::make('inkable', 'Inkable', Type::Boolean),
+                    Attr::make('abilities', 'Abilities', Type::Text),
+                    Attr::make('body_text', 'Body Text', Type::Text),
+                    Attr::make('flavor_text', 'Flavor Text', Type::Text),
                 ],
                 ItemType::Sealed->value => [
                     Attr::make('sealed_type', 'Sealed Type', Type::Enum, required: true, searchable: true, indexed: true, options: self::SEALED_TYPES),

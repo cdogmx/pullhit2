@@ -79,6 +79,13 @@ return [
         'base_url' => env('TCGCSV_BASE_URL', 'https://tcgcsv.com'),
     ],
 
+    // lorcana-api.com — free, open card data for Disney Lorcana (no prices;
+    // valuations come from eBay via Oxylabs like every other product line). The
+    // `bulk/cards` endpoint returns all cards in one call, refreshed twice daily.
+    'lorcana' => [
+        'base_url' => env('LORCANA_BASE_URL', 'https://api.lorcana-api.com'),
+    ],
+
     // eBay Browse API (live active listings) + eBay Partner Network affiliate.
     // The affiliate "Shop on eBay" link needs only campaign_id; inline live
     // listings additionally need client_id/secret (OAuth). Degrades gracefully.

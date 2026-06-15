@@ -71,13 +71,18 @@ class CardImageStore
         };
     }
 
-    public function store(string $setId, string $ptcgioId, ?string $sourceUrl): ?string
+    /**
+     * Store a card image under an organized, per-product-line prefix
+     * (`phb/{line}/{setId}/{id}.png`) so we serve our own copy. $line keeps each
+     * game's images in their own folder (pokemon, lorcana, …).
+     */
+    public function store(string $setId, string $id, ?string $sourceUrl, string $line = 'pokemon'): ?string
     {
         if (! $sourceUrl) {
             return null;
         }
 
-        $key = "phb/pokemon/{$setId}/{$ptcgioId}.png";
+        $key = "phb/{$line}/{$setId}/{$id}.png";
 
         try {
             $disk = Storage::disk('s3');

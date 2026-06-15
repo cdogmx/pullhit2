@@ -977,8 +977,11 @@ function CardTile({
                     >
                         {item.display_name ?? item.name}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                        {item.set?.code ?? item.set?.name}
+                    <p
+                        className="truncate text-xs text-muted-foreground"
+                        title={item.set?.name ?? undefined}
+                    >
+                        {item.set?.name}
                         {item.number ? ` · ${item.number}` : ''}
                     </p>
                     {item.market_value && (
