@@ -30,7 +30,7 @@ export default function Notifications({ types }: { types: NotificationType[] }) 
                 <Heading
                     variant="small"
                     title="Notifications"
-                    description="Choose which emails we send you. Account and security emails (sign-in, password resets, receipts) are always sent."
+                    description="Choose which notifications you receive by email and in-app. Account and security emails (sign-in, password resets, receipts) are always sent."
                 />
 
                 <form onSubmit={submit} className="space-y-6">

@@ -25,7 +25,30 @@ class WishlistTargetHit extends Notification
      */
     public function via(object $notifiable): array
     {
-        return $notifiable->wantsNotification('wishlist_targets') ? ['mail'] : [];
+        return $notifiable->wantsNotification('wishlist_targets') ? ['mail', 'database'] : [];
+    }
+
+    /**
+     * The in-app notification-center payload.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(object $notifiable): array
+    {
+        $count = $this->items->count();
+        $first = $this->items->first();
+        $name = $first?->catalogItem?->display_name ?? 'A card';
+
+        return [
+            'type' => 'wishlist_target',
+            'title' => $count === 1
+                ? 'A wishlist card hit your target price'
+                : "{$count} wishlist cards hit your target price",
+            'body' => $count === 1
+                ? "{$name} dropped to your target."
+                : "Including {$name} and ".($count - 1).' more.',
+            'url' => '/wishlist',
+        ];
     }
 
     public function toMail(object $notifiable): MailMessage

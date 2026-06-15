@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Web\CatalogController;
 use App\Http\Controllers\Web\CollectionController;
+use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\ScanController;
 use App\Http\Controllers\Web\SuggestionController;
 use App\Http\Controllers\Web\WishlistController;
@@ -33,6 +34,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('collection', [CollectionController::class, 'store'])->name('collection.store');
     Route::patch('collection/{collectionItem}', [CollectionController::class, 'update'])->name('collection.update');
     Route::delete('collection/{collectionItem}', [CollectionController::class, 'destroy'])->name('collection.destroy');
+
+    // In-app notification center.
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+    Route::get('notifications/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
 
     // Wishlist — cards a user wants, with optional target prices.
     Route::get('wishlist', [WishlistController::class, 'index'])->name('wishlist.index');

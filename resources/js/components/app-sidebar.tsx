@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Bell,
     Boxes,
     GitCompare,
     Globe,
@@ -51,6 +52,11 @@ const mainNavItems: NavItem[] = [
         icon: Heart,
     },
     {
+        title: 'Notifications',
+        href: '/notifications',
+        icon: Bell,
+    },
+    {
         title: 'Browse',
         href: '/browse',
         icon: Search,
@@ -77,6 +83,7 @@ export function AppSidebar() {
     const page = usePage().props as {
         auth?: { user?: { is_admin?: boolean } };
         pendingSuggestions?: number | null;
+        unreadNotifications?: number | null;
     };
     const isAdmin = Boolean(page.auth?.user?.is_admin);
 
@@ -84,6 +91,13 @@ export function AppSidebar() {
     const adminNav = adminNavItems.map((item) =>
         item.href === '/admin/suggestions'
             ? { ...item, badge: page.pendingSuggestions || null }
+            : item,
+    );
+
+    // Badge Notifications with the unread count.
+    const mainNav = mainNavItems.map((item) =>
+        item.href === '/notifications'
+            ? { ...item, badge: page.unreadNotifications || null }
             : item,
     );
 
@@ -102,7 +116,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={mainNav} />
                 <NavMain items={pokemonNavItems} label="Pokémon" />
                 {isAdmin && <NavMain items={adminNav} label="Admin" />}
             </SidebarContent>

@@ -22,7 +22,30 @@ class ItemEditReviewed extends Notification
      */
     public function via(object $notifiable): array
     {
-        return $notifiable->wantsNotification('edit_reviews') ? ['mail'] : [];
+        return $notifiable->wantsNotification('edit_reviews') ? ['mail', 'database'] : [];
+    }
+
+    /**
+     * The in-app notification-center payload.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(object $notifiable): array
+    {
+        $card = $this->suggestion->catalogItem;
+        $name = $card?->display_name ?? 'a card';
+        $approved = $this->suggestion->status === 'approved';
+
+        return [
+            'type' => 'edit_review',
+            'title' => $approved
+                ? 'Your suggested edit was approved'
+                : 'Your suggested edit was reviewed',
+            'body' => $approved
+                ? "Your edit to {$name} is now live."
+                : "Your suggested edit to {$name} wasn't applied.",
+            'url' => $card ? "/catalog/{$card->id}" : '/',
+        ];
     }
 
     public function toMail(object $notifiable): MailMessage

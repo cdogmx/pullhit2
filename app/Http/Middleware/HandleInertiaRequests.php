@@ -45,6 +45,8 @@ class HandleInertiaRequests extends Middleware
             'pendingSuggestions' => $request->user()?->is_admin
                 ? \App\Models\ItemEditSuggestion::where('status', 'pending')->count()
                 : null,
+            // Unread in-app notifications badge for the signed-in user.
+            'unreadNotifications' => $request->user()?->unreadNotifications()->count() ?? 0,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

@@ -48,7 +48,7 @@ test('opting out removes the mail channel for that notification', function () {
 
     expect($notification->via($user))->toBe([]); // suppressed
 
-    // A user who hasn't opted out still gets it.
+    // A user who hasn't opted out still gets it (email + in-app).
     $optedIn = User::factory()->create();
-    expect($notification->via($optedIn))->toBe(['mail']);
+    expect($notification->via($optedIn))->toBe(['mail', 'database']);
 });

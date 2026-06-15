@@ -65,11 +65,11 @@ class User extends Authenticatable implements PasskeyUser
     public const NOTIFICATION_TYPES = [
         'wishlist_targets' => [
             'label' => 'Wishlist price alerts',
-            'description' => 'Email me when a wishlisted card drops to my target price.',
+            'description' => 'Notify me when a wishlisted card drops to my target price.',
         ],
         'edit_reviews' => [
             'label' => 'Card edit updates',
-            'description' => 'Email me when an edit I suggested is approved or declined.',
+            'description' => 'Notify me when an edit I suggested is approved or declined.',
         ],
     ];
 
