@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Web;
 
 use App\Actions\Wishlist\AddToWishlist;
+use App\Actions\Wishlist\PublicWishlist;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Wishlist\StoreWishlistItemRequest;
 use App\Http\Resources\WishlistItemResource;
 use App\Models\CatalogItem;
+use App\Models\User;
 use App\Models\WishlistItem;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,6 +30,8 @@ class WishlistController extends Controller
 
         $resolved = WishlistItemResource::collection($items)->resolve();
 
+        $user = $request->user();
+
         return Inertia::render('wishlist/index', [
             'items' => $resolved,
             'summary' => [
@@ -35,7 +39,20 @@ class WishlistController extends Controller
                 'below_target' => collect($resolved)->where('below_target', true)->count(),
                 'currency' => 'USD',
             ],
+            'publicUrl' => $user->is_wishlist_public && $user->username
+                ? url("/wishlist/{$user->username}")
+                : null,
         ]);
+    }
+
+    /** Public, shareable wishlist page — only when the owner opted in. */
+    public function publicShow(string $username, PublicWishlist $build): Response
+    {
+        $user = User::where('username', $username)->first();
+
+        abort_unless($user && $user->is_wishlist_public, 404);
+
+        return Inertia::render('wishlist/public', $build($user));
     }
 
     public function store(StoreWishlistItemRequest $request, AddToWishlist $add): RedirectResponse

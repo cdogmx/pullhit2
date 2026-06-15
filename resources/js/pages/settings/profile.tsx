@@ -21,17 +21,20 @@ export default function Profile({
     status,
     username,
     isCollectionPublic,
+    isWishlistPublic,
 }: {
     mustVerifyEmail: boolean;
     status?: string;
     username: string | null;
     isCollectionPublic: boolean;
+    isWishlistPublic: boolean;
 }) {
     const { auth } = usePage<PageProps>().props;
 
     const collection = useForm({
         username: username ?? '',
         is_collection_public: isCollectionPublic,
+        is_wishlist_public: isWishlistPublic,
     });
 
     const saveCollection = (e: React.FormEvent) => {
@@ -141,8 +144,8 @@ export default function Profile({
             <div className="space-y-6">
                 <Heading
                     variant="small"
-                    title="Public collection"
-                    description="Pick a username and share your collection at a public URL."
+                    title="Public sharing"
+                    description="Pick a username, then share your collection and/or wishlist at a public URL."
                 />
 
                 <form onSubmit={saveCollection} className="space-y-6">
@@ -160,9 +163,9 @@ export default function Profile({
                         <InputError message={collection.errors.username} />
                         {collection.data.username.trim() && (
                             <p className="text-xs text-muted-foreground">
-                                Public URL:{' '}
+                                e.g.{' '}
                                 <span className="font-medium text-foreground">
-                                    /collection/
+                                    /wishlist/
                                     {collection.data.username.trim()}
                                 </span>
                             </p>
@@ -181,6 +184,21 @@ export default function Profile({
                         />
                         <span className="text-sm">
                             Make my collection public
+                        </span>
+                    </label>
+
+                    <label className="flex items-center gap-2">
+                        <Checkbox
+                            checked={collection.data.is_wishlist_public}
+                            onCheckedChange={(v) =>
+                                collection.setData(
+                                    'is_wishlist_public',
+                                    Boolean(v),
+                                )
+                            }
+                        />
+                        <span className="text-sm">
+                            Make my wishlist public
                         </span>
                     </label>
                     <InputError

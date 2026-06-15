@@ -12,12 +12,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class WishlistItem extends Model
 {
-    protected $fillable = ['user_id', 'catalog_item_id', 'target_price', 'notes'];
+    protected $fillable = ['user_id', 'catalog_item_id', 'target_price', 'notes', 'target_hit_at'];
 
     protected function casts(): array
     {
         return [
             'target_price' => 'integer',
+            'target_hit_at' => 'datetime',
         ];
     }
 

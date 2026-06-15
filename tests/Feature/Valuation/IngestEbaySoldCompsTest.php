@@ -18,7 +18,10 @@ const OXY_HTML = <<<'HTML'
 HTML;
 
 beforeEach(function () {
-    $this->item = CatalogItem::factory()->create(['name' => 'Pikachu ex', 'number' => '276/217']);
+    $this->item = CatalogItem::factory()->create([
+        'name' => 'Pikachu ex', 'number' => '276/217',
+        'attributes' => ['language' => 'en', 'rarity' => 'Illustration Rare', 'variant' => 'holo'],
+    ]);
     GradingCompany::factory()->create(['slug' => 'psa', 'name' => 'PSA']);
 
     // A synthetic placeholder value (the anchor) to be replaced.

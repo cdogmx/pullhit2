@@ -7,9 +7,13 @@ import { Input } from '@/components/ui/input';
 import { formatMoney } from '@/lib/format';
 import type { WishlistRow, WishlistSummary } from '@/types';
 
-type Props = { items: WishlistRow[]; summary: WishlistSummary };
+type Props = {
+    items: WishlistRow[];
+    summary: WishlistSummary;
+    publicUrl: string | null;
+};
 
-export default function WishlistIndex({ items, summary }: Props) {
+export default function WishlistIndex({ items, summary, publicUrl }: Props) {
     return (
         <>
             <Head title="Wishlist" />
@@ -19,6 +23,23 @@ export default function WishlistIndex({ items, summary }: Props) {
                     <h1 className="text-2xl font-bold tracking-tight">
                         Your wishlist
                     </h1>
+                    {publicUrl ? (
+                        <a
+                            href={publicUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                        >
+                            Public · {publicUrl.replace(/^https?:\/\//, '')}
+                        </a>
+                    ) : (
+                        <Link
+                            href="/settings/profile"
+                            className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                        >
+                            Private · make it public
+                        </Link>
+                    )}
                     <p className="mt-1 text-sm text-muted-foreground">
                         {summary.item_count.toLocaleString()}{' '}
                         {summary.item_count === 1 ? 'card' : 'cards'}

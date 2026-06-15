@@ -9,7 +9,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 test('a public collection is viewable by anyone, without private financials', function () {
     $user = User::factory()->create(['name' => 'Ash', 'email_verified_at' => now()]);
-    $user->forceFill(['username' => 'ash', 'is_collection_public' => true])->save();
+    $user->forceFill(['username' => 'ash', 'is_collection_public' => true, 'is_wishlist_public' => false])->save();
 
     $item = CatalogItem::factory()->create([
         'name' => 'Pikachu',
@@ -35,7 +35,7 @@ test('a public collection is viewable by anyone, without private financials', fu
 
 test('a private collection 404s', function () {
     $user = User::factory()->create();
-    $user->forceFill(['username' => 'secret', 'is_collection_public' => false])->save();
+    $user->forceFill(['username' => 'secret', 'is_collection_public' => false, 'is_wishlist_public' => false])->save();
 
     $this->get('/collection/secret')->assertNotFound();
 });
@@ -53,7 +53,7 @@ test('a user can set a username and make their collection public', function () {
     $user = User::factory()->create(['email_verified_at' => now()]);
 
     $this->actingAs($user)
-        ->patch('/settings/collection', ['username' => 'ash-ketchum', 'is_collection_public' => true])
+        ->patch('/settings/collection', ['username' => 'ash-ketchum', 'is_collection_public' => true, 'is_wishlist_public' => false])
         ->assertRedirect();
 
     $user->refresh();
@@ -65,7 +65,7 @@ test('going public requires a username', function () {
     $user = User::factory()->create(['email_verified_at' => now()]);
 
     $this->actingAs($user)
-        ->patch('/settings/collection', ['username' => '', 'is_collection_public' => true])
+        ->patch('/settings/collection', ['username' => '', 'is_collection_public' => true, 'is_wishlist_public' => false])
         ->assertSessionHasErrors('username');
 
     expect($user->fresh()->is_collection_public)->toBeFalse();
@@ -76,10 +76,10 @@ test('usernames must be unique and not reserved', function () {
     $user = User::factory()->create(['email_verified_at' => now()]);
 
     $this->actingAs($user)
-        ->patch('/settings/collection', ['username' => 'taken', 'is_collection_public' => false])
+        ->patch('/settings/collection', ['username' => 'taken', 'is_collection_public' => false, 'is_wishlist_public' => false])
         ->assertSessionHasErrors('username');
 
     $this->actingAs($user)
-        ->patch('/settings/collection', ['username' => 'export', 'is_collection_public' => false])
+        ->patch('/settings/collection', ['username' => 'export', 'is_collection_public' => false, 'is_wishlist_public' => false])
         ->assertSessionHasErrors('username');
 });

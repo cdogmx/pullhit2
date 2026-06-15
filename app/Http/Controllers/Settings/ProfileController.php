@@ -28,7 +28,9 @@ class ProfileController extends Controller
             'status' => $request->session()->get('status'),
             'username' => $user->username,
             'isCollectionPublic' => (bool) $user->is_collection_public,
+            'isWishlistPublic' => (bool) $user->is_wishlist_public,
             'publicUrl' => $user->username ? url("/collection/{$user->username}") : null,
+            'wishlistPublicUrl' => $user->username ? url("/wishlist/{$user->username}") : null,
         ]);
     }
 
@@ -46,22 +48,24 @@ class ProfileController extends Controller
                 Rule::notIn(['export', 'import', 'settings', 'admin', 'api', 'new', 'edit']),
             ],
             'is_collection_public' => ['required', 'boolean'],
+            'is_wishlist_public' => ['required', 'boolean'],
         ]);
 
         $username = $validated['username'] ?: null;
 
-        if ($validated['is_collection_public'] && $username === null) {
+        if (($validated['is_collection_public'] || $validated['is_wishlist_public']) && $username === null) {
             throw ValidationException::withMessages([
-                'username' => 'Pick a username before making your collection public.',
+                'username' => 'Pick a username before sharing publicly.',
             ]);
         }
 
         $user->fill([
             'username' => $username,
             'is_collection_public' => $validated['is_collection_public'],
+            'is_wishlist_public' => $validated['is_wishlist_public'],
         ])->save();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Collection settings updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Sharing settings updated.')]);
 
         return to_route('profile.edit');
     }

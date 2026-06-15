@@ -48,6 +48,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // /collection, /collection/export, /collection/import keep precedence; only an
 // unmatched handle (/collection/{username}) falls through to here.
 Route::get('collection/{username}', [CollectionController::class, 'publicShow'])->name('collection.public');
+Route::get('wishlist/{username}', [WishlistController::class, 'publicShow'])->name('wishlist.public');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/admin.php';
