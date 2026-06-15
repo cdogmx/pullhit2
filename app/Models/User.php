@@ -51,7 +51,35 @@ class User extends Authenticatable implements PasskeyUser
             'is_wishlist_public' => 'boolean',
             'membership_renews_at' => 'datetime',
             'membership_cancel_scheduled' => 'boolean',
+            'notification_preferences' => 'array',
         ];
+    }
+
+    /**
+     * Non-critical notification types a user can opt out of, with the copy shown
+     * on the settings page. Account-critical mail (verification, password reset,
+     * receipts) is intentionally absent — it's always sent.
+     *
+     * @var array<string, array{label: string, description: string}>
+     */
+    public const NOTIFICATION_TYPES = [
+        'wishlist_targets' => [
+            'label' => 'Wishlist price alerts',
+            'description' => 'Email me when a wishlisted card drops to my target price.',
+        ],
+        'edit_reviews' => [
+            'label' => 'Card edit updates',
+            'description' => 'Email me when an edit I suggested is approved or declined.',
+        ],
+    ];
+
+    /**
+     * Whether the user wants a given notification type. Unknown/unset keys
+     * default to true (opt-out model).
+     */
+    public function wantsNotification(string $type): bool
+    {
+        return (bool) ($this->notification_preferences[$type] ?? true);
     }
 
     protected static function booted(): void

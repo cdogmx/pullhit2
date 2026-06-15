@@ -25,7 +25,7 @@ class WishlistTargetHit extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return $notifiable->wantsNotification('wishlist_targets') ? ['mail'] : [];
     }
 
     public function toMail(object $notifiable): MailMessage
