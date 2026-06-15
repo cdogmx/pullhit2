@@ -7,7 +7,10 @@ use App\Support\Ebay\SoldCompClassifier;
 use Carbon\CarbonImmutable;
 
 beforeEach(function () {
-    $this->item = CatalogItem::factory()->create(['name' => 'Pikachu ex', 'number' => '276/217']);
+    $this->item = CatalogItem::factory()->create([
+        'name' => 'Pikachu ex', 'number' => '276/217',
+        'attributes' => ['language' => 'en', 'rarity' => 'Illustration Rare', 'variant' => 'holo'],
+    ]);
     $this->psa = GradingCompany::factory()->create(['slug' => 'psa', 'name' => 'PSA']);
     $this->companies = ['psa' => $this->psa->id];
     $this->classifier = new SoldCompClassifier;
@@ -34,6 +37,30 @@ test('it classifies a graded title into the company/grade state', function () {
         ->and($comp->gradingCompanyId)->toBe($this->psa->id)
         ->and($comp->grade)->toBe(10.0)
         ->and($comp->condition)->toBeNull();
+});
+
+test('it rejects the wrong printing and keeps the right one', function () {
+    $unlimited = CatalogItem::factory()->create(['name' => 'Charizard', 'number' => '4',
+        'attributes' => ['language' => 'en', 'rarity' => 'Rare Holo', 'variant' => 'holo', 'edition' => 'unlimited']]);
+    $firstEd = CatalogItem::factory()->create(['name' => 'Charizard', 'number' => '4',
+        'attributes' => ['language' => 'en', 'rarity' => 'Rare Holo', 'variant' => 'holo', 'edition' => 'first_edition']]);
+
+    // Unlimited must NOT absorb a 1st Edition listing…
+    expect($this->classifier->classify(candidate('Charizard 4 Base Set 1st Edition Holo', 500000), $unlimited, 380000, $this->companies))->toBeNull();
+    // …but keeps a plain Base listing.
+    expect($this->classifier->classify(candidate('Charizard 4 Base Set Holo', 40000), $unlimited, 38000, $this->companies))->not->toBeNull();
+
+    // 1st Edition requires the stamp in the title.
+    expect($this->classifier->classify(candidate('Charizard 4 Base Set Holo', 700000), $firstEd, 700000, $this->companies))->toBeNull();
+    expect($this->classifier->classify(candidate('Charizard 4 1st Edition Base Set Holo', 700000), $firstEd, 700000, $this->companies))->not->toBeNull();
+});
+
+test('a base card rejects a reverse-holo listing', function () {
+    $base = CatalogItem::factory()->create(['name' => 'Pikachu', 'number' => '58',
+        'attributes' => ['language' => 'en', 'rarity' => 'Common', 'variant' => 'holo']]);
+
+    expect($this->classifier->classify(candidate('Pikachu 58 Reverse Holo', 1000), $base, 1000, $this->companies))->toBeNull();
+    expect($this->classifier->classify(candidate('Pikachu 58 Holo', 1000), $base, 1000, $this->companies))->not->toBeNull();
 });
 
 test('it rejects mystery boxes, lots, code cards, and wrong cards', function () {

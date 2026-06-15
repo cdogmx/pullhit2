@@ -4,6 +4,7 @@ namespace App\Actions\Catalog;
 
 use App\Models\CatalogItem;
 use App\Support\Affiliate\EbayAffiliate;
+use App\Support\Ebay\CardSearchTerms;
 use App\Support\Ebay\EbayBrowseClient;
 use Illuminate\Support\Facades\Cache;
 
@@ -41,11 +42,11 @@ class GetCardListings
      */
     public function __invoke(CatalogItem $item): array
     {
-        $query = trim(implode(' ', array_filter([
+        $query = trim(implode(' ', array_filter(array_merge([
             $item->name,
             $item->number,
             $item->set?->name,
-        ])));
+        ], CardSearchTerms::qualifiers($item)))));
 
         $listings = Cache::remember(
             "ebay:listings:{$item->id}",

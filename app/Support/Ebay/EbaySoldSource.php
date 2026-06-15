@@ -41,7 +41,7 @@ class EbaySoldSource
         ]);
     }
 
-    /** "Name - Number - Set Name (CODE)" — the card's display identity. */
+    /** "Name - Number - Set (CODE) - 1st Edition" — the card's printing identity. */
     public function searchQuery(CatalogItem $item): string
     {
         $parts = [$item->name];
@@ -53,6 +53,11 @@ class EbaySoldSource
         $set = $item->set;
         if ($set) {
             $parts[] = $set->code ? "{$set->name} ({$set->code})" : $set->name;
+        }
+
+        // Pin the search to this exact printing (1st Edition / Shadowless / Reverse …).
+        foreach (CardSearchTerms::qualifiers($item) as $term) {
+            $parts[] = $term;
         }
 
         return implode(' - ', $parts);
