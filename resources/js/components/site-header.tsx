@@ -35,6 +35,18 @@ const catalogMenus = [
             { label: 'Japanese', href: '/browse/pokemon?language=ja' },
         ],
     },
+    {
+        title: 'One Piece',
+        items: [
+            { label: 'All One Piece', href: '/browse/one-piece' },
+            { label: 'English', href: '/browse/one-piece?language=en' },
+            { label: 'Japanese', href: '/browse/one-piece?language=ja' },
+        ],
+    },
+    {
+        title: 'Disney Lorcana',
+        items: [{ label: 'All Disney Lorcana', href: '/browse/lorcana' }],
+    },
 ];
 
 export function SiteHeader() {
