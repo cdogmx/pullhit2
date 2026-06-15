@@ -40,6 +40,27 @@ test('scan confirm requires authentication', function () {
         ->assertRedirect('/login');
 });
 
+test('scan search returns matching catalog items', function () {
+    $user = User::factory()->create(['email_verified_at' => now()]);
+    $item = CatalogItem::factory()->create(['name' => 'Charizard', 'number' => '4/102']);
+
+    $this->actingAs($user)->getJson('/scan/search?q=Charizard')
+        ->assertOk()
+        ->assertJsonPath('results.0.id', $item->id);
+});
+
+test('scan search ignores too-short queries', function () {
+    $user = User::factory()->create(['email_verified_at' => now()]);
+
+    $this->actingAs($user)->getJson('/scan/search?q=a')
+        ->assertOk()
+        ->assertExactJson(['results' => []]);
+});
+
+test('scan search requires authentication', function () {
+    $this->get('/scan/search?q=charizard')->assertRedirect('/login');
+});
+
 test('a free user past the monthly cap is blocked with 429', function () {
     Http::fake(fakeAnthropic());
     config(['membership.scan_caps.free' => 1]);

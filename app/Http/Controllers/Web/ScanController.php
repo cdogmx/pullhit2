@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Actions\Catalog\SearchCatalog;
 use App\Actions\Scanning\ScanCards;
 use App\Exceptions\TooManyScansException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Scanning\ScanConfirmRequest;
 use App\Http\Requests\Scanning\ScanRequest;
+use App\Http\Resources\CatalogItemResource;
 use App\Models\GradingCompany;
 use App\Support\Membership\ScanQuota;
 use App\Support\Scanning\FingerprintCache;
@@ -63,5 +65,24 @@ class ScanController extends Controller
         );
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Catalog search for the scan confirm grid, so a user can pick the right
+     * card when the scan didn't surface it. Reuses the shared SearchCatalog.
+     */
+    public function search(Request $request, SearchCatalog $search): JsonResponse
+    {
+        $query = trim((string) $request->query('q', ''));
+
+        if (mb_strlen($query) < 2) {
+            return response()->json(['results' => []]);
+        }
+
+        $results = $search(['q' => $query, 'per_page' => 10]);
+
+        return response()->json([
+            'results' => CatalogItemResource::collection($results->items())->resolve(),
+        ]);
     }
 }

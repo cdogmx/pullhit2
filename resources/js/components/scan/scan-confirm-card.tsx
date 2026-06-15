@@ -1,7 +1,8 @@
 import { router } from '@inertiajs/react';
-import { Check } from 'lucide-react';
+import { Check, Search, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { CatalogSearchSelect } from '@/components/scan/catalog-search-select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { formatMoney, languageLabel } from '@/lib/format';
-import type { GradingCompanyOption, ScanDetected } from '@/types';
+import type { CatalogItem, GradingCompanyOption, ScanDetected } from '@/types';
 
 const CONDITIONS = [
     { value: 'NM', label: 'Near Mint' },
@@ -49,8 +50,15 @@ export function ScanConfirmCard({
     const [cost, setCost] = useState('');
     const [busy, setBusy] = useState(false);
     const [added, setAdded] = useState(false);
+    // A card the user picked via catalog search when the scan got it wrong.
+    const [manualCard, setManualCard] = useState<CatalogItem | null>(null);
+    const [searchOpen, setSearchOpen] = useState(false);
 
-    const chosen = candidateIdx >= 0 ? detected.candidates[candidateIdx] : null;
+    const chosen = manualCard
+        ? { card: manualCard, score: 1, reasons: ['manual'] }
+        : candidateIdx >= 0
+          ? detected.candidates[candidateIdx]
+          : null;
 
     /**
      * Teach the recognition cache that this scanned image is the chosen catalog
@@ -160,11 +168,35 @@ export function ScanConfirmCard({
                     )}
                 </div>
 
-                {detected.candidates.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                        No catalog match found — can't add yet (the catalog may not include this
-                        card).
-                    </p>
+                {manualCard ? (
+                    <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-accent/30 px-2 py-1.5 text-sm">
+                        <span className="min-w-0">
+                            <span className="font-medium">
+                                {manualCard.display_name ?? manualCard.name}
+                            </span>{' '}
+                            <span className="text-muted-foreground">
+                                {manualCard.number}
+                                {manualCard.set?.name
+                                    ? ` · ${manualCard.set.name}`
+                                    : ''}
+                            </span>
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setManualCard(null)}
+                            className="shrink-0 text-muted-foreground hover:text-foreground"
+                            title="Clear selection"
+                        >
+                            <X className="size-4" />
+                        </button>
+                    </div>
+                ) : detected.candidates.length === 0 ? (
+                    <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                            No catalog match found — search for the right card:
+                        </p>
+                        <CatalogSearchSelect onSelect={setManualCard} />
+                    </div>
                 ) : (
                     <>
                         <div className="grid gap-2">
@@ -218,9 +250,29 @@ export function ScanConfirmCard({
                             </Select>
                         </div>
 
-                        {chosen && (
-                            <>
-                                <div className="inline-flex rounded-md border border-border p-0.5 text-xs">
+                        {searchOpen ? (
+                            <CatalogSearchSelect
+                                onSelect={(c) => {
+                                    setManualCard(c);
+                                    setSearchOpen(false);
+                                }}
+                            />
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setSearchOpen(true)}
+                                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                            >
+                                <Search className="size-3" /> Not the right
+                                card? Search the catalog
+                            </button>
+                        )}
+                    </>
+                )}
+
+                {chosen && (
+                    <>
+                        <div className="inline-flex rounded-md border border-border p-0.5 text-xs">
                                     {(['raw', 'graded'] as const).map((m) => (
                                         <button
                                             key={m}
@@ -325,8 +377,6 @@ export function ScanConfirmCard({
                                 </Button>
                             </>
                         )}
-                    </>
-                )}
             </div>
         </div>
     );
