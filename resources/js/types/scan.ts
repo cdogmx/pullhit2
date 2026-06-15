@@ -27,6 +27,10 @@ export type ScanCandidate = {
 export type ScanDetected = {
     identified: ScanIdentified;
     thumbnail: string | null;
+    /** Perceptual hash of the scanned image; sent back to teach the cache on add. */
+    fingerprint: string | null;
+    /** 'cache' = recognised from a prior confirmed scan (no AI read); 'vision' = AI read. */
+    source: 'vision' | 'cache';
     candidates: ScanCandidate[];
 };
 

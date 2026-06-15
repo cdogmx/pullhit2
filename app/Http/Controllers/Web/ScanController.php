@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Web;
 use App\Actions\Scanning\ScanCards;
 use App\Exceptions\TooManyScansException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Scanning\ScanConfirmRequest;
 use App\Http\Requests\Scanning\ScanRequest;
 use App\Models\GradingCompany;
 use App\Support\Membership\ScanQuota;
+use App\Support\Scanning\FingerprintCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -46,5 +48,20 @@ class ScanController extends Controller
         }
 
         return response()->json($result);
+    }
+
+    /**
+     * Learn a confirmed scan into the recognition cache so the same-looking card
+     * can be matched without an AI read next time.
+     */
+    public function confirm(ScanConfirmRequest $request, FingerprintCache $cache): JsonResponse
+    {
+        $cache->record(
+            (string) $request->input('fingerprint'),
+            (int) $request->input('catalog_item_id'),
+            $request->user()->id,
+        );
+
+        return response()->json(['ok' => true]);
     }
 }

@@ -52,6 +52,32 @@ export function ScanConfirmCard({
 
     const chosen = candidateIdx >= 0 ? detected.candidates[candidateIdx] : null;
 
+    /**
+     * Teach the recognition cache that this scanned image is the chosen catalog
+     * item, so the same-looking card is matched without an AI read next time.
+     * Fire-and-forget — never blocks adding the card.
+     */
+    const learnFingerprint = () => {
+        if (!detected.fingerprint || !chosen) {
+            return;
+        }
+
+        const m = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+        void fetch('/scan/confirm', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': m ? decodeURIComponent(m[1]) : '',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                fingerprint: detected.fingerprint,
+                catalog_item_id: chosen.card.id,
+            }),
+        }).catch(() => {});
+    };
+
     const add = () => {
         if (!chosen) {
             return;
@@ -71,6 +97,7 @@ export function ScanConfirmCard({
             preserveScroll: true,
             onSuccess: () => {
                 setAdded(true);
+                learnFingerprint();
                 toast.success(`${chosen.card.display_name ?? chosen.card.name} added to your collection.`);
             },
             onFinish: () => setBusy(false),
@@ -95,9 +122,19 @@ export function ScanConfirmCard({
                         {id.set_name ? ` · ${id.set_name}` : ''}
                         {id.language ? ` · ${languageLabel(id.language)}` : ''}
                     </span>
-                    <Badge variant="outline" className="ml-2 text-[10px]">
-                        {Math.round(id.confidence * 100)}% read
-                    </Badge>
+                    {detected.source === 'cache' ? (
+                        <Badge
+                            variant="secondary"
+                            className="ml-2 text-[10px]"
+                            title="Matched from a previous scan — no AI read used"
+                        >
+                            Recognized
+                        </Badge>
+                    ) : (
+                        <Badge variant="outline" className="ml-2 text-[10px]">
+                            {Math.round(id.confidence * 100)}% read
+                        </Badge>
+                    )}
                 </div>
 
                 {detected.candidates.length === 0 ? (

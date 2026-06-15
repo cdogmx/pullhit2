@@ -43,6 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Card scanner (Claude vision).
     Route::get('scan', [ScanController::class, 'index'])->name('scan.index');
     Route::post('scan', [ScanController::class, 'scan'])->name('scan.scan');
+    Route::post('scan/confirm', [ScanController::class, 'confirm'])->name('scan.confirm');
 
     // Suggest an edit to a catalog item (queued for admin review).
     Route::post('catalog/{catalogItem}/suggestions', [SuggestionController::class, 'store'])->name('catalog.suggest');

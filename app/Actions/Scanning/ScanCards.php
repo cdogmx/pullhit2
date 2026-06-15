@@ -34,7 +34,12 @@ class ScanCards
             ? $this->strategy->identifyBulk($base64, $mediaType)
             : [$this->strategy->identifySingle($base64, $mediaType)];
 
-        $quota->record(count($cards));
+        // Only cards that actually hit the vision API count against the AI quota;
+        // ones recognised from the cache are free.
+        $aiReads = count(array_filter($cards, fn (IdentifiedCard $c) => $c->source !== 'cache'));
+        if ($aiReads > 0) {
+            $quota->record($aiReads);
+        }
 
         $detected = array_map(fn (IdentifiedCard $card) => $this->present($card), $cards);
 
@@ -44,11 +49,28 @@ class ScanCards
     /** @return array<string, mixed> */
     protected function present(IdentifiedCard $card): array
     {
+        $matches = $this->matcher->match($card);
+
+        // A cache-recognised card already knows its exact item — pin it to the top
+        // (the matcher's name/number ranking still supplies alternatives).
+        if ($card->matchedItem !== null) {
+            $matches = array_values(array_filter(
+                $matches,
+                fn (array $m) => $m['item']->id !== $card->matchedItem->id,
+            ));
+            array_unshift($matches, [
+                'item' => $card->matchedItem,
+                'score' => 1.0,
+                'reasons' => ['recognized'],
+            ]);
+            $matches = array_slice($matches, 0, (int) config('scanning.max_candidates', 5));
+        }
+
         $candidates = array_map(fn (array $c) => [
             'card' => (new CatalogItemResource($c['item']))->resolve(),
             'score' => $c['score'],
             'reasons' => $c['reasons'],
-        ], $this->matcher->match($card));
+        ], $matches);
 
         return [
             'identified' => [
@@ -64,6 +86,8 @@ class ScanCards
                 'confidence' => round($card->confidence, 2),
             ],
             'thumbnail' => $card->thumbnail,
+            'fingerprint' => $card->phash,
+            'source' => $card->source,
             'candidates' => $candidates,
         ];
     }
