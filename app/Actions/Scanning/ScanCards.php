@@ -59,6 +59,8 @@ class ScanCards
                 'is_graded' => $card->isGraded,
                 'grading_company' => $card->gradingCompany,
                 'grade' => $card->grade,
+                'edition' => $card->edition,
+                'variant' => $card->variant,
                 'confidence' => round($card->confidence, 2),
             ],
             'thumbnail' => $card->thumbnail,

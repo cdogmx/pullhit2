@@ -2,10 +2,17 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+// Keep the PriceCharting reference fresh (the guide regenerates ~daily), then
+// apply any new structural changes (new sets/editions). reconcile --apply is
+// idempotent, so after the initial backfill the weekly pass is light.
+Schedule::command('catalog:pricecharting-import')->dailyAt('07:00')->withoutOverlapping();
+Schedule::command('catalog:reconcile --apply')->weeklyOn(1, '08:00')->withoutOverlapping();
 
 // Valuation recompute seam (§7). Wire on Laravel Cloud's scheduler when ready —
 // hot items hourly, the long tail daily. Kept off by default.

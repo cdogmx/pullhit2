@@ -11,7 +11,10 @@ test('a public collection is viewable by anyone, without private financials', fu
     $user = User::factory()->create(['name' => 'Ash', 'email_verified_at' => now()]);
     $user->forceFill(['username' => 'ash', 'is_collection_public' => true])->save();
 
-    $item = CatalogItem::factory()->create(['name' => 'Pikachu']);
+    $item = CatalogItem::factory()->create([
+        'name' => 'Pikachu',
+        'attributes' => ['language' => 'en', 'rarity' => 'Common', 'variant' => 'holo'],
+    ]);
     MarketValue::factory()->for($item)->create([
         'state_key' => 'NM', 'condition' => Condition::NearMint, 'median' => 5000,
     ]);

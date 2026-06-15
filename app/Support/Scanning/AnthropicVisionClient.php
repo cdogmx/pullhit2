@@ -140,7 +140,13 @@ class AnthropicVisionClient
             '(e.g. "029/086"), and the set name. Detect the language/script: en, ja, ko, zh-CN, zh-TW, '.
             'fr, de, it, es, or pt — never guess English if the script is not Latin. If the card is in a '.
             'professional grading slab (PSA, BGS, CGC, SGC), set is_graded true and read the company and '.
-            'numeric grade; otherwise is_graded false. Give a 0–1 confidence for the overall identification.';
+            'numeric grade; otherwise is_graded false. '.
+            'Detect the printing only when clearly visible, else null: edition = "first_edition" if a '.
+            '"1st Edition" stamp/badge is printed beside the artwork; for a vintage Base-era card with no '.
+            'drop shadow along the right edge of the artwork frame use "shadowless", with the shadow use '.
+            '"unlimited"; modern cards have no edition (null). variant = "reverse_holo" if the whole card '.
+            'body (not just the art) is foil, "holo" if only the artwork is foil, "normal" if not foil, '.
+            'null if unsure. Give a 0–1 confidence for the overall identification.';
     }
 
     protected function detectTool(): array
@@ -190,6 +196,8 @@ class AnthropicVisionClient
                     'number' => $nullableString + ['description' => 'Collector number as printed, e.g. "029/086", or null.'],
                     'set_name' => $nullableString,
                     'language' => $nullableString + ['description' => 'en, ja, ko, zh-CN, zh-TW, fr, de, it, es, pt, or null.'],
+                    'edition' => $nullableString + ['description' => "'first_edition', 'shadowless', 'unlimited', or null. Only when clearly visible."],
+                    'variant' => $nullableString + ['description' => "'reverse_holo', 'holo', 'normal', or null. The foil pattern."],
                     'is_graded' => ['type' => 'boolean'],
                     'grading_company' => $nullableString + ['description' => 'psa, bgs, cgc, sgc, ... or null.'],
                     'grade' => ['type' => ['number', 'null']],

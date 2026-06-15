@@ -47,3 +47,32 @@ test('a card not in the catalog yields no candidates', function () {
 
     expect($matches)->toBe([]);
 });
+
+test('the detected edition ranks the matching printing first', function () {
+    $unlimited = CatalogItem::factory()->create(['name' => 'Charizard', 'number' => '4',
+        'attributes' => ['language' => 'en', 'rarity' => 'Rare Holo', 'variant' => 'holo', 'edition' => 'unlimited']]);
+    $firstEd = CatalogItem::factory()->create(['name' => 'Charizard', 'number' => '4',
+        'attributes' => ['language' => 'en', 'rarity' => 'Rare Holo', 'variant' => 'holo', 'edition' => 'first_edition']]);
+
+    $matches = app(CandidateMatcher::class)->match(new IdentifiedCard(
+        name: 'Charizard', number: '4', setName: null, language: 'en', confidence: 0.9, edition: 'first_edition',
+    ));
+
+    expect($matches[0]['item']->id)->toBe($firstEd->id)
+        ->and($matches[0]['reasons'])->toContain('edition')
+        ->and(collect($matches)->firstWhere('item.id', $unlimited->id)['score'])
+        ->toBeLessThan($matches[0]['score']);
+});
+
+test('a detected reverse holo demotes the non-reverse printing', function () {
+    $holo = CatalogItem::factory()->create(['name' => 'Pikachu', 'number' => '58',
+        'attributes' => ['language' => 'en', 'rarity' => 'Common', 'variant' => 'holo']]);
+    $reverse = CatalogItem::factory()->create(['name' => 'Pikachu', 'number' => '58',
+        'attributes' => ['language' => 'en', 'rarity' => 'Common', 'variant' => 'reverse_holo']]);
+
+    $matches = app(CandidateMatcher::class)->match(new IdentifiedCard(
+        name: 'Pikachu', number: '58', setName: null, language: 'en', confidence: 0.9, variant: 'reverse_holo',
+    ));
+
+    expect($matches[0]['item']->id)->toBe($reverse->id);
+});

@@ -85,7 +85,31 @@ class CandidateMatcher
             }
         }
 
-        return ['item' => $item, 'score' => round(min(1.0, $score), 2), 'reasons' => $reasons];
+        // Printing: the vision-detected edition/variant breaks the tie between
+        // otherwise-identical printings (Unlimited vs 1st Edition vs Shadowless,
+        // holo vs reverse). A clear mismatch is demoted so it never wins.
+        $attributes = $item->getAttribute('attributes') ?? [];
+
+        if ($card->edition && isset($attributes['edition'])) {
+            if ($card->edition === $attributes['edition']) {
+                $score += 0.25;
+                $reasons[] = 'edition';
+            } else {
+                $score -= 0.25;
+            }
+        }
+
+        if ($card->variant && isset($attributes['variant'])) {
+            $reverseMismatch = ($card->variant === 'reverse_holo') !== ($attributes['variant'] === 'reverse_holo');
+            if ($card->variant === $attributes['variant']) {
+                $score += 0.15;
+                $reasons[] = 'variant';
+            } elseif ($reverseMismatch) {
+                $score -= 0.2; // reverse vs non-reverse is a real, value-changing mismatch
+            }
+        }
+
+        return ['item' => $item, 'score' => round(min(1.0, max(0.0, $score)), 2), 'reasons' => $reasons];
     }
 
     /** Leading number of a "029/086" style collector number. */

@@ -19,6 +19,8 @@ readonly class IdentifiedCard
         public float $confidence = 0.0,
         public ?string $thumbnail = null,
         public ?array $box = null,
+        public ?string $edition = null,   // first_edition | shadowless | unlimited | null
+        public ?string $variant = null,   // reverse_holo | holo | normal | null
     ) {}
 
     /** @param  array<string, mixed>  $input */
@@ -35,6 +37,8 @@ readonly class IdentifiedCard
             confidence: (float) ($input['confidence'] ?? 0.0),
             thumbnail: $thumbnail,
             box: $box,
+            edition: $input['edition'] ?? null,
+            variant: $input['variant'] ?? null,
         );
     }
 }
