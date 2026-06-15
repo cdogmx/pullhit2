@@ -71,7 +71,7 @@ export function ScanConfirmCard({
             preserveScroll: true,
             onSuccess: () => {
                 setAdded(true);
-                toast.success(`${chosen.card.name} added to your collection.`);
+                toast.success(`${chosen.card.display_name ?? chosen.card.name} added to your collection.`);
             },
             onFinish: () => setBusy(false),
         });
@@ -119,7 +119,8 @@ export function ScanConfirmCard({
                                 <SelectContent>
                                     {detected.candidates.map((c, i) => (
                                         <SelectItem key={c.card.id} value={String(i)}>
-                                            {c.card.name} {c.card.number}
+                                            {c.card.display_name ?? c.card.name}{' '}
+                                            {c.card.number}
                                             {c.card.market_value
                                                 ? ` · ${formatMoney(c.card.market_value.median, c.card.market_value.currency)}`
                                                 : ''}{' '}
