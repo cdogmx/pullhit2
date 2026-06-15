@@ -2,6 +2,7 @@ import { router } from '@inertiajs/react';
 import { Check, Search, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { CardPickTile } from '@/components/scan/card-pick-tile';
 import { CatalogSearchSelect } from '@/components/scan/catalog-search-select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { formatMoney, languageLabel } from '@/lib/format';
+import { languageLabel } from '@/lib/format';
 import type { CatalogItem, GradingCompanyOption, ScanDetected } from '@/types';
 
 const CONDITIONS = [
@@ -115,8 +116,10 @@ export function ScanConfirmCard({
     return (
         <div className="flex flex-col gap-3 rounded-lg border border-border p-3 sm:flex-row">
             {/* Side-by-side: the scanned photo (bulk only) and the matched card's
-                reference image, so the user can confirm the match at a glance. */}
-            {(detected.thumbnail || chosen?.card.image_url) && (
+                reference image, so the user can confirm the match at a glance.
+                Only shown when there's a scan photo to compare against — otherwise
+                the selected candidate tile already shows the image. */}
+            {detected.thumbnail && (
                 <div className="flex gap-2 self-center sm:self-start">
                     {detected.thumbnail && (
                         <figure className="m-0 text-center">
@@ -199,68 +202,24 @@ export function ScanConfirmCard({
                     </div>
                 ) : (
                     <>
-                        <div className="grid gap-2">
-                            <Label className="text-xs">Match</Label>
-                            <Select
-                                value={String(candidateIdx)}
-                                onValueChange={(v) => setCandidateIdx(Number(v))}
-                            >
-                                <SelectTrigger className="h-auto min-h-9 py-1 [&>span]:flex [&>span]:items-center [&>span]:gap-2">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {detected.candidates.map((c, i) => {
-                                        const origin = [
-                                            c.card.product_line?.name,
-                                            c.card.set?.name,
-                                        ]
-                                            .filter(Boolean)
-                                            .join(' · ');
-
-                                        return (
-                                            <SelectItem key={c.card.id} value={String(i)}>
-                                                {c.card.image_url && (
-                                                    <img
-                                                        src={c.card.image_url}
-                                                        alt=""
-                                                        className="h-9 w-auto shrink-0 rounded"
-                                                    />
-                                                )}
-                                                <div className="min-w-0 truncate">
-                                                    <span className="font-medium">
-                                                        {c.card.display_name ?? c.card.name}
-                                                    </span>{' '}
-                                                    {c.card.number}
-                                                    {origin && (
-                                                        <span className="text-muted-foreground">
-                                                            {' '}
-                                                            · {origin}
-                                                        </span>
-                                                    )}
-                                                    {c.card.market_value && (
-                                                        <span className="text-muted-foreground">
-                                                            {' '}
-                                                            ·{' '}
-                                                            {formatMoney(
-                                                                c.card.market_value.median,
-                                                                c.card.market_value.currency,
-                                                            )}
-                                                        </span>
-                                                    )}{' '}
-                                                    <span className="text-muted-foreground">
-                                                        ({Math.round(c.score * 100)}%)
-                                                    </span>
-                                                </div>
-                                            </SelectItem>
-                                        );
-                                    })}
-                                    <SelectItem value="-1">
-                                        <span className="text-muted-foreground">
-                                            Not in catalog — search instead
-                                        </span>
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs">
+                                Match{' '}
+                                <span className="font-normal text-muted-foreground">
+                                    — pick the right card
+                                </span>
+                            </Label>
+                            <div className="flex flex-wrap gap-2">
+                                {detected.candidates.map((c, i) => (
+                                    <CardPickTile
+                                        key={c.card.id}
+                                        card={c.card}
+                                        score={c.score}
+                                        selected={candidateIdx === i}
+                                        onSelect={() => setCandidateIdx(i)}
+                                    />
+                                ))}
+                            </div>
                         </div>
 
                         {searchOpen ? (

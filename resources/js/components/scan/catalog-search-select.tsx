@@ -1,7 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { CardPickTile } from '@/components/scan/card-pick-tile';
 import { Input } from '@/components/ui/input';
-import { formatMoney, languageLabel } from '@/lib/format';
 import type { CatalogItem } from '@/types';
 
 /**
@@ -69,42 +69,15 @@ export function CatalogSearchSelect({
             )}
 
             {results.length > 0 && (
-                <ul className="max-h-64 divide-y divide-border overflow-auto rounded-md border border-border">
+                <div className="flex max-h-80 flex-wrap gap-2 overflow-y-auto rounded-md border border-border p-2">
                     {results.map((card) => (
-                        <li key={card.id}>
-                            <button
-                                type="button"
-                                onClick={() => onSelect(card)}
-                                className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-accent/40"
-                            >
-                                {card.image_url && (
-                                    <img
-                                        src={card.image_url}
-                                        alt=""
-                                        className="h-10 w-auto shrink-0 rounded"
-                                    />
-                                )}
-                                <span className="min-w-0 flex-1">
-                                    <span className="block truncate text-sm font-medium">
-                                        {card.display_name ?? card.name}
-                                    </span>
-                                    <span className="block truncate text-xs text-muted-foreground">
-                                        {card.number}
-                                        {card.set?.name
-                                            ? ` · ${card.set.name}`
-                                            : ''}
-                                        {card.language
-                                            ? ` · ${languageLabel(card.language)}`
-                                            : ''}
-                                        {card.market_value
-                                            ? ` · ${formatMoney(card.market_value.median, card.market_value.currency)}`
-                                            : ''}
-                                    </span>
-                                </span>
-                            </button>
-                        </li>
+                        <CardPickTile
+                            key={card.id}
+                            card={card}
+                            onSelect={() => onSelect(card)}
+                        />
                     ))}
-                </ul>
+                </div>
             )}
         </div>
     );
