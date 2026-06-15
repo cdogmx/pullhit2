@@ -17,6 +17,7 @@ export function CatalogSearchSelect({
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<CatalogItem[]>([]);
     const [busy, setBusy] = useState(false);
+    const [error, setError] = useState(false);
 
     useEffect(() => {
         const q = query.trim();
@@ -29,6 +30,7 @@ export function CatalogSearchSelect({
         }
 
         setBusy(true);
+        setError(false);
         const controller = new AbortController();
         const timer = setTimeout(() => {
             fetch(`/scan/search?q=${encodeURIComponent(q)}`, {
@@ -36,10 +38,24 @@ export function CatalogSearchSelect({
                 credentials: 'same-origin',
                 signal: controller.signal,
             })
-                .then((r) => r.json())
-                .then((d) => setResults(d.results ?? []))
+                .then((r) => {
+                    if (!r.ok) {
+                        throw new Error(`search failed (${r.status})`);
+                    }
+
+                    return r.json();
+                })
+                .then((d) => {
+                    setResults(d.results ?? []);
+                    setError(false);
+                })
                 .catch(() => {
-                    /* aborted or failed — leave prior results */
+                    // Distinguish a real failure from an aborted (superseded)
+                    // request so we don't flash an error while the user types.
+                    if (!controller.signal.aborted) {
+                        setError(true);
+                        setResults([]);
+                    }
                 })
                 .finally(() => setBusy(false));
         }, 300);
@@ -64,9 +80,18 @@ export function CatalogSearchSelect({
                 )}
             </div>
 
-            {query.trim().length >= 2 && !busy && results.length === 0 && (
-                <p className="text-xs text-muted-foreground">No matches.</p>
+            {error && (
+                <p className="text-xs text-destructive">
+                    Search is unavailable right now. Please try again.
+                </p>
             )}
+
+            {!error &&
+                query.trim().length >= 2 &&
+                !busy &&
+                results.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No matches.</p>
+                )}
 
             {results.length > 0 && (
                 <div className="flex max-h-80 flex-wrap gap-2 overflow-y-auto rounded-md border border-border p-2">
