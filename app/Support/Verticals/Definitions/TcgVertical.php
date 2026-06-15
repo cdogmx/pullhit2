@@ -32,7 +32,10 @@ final class TcgVertical
             attributes: [
                 ItemType::Single->value => [
                     Attr::make('language', 'Language', Type::Enum, required: true, searchable: true, indexed: true, options: self::LANGUAGES),
-                    Attr::make('rarity', 'Rarity', Type::String, required: true, searchable: true, indexed: true),
+                    // Optional at the vertical level: Pokémon/Lorcana always carry a
+                    // rarity, but PriceCharting-sourced lines (One Piece, Magic, …)
+                    // don't expose one, so it stays null rather than being faked.
+                    Attr::make('rarity', 'Rarity', Type::String, searchable: true, indexed: true),
                     // variant (holo-ness), edition (print run), and finish (error/
                     // promo tag) each distinguish printings of the same card.
                     Attr::make('variant', 'Variant', Type::Enum, required: true, searchable: true, indexed: true, options: ['normal', 'holo', 'reverse_holo'], variantDefining: true),
