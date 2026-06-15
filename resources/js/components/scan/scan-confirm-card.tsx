@@ -205,7 +205,7 @@ export function ScanConfirmCard({
                                 value={String(candidateIdx)}
                                 onValueChange={(v) => setCandidateIdx(Number(v))}
                             >
-                                <SelectTrigger>
+                                <SelectTrigger className="h-auto min-h-9 py-1 [&>span]:flex [&>span]:items-center [&>span]:gap-2">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -219,33 +219,46 @@ export function ScanConfirmCard({
 
                                         return (
                                             <SelectItem key={c.card.id} value={String(i)}>
-                                                <span className="font-medium">
-                                                    {c.card.display_name ?? c.card.name}
-                                                </span>{' '}
-                                                {c.card.number}
-                                                {origin && (
-                                                    <span className="text-muted-foreground">
-                                                        {' '}
-                                                        · {origin}
-                                                    </span>
+                                                {c.card.image_url && (
+                                                    <img
+                                                        src={c.card.image_url}
+                                                        alt=""
+                                                        className="h-9 w-auto shrink-0 rounded"
+                                                    />
                                                 )}
-                                                {c.card.market_value && (
+                                                <div className="min-w-0 truncate">
+                                                    <span className="font-medium">
+                                                        {c.card.display_name ?? c.card.name}
+                                                    </span>{' '}
+                                                    {c.card.number}
+                                                    {origin && (
+                                                        <span className="text-muted-foreground">
+                                                            {' '}
+                                                            · {origin}
+                                                        </span>
+                                                    )}
+                                                    {c.card.market_value && (
+                                                        <span className="text-muted-foreground">
+                                                            {' '}
+                                                            ·{' '}
+                                                            {formatMoney(
+                                                                c.card.market_value.median,
+                                                                c.card.market_value.currency,
+                                                            )}
+                                                        </span>
+                                                    )}{' '}
                                                     <span className="text-muted-foreground">
-                                                        {' '}
-                                                        ·{' '}
-                                                        {formatMoney(
-                                                            c.card.market_value.median,
-                                                            c.card.market_value.currency,
-                                                        )}
+                                                        ({Math.round(c.score * 100)}%)
                                                     </span>
-                                                )}{' '}
-                                                <span className="text-muted-foreground">
-                                                    ({Math.round(c.score * 100)}%)
-                                                </span>
+                                                </div>
                                             </SelectItem>
                                         );
                                     })}
-                                    <SelectItem value="-1">Not in catalog</SelectItem>
+                                    <SelectItem value="-1">
+                                        <span className="text-muted-foreground">
+                                            Not in catalog — search instead
+                                        </span>
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -258,14 +271,15 @@ export function ScanConfirmCard({
                                 }}
                             />
                         ) : (
-                            <button
+                            <Button
                                 type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-fit"
                                 onClick={() => setSearchOpen(true)}
-                                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                             >
-                                <Search className="size-3" /> Not the right
-                                card? Search the catalog
-                            </button>
+                                <Search className="size-3.5" /> Search catalog
+                            </Button>
                         )}
                     </>
                 )}
