@@ -3,6 +3,7 @@
 use App\Http\Controllers\Web\CatalogController;
 use App\Http\Controllers\Web\CollectionController;
 use App\Http\Controllers\Web\ScanController;
+use App\Http\Controllers\Web\SuggestionController;
 use App\Http\Controllers\Web\WishlistController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +43,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Card scanner (Claude vision).
     Route::get('scan', [ScanController::class, 'index'])->name('scan.index');
     Route::post('scan', [ScanController::class, 'scan'])->name('scan.scan');
+
+    // Suggest an edit to a catalog item (queued for admin review).
+    Route::post('catalog/{catalogItem}/suggestions', [SuggestionController::class, 'store'])->name('catalog.suggest');
 });
 
 // Public, shareable collection page. Registered AFTER the auth routes above so

@@ -15,6 +15,7 @@ import { PriceTag } from '@/components/catalog/price-tag';
 import { Sparkline } from '@/components/catalog/sparkline';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
 import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
+import { SuggestEditDialog } from '@/components/catalog/suggest-edit-dialog';
 import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -311,6 +312,20 @@ export default function Show({
                                     </Link>
                                 )}
                             </div>
+                        )}
+
+                        {user && (
+                            <SuggestEditDialog
+                                item={item}
+                                trigger={
+                                    <button
+                                        type="button"
+                                        className="self-start text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                                    >
+                                        Suggest an edit
+                                    </button>
+                                }
+                            />
                         )}
 
                         {/* Market value (read from market_values; never live). */}

@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ImageController;
 use App\Http\Controllers\Admin\ReconcileController;
 use App\Http\Controllers\Admin\SetController;
+use App\Http\Controllers\Admin\SuggestionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -42,6 +43,11 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('reconcile/approve-batch', [ReconcileController::class, 'approveBatch'])->name('reconcile.approveBatch');
     Route::post('reconcile/{change}/approve', [ReconcileController::class, 'approve'])->name('reconcile.approve');
     Route::post('reconcile/{change}/skip', [ReconcileController::class, 'skip'])->name('reconcile.skip');
+
+    // User-submitted edit suggestions (review queue)
+    Route::get('suggestions', [SuggestionController::class, 'index'])->name('suggestions.index');
+    Route::post('suggestions/{itemEditSuggestion}/approve', [SuggestionController::class, 'approve'])->name('suggestions.approve');
+    Route::post('suggestions/{itemEditSuggestion}/reject', [SuggestionController::class, 'reject'])->name('suggestions.reject');
 
     // Cards
     Route::get('cards', [CardController::class, 'index'])->name('cards.index');

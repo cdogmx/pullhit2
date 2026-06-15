@@ -4,6 +4,7 @@ import {
     GitCompare,
     Globe,
     Heart,
+    Inbox,
     Languages,
     LayoutGrid,
     LibraryBig,
@@ -68,6 +69,7 @@ const adminNavItems: NavItem[] = [
     { title: 'Brands', href: '/admin/brands', icon: Boxes },
     { title: 'Sets', href: '/admin/sets', icon: Library },
     { title: 'Cards', href: '/admin/cards', icon: PencilRuler },
+    { title: 'Suggestions', href: '/admin/suggestions', icon: Inbox },
     { title: 'Reconcile', href: '/admin/reconcile', icon: GitCompare },
 ];
 
