@@ -27,7 +27,7 @@ class CandidateMatcher
         }
 
         $items = CatalogItem::query()
-            ->with(['set', 'defaultMarketValue.gradingCompany'])
+            ->with(['set', 'productLine', 'defaultMarketValue.gradingCompany'])
             ->when($card->language, fn (Builder $q) => $q->where('language', $card->language))
             ->where(function (Builder $q) use ($numerator, $nameTokens) {
                 if ($numerator !== null) {

@@ -117,16 +117,42 @@ export function ScanConfirmCard({
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {detected.candidates.map((c, i) => (
-                                        <SelectItem key={c.card.id} value={String(i)}>
-                                            {c.card.display_name ?? c.card.name}{' '}
-                                            {c.card.number}
-                                            {c.card.market_value
-                                                ? ` · ${formatMoney(c.card.market_value.median, c.card.market_value.currency)}`
-                                                : ''}{' '}
-                                            ({Math.round(c.score * 100)}%)
-                                        </SelectItem>
-                                    ))}
+                                    {detected.candidates.map((c, i) => {
+                                        const origin = [
+                                            c.card.product_line?.name,
+                                            c.card.set?.name,
+                                        ]
+                                            .filter(Boolean)
+                                            .join(' · ');
+
+                                        return (
+                                            <SelectItem key={c.card.id} value={String(i)}>
+                                                <span className="font-medium">
+                                                    {c.card.display_name ?? c.card.name}
+                                                </span>{' '}
+                                                {c.card.number}
+                                                {origin && (
+                                                    <span className="text-muted-foreground">
+                                                        {' '}
+                                                        · {origin}
+                                                    </span>
+                                                )}
+                                                {c.card.market_value && (
+                                                    <span className="text-muted-foreground">
+                                                        {' '}
+                                                        ·{' '}
+                                                        {formatMoney(
+                                                            c.card.market_value.median,
+                                                            c.card.market_value.currency,
+                                                        )}
+                                                    </span>
+                                                )}{' '}
+                                                <span className="text-muted-foreground">
+                                                    ({Math.round(c.score * 100)}%)
+                                                </span>
+                                            </SelectItem>
+                                        );
+                                    })}
                                     <SelectItem value="-1">Not in catalog</SelectItem>
                                 </SelectContent>
                             </Select>
