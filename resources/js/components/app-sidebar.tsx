@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Anchor,
     Bell,
     Boxes,
     GitCompare,
@@ -14,6 +15,7 @@ import {
     ScanLine,
     Search,
     Shield,
+    Sparkles,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -60,6 +62,16 @@ const mainNavItems: NavItem[] = [
         title: 'Browse',
         href: '/browse',
         icon: Search,
+    },
+    {
+        title: 'One Piece',
+        href: '/browse/one-piece',
+        icon: Anchor,
+    },
+    {
+        title: 'Disney Lorcana',
+        href: '/browse/lorcana',
+        icon: Sparkles,
     },
 ];
 

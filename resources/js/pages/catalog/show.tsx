@@ -1,13 +1,12 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
-    ArrowLeft,
     BarChart3,
     ExternalLink,
     Loader2,
     Pencil,
     RefreshCw,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { EbayListings } from '@/components/catalog/ebay-listings';
 import { EbayShopButton } from '@/components/catalog/ebay-shop-button';
 import { PriceBreakdownDrawer } from '@/components/catalog/price-breakdown-drawer';
@@ -18,6 +17,14 @@ import { AddToCollectionDialog } from '@/components/collection/add-to-collection
 import { SuggestEditDialog } from '@/components/catalog/suggest-edit-dialog';
 import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { Badge } from '@/components/ui/badge';
+import {
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbLink,
+    BreadcrumbList,
+    BreadcrumbPage,
+    BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import {
     confidenceVariant,
@@ -201,6 +208,35 @@ export default function Show({
         ? `?return=${encodeURIComponent(returnSearch)}`
         : '';
 
+    // Breadcrumb: Browse → brand → set → card → variant (whatever's available).
+    const line = item.product_line;
+    const set = item.set;
+    const printingLabel = [
+        attributes.edition ? humanize(String(attributes.edition)) : null,
+        attributes.variant && attributes.variant !== 'normal'
+            ? humanize(String(attributes.variant))
+            : null,
+        attributes.finish ? humanize(String(attributes.finish)) : null,
+    ]
+        .filter(Boolean)
+        .join(' · ');
+    const crumbs: { label: string; href?: string }[] = [
+        { label: 'Browse', href: backHref },
+        ...(line ? [{ label: line.name, href: `/browse/${line.slug}` }] : []),
+        ...(line && set
+            ? [{ label: set.name, href: `/browse/${line.slug}/${set.slug}` }]
+            : []),
+        {
+            label: item.name,
+            ...(printingLabel && line && set
+                ? {
+                      href: `/browse/${line.slug}/${set.slug}?q=${encodeURIComponent(item.name)}`,
+                  }
+                : {}),
+        },
+        ...(printingLabel ? [{ label: printingLabel }] : []),
+    ];
+
     const eyebrow = [
         item.set?.name,
         item.number ? `#${item.number}` : null,
@@ -224,13 +260,26 @@ export default function Show({
             <Head title={item.display_name ?? item.name} />
 
             <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-                <Link
-                    href={backHref}
-                    className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
-                    <ArrowLeft className="size-4" />
-                    Back to browse
-                </Link>
+                <Breadcrumb className="mb-6">
+                    <BreadcrumbList>
+                        {crumbs.map((c, i) => (
+                            <Fragment key={`${c.label}-${i}`}>
+                                {i > 0 && <BreadcrumbSeparator />}
+                                <BreadcrumbItem>
+                                    {c.href && i < crumbs.length - 1 ? (
+                                        <BreadcrumbLink asChild>
+                                            <Link href={c.href}>{c.label}</Link>
+                                        </BreadcrumbLink>
+                                    ) : (
+                                        <BreadcrumbPage>
+                                            {c.label}
+                                        </BreadcrumbPage>
+                                    )}
+                                </BreadcrumbItem>
+                            </Fragment>
+                        ))}
+                    </BreadcrumbList>
+                </Breadcrumb>
 
                 <div className="grid gap-8 md:grid-cols-[minmax(0,320px)_1fr]">
                     {/* Image — sticky alongside the scrolling detail column */}
