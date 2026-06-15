@@ -4,6 +4,25 @@
 
 ---
 
+## Status snapshot — updated 2026-06-14
+
+**Phases 0–4 are built and live** (CardFoo.com / pullhit.com). **Phase 5 (marketplace) is the next major build.** Substantial scope was added on top of the original brief — see **§14**.
+
+| Phase | Status |
+|---|---|
+| 0 — Foundations | ✅ Done (AppShell shared chrome, Sanctum, S3, Pest/CI; mobile **bottom-tab nav not built** — sidebar instead) |
+| 1 — Core schema | ✅ Done (verticals → product_lines → sets → catalog_items + JSON facets + Vertical registry) |
+| 2 — Mining / ingestion | ✅ Done — **PHP-native, not Python** (no `scrapers/`; see §6 note) |
+| 3 — Valuation | ✅ Done (engine, sale_observations, market_values, confidence; eBay sold via Oxylabs; synthetic seeding) |
+| 4 — Collections + Scanning | ✅ Done (collection + acquisition lots + portfolio; scan with language **and** edition/variant detection) |
+| 5 — Marketplace | ⬜ **Not started — next major phase** |
+| 6 — Mobile/PWA + API hardening | 🟡 Partial (`/api/v1` + AppShell exist; PWA install/offline + bottom-tab not built) |
+| 7 — Second vertical (Sports) | ⬜ Not started (core stayed vertical-agnostic — architecture ready) |
+
+**Catalog today:** ~172 English Pokémon sets (+ some Japanese), ~35k `catalog_items` back to Base Set 1999, with editions/variants modeled and PriceCharting-reconciled (see §14).
+
+---
+
 ## 0. What we are building
 
 A collection-tracking, valuation, and marketplace platform for **all collectible verticals** — TCG (Pokémon first), sports cards, and other collectibles — with:
@@ -225,6 +244,8 @@ Indexes: `(catalog_item_id, condition, grading_company_id, grade, observed_at)`.
 
 ## 6. Data mining toolkit (Python, local — Phase 2)
 
+> **⚠️ As-built (2026-06-14): this section was NOT followed as written.** Ingestion is **PHP-native**, not a Python `scrapers/` workspace. Catalog/images come from HTTP clients + artisan commands: `App\Support\Catalog\PokemonTcgClient` (pokemontcg.io), `TcgcsvClient` (Japanese via TCGCSV), `App\Support\Pricecharting\CsvClient` (Legendary price guide), and `CardImageStore` for S3 (stores source images directly; no WebP derivative pipeline). The manifest-based `catalog:import` / `observations:import` design below was superseded by direct importers (`catalog:import-set`, `catalog:import-curated`, `catalog:import-missing-en`, `catalog:import-jp`, `catalog:pricecharting-import`, `valuation:refresh-ebay`). eBay sold comps come from Oxylabs in PHP. The §5 "mining before features" principle held regardless — the catalog shipped before the UI. The Python design is retained below as the reference for if/when a heavier scraping tier is needed.
+
 Runs locally, populates catalog, uploads images, emits manifests; Laravel ingests.
 
 ### 6.1 S3 bucket layout (organized, deterministic)
@@ -317,14 +338,14 @@ Flow: capture image(s) → identify → return ranked `catalog_item` candidates 
 
 | Phase | Deliverable | Done when |
 |---|---|---|
-| **0 — Foundations** | Install starter kit; `AppShell` shared header/footer (marketing + dashboard); design tokens; Sanctum (session + token); S3 disk; queue/scheduler on Laravel Cloud; CI + Pest. | A marketing page and a dummy auth dashboard share one header/footer; mobile bottom nav renders; `/api/v1/ping` works with a token. |
-| **1 — Core schema** | Migrations + models for verticals, product_lines, sets, catalog_items (JSON+generated cols), grading_companies, conditions; the **Vertical registry** + Pokémon attribute schema. | Can seed Pokémon vertical + a set + items by hand; faceted attributes validate against the registry. |
-| **2 — Mining** | Python adapters (TCGCSV + pokemontcg.io), image pipeline → S3, manifests; `catalog:import` + `observations:import`. | Pokémon catalog (singles + sealed) + images populated from a real run; re-running is idempotent. |
-| **3 — Valuation** | `sale_observations` ingestion; engine (MAD outliers, venue priors, velocity EWMA, confidence); `market_values` + recompute jobs; price display component with confidence. | A Pokémon single shows median/IQR/n/confidence/trend; thin-market items show low confidence, not inflated values. |
-| **4 — Collections + Scanning** | Collection CRUD, acquisition lots, portfolio analytics; `POST /api/v1/scan` + Pokémon `IdentifierStrategy` with language detection; scan-confirm UI. | User scans a Pokémon card, confirms language/variant, it lands in collection with correct `catalog_item`; collection value uses `market_values`. |
-| **5 — Marketplace** | Listings from collection, search/browse, cart, orders, payments (gateway interface), seller payouts. | A user lists an item, another buys it, order + payout recorded. |
-| **6 — Mobile/PWA polish + API hardening** | PWA install, offline scan queue, rate limits, API versioning discipline, docs. | Installable PWA; documented stable `/api/v1` ready for a native client. |
-| **7 — Second vertical (Sports)** | New seed + attribute schema + source adapter + identifier strategy **only**. | Sports cards work end-to-end with **zero changes** to core tables/valuation/marketplace/collection code. (This phase is the test of the architecture.) |
+| ✅ **0 — Foundations** | Install starter kit; `AppShell` shared header/footer (marketing + dashboard); design tokens; Sanctum (session + token); S3 disk; queue/scheduler on Laravel Cloud; CI + Pest. | A marketing page and a dummy auth dashboard share one header/footer; mobile bottom nav renders; `/api/v1/ping` works with a token. |
+| ✅ **1 — Core schema** | Migrations + models for verticals, product_lines, sets, catalog_items (JSON+generated cols), grading_companies, conditions; the **Vertical registry** + Pokémon attribute schema. | Can seed Pokémon vertical + a set + items by hand; faceted attributes validate against the registry. |
+| ✅ **2 — Mining** *(PHP, not Python)* | Catalog + image ingestion. **Built PHP-native** — `PokemonTcgClient`/`TcgcsvClient`/PriceCharting importers + `CardImageStore` to S3, via artisan (`catalog:import-set`, `catalog:import-missing-en`, `catalog:pricecharting-import`). No `scrapers/`; see §6 note. | ✅ Pokémon catalog (singles + sealed) + images populated; importers idempotent. |
+| ✅ **3 — Valuation** | `sale_observations` ingestion; engine (MAD outliers, venue priors, velocity EWMA, confidence); `market_values` + recompute jobs; price display component with confidence. | A Pokémon single shows median/IQR/n/confidence/trend; thin-market items show low confidence, not inflated values. |
+| ✅ **4 — Collections + Scanning** | Collection CRUD, acquisition lots, portfolio analytics; `POST /api/v1/scan` + Pokémon `IdentifierStrategy` with language **and edition/variant** detection; scan-confirm UI. | ✅ Done — plus public collections, **wishlists** (target-price alerts), and edition-aware scan ranking (§14). |
+| ⬜ **5 — Marketplace** *(next)* | Listings from collection, search/browse, cart, orders, payments (gateway interface), seller payouts. | ⬜ Not started — no `listings/orders/payments` tables yet. The intended differentiator (first-party sold data → wash-trade detection). |
+| 🟡 **6 — Mobile/PWA polish + API hardening** | PWA install, offline scan queue, rate limits, API versioning discipline, docs. | 🟡 Partial — `/api/v1` + responsive AppShell exist; **PWA install/offline + mobile bottom-tab nav not built.** |
+| ⬜ **7 — Second vertical (Sports)** | New seed + attribute schema + source adapter + identifier strategy **only**. | ⬜ Not started. Core stayed vertical-agnostic (edition/variant were added as *facets*, not core columns) — the architecture is still ready for this test. |
 
 ---
 
@@ -350,7 +371,27 @@ Flow: capture image(s) → identify → return ranked `catalog_item` candidates 
 
 ---
 
-### First task for Cursor
+## 14. Built beyond the original brief (as of 2026-06-14)
+
+Shipped on top of Phases 0–4, roughly by impact. All of this respects §13 (no TCG columns on core tables; edition/variant are *facets* in `attributes`; logic in Actions; values from `market_values`).
+
+- **Smart browse hierarchy** — brand → series → set → subset → card drill-down (not a flat catalog dump), SEO landings (`/browse/{line}`, `/browse/{line}/{set}`) + `sitemap.xml`, relevance-ranked tokenized search (name / number / set / edition), and sort by price / 30-day % change.
+- **PriceCharting reconciliation + editions** *(largest addition).* Models card **edition** (`unlimited`/`shadowless`/`first_edition`) and error/promo **finish** tags as variant-defining facets. Ingests the PriceCharting Legendary price-guide CSV → `pricecharting_products`, diffs vs. catalog (`catalog:reconcile`), auto-applies high-confidence changes (~32k across 135 sets), queues the rest for review (`reconciliation_changes`, admin `/admin/reconcile`). Display names disambiguate printings ("Charizard (1st Edition)"); search, eBay lookups, and scanning are all edition-aware. Daily import + weekly reconcile scheduled (`routes/console.php`).
+- **Wishlists** — heart-toggle on browse + card page, a `/wishlist` page with per-card **target prices**, opt-in **public wishlists** (`/wishlist/{username}`), and **target-price email alerts** (`wishlist:check-targets`, fires once per crossing, daily).
+- **Public sharing** — opt-in public **collections** (`/collection/{username}`) and wishlists; cost basis / targets stay private.
+- **Admin area** — brands/sets/cards editors (logo + description + S3 image upload), sealed-product management, set import/resync, missing-card reports, the reconciliation review queue.
+- **eBay + affiliate** — Browse API active listings + EPN / TCGplayer affiliate "Shop on eBay" links (printing-aware); Oxylabs for sold comps with an edition/variant-gated classifier.
+- **Billing scaffold** — Dodo Payments (merchant of record), membership tiers, scan quota.
+- **Marketing/brand** — CardFoo brand + theme, beta notices, default OG share image, terms/privacy.
+
+### Suggested next focus
+1. **Phase 5 — Marketplace** (the strategic differentiator: first-party sold data unlocks the wash-trade-detection wedge noted in the competitor strategy).
+2. **Phase 6 — PWA + mobile bottom-tab nav** (the brief's mobile-first goal is only partly met).
+3. **Reconciliation backlog** (separate note): graded re-seed, eBay-refresh backfill for new printings, the ~5.3k review queue, Japanese editions.
+
+---
+
+### First task for Cursor *(historical — Phase 0, completed)*
 
 Start **Phase 0** only: scaffold the Laravel React starter kit, build the `AppShell` persistent layout shared across a sample marketing page and a sample authenticated dashboard page (identical header/footer, mobile bottom nav), wire Sanctum for both session (web) and token (api) auth, configure the S3 disk and queue/scheduler for Laravel Cloud, and add a trivial `/api/v1/ping`. Stop and report before touching the schema.
 
