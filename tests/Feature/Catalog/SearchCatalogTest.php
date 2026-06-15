@@ -113,6 +113,34 @@ test('search matches name + card number together', function () {
         ->assertOk()->assertJsonCount(2, 'data'); // both Weedle printings are #001/086
 });
 
+test('search ranks exact name matches above partial ones', function () {
+    $create = app(CreateCatalogItem::class);
+    $create(vertical: $this->vertical, productLine: $this->pokemon, set: $this->set,
+        itemType: ItemType::Single, name: 'Charizard ex', number: '200',
+        attributes: ['language' => 'en', 'rarity' => 'Double Rare', 'variant' => 'holo']);
+    $create(vertical: $this->vertical, productLine: $this->pokemon, set: $this->set,
+        itemType: ItemType::Single, name: 'Charizard', number: '4',
+        attributes: ['language' => 'en', 'rarity' => 'Rare Holo', 'variant' => 'holo']);
+
+    $names = collect($this->getJson('/api/v1/catalog?q=charizard')->json('data'))->pluck('name');
+    expect($names->first())->toBe('Charizard'); // exact beats "Charizard ex"
+});
+
+test('search ranks the better set-name match first', function () {
+    $create = app(CreateCatalogItem::class);
+    $base = Set::factory()->create(['product_line_id' => $this->pokemon->id, 'slug' => 'base', 'name' => 'Base', 'language' => 'en']);
+    $exp = Set::factory()->create(['product_line_id' => $this->pokemon->id, 'slug' => 'expedition', 'name' => 'Expedition Base Set', 'language' => 'en']);
+    foreach ([$exp, $base] as $set) {
+        $create(vertical: $this->vertical, productLine: $this->pokemon, set: $set,
+            itemType: ItemType::Single, name: 'Charizard', number: '4',
+            attributes: ['language' => 'en', 'rarity' => 'Rare Holo', 'variant' => 'holo']);
+    }
+
+    $sets = collect($this->getJson('/api/v1/catalog?q='.urlencode('charizard base set'))->json('data'))
+        ->pluck('set.name');
+    expect($sets->first())->toBe('Base'); // exact "Base" beats "Expedition Base Set"
+});
+
 test('search matches name + set name', function () {
     $base = Set::factory()->create(['product_line_id' => $this->pokemon->id, 'slug' => 'base', 'name' => 'Base', 'language' => 'en']);
     app(CreateCatalogItem::class)(

@@ -37,7 +37,13 @@ class SearchCatalog
             $this->collapseToBaseCards($query);
         }
 
-        $this->applySort($query, $filters['sort'] ?? 'number', $filters['direction'] ?? 'asc');
+        // A search with no explicit sort ranks by relevance; otherwise sort as asked.
+        $sort = $filters['sort'] ?? 'number';
+        if (! empty($filters['q']) && $sort === 'number' && empty($filters['group'])) {
+            $this->applyRelevance($query, (string) $filters['q']);
+        } else {
+            $this->applySort($query, $sort, $filters['direction'] ?? 'asc');
+        }
 
         $perPage = (int) ($filters['per_page'] ?? 24);
 
@@ -75,22 +81,14 @@ class SearchCatalog
             return;
         }
 
-        // 1) Lift "1st edition", "shadowless", "reverse", … into edition/variant
-        //    facets — they live in attributes, not the stored name.
-        $text = ' '.strtolower(trim($q)).' ';
-        foreach (self::SEARCH_FACETS as $phrase => [$facet, $value]) {
-            if (str_contains($text, " {$phrase} ")) {
-                $query->where("attributes->{$facet}", $value);
-                $text = str_replace(" {$phrase} ", ' ', $text);
-            }
+        ['facets' => $facets, 'tokens' => $tokens] = $this->parseQuery($q);
+
+        // Edition/variant phrases → facets (they live in attributes, not the name).
+        foreach ($facets as $facet => $value) {
+            $query->where("attributes->{$facet}", $value);
         }
 
-        // 2) Each remaining token must match somewhere (AND across tokens).
-        $tokens = array_filter(
-            preg_split('/\s+/', trim($text)) ?: [],
-            fn (string $t) => $t !== '' && ! in_array($t, self::STOPWORDS, true),
-        );
-
+        // Each remaining token must match somewhere (AND across tokens).
         foreach ($tokens as $token) {
             $query->where(function (Builder $w) use ($token): void {
                 $w->where('name', 'like', "%{$token}%")
@@ -104,6 +102,74 @@ class SearchCatalog
                 }
             });
         }
+    }
+
+    /**
+     * Order matched rows by relevance: per token, how well it hits the card name
+     * (exact ≫ starts-with ≫ contains), the set name, or the card number. Summed
+     * across tokens, with popularity as the tiebreak.
+     *
+     * @param  Builder<CatalogItem>  $query
+     */
+    protected function applyRelevance(Builder $query, string $q): void
+    {
+        $tokens = $this->parseQuery($q)['tokens'];
+
+        if ($tokens === []) {
+            $query->orderByDesc('popularity')->orderBy('name');
+
+            return;
+        }
+
+        $setName = '(select lower(name) from sets where sets.id = catalog_items.set_id)';
+        $parts = [];
+        $bindings = [];
+
+        foreach ($tokens as $token) {
+            $parts[] = 'case when lower(name) = ? then 100 when lower(name) like ? then 50 when lower(name) like ? then 25 else 0 end';
+            array_push($bindings, $token, $token.'%', '%'.$token.'%');
+
+            $parts[] = "case when {$setName} = ? then 30 when {$setName} like ? then 15 else 0 end";
+            array_push($bindings, $token, '%'.$token.'%');
+
+            if (preg_match('/\d/', $token)) {
+                $numerator = ltrim(explode('/', $token)[0], '0');
+                $parts[] = 'case when number = ? then 40 else 0 end';
+                $bindings[] = $numerator === '' ? '0' : $numerator;
+            }
+        }
+
+        // orderByRaw (not a selected column) so pagination's count query — which
+        // strips ORDER BY and its bindings — never sees a binding mismatch.
+        $query->orderByRaw('('.implode(' + ', $parts).') desc', $bindings)
+            ->orderByDesc('popularity')
+            ->orderBy('name');
+    }
+
+    /**
+     * Split a free-text query into edition/variant facets and the remaining
+     * search tokens (filler words dropped). Shared by matching + ranking.
+     *
+     * @return array{facets: array<string, string>, tokens: array<int, string>}
+     */
+    protected function parseQuery(string $q): array
+    {
+        $text = ' '.strtolower(trim($q)).' ';
+
+        $facets = [];
+        foreach (self::SEARCH_FACETS as $phrase => [$facet, $value]) {
+            if (str_contains($text, " {$phrase} ")) {
+                $facets[$facet] = $value;
+                $text = str_replace(" {$phrase} ", ' ', $text);
+            }
+        }
+
+        $tokens = array_values(array_filter(
+            preg_split('/\s+/', trim($text)) ?: [],
+            fn (string $t) => $t !== '' && ! in_array($t, self::STOPWORDS, true),
+        ));
+
+        return ['facets' => $facets, 'tokens' => $tokens];
     }
 
     /**
