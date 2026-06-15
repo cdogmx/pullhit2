@@ -48,4 +48,28 @@ trait ProfileValidationRules
                 : Rule::unique(User::class)->ignore($userId),
         ];
     }
+
+    /**
+     * Validation rules for a username (a handle, also used in public
+     * collection/wishlist URLs). Required, unique, and free of route words.
+     *
+     * @return array<int, ValidationRule|array<mixed>|string>
+     */
+    protected function usernameRules(?int $userId = null): array
+    {
+        return [
+            'required',
+            'string',
+            'min:3',
+            'max:30',
+            'regex:/^[a-zA-Z0-9_-]+$/',
+            $userId === null
+                ? Rule::unique(User::class, 'username')
+                : Rule::unique(User::class, 'username')->ignore($userId),
+            Rule::notIn([
+                'admin', 'api', 'settings', 'dashboard', 'new', 'edit',
+                'collection', 'wishlist', 'catalog', 'browse', 'scan', 'export', 'import',
+            ]),
+        ];
+    }
 }

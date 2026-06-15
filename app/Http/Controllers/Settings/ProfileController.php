@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Concerns\ProfileValidationRules;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
@@ -9,13 +10,13 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ProfileController extends Controller
 {
+    use ProfileValidationRules;
+
     /**
      * Show the user's profile settings page.
      */
@@ -42,25 +43,13 @@ class ProfileController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'username' => [
-                'nullable', 'string', 'min:3', 'max:30', 'regex:/^[a-zA-Z0-9_-]+$/',
-                Rule::unique('users', 'username')->ignore($user->id),
-                Rule::notIn(['export', 'import', 'settings', 'admin', 'api', 'new', 'edit']),
-            ],
+            'username' => $this->usernameRules($user->id),
             'is_collection_public' => ['required', 'boolean'],
             'is_wishlist_public' => ['required', 'boolean'],
         ]);
 
-        $username = $validated['username'] ?: null;
-
-        if (($validated['is_collection_public'] || $validated['is_wishlist_public']) && $username === null) {
-            throw ValidationException::withMessages([
-                'username' => 'Pick a username before sharing publicly.',
-            ]);
-        }
-
         $user->fill([
-            'username' => $username,
+            'username' => $validated['username'],
             'is_collection_public' => $validated['is_collection_public'],
             'is_wishlist_public' => $validated['is_wishlist_public'],
         ])->save();
