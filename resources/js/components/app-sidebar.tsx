@@ -74,7 +74,18 @@ const adminNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
-    const isAdmin = Boolean(usePage().props.auth?.user?.is_admin);
+    const page = usePage().props as {
+        auth?: { user?: { is_admin?: boolean } };
+        pendingSuggestions?: number | null;
+    };
+    const isAdmin = Boolean(page.auth?.user?.is_admin);
+
+    // Badge the review queue with its pending count (shared from the server).
+    const adminNav = adminNavItems.map((item) =>
+        item.href === '/admin/suggestions'
+            ? { ...item, badge: page.pendingSuggestions || null }
+            : item,
+    );
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -93,7 +104,7 @@ export function AppSidebar() {
             <SidebarContent>
                 <NavMain items={mainNavItems} />
                 <NavMain items={pokemonNavItems} label="Pokémon" />
-                {isAdmin && <NavMain items={adminNavItems} label="Admin" />}
+                {isAdmin && <NavMain items={adminNav} label="Admin" />}
             </SidebarContent>
 
             <SidebarFooter>

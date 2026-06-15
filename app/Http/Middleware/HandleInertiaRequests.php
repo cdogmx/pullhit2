@@ -41,6 +41,10 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // Admin review-queue badge (cheap count; admins only).
+            'pendingSuggestions' => $request->user()?->is_admin
+                ? \App\Models\ItemEditSuggestion::where('status', 'pending')->count()
+                : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

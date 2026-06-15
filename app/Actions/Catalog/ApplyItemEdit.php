@@ -5,6 +5,7 @@ namespace App\Actions\Catalog;
 use App\Models\CatalogItem;
 use App\Models\ItemEditSuggestion;
 use App\Models\User;
+use App\Notifications\ItemEditReviewed;
 use App\Support\Catalog\IdentityHash;
 use App\Support\Verticals\VerticalRegistry;
 use Illuminate\Support\Carbon;
@@ -64,6 +65,9 @@ class ApplyItemEdit
             'review_note' => $note,
             'reviewed_at' => Carbon::now(),
         ])->save();
+
+        // Let the submitter know the outcome.
+        $suggestion->user?->notify(new ItemEditReviewed($suggestion));
     }
 
     private function rehash(CatalogItem $item): void

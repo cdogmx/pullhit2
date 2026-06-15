@@ -6,8 +6,11 @@ use App\Models\ProductLine;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Vertical;
+use App\Notifications\ItemEditReviewed;
+use Illuminate\Support\Facades\Notification;
 
 beforeEach(function () {
+    Notification::fake();
     $this->user = User::factory()->create(['email_verified_at' => now()]);
     $this->admin = User::factory()->create(['is_admin' => true, 'email_verified_at' => now()]);
 
@@ -62,6 +65,17 @@ test('approving applies the change to the catalog item and rehashes', function (
         ->and($this->item->identity_hash)->not->toBe($oldHash) // facets changed → rehashed
         ->and($s->fresh()->status)->toBe('approved')
         ->and($s->fresh()->reviewed_by)->toBe($this->admin->id);
+});
+
+test('the submitter is notified of the outcome', function () {
+    $s = ItemEditSuggestion::create([
+        'user_id' => $this->user->id, 'catalog_item_id' => $this->item->id,
+        'changes' => ['illustrator' => 'Arita'], 'status' => 'pending',
+    ]);
+
+    $this->actingAs($this->admin)->post("/admin/suggestions/{$s->id}/approve");
+
+    Notification::assertSentTo($this->user, ItemEditReviewed::class);
 });
 
 test('rejecting dismisses the suggestion without touching the card', function () {
