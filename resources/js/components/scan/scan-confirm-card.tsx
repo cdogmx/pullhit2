@@ -106,12 +106,35 @@ export function ScanConfirmCard({
 
     return (
         <div className="flex flex-col gap-3 rounded-lg border border-border p-3 sm:flex-row">
-            {detected.thumbnail && (
-                <img
-                    src={detected.thumbnail}
-                    alt=""
-                    className="h-32 w-auto self-center rounded sm:self-start"
-                />
+            {/* Side-by-side: the scanned photo (bulk only) and the matched card's
+                reference image, so the user can confirm the match at a glance. */}
+            {(detected.thumbnail || chosen?.card.image_url) && (
+                <div className="flex gap-2 self-center sm:self-start">
+                    {detected.thumbnail && (
+                        <figure className="m-0 text-center">
+                            <img
+                                src={detected.thumbnail}
+                                alt=""
+                                className="h-32 w-auto rounded"
+                            />
+                            <figcaption className="mt-1 text-[10px] text-muted-foreground">
+                                Your scan
+                            </figcaption>
+                        </figure>
+                    )}
+                    {chosen?.card.image_url && (
+                        <figure className="m-0 text-center">
+                            <img
+                                src={chosen.card.image_url}
+                                alt={chosen.card.display_name ?? chosen.card.name}
+                                className="h-32 w-auto rounded"
+                            />
+                            <figcaption className="mt-1 text-[10px] text-muted-foreground">
+                                Match
+                            </figcaption>
+                        </figure>
+                    )}
+                </div>
             )}
 
             <div className="min-w-0 flex-1 space-y-2">
