@@ -145,30 +145,50 @@ export default function Profile({
                 <Heading
                     variant="small"
                     title="Public sharing"
-                    description="Pick a username, then share your collection and/or wishlist at a public URL."
+                    description="Share your collection and/or wishlist at a public URL."
                 />
 
                 <form onSubmit={saveCollection} className="space-y-6">
                     <div className="grid gap-2">
                         <Label htmlFor="username">Username</Label>
-                        <Input
-                            id="username"
-                            value={collection.data.username}
-                            onChange={(e) =>
-                                collection.setData('username', e.target.value)
-                            }
-                            placeholder="your-handle"
-                            autoComplete="off"
-                        />
-                        <InputError message={collection.errors.username} />
-                        {collection.data.username.trim() && (
-                            <p className="text-xs text-muted-foreground">
-                                e.g.{' '}
-                                <span className="font-medium text-foreground">
-                                    /wishlist/
-                                    {collection.data.username.trim()}
-                                </span>
-                            </p>
+                        {username ? (
+                            <>
+                                <Input
+                                    id="username"
+                                    value={username}
+                                    readOnly
+                                    disabled
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Your username is permanent and can't be
+                                    changed. Public URL:{' '}
+                                    <span className="font-medium text-foreground">
+                                        /collection/{username}
+                                    </span>
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <Input
+                                    id="username"
+                                    value={collection.data.username}
+                                    onChange={(e) =>
+                                        collection.setData(
+                                            'username',
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder="your-handle"
+                                    autoComplete="off"
+                                />
+                                <InputError
+                                    message={collection.errors.username}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Choose a permanent username — it can't be
+                                    changed later.
+                                </p>
+                            </>
                         )}
                     </div>
 

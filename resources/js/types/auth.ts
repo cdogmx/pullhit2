@@ -1,6 +1,8 @@
 export type User = {
     id: number;
     name: string;
+    /** Public handle, shown across the site in place of the real name. */
+    username?: string | null;
     email: string;
     avatar?: string;
     email_verified_at: string | null;

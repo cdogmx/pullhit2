@@ -40,7 +40,7 @@ class PublicWishlist
 
         return [
             'owner' => [
-                'name' => $user->name,
+                // Public pages identify the owner by their handle, never their real name.
                 'username' => $user->username,
             ],
             'summary' => [

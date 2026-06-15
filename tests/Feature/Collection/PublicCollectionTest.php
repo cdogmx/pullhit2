@@ -24,7 +24,8 @@ test('a public collection is viewable by anyone, without private financials', fu
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('collection/public')
-            ->where('owner.name', 'Ash')
+            ->where('owner.username', 'ash')
+            ->missing('owner.name') // real name never exposed publicly
             ->where('summary.card_count', 2)
             ->where('holdings.0.name', 'Pikachu')
             ->where('holdings.0.market_value', 10000) // 2 × 5000
@@ -69,6 +70,24 @@ test('going public requires a username', function () {
         ->assertSessionHasErrors('username');
 
     expect($user->fresh()->is_collection_public)->toBeFalse();
+});
+
+test('an existing username cannot be changed', function () {
+    $user = User::factory()->create(['email_verified_at' => now()]);
+    $user->forceFill(['username' => 'original'])->save();
+
+    $this->actingAs($user)
+        ->patch('/settings/collection', [
+            'username' => 'something-else',
+            'is_collection_public' => true,
+            'is_wishlist_public' => false,
+        ])
+        ->assertRedirect();
+
+    $user->refresh();
+    // Username is permanent; only the privacy toggle changes.
+    expect($user->username)->toBe('original')
+        ->and($user->is_collection_public)->toBeTrue();
 });
 
 test('usernames must be unique and not reserved', function () {

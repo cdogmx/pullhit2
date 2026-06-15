@@ -36,23 +36,32 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update the username + collection privacy (public/private).
+     * Update collection/wishlist privacy. The username is chosen once (at signup)
+     * and is permanent — it's only settable here for legacy accounts that don't
+     * have one yet, never changeable once set.
      */
     public function updateCollection(Request $request): RedirectResponse
     {
         $user = $request->user();
 
-        $validated = $request->validate([
-            'username' => $this->usernameRules($user->id),
+        $rules = [
             'is_collection_public' => ['required', 'boolean'],
             'is_wishlist_public' => ['required', 'boolean'],
-        ]);
+        ];
 
-        $user->fill([
-            'username' => $validated['username'],
-            'is_collection_public' => $validated['is_collection_public'],
-            'is_wishlist_public' => $validated['is_wishlist_public'],
-        ])->save();
+        if ($user->username === null) {
+            $rules['username'] = $this->usernameRules($user->id);
+        }
+
+        $validated = $request->validate($rules);
+
+        if ($user->username === null && isset($validated['username'])) {
+            $user->username = $validated['username'];
+        }
+
+        $user->is_collection_public = $validated['is_collection_public'];
+        $user->is_wishlist_public = $validated['is_wishlist_public'];
+        $user->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Sharing settings updated.')]);
 

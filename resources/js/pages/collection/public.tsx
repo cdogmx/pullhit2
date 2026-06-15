@@ -15,7 +15,7 @@ type Holding = {
 };
 
 type Props = {
-    owner: { name: string; username: string | null };
+    owner: { username: string };
     summary: {
         total_value: number;
         item_count: number;
@@ -32,12 +32,12 @@ type Props = {
 export default function PublicCollection({ owner, summary, holdings }: Props) {
     return (
         <>
-            <Head title={`${owner.name}'s collection`} />
+            <Head title={`${owner.username}'s collection`} />
 
             <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                        {owner.name}&rsquo;s collection
+                        {owner.username}&rsquo;s collection
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {summary.card_count.toLocaleString()} cards ·{' '}

@@ -12,7 +12,7 @@ type Item = {
 };
 
 type Props = {
-    owner: { name: string; username: string | null };
+    owner: { username: string };
     summary: { item_count: number; total_value: number; currency: string };
     items: Item[];
 };
@@ -24,12 +24,12 @@ type Props = {
 export default function PublicWishlist({ owner, summary, items }: Props) {
     return (
         <>
-            <Head title={`${owner.name}'s wishlist`} />
+            <Head title={`${owner.username}'s wishlist`} />
 
             <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                        {owner.name}&rsquo;s wishlist
+                        {owner.username}&rsquo;s wishlist
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {summary.item_count.toLocaleString()} cards ·{' '}

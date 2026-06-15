@@ -23,7 +23,8 @@ test('a public wishlist is viewable by anyone, without target prices', function 
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('wishlist/public')
-            ->where('owner.name', 'Ash')
+            ->where('owner.username', 'ash')
+            ->missing('owner.name') // real name never exposed publicly
             ->where('items.0.name', 'Pikachu')
             ->where('items.0.current_value', 5000)
             ->missing('items.0.target_price'), // target stays private
