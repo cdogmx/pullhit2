@@ -115,6 +115,7 @@ class CatalogController extends Controller
         $common = [
             'mode' => $mode,
             'blurb' => $blurb,
+            'wishlistedIds' => auth()->user()?->wishlistItems()->pluck('catalog_item_id')->all() ?? [],
             'options' => $options($filters),
             'filters' => $filters,
             // Options for the inline "add to collection" graded picker on each card.
@@ -205,6 +206,8 @@ class CatalogController extends Controller
             'refreshedAt' => $catalogItem->ebay_refreshed_at?->toIso8601String(),
             'priceHistory' => $history($catalogItem),
             'ownership' => $this->ownership($request, $model),
+            'wishlisted' => (bool) $request->user()?->wishlistItems()
+                ->where('catalog_item_id', $catalogItem->id)->exists(),
             // Options for the "add to collection" graded picker.
             'gradingCompanies' => GradingCompany::orderBy('name')
                 ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),

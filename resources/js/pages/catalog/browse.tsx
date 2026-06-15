@@ -12,6 +12,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { PriceTag } from '@/components/catalog/price-tag';
 import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
+import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,6 +68,7 @@ type Props = {
     options: CatalogFilterOptions;
     filters: CatalogFilters;
     gradingCompanies: GradingCompanyOption[];
+    wishlistedIds: number[];
     seo?: { title: string; heading: string } | null;
     /** Smart browse: brands → series → sets → subsets → cards. */
     mode: 'brands' | 'series' | 'sets' | 'subsets' | 'cards';
@@ -163,6 +165,7 @@ export default function Browse({
     options,
     filters,
     gradingCompanies,
+    wishlistedIds,
     seo,
     mode,
     tiles,
@@ -569,6 +572,7 @@ export default function Browse({
                                         returnTo={returnTo}
                                         canAdd={canAdd}
                                         gradingCompanies={gradingCompanies}
+                                        wishlisted={wishlistedIds.includes(item.id)}
                                     />
                                 ))}
                             </div>
@@ -581,6 +585,7 @@ export default function Browse({
                                         returnTo={returnTo}
                                         canAdd={canAdd}
                                         gradingCompanies={gradingCompanies}
+                                        wishlisted={wishlistedIds.includes(item.id)}
                                     />
                                 ))}
                             </div>
@@ -948,11 +953,13 @@ function CardTile({
     returnTo,
     canAdd,
     gradingCompanies,
+    wishlisted,
 }: {
     item: CatalogItem;
     returnTo: string;
     canAdd: boolean;
     gradingCompanies: GradingCompanyOption[];
+    wishlisted: boolean;
 }) {
     return (
         <div className="group relative overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring">
@@ -981,7 +988,11 @@ function CardTile({
                 </div>
             </Link>
             {canAdd && (
-                <div className="absolute top-2 right-2">
+                <div className="absolute top-2 right-2 flex gap-1.5">
+                    <WishlistButton
+                        catalogItemId={item.id}
+                        wishlisted={wishlisted}
+                    />
                     <AddButton item={item} gradingCompanies={gradingCompanies} />
                 </div>
             )}
@@ -994,11 +1005,13 @@ function ListRow({
     returnTo,
     canAdd,
     gradingCompanies,
+    wishlisted,
 }: {
     item: CatalogItem;
     returnTo: string;
     canAdd: boolean;
     gradingCompanies: GradingCompanyOption[];
+    wishlisted: boolean;
 }) {
     return (
         <div className="flex items-center bg-card hover:bg-accent/40">
@@ -1032,7 +1045,11 @@ function ListRow({
                 )}
             </Link>
             {canAdd && (
-                <div className="pr-3">
+                <div className="flex items-center gap-1.5 pr-3">
+                    <WishlistButton
+                        catalogItemId={item.id}
+                        wishlisted={wishlisted}
+                    />
                     <AddButton item={item} gradingCompanies={gradingCompanies} />
                 </div>
             )}

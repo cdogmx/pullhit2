@@ -15,6 +15,7 @@ import { PriceTag } from '@/components/catalog/price-tag';
 import { Sparkline } from '@/components/catalog/sparkline';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
 import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
+import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -43,6 +44,8 @@ type Props = {
     priceHistory: PricePoint[];
     /** The viewer's owned copies of this card, or null. */
     ownership: OwnedState[] | null;
+    /** Whether the viewer has this card on their wishlist. */
+    wishlisted: boolean;
     /** Sealed-product editor options (admin). */
     sealedTypes: string[];
     languages: string[];
@@ -77,6 +80,7 @@ const SECTION_LABEL =
 export default function Show({
     item: { data: item },
     gradingCompanies,
+    wishlisted,
     refreshing,
     refreshedAt: initialRefreshedAt,
     priceHistory,
@@ -274,6 +278,10 @@ export default function Show({
                                 <AddToCollectionDialog
                                     catalogItemId={item.id}
                                     gradingCompanies={gradingCompanies}
+                                />
+                                <WishlistButton
+                                    catalogItemId={item.id}
+                                    wishlisted={wishlisted}
                                 />
                                 {ownership && (
                                     <Link

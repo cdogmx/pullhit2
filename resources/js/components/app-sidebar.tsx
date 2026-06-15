@@ -3,6 +3,7 @@ import {
     Boxes,
     GitCompare,
     Globe,
+    Heart,
     Languages,
     LayoutGrid,
     LibraryBig,
@@ -42,6 +43,11 @@ const mainNavItems: NavItem[] = [
         title: 'Collection',
         href: '/collection',
         icon: LibraryBig,
+    },
+    {
+        title: 'Wishlist',
+        href: '/wishlist',
+        icon: Heart,
     },
     {
         title: 'Browse',
