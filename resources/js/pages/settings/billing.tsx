@@ -3,9 +3,7 @@ import { Check, Loader2, Zap } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 type Plan = {
@@ -37,6 +35,14 @@ type Props = {
     usage: Usage;
 };
 
+const POPULAR = 'collector';
+
+const TAGLINE: Record<string, string> = {
+    free: 'Get started',
+    collector: 'For serious collectors',
+    guru: 'For dealers & power users',
+};
+
 function formatDate(iso: string | null): string {
     return iso
         ? new Date(iso).toLocaleDateString(undefined, {
@@ -45,6 +51,13 @@ function formatDate(iso: string | null): string {
               day: 'numeric',
           })
         : '';
+}
+
+/** "$4.99/mo" -> ["$4.99", "/mo"]; "Free" -> ["Free", ""]. */
+function splitPrice(label: string): [string, string] {
+    const i = label.indexOf('/');
+
+    return i === -1 ? [label, ''] : [label.slice(0, i), label.slice(i)];
 }
 
 export default function Billing({
@@ -99,100 +112,128 @@ export default function Billing({
                 />
 
                 {/* Current plan + usage */}
-                <Card>
-                    <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
+                <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card p-4">
+                    <div className="flex items-center gap-3">
+                        <span
+                            className={cn(
+                                'flex size-10 items-center justify-center rounded-lg',
+                                isAdmin || isPaid
+                                    ? 'bg-primary/15 text-primary'
+                                    : 'bg-muted text-muted-foreground',
+                            )}
+                        >
+                            <Zap className="size-5" />
+                        </span>
                         <div>
-                            <p className="text-sm text-muted-foreground">
-                                Current plan
+                            <p className="text-sm font-semibold capitalize">
+                                {isAdmin ? 'Admin' : tier} plan
                             </p>
-                            <p className="text-lg font-semibold capitalize">
-                                {isAdmin ? 'Admin' : tier}
-                            </p>
-                            {!usage.unlimited && (
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    {usage.used.toLocaleString()} /{' '}
-                                    {usage.cap?.toLocaleString()} scans this
-                                    month
-                                    {(usage.credits ?? 0) > 0 &&
-                                        ` · ${usage.credits} credits`}
+                            {isAdmin ? (
+                                <p className="text-xs text-muted-foreground">
+                                    Unlimited access to everything.
                                 </p>
-                            )}
+                            ) : cancelScheduled ? (
+                                <p className="text-xs text-muted-foreground">
+                                    Cancels {formatDate(renewsAt)}
+                                </p>
+                            ) : !usage.unlimited ? (
+                                <p className="text-xs text-muted-foreground">
+                                    {usage.used.toLocaleString()} /{' '}
+                                    {usage.cap?.toLocaleString()} scans this month
+                                    {(usage.credits ?? 0) > 0 &&
+                                        ` · ${usage.credits?.toLocaleString()} credits`}
+                                </p>
+                            ) : null}
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Badge variant={isAdmin || isPaid ? 'default' : 'secondary'}>
-                                {isAdmin
-                                    ? 'Unlimited'
-                                    : isPaid
-                                      ? cancelScheduled
-                                          ? `Cancels ${formatDate(renewsAt)}`
-                                          : 'Active'
-                                      : 'Free'}
-                            </Badge>
-                            {isPaid && !cancelScheduled && (
-                                <Button variant="outline" size="sm" onClick={cancel}>
-                                    Cancel
-                                </Button>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
+                    </div>
+                    {isPaid && !cancelScheduled && (
+                        <Button variant="ghost" size="sm" onClick={cancel}>
+                            Cancel plan
+                        </Button>
+                    )}
+                </div>
 
-                {isAdmin ? (
-                    <p className="text-sm text-muted-foreground">
-                        Admin accounts have unlimited access to every feature.
-                    </p>
-                ) : (
+                {!isAdmin && (
                     <>
                         {/* Plans */}
-                        <div className="grid gap-4 md:grid-cols-3">
+                        <div className="grid items-stretch gap-4 md:grid-cols-3">
                             {plans.map((plan) => {
                                 const current = plan.key === tier;
+                                const popular = plan.key === POPULAR;
                                 const paidPlan =
                                     plan.key === 'collector' ||
                                     plan.key === 'guru';
+                                const [amount, period] = splitPrice(
+                                    plan.price_label,
+                                );
 
                                 return (
-                                    <Card
+                                    <div
                                         key={plan.key}
                                         className={cn(
-                                            current && 'border-primary ring-1 ring-primary',
+                                            'relative flex flex-col rounded-xl border bg-card p-5',
+                                            current
+                                                ? 'border-primary ring-1 ring-primary'
+                                                : popular
+                                                  ? 'border-primary/40'
+                                                  : 'border-border',
                                         )}
                                     >
-                                        <CardContent className="space-y-4 pt-6">
-                                            <div>
-                                                <p className="font-semibold">
-                                                    {plan.name}
-                                                </p>
-                                                <p className="text-2xl font-bold">
-                                                    {plan.price_label}
-                                                </p>
-                                            </div>
-                                            <ul className="space-y-1.5 text-sm">
-                                                <Feature>
-                                                    {plan.scans.toLocaleString()}{' '}
-                                                    scans / month
-                                                </Feature>
-                                                <Feature>
-                                                    {plan.collections}{' '}
-                                                    collection
-                                                    {plan.collections === '1'
-                                                        ? ''
-                                                        : 's'}
-                                                </Feature>
-                                                <Feature>
-                                                    {plan.wishlists} wishlist
-                                                    {plan.wishlists === '1'
-                                                        ? ''
-                                                        : 's'}
-                                                </Feature>
-                                                <Feature>
-                                                    {plan.alerts} price alert
-                                                    {plan.alerts === '1'
-                                                        ? ''
-                                                        : 's'}
-                                                </Feature>
-                                            </ul>
+                                        {popular && !current && (
+                                            <span className="absolute -top-2.5 left-5 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground">
+                                                Most popular
+                                            </span>
+                                        )}
+                                        {current && (
+                                            <span className="absolute -top-2.5 left-5 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-background">
+                                                Current
+                                            </span>
+                                        )}
 
+                                        <p className="text-sm font-semibold">
+                                            {plan.name}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {TAGLINE[plan.key]}
+                                        </p>
+
+                                        <p className="mt-3 flex items-baseline gap-1">
+                                            <span className="text-3xl font-bold tracking-tight">
+                                                {amount}
+                                            </span>
+                                            {period && (
+                                                <span className="text-sm text-muted-foreground">
+                                                    {period}
+                                                </span>
+                                            )}
+                                        </p>
+
+                                        <ul className="mt-5 space-y-2.5 text-sm">
+                                            <Feature>
+                                                <strong className="font-semibold">
+                                                    {plan.scans.toLocaleString()}
+                                                </strong>{' '}
+                                                AI scans / month
+                                            </Feature>
+                                            <Feature>
+                                                {plan.collections} collection
+                                                {plan.collections === '1'
+                                                    ? ''
+                                                    : 's'}
+                                            </Feature>
+                                            <Feature>
+                                                {plan.wishlists} wishlist
+                                                {plan.wishlists === '1'
+                                                    ? ''
+                                                    : 's'}
+                                            </Feature>
+                                            <Feature>
+                                                {plan.alerts} price alert
+                                                {plan.alerts === '1' ? '' : 's'}
+                                            </Feature>
+                                        </ul>
+
+                                        <div className="mt-6 pt-2">
                                             {current ? (
                                                 <Button
                                                     variant="outline"
@@ -204,26 +245,36 @@ export default function Billing({
                                             ) : paidPlan ? (
                                                 <Button
                                                     className="w-full"
+                                                    variant={
+                                                        popular
+                                                            ? 'default'
+                                                            : 'outline'
+                                                    }
                                                     onClick={() =>
                                                         upgrade(plan.key)
                                                     }
                                                     disabled={
-                                                        busy === `plan:${plan.key}`
+                                                        busy ===
+                                                        `plan:${plan.key}`
                                                     }
                                                 >
                                                     {busy ===
-                                                    `plan:${plan.key}` ? (
+                                                        `plan:${plan.key}` && (
                                                         <Loader2 className="size-4 animate-spin" />
-                                                    ) : (
-                                                        <Zap className="size-4" />
                                                     )}
                                                     Choose {plan.name}
                                                 </Button>
                                             ) : (
-                                                <div className="h-9" />
+                                                <Button
+                                                    variant="ghost"
+                                                    className="w-full text-muted-foreground"
+                                                    disabled
+                                                >
+                                                    Free forever
+                                                </Button>
                                             )}
-                                        </CardContent>
-                                    </Card>
+                                        </div>
+                                    </div>
                                 );
                             })}
                         </div>
@@ -233,39 +284,38 @@ export default function Billing({
                             <Heading
                                 variant="small"
                                 title="Scan credits"
-                                description="One-time top-ups. Credits never expire and are used after your monthly allowance. Cache-recognised scans are always free."
+                                description="One-time top-ups, used after your monthly allowance. Credits never expire — and cache-recognised scans are always free."
                             />
                             <div className="mt-4 grid gap-4 sm:grid-cols-3">
                                 {creditPacks.map((pack) => (
-                                    <Card key={pack.key}>
-                                        <CardContent className="flex items-center justify-between gap-2 pt-6">
-                                            <div>
-                                                <p className="font-semibold">
-                                                    {pack.credits.toLocaleString()}{' '}
-                                                    credits
-                                                </p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {pack.price_label}
-                                                </p>
-                                            </div>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() =>
-                                                    buyCredits(pack.key)
-                                                }
-                                                disabled={
-                                                    busy === `pack:${pack.key}`
-                                                }
-                                            >
-                                                {busy === `pack:${pack.key}` ? (
-                                                    <Loader2 className="size-4 animate-spin" />
-                                                ) : (
-                                                    'Buy'
-                                                )}
-                                            </Button>
-                                        </CardContent>
-                                    </Card>
+                                    <div
+                                        key={pack.key}
+                                        className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4"
+                                    >
+                                        <div>
+                                            <p className="font-semibold">
+                                                {pack.credits.toLocaleString()}{' '}
+                                                credits
+                                            </p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {pack.price_label}
+                                            </p>
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => buyCredits(pack.key)}
+                                            disabled={
+                                                busy === `pack:${pack.key}`
+                                            }
+                                        >
+                                            {busy === `pack:${pack.key}` ? (
+                                                <Loader2 className="size-4 animate-spin" />
+                                            ) : (
+                                                'Buy'
+                                            )}
+                                        </Button>
+                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -278,9 +328,9 @@ export default function Billing({
 
 function Feature({ children }: { children: React.ReactNode }) {
     return (
-        <li className="flex items-center gap-2">
-            <Check className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            {children}
+        <li className="flex items-start gap-2">
+            <Check className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span>{children}</span>
         </li>
     );
 }
