@@ -12,14 +12,14 @@ enum MembershipTier: string
 {
     case Free = 'free';
     case Collector = 'collector';
-    case Dealer = 'dealer';
+    case Guru = 'guru';
 
     public function label(): string
     {
         return match ($this) {
             self::Free => 'Free',
             self::Collector => 'Collector',
-            self::Dealer => 'Dealer',
+            self::Guru => 'Guru',
         };
     }
 

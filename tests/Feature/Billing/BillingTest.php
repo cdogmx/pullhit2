@@ -10,7 +10,8 @@ beforeEach(function () {
     config([
         'services.dodo.key' => 'test-key',
         'services.dodo.base_url' => 'https://test.dodopayments.com',
-        'services.dodo.premium_product_id' => 'prod_premium',
+        'services.dodo.collector_product_id' => 'prod_collector',
+        'services.dodo.guru_product_id' => 'prod_guru',
     ]);
 });
 
@@ -20,15 +21,16 @@ test('StartCheckout creates a Dodo checkout with the user id + email and returns
     ]);
 
     $user = User::factory()->create(['email' => 'buyer@example.com']);
-    $url = app(StartCheckout::class)($user);
+    $url = app(StartCheckout::class)($user, 'collector');
 
     expect($url)->toBe('https://test.dodopayments.com/c/abc');
 
     Http::assertSent(function ($request) use ($user) {
         return str_contains($request->url(), '/checkouts')
             && data_get($request->data(), 'metadata.user_id') === (string) $user->id
+            && data_get($request->data(), 'metadata.tier') === 'collector'
             && data_get($request->data(), 'customer.email') === 'buyer@example.com'
-            && data_get($request->data(), 'product_cart.0.product_id') === 'prod_premium';
+            && data_get($request->data(), 'product_cart.0.product_id') === 'prod_collector';
     });
 });
 
@@ -40,8 +42,25 @@ test('the checkout endpoint redirects to the hosted checkout', function () {
     $user = User::factory()->create(['email_verified_at' => now()]);
 
     $this->actingAs($user)
-        ->post('/settings/billing/checkout')
+        ->post('/settings/billing/checkout', ['tier' => 'collector'])
         ->assertRedirect('https://test.dodopayments.com/c/xyz');
+});
+
+test('buying a credit pack redirects to the hosted checkout', function () {
+    config(['membership.credit_packs.credit100.dodo_product' => 'prod_c100']);
+    Http::fake([
+        '*dodopayments.com/checkouts' => Http::response(['checkout_url' => 'https://test.dodopayments.com/c/cred'], 200),
+    ]);
+
+    $user = User::factory()->create(['email_verified_at' => now()]);
+
+    $this->actingAs($user)
+        ->post('/settings/billing/credits', ['pack' => 'credit100'])
+        ->assertRedirect('https://test.dodopayments.com/c/cred');
+
+    Http::assertSent(fn ($request) => data_get($request->data(), 'metadata.type') === 'credits'
+        && data_get($request->data(), 'metadata.credits') === '100'
+        && data_get($request->data(), 'product_cart.0.product_id') === 'prod_c100');
 });
 
 test('CancelSubscription schedules cancellation at period end', function () {

@@ -45,6 +45,35 @@ test('a signed subscription.active webhook upgrades the user to premium', functi
         ->and($user->membership_renews_at)->not->toBeNull();
 });
 
+test('the activated tier comes from the checkout metadata', function () {
+    $user = User::factory()->create();
+
+    postDodo([
+        'type' => 'subscription.active',
+        'data' => [
+            'subscription_id' => 'sub_g',
+            'metadata' => ['user_id' => (string) $user->id, 'tier' => 'guru'],
+        ],
+    ])->assertOk();
+
+    expect($user->fresh()->membership_tier)->toBe(MembershipTier::Guru);
+});
+
+test('a credit-pack payment grants scan credits without changing tier', function () {
+    $user = User::factory()->create();
+
+    postDodo([
+        'type' => 'payment.succeeded',
+        'data' => [
+            'metadata' => ['user_id' => (string) $user->id, 'type' => 'credits', 'credits' => '500'],
+        ],
+    ])->assertOk();
+
+    $user->refresh();
+    expect($user->purchased_scan_credits)->toBe(500)
+        ->and($user->membership_tier)->toBe(MembershipTier::Free);
+});
+
 test('a signed subscription.cancelled webhook downgrades to free', function () {
     $user = User::factory()->create([
         'membership_tier' => MembershipTier::Collector,

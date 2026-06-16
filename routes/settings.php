@@ -34,6 +34,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Premium billing (Dodo Payments).
     Route::get('settings/billing', [BillingController::class, 'edit'])->name('billing.edit');
     Route::post('settings/billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');
+    Route::post('settings/billing/credits', [BillingController::class, 'buyCredits'])->name('billing.credits');
     Route::delete('settings/billing', [BillingController::class, 'cancel'])->name('billing.cancel');
     Route::get('billing/return', fn () => redirect()->route('billing.edit')
         ->with('status', 'Your upgrade is processing — premium activates in a moment.'))->name('billing.return');

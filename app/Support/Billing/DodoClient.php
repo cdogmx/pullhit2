@@ -14,26 +14,27 @@ use RuntimeException;
  */
 class DodoClient
 {
-    /** Create a hosted subscription checkout and return its URL. */
-    public function createSubscriptionCheckout(User $user, string $returnUrl): string
+    /**
+     * Create a hosted checkout for any product (a subscription tier or a one-time
+     * credit pack) and return its URL. Extra metadata is merged onto user_id.
+     *
+     * @param  array<string, string>  $metadata
+     */
+    public function createCheckout(User $user, string $productId, string $returnUrl, array $metadata = []): string
     {
-        $config = $this->config();
-
-        if (empty($config['premium_product_id'])) {
-            throw new RuntimeException('Dodo premium product is not configured.');
+        if ($productId === '') {
+            throw new RuntimeException('Dodo product id is not configured.');
         }
 
         $response = $this->http()->post($this->url('checkouts'), [
             'product_cart' => [
-                ['product_id' => $config['premium_product_id'], 'quantity' => 1],
+                ['product_id' => $productId, 'quantity' => 1],
             ],
             'customer' => [
                 'email' => $user->email,
                 'name' => $user->name,
             ],
-            'metadata' => [
-                'user_id' => (string) $user->id,
-            ],
+            'metadata' => array_merge(['user_id' => (string) $user->id], $metadata),
             'return_url' => $returnUrl,
         ]);
 

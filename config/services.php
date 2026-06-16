@@ -65,15 +65,15 @@ return [
         'base_url' => env('DODO_BASE_URL', 'https://test.dodopayments.com'),
         'webhook_secret' => env('DODO_WEBHOOK_SECRET'),
         // One subscription product per paid tier.
-        'collector_product_id' => env('DODO_COLLECTOR_PRODUCT_ID'),
-        'dealer_product_id' => env('DODO_DEALER_PRODUCT_ID'),
+        'collector_product_id' => env('DODO_PRODUCT_ID_COLLECTOR'),
+        'guru_product_id' => env('DODO_PRODUCT_ID_GURU'),
         // Back-compat: the original single product is the Collector tier.
-        'premium_product_id' => env('DODO_COLLECTOR_PRODUCT_ID', env('DODO_PREMIUM_PRODUCT_ID')),
+        'premium_product_id' => env('DODO_PRODUCT_ID_COLLECTOR', env('DODO_PREMIUM_PRODUCT_ID')),
         // Subscription product id → tier (for the webhook).
         'product_tiers' => array_filter([
-            env('DODO_COLLECTOR_PRODUCT_ID') => 'collector',
-            env('DODO_DEALER_PRODUCT_ID') => 'dealer',
-        ], fn ($k) => $k !== '' && $k !== null, ARRAY_FILTER_USE_KEY),
+            (string) env('DODO_PRODUCT_ID_COLLECTOR') => 'collector',
+            (string) env('DODO_PRODUCT_ID_GURU') => 'guru',
+        ], fn ($k) => $k !== '', ARRAY_FILTER_USE_KEY),
     ],
 
     // pokemontcg.io — catalog + TCGplayer price source for set imports.

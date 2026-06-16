@@ -4,10 +4,11 @@ namespace App\Actions\Billing;
 
 use App\Models\User;
 use App\Support\Billing\DodoClient;
+use InvalidArgumentException;
 
 /**
- * Begin a premium upgrade: create a Dodo hosted checkout for the user and return
- * the URL to redirect them to.
+ * Begin a subscription upgrade to a paid tier (collector | guru): create a Dodo
+ * hosted checkout for that tier's product and return the URL to redirect to.
  */
 class StartCheckout
 {
@@ -15,8 +16,16 @@ class StartCheckout
         protected DodoClient $dodo,
     ) {}
 
-    public function __invoke(User $user): string
+    public function __invoke(User $user, string $tier = 'collector'): string
     {
-        return $this->dodo->createSubscriptionCheckout($user, route('billing.return'));
+        $productId = (string) config("services.dodo.{$tier}_product_id");
+
+        if ($productId === '') {
+            throw new InvalidArgumentException("No Dodo product configured for tier [{$tier}].");
+        }
+
+        return $this->dodo->createCheckout($user, $productId, route('billing.return'), [
+            'tier' => $tier,
+        ]);
     }
 }

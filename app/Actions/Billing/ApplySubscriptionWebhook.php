@@ -31,15 +31,21 @@ class ApplySubscriptionWebhook
             return null;
         }
 
+        // One-time scan-credit-pack purchase: grant the credits and stop here.
+        $credits = (int) data_get($data, 'metadata.credits', 0);
+        if ($credits > 0 && $type === 'payment.succeeded') {
+            $user->addScanCredits($credits);
+
+            return $user;
+        }
+
         $subscriptionId = data_get($data, 'subscription_id') ?? data_get($data, 'data.id') ?? data_get($data, 'id');
         $activating = in_array($type, self::ACTIVATING, true)
             || ($type === 'payment.succeeded' && $subscriptionId);
 
         if ($activating) {
             $user->forceFill([
-                // The existing single subscription product maps to the mid tier;
-                // Phase C will map each Dodo product to its tier.
-                'membership_tier' => MembershipTier::Collector,
+                'membership_tier' => $this->tierFor($data),
                 'dodo_subscription_id' => $subscriptionId ?: $user->dodo_subscription_id,
                 'dodo_customer_id' => data_get($data, 'customer.customer_id') ?? $user->dodo_customer_id,
                 'membership_renews_at' => $this->date(data_get($data, 'next_billing_date')),
@@ -55,6 +61,27 @@ class ApplySubscriptionWebhook
         }
 
         return $user;
+    }
+
+    /**
+     * The tier to grant for an activating subscription — from checkout metadata
+     * (set when we start checkout), falling back to the product→tier map, then
+     * to Collector.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected function tierFor(array $data): MembershipTier
+    {
+        $tier = data_get($data, 'metadata.tier');
+
+        if (! $tier) {
+            $productId = data_get($data, 'product_id')
+                ?? data_get($data, 'product_cart.0.product_id')
+                ?? data_get($data, 'subscription.product_id');
+            $tier = data_get(config('services.dodo.product_tiers', []), (string) $productId);
+        }
+
+        return MembershipTier::tryFrom((string) $tier) ?? MembershipTier::Collector;
     }
 
     /** @param  array<string, mixed>  $data */
