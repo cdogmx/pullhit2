@@ -48,7 +48,7 @@ test('CancelSubscription schedules cancellation at period end', function () {
     Http::fake(['*dodopayments.com/subscriptions/*' => Http::response([], 200)]);
 
     $user = User::factory()->create([
-        'membership_tier' => MembershipTier::Premium,
+        'membership_tier' => MembershipTier::Collector,
         'dodo_subscription_id' => 'sub_55',
     ]);
 

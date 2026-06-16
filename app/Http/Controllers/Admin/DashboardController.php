@@ -25,7 +25,7 @@ class DashboardController extends Controller
                 'valued' => MarketValue::distinct('catalog_item_id')->count('catalog_item_id'),
                 'images' => CatalogItem::whereNotNull('primary_image_path')->count(),
                 'users' => User::count(),
-                'premium' => User::where('membership_tier', MembershipTier::Premium)->count(),
+                'premium' => User::where('membership_tier', '!=', MembershipTier::Free)->count(),
                 'admins' => User::where('is_admin', true)->count(),
             ],
             'health' => $this->health(),

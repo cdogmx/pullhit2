@@ -35,9 +35,26 @@ class ScanQuota
         return (int) ($this->user->scanUsages()->where('period', $this->period())->value('count') ?? 0);
     }
 
+    /** Purchased (top-up) credits that persist past the monthly allowance. */
+    public function credits(): int
+    {
+        return (int) $this->user->purchased_scan_credits;
+    }
+
+    /** Allowance left this month (PHP_INT_MAX for unlimited/admin). */
+    public function monthlyRemaining(): int
+    {
+        $cap = $this->cap();
+
+        return $cap === PHP_INT_MAX ? PHP_INT_MAX : max(0, $cap - $this->used());
+    }
+
+    /** Total scans left = monthly allowance + purchased credits. */
     public function remaining(): int
     {
-        return max(0, $this->cap() - $this->used());
+        $monthly = $this->monthlyRemaining();
+
+        return $monthly === PHP_INT_MAX ? PHP_INT_MAX : $monthly + $this->credits();
     }
 
     /** Throw when the user has no scans left (admins never do). */
@@ -52,18 +69,41 @@ class ScanQuota
         }
     }
 
-    /** Record N identified cards against the current period (atomic upsert). */
-    public function record(int $cards): void
+    /**
+     * Meter N AI card reads: spend the monthly allowance first, then draw any
+     * overflow from purchased credits. Cache-recognized scans aren't passed here.
+     * Returns the number of purchased credits spent (for the scan log).
+     */
+    public function record(int $cards): int
     {
         if ($cards <= 0) {
-            return;
+            return 0;
         }
 
-        $usage = $this->user->scanUsages()->firstOrCreate(['period' => $this->period()], ['count' => 0]);
-        $usage->increment('count', $cards);
+        $monthly = $this->monthlyRemaining();
+        if ($monthly === PHP_INT_MAX) {
+            return 0; // unlimited (admin) — nothing to meter
+        }
+
+        $fromMonthly = min($cards, $monthly);
+        if ($fromMonthly > 0) {
+            $usage = $this->user->scanUsages()->firstOrCreate(['period' => $this->period()], ['count' => 0]);
+            $usage->increment('count', $fromMonthly);
+        }
+
+        $overflow = $cards - $fromMonthly;
+        $creditsSpent = 0;
+        if ($overflow > 0 && $this->credits() > 0) {
+            $creditsSpent = min($overflow, $this->credits());
+            $this->user->decrement('purchased_scan_credits', $creditsSpent);
+        }
+
+        return $creditsSpent;
     }
 
-    /** @return array{used: int, cap: int|null, remaining: int|null, unlimited: bool} */
+    /**
+     * @return array{used: int, cap: int|null, remaining: int|null, monthly_remaining: int|null, credits: int, unlimited: bool}
+     */
     public function snapshot(): array
     {
         $cap = $this->cap();
@@ -73,6 +113,8 @@ class ScanQuota
             'used' => $this->used(),
             'cap' => $unlimited ? null : $cap,
             'remaining' => $unlimited ? null : $this->remaining(),
+            'monthly_remaining' => $unlimited ? null : $this->monthlyRemaining(),
+            'credits' => $this->credits(),
             'unlimited' => $unlimited,
         ];
     }

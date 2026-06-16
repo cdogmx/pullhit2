@@ -3,6 +3,7 @@
 namespace App\Actions\Scanning;
 
 use App\Http\Resources\CatalogItemResource;
+use App\Models\ScanLog;
 use App\Models\User;
 use App\Support\Membership\ScanQuota;
 use App\Support\Scanning\CandidateMatcher;
@@ -35,10 +36,21 @@ class ScanCards
             : [$this->strategy->identifySingle($base64, $mediaType)];
 
         // Only cards that actually hit the vision API count against the AI quota;
-        // ones recognised from the cache are free.
+        // ones recognised from the cache are free (no credit, no cost).
+        $total = count($cards);
         $aiReads = count(array_filter($cards, fn (IdentifiedCard $c) => $c->source !== 'cache'));
-        if ($aiReads > 0) {
-            $quota->record($aiReads);
+        $creditsSpent = $aiReads > 0 ? $quota->record($aiReads) : 0;
+
+        // Audit log: one row per scan, for user history + admin record-keeping.
+        if ($total > 0) {
+            ScanLog::create([
+                'user_id' => $user->id,
+                'mode' => $mode,
+                'cards' => $total,
+                'ai_reads' => $aiReads,
+                'cache_hits' => $total - $aiReads,
+                'credits_spent' => $creditsSpent,
+            ]);
         }
 
         $detected = array_map(fn (IdentifiedCard $card) => $this->present($card), $cards);

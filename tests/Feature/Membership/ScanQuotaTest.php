@@ -9,13 +9,13 @@ use Illuminate\Support\Carbon;
 afterEach(fn () => Carbon::setTestNow());
 
 test('caps come from the tier config', function () {
-    config(['membership.scan_caps.free' => 75, 'membership.scan_caps.premium' => 2000]);
+    config(['membership.scan_caps.free' => 75, 'membership.scan_caps.collector' => 2000]);
 
     $free = User::factory()->create();
-    $premium = User::factory()->create(['membership_tier' => MembershipTier::Premium]);
+    $collector = User::factory()->create(['membership_tier' => MembershipTier::Collector]);
 
     expect(ScanQuota::for($free)->cap())->toBe(75)
-        ->and(ScanQuota::for($premium)->cap())->toBe(2000);
+        ->and(ScanQuota::for($collector)->cap())->toBe(2000);
 });
 
 test('record increments the current month and ensure throws past the cap', function () {
@@ -31,6 +31,26 @@ test('record increments the current month and ensure throws past the cap', funct
     $quota->record(1);
     expect($quota->remaining())->toBe(0);
     expect(fn () => $quota->ensure())->toThrow(TooManyScansException::class);
+});
+
+test('purchased credits cover overflow past the monthly allowance', function () {
+    config(['membership.scan_caps.free' => 5]);
+    $user = User::factory()->create();
+    $user->forceFill(['purchased_scan_credits' => 10])->save();
+    $quota = ScanQuota::for($user);
+
+    expect($quota->remaining())->toBe(15); // 5 monthly + 10 credits
+
+    // Spend 7: 5 from the monthly allowance, then 2 from purchased credits.
+    $spent = $quota->record(7);
+
+    expect($spent)->toBe(2)
+        ->and($quota->used())->toBe(5)
+        ->and($quota->monthlyRemaining())->toBe(0)
+        ->and($user->fresh()->purchased_scan_credits)->toBe(8)
+        ->and($quota->remaining())->toBe(8);
+
+    $quota->ensure(); // still has credits — no throw
 });
 
 test('usage is tracked per month and resets next period', function () {

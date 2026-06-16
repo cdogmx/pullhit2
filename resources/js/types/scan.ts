@@ -4,6 +4,10 @@ export type ScanUsage = {
     used: number;
     cap: number | null;
     remaining: number | null;
+    /** Monthly allowance left (before dipping into purchased credits). */
+    monthly_remaining?: number | null;
+    /** Purchased top-up credits that persist past the monthly allowance. */
+    credits?: number;
     unlimited: boolean;
 };
 

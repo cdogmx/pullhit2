@@ -32,6 +32,7 @@ class User extends Authenticatable implements PasskeyUser
     protected $attributes = [
         'membership_tier' => 'free',
         'is_admin' => false,
+        'purchased_scan_credits' => 0,
     ];
 
     /**
@@ -95,7 +96,15 @@ class User extends Authenticatable implements PasskeyUser
 
     public function isPremium(): bool
     {
-        return $this->is_admin || $this->membership_tier === MembershipTier::Premium;
+        return $this->is_admin || $this->membership_tier->isPaid();
+    }
+
+    /** Grant purchased scan credits (from a credit-pack purchase). */
+    public function addScanCredits(int $credits): void
+    {
+        if ($credits > 0) {
+            $this->increment('purchased_scan_credits', $credits);
+        }
     }
 
     public function isAdmin(): bool

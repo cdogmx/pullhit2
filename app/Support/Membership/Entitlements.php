@@ -44,6 +44,36 @@ class Entitlements
         return (int) config("membership.scan_caps.{$this->tier()->value}", 0);
     }
 
+    /** Max named collections this tier allows (PHP_INT_MAX = unlimited). */
+    public function collectionLimit(): int
+    {
+        return $this->limit('collections');
+    }
+
+    /** Max wishlists this tier allows. */
+    public function wishlistLimit(): int
+    {
+        return $this->limit('wishlists');
+    }
+
+    /** Max active target-price alerts this tier allows. */
+    public function alertLimit(): int
+    {
+        return $this->limit('alerts');
+    }
+
+    /** A per-tier list limit from config; -1 (or admin) means unlimited. */
+    private function limit(string $key): int
+    {
+        if ($this->isAdmin()) {
+            return PHP_INT_MAX;
+        }
+
+        $value = (int) config("membership.limits.{$key}.{$this->tier()->value}", 1);
+
+        return $value < 0 ? PHP_INT_MAX : $value;
+    }
+
     public function can(string $feature): bool
     {
         if ($this->isAdmin()) {

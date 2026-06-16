@@ -40,14 +40,14 @@ test('a signed subscription.active webhook upgrades the user to premium', functi
     ])->assertOk();
 
     $user->refresh();
-    expect($user->membership_tier)->toBe(MembershipTier::Premium)
+    expect($user->membership_tier)->toBe(MembershipTier::Collector)
         ->and($user->dodo_subscription_id)->toBe('sub_123')
         ->and($user->membership_renews_at)->not->toBeNull();
 });
 
 test('a signed subscription.cancelled webhook downgrades to free', function () {
     $user = User::factory()->create([
-        'membership_tier' => MembershipTier::Premium,
+        'membership_tier' => MembershipTier::Collector,
         'dodo_subscription_id' => 'sub_123',
         'membership_cancel_scheduled' => true,
     ]);

@@ -26,8 +26,8 @@ class BillingController extends Controller
             'isAdmin' => $user->isAdmin(),
             'renewsAt' => $user->membership_renews_at?->toIso8601String(),
             'cancelScheduled' => (bool) $user->membership_cancel_scheduled,
-            'priceLabel' => config('membership.premium_price_label'),
-            'premiumScanCap' => (int) config('membership.scan_caps.premium'),
+            'priceLabel' => config('membership.tiers.collector.price_label'),
+            'premiumScanCap' => (int) config('membership.scan_caps.collector'),
         ]);
     }
 

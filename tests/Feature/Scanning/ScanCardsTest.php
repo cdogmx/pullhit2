@@ -30,6 +30,19 @@ test('a single scan identifies one card, matches it, and meters one card', funct
     expect(ScanQuota::for($this->user)->used())->toBe(1);
 });
 
+test('every scan writes an audit log row', function () {
+    app(ScanCards::class)($this->user, tinyJpeg(), 'image/jpeg', 'single');
+
+    $log = App\Models\ScanLog::where('user_id', $this->user->id)->latest('id')->first();
+
+    expect($log)->not->toBeNull()
+        ->and($log->mode)->toBe('single')
+        ->and($log->cards)->toBe(1)
+        ->and($log->ai_reads)->toBe(1)
+        ->and($log->cache_hits)->toBe(0)
+        ->and($log->credits_spent)->toBe(0);
+});
+
 test('a recognised single scan skips the AI, pins the learned item, and is free', function () {
     $item = CatalogItem::first(); // the Pikachu seeded in beforeEach
     $phash = PerceptualHash::fromBinary(base64_decode(tinyJpeg()));

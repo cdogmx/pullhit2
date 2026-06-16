@@ -37,7 +37,9 @@ class ApplySubscriptionWebhook
 
         if ($activating) {
             $user->forceFill([
-                'membership_tier' => MembershipTier::Premium,
+                // The existing single subscription product maps to the mid tier;
+                // Phase C will map each Dodo product to its tier.
+                'membership_tier' => MembershipTier::Collector,
                 'dodo_subscription_id' => $subscriptionId ?: $user->dodo_subscription_id,
                 'dodo_customer_id' => data_get($data, 'customer.customer_id') ?? $user->dodo_customer_id,
                 'membership_renews_at' => $this->date(data_get($data, 'next_billing_date')),

@@ -126,6 +126,9 @@ export default function ScanIndex({ usage: initialUsage, gradingCompanies }: Pro
                         {usage.unlimited
                             ? 'Unlimited scans'
                             : `${usage.used} / ${usage.cap} scans this month`}
+                        {!usage.unlimited && (usage.credits ?? 0) > 0 && (
+                            <span> · {usage.credits} credits</span>
+                        )}
                     </p>
                 </div>
 
