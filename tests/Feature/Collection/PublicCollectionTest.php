@@ -34,6 +34,18 @@ test('a public collection is viewable by anyone, without private financials', fu
         );
 });
 
+test('a public collection page carries share meta', function () {
+    $user = User::factory()->create(['email_verified_at' => now()]);
+    $user->forceFill(['username' => 'ash', 'is_collection_public' => true])->save();
+    $user->defaultCollection(); // public (mirrors the user flag)
+
+    $this->get('/collection/ash')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('meta.title', "ash's collection")
+            ->has('meta.description'));
+});
+
 test('a private collection 404s', function () {
     $user = User::factory()->create();
     $user->forceFill(['username' => 'secret', 'is_collection_public' => false, 'is_wishlist_public' => false])->save();

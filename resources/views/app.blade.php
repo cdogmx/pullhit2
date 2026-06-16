@@ -49,8 +49,12 @@
 
         @php
             $appName = config('app.name', 'CardFoo');
-            $description = 'Value your trading cards and collectibles with confidence-scored market prices — sealed product, raw singles, and graded items. Wax on.';
-            $ogTitle = $appName.' — Wax on.';
+            // Per-page share meta (e.g. public collection/wishlist pages) overrides
+            // the site defaults; falls back to the brand copy everywhere else.
+            $pageMeta = $page['props']['meta'] ?? null;
+            $description = $pageMeta['description'] ?? 'Value your trading cards and collectibles with confidence-scored market prices — sealed product, raw singles, and graded items. Wax on.';
+            $ogTitle = $pageMeta['title'] ?? $appName.' — Wax on.';
+            $pageTitle = $pageMeta['title'] ?? $appName.' — Trading card prices, values & collection tracker';
             $ogImage = \Illuminate\Support\Facades\Storage::disk('s3')->url('phb/og/cardfoo-wax-on.jpg');
         @endphp
 
@@ -84,7 +88,7 @@
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         <x-inertia::head>
-            <title>{{ $appName }} — Trading card prices, values &amp; collection tracker</title>
+            <title>{{ $pageTitle }}</title>
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">

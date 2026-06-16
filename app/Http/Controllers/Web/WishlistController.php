@@ -87,7 +87,20 @@ class WishlistController extends Controller
 
         abort_unless($wishlist && $wishlist->is_public, 404);
 
-        return Inertia::render('wishlist/public', $build($wishlist));
+        $data = $build($wishlist);
+
+        // Server-rendered share meta (social scrapers don't run JS).
+        $title = $wishlist->is_default
+            ? "{$user->username}'s wishlist"
+            : "{$user->username}'s {$wishlist->name} wishlist";
+        $data['meta'] = [
+            'title' => $title,
+            'description' => number_format($data['summary']['item_count']).' cards · '
+                .'$'.number_format($data['summary']['total_value'] / 100, 2)
+                .' on CardFoo.',
+        ];
+
+        return Inertia::render('wishlist/public', $data);
     }
 
     public function store(StoreWishlistItemRequest $request, AddToWishlist $add): RedirectResponse

@@ -105,7 +105,20 @@ class CollectionController extends Controller
 
         abort_unless($collection && $collection->is_public, 404);
 
-        return Inertia::render('collection/public', $build($collection));
+        $data = $build($collection);
+
+        // Server-rendered share meta (social scrapers don't run JS).
+        $title = $collection->is_default
+            ? "{$user->username}'s collection"
+            : "{$user->username}'s {$collection->name} collection";
+        $data['meta'] = [
+            'title' => $title,
+            'description' => number_format($data['summary']['card_count']).' cards · '
+                .'$'.number_format($data['summary']['total_value'] / 100, 2)
+                .' on CardFoo.',
+        ];
+
+        return Inertia::render('collection/public', $data);
     }
 
     public function importForm(): Response
