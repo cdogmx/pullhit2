@@ -15,6 +15,7 @@ import { Sparkline } from '@/components/catalog/sparkline';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
 import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
 import { SuggestEditDialog } from '@/components/catalog/suggest-edit-dialog';
+import { HScroller } from '@/components/shared/h-scroller';
 import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -706,12 +707,13 @@ export default function Show({
                                 </Link>
                             )}
                         </div>
-                        <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
+                        <HScroller>
                             {moreInSet.map((card) => (
                                 <Link
                                     key={card.id}
                                     href={`/catalog/${card.id}`}
-                                    className="group w-28 shrink-0"
+                                    draggable={false}
+                                    className="group w-28 shrink-0 snap-start"
                                 >
                                     <div className="aspect-[5/7] overflow-hidden rounded-lg border border-border bg-muted">
                                         {card.image_url ? (
@@ -738,7 +740,7 @@ export default function Show({
                                     </p>
                                 </Link>
                             ))}
-                        </div>
+                        </HScroller>
                     </section>
                 )}
             </div>
