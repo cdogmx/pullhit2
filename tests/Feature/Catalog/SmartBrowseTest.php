@@ -103,6 +103,21 @@ test('a brand with multiple series shows series tiles, newest first', function (
         );
 });
 
+test('the all flag forces the flat card grid for a product line', function () {
+    $set = Set::factory()->for($this->line)->create([
+        'slug' => 'sv-set', 'series' => 'Scarlet & Violet', 'language' => 'en',
+    ]);
+    CatalogItem::factory()->for($this->vertical)->for($this->line)->for($set)
+        ->create(['number' => '1']);
+
+    // Without ?all it would drill into series/sets; with it, cards.
+    $this->get('/browse?product_line=pokemon&all=1')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('mode', 'cards')
+            ->where('filters.all', true)
+            ->has('items'));
+});
+
 test('choosing a series shows its sets', function () {
     Set::factory()->for($this->line)->create([
         'slug' => 'temporal-forces', 'series' => 'Scarlet & Violet', 'language' => 'en',

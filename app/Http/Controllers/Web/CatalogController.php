@@ -169,7 +169,7 @@ class CatalogController extends Controller
     private function browseMode(array $filters): string
     {
         return match (true) {
-            ! empty($filters['q']) || ! empty($filters['subset']) => 'cards',
+            ! empty($filters['all']) || ! empty($filters['q']) || ! empty($filters['subset']) => 'cards',
             ! empty($filters['set']) => 'subsets',
             ! empty($filters['series']) => 'sets',
             ! empty($filters['product_line']) => 'series',

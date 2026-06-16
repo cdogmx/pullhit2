@@ -38,6 +38,8 @@ class SearchCatalogRequest extends FormRequest
             'sort' => ['nullable', Rule::in(['number', 'name', 'newest', 'set', 'price', 'change'])],
             'direction' => ['nullable', Rule::in(['asc', 'desc'])],
             'group' => ['nullable', 'boolean'],
+            // Force the flat card grid (skip the set-tile drill-down).
+            'all' => ['nullable', 'boolean'],
             'view' => ['nullable', Rule::in(['grid', 'list'])],
             'per_page' => ['nullable', 'integer'],
             'page' => ['nullable', 'integer', 'min:1'],
@@ -68,6 +70,7 @@ class SearchCatalogRequest extends FormRequest
             'sort' => $v['sort'] ?? 'number',
             'direction' => $v['direction'] ?? 'asc',
             'group' => $this->boolean('group'),
+            'all' => $this->boolean('all'),
             'view' => $v['view'] ?? 'grid',
             'per_page' => min(max((int) ($v['per_page'] ?? 24), 1), 96),
         ];

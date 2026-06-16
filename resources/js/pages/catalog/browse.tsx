@@ -141,6 +141,10 @@ function buildQuery(filters: CatalogFilters): Record<string, string | number> {
         out.group = 1;
     }
 
+    if (filters.all) {
+        out.all = 1;
+    }
+
     if (filters.per_page && filters.per_page !== 24) {
         out.per_page = filters.per_page;
     }
@@ -365,6 +369,17 @@ export default function Browse({
                         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
                             {blurb}
                         </p>
+                    )}
+                    {!isCards && filters.product_line && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-3"
+                            onClick={() => update({ all: true })}
+                        >
+                            <LayoutGrid className="size-4" />
+                            Browse all cards
+                        </Button>
                     )}
                 </div>
 

@@ -107,6 +107,7 @@ export type CatalogFilters = {
     sort: string;
     direction: string;
     group: boolean;
+    all: boolean;
     view: 'grid' | 'list';
     per_page: number;
 };
