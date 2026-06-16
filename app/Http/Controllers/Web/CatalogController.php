@@ -214,7 +214,38 @@ class CatalogController extends Controller
             // Sealed-product editor options (admin only, but cheap to ship).
             'sealedTypes' => TcgVertical::SEALED_TYPES,
             'languages' => TcgVertical::LANGUAGES,
+            // "More in this set" — other base cards from the same set.
+            'moreInSet' => $this->moreInSet($catalogItem),
         ]);
+    }
+
+    /**
+     * Other cards in the same set (one representative per base card, excluding the
+     * card being viewed), for the detail page's horizontal scroller.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function moreInSet(CatalogItem $item): array
+    {
+        if ($item->set_id === null) {
+            return [];
+        }
+
+        $repIds = CatalogItem::query()
+            ->where('set_id', $item->set_id)
+            ->where('base_key', '!=', $item->base_key)
+            ->selectRaw('MIN(id) as id')
+            ->groupBy('base_key')
+            ->limit(24)
+            ->pluck('id');
+
+        $cards = CatalogItem::whereIn('id', $repIds)
+            ->with('defaultMarketValue')
+            ->orderByDesc('popularity')
+            ->orderBy('id')
+            ->get();
+
+        return CatalogItemResource::collection($cards)->resolve();
     }
 
     /**

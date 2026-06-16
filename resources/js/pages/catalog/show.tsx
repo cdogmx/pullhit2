@@ -57,6 +57,8 @@ type Props = {
     /** Sealed-product editor options (admin). */
     sealedTypes: string[];
     languages: string[];
+    /** Other base cards in the same set, for the horizontal scroller. */
+    moreInSet: CatalogItem[];
 };
 
 /** Read Laravel's XSRF-TOKEN cookie for same-origin POSTs. */
@@ -95,6 +97,7 @@ export default function Show({
     ownership,
     sealedTypes,
     languages,
+    moreInSet,
 }: Props) {
     const user = usePage().props.auth?.user;
     const isAdmin = Boolean(user?.is_admin);
@@ -683,6 +686,58 @@ export default function Show({
                                     </Link>
                                 );
                             })}
+                        </div>
+                    </section>
+                )}
+
+                {/* More cards in this set */}
+                {moreInSet.length > 0 && (
+                    <section className="mt-8">
+                        <div className="mb-3 flex items-baseline justify-between gap-2">
+                            <h2 className={SECTION_LABEL}>
+                                More in {item.set?.name ?? 'this set'}
+                            </h2>
+                            {item.set && item.product_line && (
+                                <Link
+                                    href={`/browse/${item.product_line.slug}/${item.set.slug}`}
+                                    className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                                >
+                                    View all
+                                </Link>
+                            )}
+                        </div>
+                        <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
+                            {moreInSet.map((card) => (
+                                <Link
+                                    key={card.id}
+                                    href={`/catalog/${card.id}`}
+                                    className="group w-28 shrink-0"
+                                >
+                                    <div className="aspect-[5/7] overflow-hidden rounded-lg border border-border bg-muted">
+                                        {card.image_url ? (
+                                            <img
+                                                src={card.image_url}
+                                                alt={card.display_name ?? card.name}
+                                                loading="lazy"
+                                                className="size-full object-contain transition-transform group-hover:scale-105"
+                                            />
+                                        ) : (
+                                            <div className="flex size-full items-center justify-center px-1 text-center text-[10px] text-muted-foreground">
+                                                {card.display_name ?? card.name}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <p className="mt-1.5 truncate text-xs font-medium">
+                                        {card.display_name ?? card.name}
+                                    </p>
+                                    <p className="truncate text-[11px] text-muted-foreground">
+                                        {card.number}
+                                        {card.market_value
+                                            ? ` · ${formatMoney(card.market_value.median, card.market_value.currency)}`
+                                            : ''}
+                                    </p>
+                                </Link>
+                            ))}
                         </div>
                     </section>
                 )}

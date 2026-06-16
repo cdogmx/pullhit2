@@ -36,6 +36,26 @@ test('the detail page renders for guests with the item and its printings', funct
             ->has('item.data.variants', 2));
 });
 
+test('the detail page lists other cards in the same set, excluding this card', function () {
+    $create = app(CreateCatalogItem::class);
+    foreach (['Caterpie' => '002/086', 'Metapod' => '003/086'] as $name => $number) {
+        $create(
+            vertical: $this->vertical, productLine: $this->pokemon, set: $this->set,
+            itemType: ItemType::Single, name: $name, number: $number,
+            attributes: ['language' => 'en', 'rarity' => 'Common', 'variant' => 'normal'],
+        );
+    }
+
+    $weedle = CatalogItem::where('name', 'Weedle')->where('attributes->variant', 'normal')->first();
+
+    $this->get("/catalog/{$weedle->id}")
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('catalog/show')
+            ->has('moreInSet', 2) // Caterpie + Metapod, one per base card; no Weedle
+            ->where('moreInSet.0.name', fn ($n) => in_array($n, ['Caterpie', 'Metapod'], true)));
+});
+
 test('the api returns the item with its variants', function () {
     $item = CatalogItem::where('number', '001/086')->first();
 
