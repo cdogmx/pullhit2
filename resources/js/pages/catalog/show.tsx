@@ -3,6 +3,7 @@ import {
     BarChart3,
     ExternalLink,
     Loader2,
+    Maximize2,
     Pencil,
     RefreshCw,
 } from 'lucide-react';
@@ -18,6 +19,11 @@ import { SuggestEditDialog } from '@/components/catalog/suggest-edit-dialog';
 import { HScroller } from '@/components/shared/h-scroller';
 import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { Badge } from '@/components/ui/badge';
+import {
+    Dialog,
+    DialogContent,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -123,6 +129,7 @@ export default function Show({
         label: string;
     } | null>(null);
     const [editingSealed, setEditingSealed] = useState(false);
+    const [zoomed, setZoomed] = useState(false);
     const isSealed = item.item_type === 'sealed';
 
     // Buy links + live listings (lazy — drives the prominent "Shop on eBay" CTA).
@@ -290,11 +297,21 @@ export default function Show({
                     <div className="md:sticky md:top-6 md:self-start">
                         <div className="mx-auto w-full max-w-[300px] overflow-hidden rounded-xl border border-border bg-muted shadow-sm">
                             {item.image_url ? (
-                                <img
-                                    src={item.image_url}
-                                    alt={item.name}
-                                    className="aspect-[3/4] w-full object-contain"
-                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setZoomed(true)}
+                                    className="group/img relative block w-full cursor-zoom-in"
+                                    aria-label="Enlarge image"
+                                >
+                                    <img
+                                        src={item.image_url}
+                                        alt={item.name}
+                                        className="aspect-[3/4] w-full object-contain"
+                                    />
+                                    <span className="pointer-events-none absolute right-2 bottom-2 flex size-8 items-center justify-center rounded-full bg-background/80 text-foreground opacity-0 shadow backdrop-blur transition-opacity group-hover/img:opacity-100">
+                                        <Maximize2 className="size-4" />
+                                    </span>
+                                </button>
                             ) : (
                                 <div className="flex aspect-[3/4] items-center justify-center text-sm text-muted-foreground">
                                     No image
@@ -746,6 +763,21 @@ export default function Show({
                     </section>
                 )}
             </div>
+
+            {item.image_url && (
+                <Dialog open={zoomed} onOpenChange={setZoomed}>
+                    <DialogContent className="border-0 bg-transparent p-0 shadow-none sm:max-w-2xl [&>button]:bg-background/80 [&>button]:rounded-full [&>button]:p-1.5">
+                        <DialogTitle className="sr-only">
+                            {item.display_name ?? item.name}
+                        </DialogTitle>
+                        <img
+                            src={item.image_url}
+                            alt={item.display_name ?? item.name}
+                            className="mx-auto max-h-[88vh] w-auto rounded-xl object-contain"
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
 
             <PriceBreakdownDrawer
                 itemId={item.id}
