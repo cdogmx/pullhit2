@@ -193,23 +193,27 @@ export default function Browse({
     }, [q]);
 
     // A filter/sort/group change resets the infinite-scroll list back to page 1.
+    // Props the list/filters visits need to refresh (shared across update/reset).
+    const LIST_PROPS = [
+        'items',
+        'pagination',
+        'options',
+        'filters',
+        'seo',
+        'mode',
+        'blurb',
+        'tiles',
+        'tileLanguages',
+    ];
+
     function update(partial: Partial<CatalogFilters>) {
         const next = buildQuery({ ...filters, ...partial });
         router.get('/browse', next, {
             preserveState: true,
+            preserveScroll: true,
             replace: true,
             reset: ['items'],
-            only: [
-                'items',
-                'pagination',
-                'options',
-                'filters',
-                'seo',
-                'mode',
-                'blurb',
-                'tiles',
-                'tileLanguages',
-            ],
+            only: LIST_PROPS,
         });
     }
 
@@ -219,18 +223,11 @@ export default function Browse({
             '/browse',
             {},
             {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
                 reset: ['items'],
-                only: [
-                'items',
-                'pagination',
-                'options',
-                'filters',
-                'seo',
-                'mode',
-                'blurb',
-                'tiles',
-                'tileLanguages',
-            ],
+                only: LIST_PROPS,
             },
         );
     }
