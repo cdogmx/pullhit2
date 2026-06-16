@@ -696,7 +696,9 @@ export default function Show({
                     <section className="mt-8">
                         <div className="mb-3 flex items-baseline justify-between gap-2">
                             <h2 className={SECTION_LABEL}>
-                                More in {item.set?.name ?? 'this set'}
+                                {attributes.rarity
+                                    ? `More ${attributes.rarity} in ${item.set?.name ?? 'this set'}`
+                                    : `More in ${item.set?.name ?? 'this set'}`}
                             </h2>
                             {item.set && item.product_line && (
                                 <Link

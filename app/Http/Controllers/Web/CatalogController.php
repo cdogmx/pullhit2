@@ -220,8 +220,9 @@ class CatalogController extends Controller
     }
 
     /**
-     * Other cards in the same set (one representative per base card, excluding the
-     * card being viewed), for the detail page's horizontal scroller.
+     * Other cards in the same set sharing this card's rarity (one representative
+     * per base card, excluding the card being viewed), for the detail page's
+     * horizontal scroller. Falls back to the whole set when the card has no rarity.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -231,9 +232,12 @@ class CatalogController extends Controller
             return [];
         }
 
+        $rarity = $item->getAttribute('attributes')['rarity'] ?? null;
+
         $repIds = CatalogItem::query()
             ->where('set_id', $item->set_id)
             ->where('base_key', '!=', $item->base_key)
+            ->when($rarity, fn ($q) => $q->where('attributes->rarity', $rarity))
             ->selectRaw('MIN(id) as id')
             ->groupBy('base_key')
             ->limit(24)

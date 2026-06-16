@@ -36,8 +36,9 @@ test('the detail page renders for guests with the item and its printings', funct
             ->has('item.data.variants', 2));
 });
 
-test('the detail page lists other cards in the same set, excluding this card', function () {
+test('the detail page lists same-rarity cards in the set, excluding this card', function () {
     $create = app(CreateCatalogItem::class);
+    // Two more Commons (should appear) + one Rare (should be excluded by rarity).
     foreach (['Caterpie' => '002/086', 'Metapod' => '003/086'] as $name => $number) {
         $create(
             vertical: $this->vertical, productLine: $this->pokemon, set: $this->set,
@@ -45,6 +46,11 @@ test('the detail page lists other cards in the same set, excluding this card', f
             attributes: ['language' => 'en', 'rarity' => 'Common', 'variant' => 'normal'],
         );
     }
+    $create(
+        vertical: $this->vertical, productLine: $this->pokemon, set: $this->set,
+        itemType: ItemType::Single, name: 'Charizard', number: '004/086',
+        attributes: ['language' => 'en', 'rarity' => 'Rare Holo', 'variant' => 'holo'],
+    );
 
     $weedle = CatalogItem::where('name', 'Weedle')->where('attributes->variant', 'normal')->first();
 
@@ -52,7 +58,7 @@ test('the detail page lists other cards in the same set, excluding this card', f
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('catalog/show')
-            ->has('moreInSet', 2) // Caterpie + Metapod, one per base card; no Weedle
+            ->has('moreInSet', 2) // the two Commons; the Rare Holo Charizard is excluded
             ->where('moreInSet.0.name', fn ($n) => in_array($n, ['Caterpie', 'Metapod'], true)));
 });
 
