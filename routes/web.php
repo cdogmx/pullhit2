@@ -7,6 +7,7 @@ use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\ScanController;
 use App\Http\Controllers\Web\SuggestionController;
 use App\Http\Controllers\Web\WishlistController;
+use App\Http\Controllers\Web\WishlistsController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -52,6 +53,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('wishlist/{wishlistItem}', [WishlistController::class, 'update'])->name('wishlist.update');
     Route::delete('wishlist/{catalogItem}', [WishlistController::class, 'destroy'])->name('wishlist.destroy');
 
+    // Named wishlists (create / rename / share / delete), tier-gated.
+    Route::post('wishlists', [WishlistsController::class, 'store'])->name('wishlists.store');
+    Route::patch('wishlists/{wishlist}', [WishlistsController::class, 'update'])->name('wishlists.update');
+    Route::delete('wishlists/{wishlist}', [WishlistsController::class, 'destroy'])->name('wishlists.destroy');
+
     // Card scanner (Claude vision).
     Route::get('scan', [ScanController::class, 'index'])->name('scan.index');
     Route::post('scan', [ScanController::class, 'scan'])->name('scan.scan');
@@ -68,6 +74,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::get('collection/{username}', [CollectionController::class, 'publicShow'])->name('collection.public');
 Route::get('collection/{username}/{collectionSlug}', [CollectionController::class, 'publicShowCollection'])->name('collection.public.named');
 Route::get('wishlist/{username}', [WishlistController::class, 'publicShow'])->name('wishlist.public');
+Route::get('wishlist/{username}/{wishlistSlug}', [WishlistController::class, 'publicShowWishlist'])->name('wishlist.public.named');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/admin.php';

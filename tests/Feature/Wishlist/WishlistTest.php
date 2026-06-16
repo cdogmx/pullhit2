@@ -28,7 +28,7 @@ test('a user can add a card to their wishlist (idempotent) and remove it', funct
 
 test('the wishlist page shows current value + at-target flag', function () {
     // Target ($120) above current value ($100) → "at or below target".
-    WishlistItem::create(['user_id' => $this->user->id, 'catalog_item_id' => $this->item->id, 'target_price' => 12000]);
+    WishlistItem::create(['user_id' => $this->user->id, 'wishlist_id' => $this->user->defaultWishlist()->id, 'catalog_item_id' => $this->item->id, 'target_price' => 12000]);
 
     $this->actingAs($this->user)->get('/wishlist')
         ->assertOk()
@@ -43,7 +43,7 @@ test('the wishlist page shows current value + at-target flag', function () {
 });
 
 test('a user can set a target price', function () {
-    $wish = WishlistItem::create(['user_id' => $this->user->id, 'catalog_item_id' => $this->item->id]);
+    $wish = WishlistItem::create(['user_id' => $this->user->id, 'wishlist_id' => $this->user->defaultWishlist()->id, 'catalog_item_id' => $this->item->id]);
 
     $this->actingAs($this->user)->patch("/wishlist/{$wish->id}", ['target_price' => 5000])->assertRedirect();
 
@@ -52,7 +52,7 @@ test('a user can set a target price', function () {
 
 test("a user cannot edit another user's wishlist item", function () {
     $other = User::factory()->create(['email_verified_at' => now()]);
-    $wish = WishlistItem::create(['user_id' => $other->id, 'catalog_item_id' => $this->item->id]);
+    $wish = WishlistItem::create(['user_id' => $other->id, 'wishlist_id' => $other->defaultWishlist()->id, 'catalog_item_id' => $this->item->id]);
 
     $this->actingAs($this->user)->patch("/wishlist/{$wish->id}", ['target_price' => 5000])->assertForbidden();
 });

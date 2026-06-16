@@ -133,6 +133,21 @@ class User extends Authenticatable implements PasskeyUser
         );
     }
 
+    /** @return HasMany<Wishlist, $this> */
+    public function wishlists(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    /** The user's default wishlist (the heart-toggle target), created on demand. */
+    public function defaultWishlist(): Wishlist
+    {
+        return $this->wishlists()->firstOrCreate(
+            ['is_default' => true],
+            ['name' => 'My Wishlist', 'slug' => 'my-wishlist', 'is_public' => (bool) $this->is_wishlist_public],
+        );
+    }
+
     /** @return HasMany<WishlistItem, $this> */
     public function wishlistItems(): HasMany
     {

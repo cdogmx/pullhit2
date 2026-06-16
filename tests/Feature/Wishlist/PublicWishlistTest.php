@@ -17,7 +17,7 @@ test('a public wishlist is viewable by anyone, without target prices', function 
     MarketValue::factory()->for($item)->create([
         'state_key' => 'NM', 'condition' => 'NM', 'grading_company_id' => null, 'median' => 5000,
     ]);
-    WishlistItem::create(['user_id' => $user->id, 'catalog_item_id' => $item->id, 'target_price' => 4000]);
+    WishlistItem::create(['user_id' => $user->id, 'wishlist_id' => $user->defaultWishlist()->id, 'catalog_item_id' => $item->id, 'target_price' => 4000]);
 
     $this->get('/wishlist/ash')
         ->assertOk()

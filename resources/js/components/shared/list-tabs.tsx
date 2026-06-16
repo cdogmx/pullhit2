@@ -11,7 +11,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
-export type CollectionSummary = {
+export type ListSummary = {
     id: number;
     name: string;
     slug: string;
@@ -21,29 +21,42 @@ export type CollectionSummary = {
 };
 
 /**
- * Tabs across a user's named collections + management (create / rename / share /
- * delete), gated by the tier's collection limit.
+ * Tabs across a user's named lists (collections / wishlists) with management —
+ * create / rename / share / delete — gated by the tier limit. Generic over the
+ * list noun and routes so collections and wishlists share one component.
+ *
+ * @param basePath   page path the tabs link to (e.g. '/collection')
+ * @param queryKey   query param selecting the active list (e.g. 'collection')
+ * @param entityBase CRUD route base for the list entity (e.g. '/collections')
  */
-export function CollectionBar({
-    collections,
+export function ListTabs({
+    lists,
     active,
     limit,
+    basePath,
+    queryKey,
+    entityBase,
+    noun,
 }: {
-    collections: CollectionSummary[];
+    lists: ListSummary[];
     active: string;
     limit: number | null;
+    basePath: string;
+    queryKey: string;
+    entityBase: string;
+    noun: string;
 }) {
     const [creating, setCreating] = useState(false);
     const [name, setName] = useState('');
-    const atLimit = limit !== null && collections.length >= limit;
-    const current = collections.find((x) => x.slug === active);
+    const atLimit = limit !== null && lists.length >= limit;
+    const current = lists.find((x) => x.slug === active);
 
     const create = () => {
         if (!name.trim()) {
             return;
         }
         router.post(
-            '/collections',
+            entityBase,
             { name: name.trim() },
             {
                 preserveScroll: true,
@@ -59,10 +72,10 @@ export function CollectionBar({
         if (!current) {
             return;
         }
-        const next = window.prompt('Rename collection', current.name);
+        const next = window.prompt(`Rename ${noun}`, current.name);
         if (next && next.trim() && next.trim() !== current.name) {
             router.patch(
-                `/collections/${current.id}`,
+                `${entityBase}/${current.id}`,
                 { name: next.trim() },
                 { preserveScroll: true },
             );
@@ -74,7 +87,7 @@ export function CollectionBar({
             return;
         }
         router.patch(
-            `/collections/${current.id}`,
+            `${entityBase}/${current.id}`,
             { is_public: !current.is_public },
             { preserveScroll: true },
         );
@@ -84,34 +97,33 @@ export function CollectionBar({
         if (!current || current.is_default) {
             return;
         }
-        if (window.confirm(`Delete “${current.name}”? Its cards move to your default collection.`)) {
-            router.delete(`/collections/${current.id}`, { preserveScroll: true });
+        if (window.confirm(`Delete “${current.name}”? Its cards move to your default ${noun}.`)) {
+            router.delete(`${entityBase}/${current.id}`, { preserveScroll: true });
         }
     };
 
     return (
         <div className="flex flex-wrap items-center gap-2">
-            {collections.map((col) => (
+            {lists.map((list) => (
                 <Link
-                    key={col.id}
-                    href={`/collection?collection=${col.slug}`}
+                    key={list.id}
+                    href={`${basePath}?${queryKey}=${list.slug}`}
                     preserveScroll
                     className={cn(
                         'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors',
-                        col.slug === active
+                        list.slug === active
                             ? 'border-primary bg-primary/10 font-medium text-foreground'
                             : 'border-border text-muted-foreground hover:bg-accent/40',
                     )}
                 >
-                    {col.is_public && <Globe className="size-3" />}
-                    {col.name}
+                    {list.is_public && <Globe className="size-3" />}
+                    {list.name}
                     <span className="text-xs text-muted-foreground">
-                        {col.items_count}
+                        {list.items_count}
                     </span>
                 </Link>
             ))}
 
-            {/* Manage the active collection */}
             {current && (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -146,7 +158,6 @@ export function CollectionBar({
                 </DropdownMenu>
             )}
 
-            {/* New collection */}
             {creating ? (
                 <span className="inline-flex items-center gap-1">
                     <Input
@@ -154,7 +165,7 @@ export function CollectionBar({
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && create()}
-                        placeholder="Collection name"
+                        placeholder={`${noun} name`}
                         className="h-8 w-40"
                     />
                     <Button size="icon" className="size-8" onClick={create}>
@@ -169,7 +180,7 @@ export function CollectionBar({
                     disabled={atLimit}
                     title={
                         atLimit
-                            ? `Your plan allows ${limit} collections — upgrade for more`
+                            ? `Your plan allows ${limit} ${noun}s — upgrade for more`
                             : undefined
                     }
                 >

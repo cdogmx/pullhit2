@@ -13,6 +13,7 @@ type Item = {
 
 type Props = {
     owner: { username: string };
+    wishlist: { name: string; is_default: boolean };
     summary: { item_count: number; total_value: number; currency: string };
     items: Item[];
 };
@@ -21,15 +22,24 @@ type Props = {
  * Public, read-only view of a user's wishlist — the cards they want + current
  * market value. Never shows target prices or notes (those stay private).
  */
-export default function PublicWishlist({ owner, summary, items }: Props) {
+export default function PublicWishlist({
+    owner,
+    wishlist,
+    summary,
+    items,
+}: Props) {
+    const title = wishlist.is_default
+        ? `${owner.username}'s wishlist`
+        : `${owner.username} · ${wishlist.name}`;
+
     return (
         <>
-            <Head title={`${owner.username}'s wishlist`} />
+            <Head title={title} />
 
             <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                        {owner.username}&rsquo;s wishlist
+                        {title}
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {summary.item_count.toLocaleString()} cards ·{' '}

@@ -1,9 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Download, Trash2, Upload } from 'lucide-react';
-import {
-    CollectionBar,
-    type CollectionSummary,
-} from '@/components/collection/collection-bar';
+import { ListTabs, type ListSummary } from '@/components/shared/list-tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,7 +19,7 @@ import type {
 } from '@/types';
 
 type Props = {
-    collections: CollectionSummary[];
+    collections: ListSummary[];
     activeCollection: string;
     collectionLimit: number | null;
     holdings: Holding[];
@@ -115,10 +112,14 @@ export default function CollectionIndex({
                     </div>
                 </div>
 
-                <CollectionBar
-                    collections={collections}
+                <ListTabs
+                    lists={collections}
                     active={activeCollection}
                     limit={collectionLimit}
+                    basePath="/collection"
+                    queryKey="collection"
+                    entityBase="/collections"
+                    noun="collection"
                 />
 
                 {/* Summary */}

@@ -2,22 +2,23 @@
 
 namespace App\Actions\Wishlist;
 
-use App\Models\User;
+use App\Models\Wishlist;
 use App\Models\WishlistItem;
 
 /**
- * The PUBLIC view of a user's wishlist: the cards they want + current market
+ * The PUBLIC view of a named wishlist: the cards they want + current market
  * value, sorted by value. Deliberately omits target prices and notes — those
  * stay private (a public wishlist shows WHAT, not what you'd pay).
  */
 class PublicWishlist
 {
     /**
-     * @return array{owner: array<string, mixed>, summary: array<string, mixed>, items: array<int, array<string, mixed>>}
+     * @return array{owner: array<string, mixed>, wishlist: array<string, mixed>, summary: array<string, mixed>, items: array<int, array<string, mixed>>}
      */
-    public function __invoke(User $user): array
+    public function __invoke(Wishlist $wishlist): array
     {
-        $rows = $user->wishlistItems()
+        $user = $wishlist->user;
+        $rows = $wishlist->items()
             ->with(['catalogItem.set', 'catalogItem.defaultMarketValue'])
             ->get()
             ->map(function (WishlistItem $w) {
@@ -42,6 +43,10 @@ class PublicWishlist
             'owner' => [
                 // Public pages identify the owner by their handle, never their real name.
                 'username' => $user->username,
+            ],
+            'wishlist' => [
+                'name' => $wishlist->name,
+                'is_default' => $wishlist->is_default,
             ],
             'summary' => [
                 'item_count' => $rows->count(),

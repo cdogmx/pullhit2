@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class WishlistItem extends Model
 {
-    protected $fillable = ['user_id', 'catalog_item_id', 'target_price', 'notes', 'target_hit_at'];
+    protected $fillable = ['user_id', 'wishlist_id', 'catalog_item_id', 'target_price', 'notes', 'target_hit_at'];
 
     protected function casts(): array
     {
@@ -32,6 +32,12 @@ class WishlistItem extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** @return BelongsTo<Wishlist, $this> */
+    public function wishlist(): BelongsTo
+    {
+        return $this->belongsTo(Wishlist::class);
     }
 
     /** @return BelongsTo<CatalogItem, $this> */

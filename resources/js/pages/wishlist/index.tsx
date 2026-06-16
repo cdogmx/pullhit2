@@ -1,6 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Heart, Tag, X } from 'lucide-react';
 import { useState } from 'react';
+import { ListTabs, type ListSummary } from '@/components/shared/list-tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,12 +9,23 @@ import { formatMoney } from '@/lib/format';
 import type { WishlistRow, WishlistSummary } from '@/types';
 
 type Props = {
+    wishlists: ListSummary[];
+    activeWishlist: string;
+    wishlistLimit: number | null;
     items: WishlistRow[];
     summary: WishlistSummary;
     publicUrl: string | null;
 };
 
-export default function WishlistIndex({ items, summary, publicUrl }: Props) {
+export default function WishlistIndex({
+    wishlists,
+    activeWishlist,
+    wishlistLimit,
+    items,
+    summary,
+    publicUrl,
+}: Props) {
+    const otherWishlists = wishlists.filter((w) => w.slug !== activeWishlist);
     return (
         <>
             <Head title="Wishlist" />
@@ -54,11 +66,23 @@ export default function WishlistIndex({ items, summary, publicUrl }: Props) {
                     </p>
                 </div>
 
+                <div className="mb-4">
+                    <ListTabs
+                        lists={wishlists}
+                        active={activeWishlist}
+                        limit={wishlistLimit}
+                        basePath="/wishlist"
+                        queryKey="wishlist"
+                        entityBase="/wishlists"
+                        noun="wishlist"
+                    />
+                </div>
+
                 {items.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-border py-20 text-center">
                         <Heart className="mx-auto size-8 text-muted-foreground" />
                         <p className="mt-3 text-sm text-muted-foreground">
-                            Your wishlist is empty. Tap the{' '}
+                            This wishlist is empty. Tap the{' '}
                             <Heart className="inline size-3.5" /> on any card to
                             add it.
                         </p>
@@ -69,7 +93,11 @@ export default function WishlistIndex({ items, summary, publicUrl }: Props) {
                 ) : (
                     <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
                         {items.map((row) => (
-                            <WishRow key={row.id} row={row} />
+                            <WishRow
+                                key={row.id}
+                                row={row}
+                                otherWishlists={otherWishlists}
+                            />
                         ))}
                     </div>
                 )}
@@ -78,7 +106,13 @@ export default function WishlistIndex({ items, summary, publicUrl }: Props) {
     );
 }
 
-function WishRow({ row }: { row: WishlistRow }) {
+function WishRow({
+    row,
+    otherWishlists,
+}: {
+    row: WishlistRow;
+    otherWishlists: ListSummary[];
+}) {
     const card = row.catalog_item;
     const [target, setTarget] = useState(
         row.target_price != null ? String(row.target_price / 100) : '',
@@ -146,6 +180,29 @@ function WishRow({ row }: { row: WishlistRow }) {
             </Link>
 
             <div className="flex shrink-0 items-center gap-1.5">
+                {otherWishlists.length > 0 && (
+                    <select
+                        aria-label="Move to wishlist"
+                        title="Move to wishlist"
+                        value=""
+                        onChange={(e) =>
+                            e.target.value &&
+                            router.patch(
+                                `/wishlist/${row.id}`,
+                                { wishlist_id: Number(e.target.value) },
+                                { preserveScroll: true },
+                            )
+                        }
+                        className="h-8 rounded border border-border bg-background px-1 text-xs text-muted-foreground"
+                    >
+                        <option value="">Move…</option>
+                        {otherWishlists.map((w) => (
+                            <option key={w.id} value={w.id}>
+                                {w.name}
+                            </option>
+                        ))}
+                    </select>
+                )}
                 <Tag className="size-3.5 text-muted-foreground" />
                 <Input
                     value={target}

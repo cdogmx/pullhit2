@@ -18,8 +18,13 @@ class AddToWishlist
      */
     public function __invoke(User $user, CatalogItem $item, array $attrs = []): WishlistItem
     {
+        // Items live in a wishlist — the one given, else the user's default
+        // (the heart-toggle target).
+        $wishlistId = $attrs['wishlist_id'] ?? $user->defaultWishlist()->id;
+
         $wish = WishlistItem::firstOrNew([
             'user_id' => $user->id,
+            'wishlist_id' => $wishlistId,
             'catalog_item_id' => $item->id,
         ]);
 
