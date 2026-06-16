@@ -16,6 +16,7 @@ import {
     Search,
     Shield,
     Sparkles,
+    Zap,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -93,11 +94,20 @@ const adminNavItems: NavItem[] = [
 
 export function AppSidebar() {
     const page = usePage().props as {
-        auth?: { user?: { is_admin?: boolean } };
+        auth?: {
+            user?: {
+                is_admin?: boolean;
+                membership_tier?: string;
+            };
+        };
         pendingSuggestions?: number | null;
         unreadNotifications?: number | null;
     };
     const isAdmin = Boolean(page.auth?.user?.is_admin);
+    const isFree =
+        Boolean(page.auth?.user) &&
+        !isAdmin &&
+        (page.auth?.user?.membership_tier ?? 'free') === 'free';
 
     // Badge the review queue with its pending count (shared from the server).
     const adminNav = adminNavItems.map((item) =>
@@ -131,6 +141,23 @@ export function AppSidebar() {
                 <NavMain items={mainNav} />
                 <NavMain items={pokemonNavItems} label="Pokémon" />
                 {isAdmin && <NavMain items={adminNav} label="Admin" />}
+
+                {isFree && (
+                    <div className="mt-auto px-3 pb-2 group-data-[collapsible=icon]:hidden">
+                        <Link
+                            href="/settings/billing"
+                            className="block rounded-lg border border-primary/30 bg-primary/10 p-3 text-center transition-colors hover:bg-primary/15"
+                        >
+                            <span className="flex items-center justify-center gap-1.5 text-sm font-semibold">
+                                <Zap className="size-4 text-primary" />
+                                Upgrade
+                            </span>
+                            <span className="mt-0.5 block text-xs text-muted-foreground">
+                                More scans, collections &amp; wishlists
+                            </span>
+                        </Link>
+                    </div>
+                )}
             </SidebarContent>
 
             <SidebarFooter>

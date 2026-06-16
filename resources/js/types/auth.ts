@@ -5,6 +5,9 @@ export type User = {
     username?: string | null;
     email: string;
     avatar?: string;
+    /** 'free' | 'collector' | 'dealer'. */
+    membership_tier?: string;
+    is_admin?: boolean;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
     created_at: string;

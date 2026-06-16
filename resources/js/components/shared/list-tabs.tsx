@@ -172,18 +172,14 @@ export function ListTabs({
                         <Check className="size-4" />
                     </Button>
                 </span>
+            ) : atLimit ? (
+                <Button asChild variant="outline" size="sm">
+                    <Link href="/settings/billing" title={`Your plan allows ${limit} ${noun}s`}>
+                        <Plus className="size-4" /> Upgrade for more
+                    </Link>
+                </Button>
             ) : (
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCreating(true)}
-                    disabled={atLimit}
-                    title={
-                        atLimit
-                            ? `Your plan allows ${limit} ${noun}s — upgrade for more`
-                            : undefined
-                    }
-                >
+                <Button variant="outline" size="sm" onClick={() => setCreating(true)}>
                     <Plus className="size-4" /> New
                 </Button>
             )}

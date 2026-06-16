@@ -59,12 +59,21 @@ return [
         'model' => env('SCAN_MODEL', 'claude-sonnet-4-6'),
     ],
 
-    // Dodo Payments — premium subscriptions (merchant of record).
+    // Dodo Payments — subscriptions + credit packs (merchant of record).
     'dodo' => [
-        'key' => env('DODO_API_KEY'),
+        'key' => env('DODO_API_KEY', env('DODO_PAYMENTS_API_KEY')),
         'base_url' => env('DODO_BASE_URL', 'https://test.dodopayments.com'),
         'webhook_secret' => env('DODO_WEBHOOK_SECRET'),
-        'premium_product_id' => env('DODO_PREMIUM_PRODUCT_ID'),
+        // One subscription product per paid tier.
+        'collector_product_id' => env('DODO_COLLECTOR_PRODUCT_ID'),
+        'dealer_product_id' => env('DODO_DEALER_PRODUCT_ID'),
+        // Back-compat: the original single product is the Collector tier.
+        'premium_product_id' => env('DODO_COLLECTOR_PRODUCT_ID', env('DODO_PREMIUM_PRODUCT_ID')),
+        // Subscription product id → tier (for the webhook).
+        'product_tiers' => array_filter([
+            env('DODO_COLLECTOR_PRODUCT_ID') => 'collector',
+            env('DODO_DEALER_PRODUCT_ID') => 'dealer',
+        ], fn ($k) => $k !== '' && $k !== null, ARRAY_FILTER_USE_KEY),
     ],
 
     // pokemontcg.io — catalog + TCGplayer price source for set imports.

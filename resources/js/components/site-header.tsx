@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Zap } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -107,6 +107,15 @@ export function SiteHeader() {
                 <div className="flex items-center gap-2">
                     {auth.user ? (
                         <>
+                            {(auth.user.membership_tier ?? 'free') === 'free' &&
+                                !auth.user.is_admin && (
+                                    <Button asChild size="sm">
+                                        <Link href="/settings/billing">
+                                            <Zap className="size-4" />
+                                            Upgrade
+                                        </Link>
+                                    </Button>
+                                )}
                             <Button
                                 asChild
                                 variant="ghost"
