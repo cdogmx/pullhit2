@@ -118,6 +118,21 @@ class User extends Authenticatable implements PasskeyUser
         return $this->hasMany(CollectionItem::class);
     }
 
+    /** @return HasMany<Collection, $this> */
+    public function collections(): HasMany
+    {
+        return $this->hasMany(Collection::class);
+    }
+
+    /** The user's default collection, created on demand. */
+    public function defaultCollection(): Collection
+    {
+        return $this->collections()->firstOrCreate(
+            ['is_default' => true],
+            ['name' => 'My Collection', 'slug' => 'my-collection', 'is_public' => (bool) $this->is_collection_public],
+        );
+    }
+
     /** @return HasMany<WishlistItem, $this> */
     public function wishlistItems(): HasMany
     {

@@ -1,5 +1,9 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Download, Trash2, Upload } from 'lucide-react';
+import {
+    CollectionBar,
+    type CollectionSummary,
+} from '@/components/collection/collection-bar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +22,9 @@ import type {
 } from '@/types';
 
 type Props = {
+    collections: CollectionSummary[];
+    activeCollection: string;
+    collectionLimit: number | null;
     holdings: Holding[];
     summary: PortfolioSummary;
     allocation: Allocation[];
@@ -47,6 +54,9 @@ function formatGain(cents: number | null, currency = 'USD'): string {
 }
 
 export default function CollectionIndex({
+    collections,
+    activeCollection,
+    collectionLimit,
     holdings,
     summary,
     allocation,
@@ -55,6 +65,9 @@ export default function CollectionIndex({
     publicUrl,
 }: Props) {
     const c = summary.currency;
+    const otherCollections = collections.filter(
+        (x) => x.slug !== activeCollection,
+    );
 
     return (
         <>
@@ -101,6 +114,12 @@ export default function CollectionIndex({
                         )}
                     </div>
                 </div>
+
+                <CollectionBar
+                    collections={collections}
+                    active={activeCollection}
+                    limit={collectionLimit}
+                />
 
                 {/* Summary */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -280,19 +299,72 @@ export default function CollectionIndex({
                                                     {formatGain(h.unrealized_gain, h.currency)}
                                                 </td>
                                                 <td className="py-2 text-right">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            router.delete(
-                                                                `/collection/${h.id}`,
-                                                                { preserveScroll: true },
-                                                            )
-                                                        }
-                                                        className="text-muted-foreground hover:text-red-600"
-                                                        aria-label="Remove holding"
-                                                    >
-                                                        <Trash2 className="size-4" />
-                                                    </button>
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {otherCollections.length >
+                                                            0 && (
+                                                            <select
+                                                                aria-label="Move to collection"
+                                                                title="Move to collection"
+                                                                value=""
+                                                                onChange={(e) =>
+                                                                    e.target
+                                                                        .value &&
+                                                                    router.patch(
+                                                                        `/collection/${h.id}`,
+                                                                        {
+                                                                            collection_id:
+                                                                                Number(
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                ),
+                                                                        },
+                                                                        {
+                                                                            preserveScroll:
+                                                                                true,
+                                                                        },
+                                                                    )
+                                                                }
+                                                                className="h-7 rounded border border-border bg-background px-1 text-xs text-muted-foreground"
+                                                            >
+                                                                <option value="">
+                                                                    Move…
+                                                                </option>
+                                                                {otherCollections.map(
+                                                                    (col) => (
+                                                                        <option
+                                                                            key={
+                                                                                col.id
+                                                                            }
+                                                                            value={
+                                                                                col.id
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                col.name
+                                                                            }
+                                                                        </option>
+                                                                    ),
+                                                                )}
+                                                            </select>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                router.delete(
+                                                                    `/collection/${h.id}`,
+                                                                    {
+                                                                        preserveScroll:
+                                                                            true,
+                                                                    },
+                                                                )
+                                                            }
+                                                            className="text-muted-foreground hover:text-red-600"
+                                                            aria-label="Remove holding"
+                                                        >
+                                                            <Trash2 className="size-4" />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Web\CatalogController;
 use App\Http\Controllers\Web\CollectionController;
+use App\Http\Controllers\Web\CollectionsController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\ScanController;
 use App\Http\Controllers\Web\SuggestionController;
@@ -35,6 +36,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('collection/{collectionItem}', [CollectionController::class, 'update'])->name('collection.update');
     Route::delete('collection/{collectionItem}', [CollectionController::class, 'destroy'])->name('collection.destroy');
 
+    // Named collections (create / rename / share / delete), tier-gated.
+    Route::post('collections', [CollectionsController::class, 'store'])->name('collections.store');
+    Route::patch('collections/{collection}', [CollectionsController::class, 'update'])->name('collections.update');
+    Route::delete('collections/{collection}', [CollectionsController::class, 'destroy'])->name('collections.destroy');
+
     // In-app notification center.
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
@@ -60,6 +66,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // /collection, /collection/export, /collection/import keep precedence; only an
 // unmatched handle (/collection/{username}) falls through to here.
 Route::get('collection/{username}', [CollectionController::class, 'publicShow'])->name('collection.public');
+Route::get('collection/{username}/{collectionSlug}', [CollectionController::class, 'publicShowCollection'])->name('collection.public.named');
 Route::get('wishlist/{username}', [WishlistController::class, 'publicShow'])->name('wishlist.public');
 
 require __DIR__.'/settings.php';

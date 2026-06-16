@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 #[Fillable([
     'user_id',
+    'collection_id',
     'catalog_item_id',
     'condition',
     'grading_company_id',
@@ -87,6 +88,12 @@ class CollectionItem extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** @return BelongsTo<Collection, $this> */
+    public function collection(): BelongsTo
+    {
+        return $this->belongsTo(Collection::class);
     }
 
     /** @return BelongsTo<CatalogItem, $this> */

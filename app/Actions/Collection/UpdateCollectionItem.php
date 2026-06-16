@@ -22,6 +22,9 @@ class UpdateCollectionItem
         if (array_key_exists('notes', $attrs)) {
             $item->notes = $attrs['notes'];
         }
+        if (array_key_exists('collection_id', $attrs)) {
+            $item->collection_id = (int) $attrs['collection_id'];
+        }
 
         $item->save();
 

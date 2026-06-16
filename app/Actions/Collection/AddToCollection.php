@@ -23,9 +23,13 @@ class AddToCollection
     {
         $graded = ($attrs['grading_company_id'] ?? null) !== null;
 
-        return DB::transaction(function () use ($user, $item, $attrs, $graded) {
+        // Holdings live in a collection — the one given, else the user's default.
+        $collectionId = $attrs['collection_id'] ?? $user->defaultCollection()->id;
+
+        return DB::transaction(function () use ($user, $item, $attrs, $graded, $collectionId) {
             $collectionItem = $user->collectionItems()->firstOrCreate(
                 [
+                    'collection_id' => $collectionId,
                     'catalog_item_id' => $item->id,
                     // A graded copy has no raw condition; a raw copy has no grade.
                     'condition' => $graded ? null : ($attrs['condition'] ?? null),

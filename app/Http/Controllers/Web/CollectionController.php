@@ -11,6 +11,7 @@ use App\Actions\Collection\PublicCollection;
 use App\Actions\Import\BuildImportPreview;
 use App\Actions\Import\ImportCollection;
 use App\Models\User;
+use App\Support\Membership\Entitlements;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Collection\StoreCollectionItemRequest;
 use App\Http\Resources\CollectionItemResource;
@@ -31,17 +32,37 @@ class CollectionController extends Controller
     public function index(Request $request, BuildPortfolio $build): Response
     {
         $user = $request->user();
-        $portfolio = $build($user);
+
+        // Ensure the user has a default collection, then pick the active one.
+        $default = $user->defaultCollection();
+        $collections = $user->collections()->withCount('items')
+            ->orderByDesc('is_default')->orderBy('sort')->orderBy('name')->get();
+
+        $active = $collections->firstWhere('slug', $request->query('collection')) ?? $default;
+
+        $portfolio = $build($user, $active->id);
+
+        $publicUrl = $active->is_public && $user->username
+            ? url('/collection/'.$user->username.($active->is_default ? '' : '/'.$active->slug))
+            : null;
 
         return Inertia::render('collection/index', [
+            'collections' => $collections->map(fn ($c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                'slug' => $c->slug,
+                'is_public' => $c->is_public,
+                'is_default' => $c->is_default,
+                'items_count' => $c->items_count,
+            ]),
+            'activeCollection' => $active->slug,
+            'collectionLimit' => ($lim = Entitlements::for($user)->collectionLimit()) === PHP_INT_MAX ? null : $lim,
             'holdings' => CollectionItemResource::collection($portfolio['items'])->resolve(),
             'summary' => $portfolio['summary'],
             'allocation' => $portfolio['allocation'],
             'gainers' => $portfolio['gainers'],
             'decliners' => $portfolio['decliners'],
-            'publicUrl' => $user->is_collection_public && $user->username
-                ? url("/collection/{$user->username}")
-                : null,
+            'publicUrl' => $publicUrl,
         ]);
     }
 
@@ -61,14 +82,30 @@ class CollectionController extends Controller
         }, $filename, ['Content-Type' => 'text/csv']);
     }
 
-    /** Public, shareable collection page — only when the owner opted in. */
+    /** Public, shareable collection page — the owner's default collection. */
     public function publicShow(string $username, PublicCollection $build): Response
     {
+        return $this->renderPublic($username, null, $build);
+    }
+
+    /** Public page for a specific named collection. */
+    public function publicShowCollection(string $username, string $collectionSlug, PublicCollection $build): Response
+    {
+        return $this->renderPublic($username, $collectionSlug, $build);
+    }
+
+    private function renderPublic(string $username, ?string $slug, PublicCollection $build): Response
+    {
         $user = User::where('username', $username)->first();
+        abort_unless((bool) $user, 404);
 
-        abort_unless($user && $user->is_collection_public, 404);
+        $collection = $slug !== null
+            ? $user->collections()->where('slug', $slug)->first()
+            : $user->collections()->where('is_default', true)->first();
 
-        return Inertia::render('collection/public', $build($user));
+        abort_unless($collection && $collection->is_public, 404);
+
+        return Inertia::render('collection/public', $build($collection));
     }
 
     public function importForm(): Response
@@ -125,6 +162,8 @@ class CollectionController extends Controller
             'quantity' => ['sometimes', 'integer', 'min:0', 'max:100000'],
             'is_for_sale' => ['sometimes', 'boolean'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            // Move a holding to another of the user's collections.
+            'collection_id' => ['sometimes', 'integer', \Illuminate\Validation\Rule::exists('collections', 'id')->where('user_id', $request->user()->id)],
         ]));
 
         return back()->with('success', 'Collection updated.');

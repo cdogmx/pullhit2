@@ -63,6 +63,10 @@ class ProfileController extends Controller
         $user->is_wishlist_public = $validated['is_wishlist_public'];
         $user->save();
 
+        // Keep the default collection's public flag in sync (it drives the
+        // /collection/{username} public page).
+        $user->defaultCollection()->update(['is_public' => $user->is_collection_public]);
+
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Sharing settings updated.')]);
 
         return to_route('profile.edit');

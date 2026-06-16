@@ -16,6 +16,7 @@ type Holding = {
 
 type Props = {
     owner: { username: string };
+    collection: { name: string; is_default: boolean };
     summary: {
         total_value: number;
         item_count: number;
@@ -29,15 +30,24 @@ type Props = {
  * Public, read-only view of a user's collection. Shows cards + market values,
  * but never cost basis or P&L (those stay private). Chrome from AppShell.
  */
-export default function PublicCollection({ owner, summary, holdings }: Props) {
+export default function PublicCollection({
+    owner,
+    collection,
+    summary,
+    holdings,
+}: Props) {
+    const title = collection.is_default
+        ? `${owner.username}'s collection`
+        : `${owner.username} · ${collection.name}`;
+
     return (
         <>
-            <Head title={`${owner.username}'s collection`} />
+            <Head title={title} />
 
             <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                        {owner.username}&rsquo;s collection
+                        {title}
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {summary.card_count.toLocaleString()} cards ·{' '}

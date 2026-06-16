@@ -21,9 +21,10 @@ class BuildPortfolio
     /**
      * @return array{items: Collection<int, CollectionItem>, summary: array<string, mixed>, allocation: array<int, array<string, mixed>>, gainers: array<int, array<string, mixed>>, decliners: array<int, array<string, mixed>>}
      */
-    public function __invoke(User $user): array
+    public function __invoke(User $user, ?int $collectionId = null): array
     {
         $items = $user->collectionItems()
+            ->when($collectionId, fn ($q) => $q->where('collection_id', $collectionId))
             ->with(['catalogItem.set', 'catalogItem.vertical', 'catalogItem.marketValues', 'gradingCompany', 'acquisitionLots'])
             ->get();
 
