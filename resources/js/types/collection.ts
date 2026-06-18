@@ -37,7 +37,12 @@ export type PortfolioSummary = {
     currency: string;
 };
 
-export type Allocation = { label: string; value: number; pct: number };
+export type Allocation = {
+    label: string;
+    brand: string | null;
+    value: number;
+    pct: number;
+};
 
 export type PortfolioMover = {
     id: number;

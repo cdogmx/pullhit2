@@ -41,7 +41,12 @@ type Mover = {
     pct: number | null;
 };
 
-type Allocation = { label: string; value: number; pct: number };
+type Allocation = {
+    label: string;
+    brand: string | null;
+    value: number;
+    pct: number;
+};
 
 type Scans = {
     used: number;
@@ -243,11 +248,19 @@ export default function Dashboard({
                                             No valued cards yet.
                                         </p>
                                     ) : (
-                                        <div className="space-y-2.5">
+                                        <div className="max-h-72 space-y-2.5 overflow-y-auto">
                                             {allocation.map((a) => (
                                                 <div key={a.label}>
                                                     <div className="flex items-baseline justify-between text-sm">
-                                                        <span className="truncate pr-2 font-medium">
+                                                        <span className="min-w-0 truncate pr-2 font-medium">
+                                                            {a.brand && (
+                                                                <span className="font-normal text-muted-foreground">
+                                                                    {a.brand}{' '}
+                                                                    <span aria-hidden>
+                                                                        →
+                                                                    </span>{' '}
+                                                                </span>
+                                                            )}
                                                             {a.label}
                                                         </span>
                                                         <span className="shrink-0 text-xs text-muted-foreground">

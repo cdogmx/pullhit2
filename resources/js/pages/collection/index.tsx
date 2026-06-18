@@ -1,9 +1,9 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Download, StickyNote, Tag, Trash2, Upload } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Download, Search, StickyNote, Tag, Trash2, Upload } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { ListTabs  } from '@/components/shared/list-tabs';
-import type {ListSummary} from '@/components/shared/list-tabs';
+import { ListTabs } from '@/components/shared/list-tabs';
+import type { ListSummary } from '@/components/shared/list-tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +12,14 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type {
@@ -32,6 +40,38 @@ type Props = {
     decliners: PortfolioMover[];
     publicUrl: string | null;
 };
+
+const ALL = '__all__';
+
+const SORTS = [
+    { value: 'value_desc', label: 'Value: high to low' },
+    { value: 'value_asc', label: 'Value: low to high' },
+    { value: 'pl_desc', label: 'P&L: best first' },
+    { value: 'pl_asc', label: 'P&L: worst first' },
+    { value: 'name', label: 'Name: A to Z' },
+    { value: 'quantity', label: 'Quantity' },
+];
+
+/** Compare nullable numbers, always sorting nulls last. */
+function nullableCompare(
+    a: number | null,
+    b: number | null,
+    dir: 1 | -1,
+): number {
+    if (a == null && b == null) {
+        return 0;
+    }
+
+    if (a == null) {
+        return 1;
+    }
+
+    if (b == null) {
+        return -1;
+    }
+
+    return (a - b) * dir;
+}
 
 const gainClass = (n: number | null | undefined) =>
     n == null
@@ -68,6 +108,77 @@ export default function CollectionIndex({
     const otherCollections = collections.filter(
         (x) => x.slug !== activeCollection,
     );
+
+    const [q, setQ] = useState('');
+    const [setFilter, setSetFilter] = useState(ALL);
+    const [forSaleOnly, setForSaleOnly] = useState(false);
+    const [sort, setSort] = useState('value_desc');
+
+    // Sets present in this collection, for the filter dropdown.
+    const sets = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    holdings
+                        .map((h) => h.catalog_item?.set?.name)
+                        .filter((s): s is string => !!s),
+                ),
+            ).sort((a, b) => a.localeCompare(b)),
+        [holdings],
+    );
+
+    const visible = useMemo(() => {
+        const needle = q.trim().toLowerCase();
+
+        const filtered = holdings.filter((h) => {
+            if (forSaleOnly && !h.is_for_sale) {
+                return false;
+            }
+
+            if (setFilter !== ALL && h.catalog_item?.set?.name !== setFilter) {
+                return false;
+            }
+
+            if (needle === '') {
+                return true;
+            }
+
+            const ci = h.catalog_item;
+
+            return (
+                (ci?.display_name ?? ci?.name ?? '')
+                    .toLowerCase()
+                    .includes(needle) ||
+                (ci?.number ?? '').toLowerCase().includes(needle) ||
+                (ci?.set?.name ?? '').toLowerCase().includes(needle)
+            );
+        });
+
+        const sorted = [...filtered];
+        sorted.sort((a, b) => {
+            switch (sort) {
+                case 'value_asc':
+                    return nullableCompare(a.market_value, b.market_value, 1);
+                case 'pl_desc':
+                    return nullableCompare(a.unrealized_gain, b.unrealized_gain, -1);
+                case 'pl_asc':
+                    return nullableCompare(a.unrealized_gain, b.unrealized_gain, 1);
+                case 'name':
+                    return (
+                        a.catalog_item?.name ?? ''
+                    ).localeCompare(b.catalog_item?.name ?? '');
+                case 'quantity':
+                    return b.quantity - a.quantity;
+                default:
+                    return nullableCompare(a.market_value, b.market_value, -1);
+            }
+        });
+
+        return sorted;
+    }, [holdings, q, setFilter, forSaleOnly, sort]);
+
+    const filtersActive =
+        q.trim() !== '' || setFilter !== ALL || forSaleOnly;
 
     return (
         <>
@@ -167,13 +278,13 @@ export default function CollectionIndex({
                     </Card>
                 ) : (
                     <>
-                        {/* Allocation + movers */}
-                        <div className="grid gap-4 lg:grid-cols-3">
-                            <Card className="lg:col-span-1">
+                        {/* Allocation + movers — equal-height cards (grid stretch). */}
+                        <div className="grid items-stretch gap-4 lg:grid-cols-3">
+                            <Card className="flex h-full flex-col lg:col-span-1">
                                 <CardHeader>
                                     <CardTitle className="text-sm">Allocation by set</CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-2">
+                                <CardContent className="max-h-72 flex-1 space-y-2 overflow-y-auto">
                                     {allocation.length === 0 && (
                                         <p className="text-sm text-muted-foreground">
                                             No valued holdings yet.
@@ -181,9 +292,19 @@ export default function CollectionIndex({
                                     )}
                                     {allocation.map((a) => (
                                         <div key={a.label}>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="truncate">{a.label}</span>
-                                                <span className="text-muted-foreground">
+                                            <div className="flex items-baseline justify-between gap-2 text-sm">
+                                                <span className="min-w-0 truncate">
+                                                    {a.brand && (
+                                                        <span className="text-muted-foreground">
+                                                            {a.brand}{' '}
+                                                            <span aria-hidden>
+                                                                →
+                                                            </span>{' '}
+                                                        </span>
+                                                    )}
+                                                    {a.label}
+                                                </span>
+                                                <span className="shrink-0 text-muted-foreground">
                                                     {formatMoney(a.value, c)} · {a.pct}%
                                                 </span>
                                             </div>
@@ -204,8 +325,93 @@ export default function CollectionIndex({
 
                         {/* Holdings */}
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="text-sm">Holdings</CardTitle>
+                            <CardHeader className="gap-3">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <CardTitle className="text-sm">
+                                        Holdings
+                                    </CardTitle>
+                                    <span className="text-xs text-muted-foreground">
+                                        {visible.length.toLocaleString()} of{' '}
+                                        {holdings.length.toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <div className="relative">
+                                        <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                                        <Input
+                                            value={q}
+                                            onChange={(e) => setQ(e.target.value)}
+                                            placeholder="Search cards"
+                                            className="h-8 w-48 pl-8"
+                                        />
+                                    </div>
+
+                                    {sets.length > 1 && (
+                                        <Select
+                                            value={setFilter}
+                                            onValueChange={setSetFilter}
+                                        >
+                                            <SelectTrigger className="h-8 w-40">
+                                                <SelectValue placeholder="All sets" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value={ALL}>
+                                                    All sets
+                                                </SelectItem>
+                                                {sets.map((s) => (
+                                                    <SelectItem key={s} value={s}>
+                                                        {s}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+
+                                    <Select value={sort} onValueChange={setSort}>
+                                        <SelectTrigger className="h-8 w-44">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {SORTS.map((s) => (
+                                                <SelectItem
+                                                    key={s.value}
+                                                    value={s.value}
+                                                >
+                                                    Sort: {s.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={forSaleOnly ? 'default' : 'outline'}
+                                        onClick={() =>
+                                            setForSaleOnly((v) => !v)
+                                        }
+                                        className="h-8"
+                                    >
+                                        <Tag className="size-4" />
+                                        For sale
+                                    </Button>
+
+                                    {filtersActive && (
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => {
+                                                setQ('');
+                                                setSetFilter(ALL);
+                                                setForSaleOnly(false);
+                                            }}
+                                            className="h-8"
+                                        >
+                                            Clear
+                                        </Button>
+                                    )}
+                                </div>
                             </CardHeader>
                             <CardContent className="overflow-x-auto">
                                 <table className="w-full text-sm">
@@ -230,7 +436,17 @@ export default function CollectionIndex({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {holdings.map((h) => (
+                                        {visible.length === 0 && (
+                                            <tr>
+                                                <td
+                                                    colSpan={8}
+                                                    className="py-8 text-center text-muted-foreground"
+                                                >
+                                                    No cards match your filters.
+                                                </td>
+                                            </tr>
+                                        )}
+                                        {visible.map((h) => (
                                             <tr
                                                 key={h.id}
                                                 className="border-b border-border/60 last:border-0"
@@ -467,11 +683,11 @@ function MoversCard({
     currency: string;
 }) {
     return (
-        <Card>
+        <Card className="flex h-full flex-col">
             <CardHeader>
                 <CardTitle className="text-sm">{title}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="max-h-72 flex-1 space-y-2 overflow-y-auto">
                 {movers.length === 0 && (
                     <p className="text-sm text-muted-foreground">Nothing yet.</p>
                 )}

@@ -25,7 +25,7 @@ class BuildPortfolio
     {
         $items = $user->collectionItems()
             ->when($collectionId, fn ($q) => $q->where('collection_id', $collectionId))
-            ->with(['catalogItem.set', 'catalogItem.vertical', 'catalogItem.marketValues', 'gradingCompany', 'acquisitionLots'])
+            ->with(['catalogItem.set', 'catalogItem.productLine', 'catalogItem.vertical', 'catalogItem.marketValues', 'gradingCompany', 'acquisitionLots'])
             ->get();
 
         // Memoize the per-holding numbers once.
@@ -62,14 +62,20 @@ class BuildPortfolio
             'currency' => 'USD',
         ];
 
-        // Allocation by set (valued holdings), largest first.
+        // Allocation by set (valued holdings), largest first. Each carries the
+        // brand (product line) so the UI can show "Brand → Set".
         $allocation = $valued
             ->groupBy(fn ($r) => $r['ci']->catalogItem?->set?->name ?? 'Other')
-            ->map(fn (Collection $group, string $label) => [
-                'label' => $label,
-                'value' => (int) $group->sum('value'),
-                'pct' => $totalValue > 0 ? round((int) $group->sum('value') / $totalValue * 100, 1) : 0.0,
-            ])
+            ->map(function (Collection $group, string $label) use ($totalValue) {
+                $value = (int) $group->sum('value');
+
+                return [
+                    'label' => $label,
+                    'brand' => $group->first()['ci']->catalogItem?->productLine?->name,
+                    'value' => $value,
+                    'pct' => $totalValue > 0 ? round($value / $totalValue * 100, 1) : 0.0,
+                ];
+            })
             ->sortByDesc('value')
             ->values()
             ->all();
