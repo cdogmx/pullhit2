@@ -1,6 +1,9 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Download, Trash2, Upload } from 'lucide-react';
-import { ListTabs, type ListSummary } from '@/components/shared/list-tabs';
+import { Download, StickyNote, Tag, Trash2, Upload } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { ListTabs  } from '@/components/shared/list-tabs';
+import type {ListSummary} from '@/components/shared/list-tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -243,27 +246,40 @@ export default function CollectionIndex({
                                                             />
                                                         )}
                                                         <div className="min-w-0">
-                                                            {h.catalog_item ? (
-                                                                <Link
-                                                                    href={`/catalog/${h.catalog_item.id}`}
-                                                                    className="font-medium hover:underline"
-                                                                >
-                                                                    {h.catalog_item
-                                                                        .display_name ??
-                                                                        h.catalog_item
-                                                                            .name}
-                                                                </Link>
-                                                            ) : (
-                                                                <span className="font-medium">
-                                                                    Unknown
-                                                                </span>
-                                                            )}
+                                                            <div className="flex items-center gap-1.5">
+                                                                {h.catalog_item ? (
+                                                                    <Link
+                                                                        href={`/catalog/${h.catalog_item.id}`}
+                                                                        className="font-medium hover:underline"
+                                                                    >
+                                                                        {h
+                                                                            .catalog_item
+                                                                            .display_name ??
+                                                                            h
+                                                                                .catalog_item
+                                                                                .name}
+                                                                    </Link>
+                                                                ) : (
+                                                                    <span className="font-medium">
+                                                                        Unknown
+                                                                    </span>
+                                                                )}
+                                                                {h.is_for_sale && (
+                                                                    <Badge className="bg-emerald-600/15 text-[10px] text-emerald-700 dark:text-emerald-400">
+                                                                        For sale
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
                                                             <p className="text-xs text-muted-foreground">
                                                                 {h.catalog_item?.number}
                                                                 {h.catalog_item?.set
                                                                     ? ` · ${h.catalog_item.set.name}`
                                                                     : ''}
                                                             </p>
+                                                            <InlineNotes
+                                                                id={h.id}
+                                                                value={h.notes}
+                                                            />
                                                         </div>
                                                     </div>
                                                 </td>
@@ -273,7 +289,10 @@ export default function CollectionIndex({
                                                     </Badge>
                                                 </td>
                                                 <td className="py-2 pr-3 text-right">
-                                                    {h.quantity}
+                                                    <InlineQty
+                                                        id={h.id}
+                                                        value={h.quantity}
+                                                    />
                                                 </td>
                                                 <td className="py-2 pr-3 text-right text-muted-foreground">
                                                     {formatMoney(
@@ -301,6 +320,47 @@ export default function CollectionIndex({
                                                 </td>
                                                 <td className="py-2 text-right">
                                                     <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                router.patch(
+                                                                    `/collection/${h.id}`,
+                                                                    {
+                                                                        is_for_sale:
+                                                                            !h.is_for_sale,
+                                                                    },
+                                                                    {
+                                                                        preserveScroll:
+                                                                            true,
+                                                                        onSuccess:
+                                                                            () =>
+                                                                                toast.success(
+                                                                                    h.is_for_sale
+                                                                                        ? 'Removed from sale.'
+                                                                                        : 'Marked for sale.',
+                                                                                ),
+                                                                    },
+                                                                )
+                                                            }
+                                                            className={cn(
+                                                                'transition-colors',
+                                                                h.is_for_sale
+                                                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                                                    : 'text-muted-foreground hover:text-foreground',
+                                                            )}
+                                                            aria-label={
+                                                                h.is_for_sale
+                                                                    ? 'Remove from sale'
+                                                                    : 'Mark for sale'
+                                                            }
+                                                            title={
+                                                                h.is_for_sale
+                                                                    ? 'Remove from sale'
+                                                                    : 'Mark for sale'
+                                                            }
+                                                        >
+                                                            <Tag className="size-4" />
+                                                        </button>
                                                         {otherCollections.length >
                                                             0 && (
                                                             <select
@@ -434,6 +494,148 @@ function MoversCard({
                 ))}
             </CardContent>
         </Card>
+    );
+}
+
+/**
+ * Enter commits, Escape cancels, blur commits. Blur is the single commit path —
+ * Enter/Escape just blur the field (Escape sets a skip flag first) so we never
+ * double-submit or save a cancelled edit.
+ */
+function inlineKeyDown(
+    e: React.KeyboardEvent<HTMLInputElement>,
+    cancel: React.MutableRefObject<boolean>,
+) {
+    if (e.key === 'Enter') {
+        e.currentTarget.blur();
+    } else if (e.key === 'Escape') {
+        cancel.current = true;
+        e.currentTarget.blur();
+    }
+}
+
+/** Click-to-edit quantity. */
+function InlineQty({ id, value }: { id: number; value: number }) {
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState(String(value));
+    const cancel = useRef(false);
+
+    const start = () => {
+        setDraft(String(value));
+        setEditing(true);
+    };
+
+    const commit = () => {
+        setEditing(false);
+
+        if (cancel.current) {
+            cancel.current = false;
+
+            return;
+        }
+
+        const next = Math.max(0, Math.min(100000, parseInt(draft, 10) || 0));
+
+        if (next !== value) {
+            router.patch(
+                `/collection/${id}`,
+                { quantity: next },
+                { preserveScroll: true },
+            );
+        }
+    };
+
+    if (!editing) {
+        return (
+            <button
+                type="button"
+                onClick={start}
+                className="rounded px-1.5 py-0.5 tabular-nums hover:bg-muted"
+                title="Edit quantity"
+            >
+                {value}
+            </button>
+        );
+    }
+
+    return (
+        <input
+            type="number"
+            min={0}
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => inlineKeyDown(e, cancel)}
+            className="h-7 w-16 rounded border border-border bg-background px-1.5 text-right text-sm tabular-nums"
+        />
+    );
+}
+
+/** Click-to-edit holding note. */
+function InlineNotes({ id, value }: { id: number; value: string | null }) {
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState(value ?? '');
+    const cancel = useRef(false);
+
+    const start = () => {
+        setDraft(value ?? '');
+        setEditing(true);
+    };
+
+    const commit = () => {
+        setEditing(false);
+
+        if (cancel.current) {
+            cancel.current = false;
+
+            return;
+        }
+
+        const next = draft.trim();
+
+        if (next !== (value ?? '')) {
+            router.patch(
+                `/collection/${id}`,
+                { notes: next === '' ? null : next.slice(0, 1000) },
+                {
+                    preserveScroll: true,
+                    onSuccess: () => toast.success('Note saved.'),
+                },
+            );
+        }
+    };
+
+    if (editing) {
+        return (
+            <input
+                type="text"
+                autoFocus
+                maxLength={1000}
+                value={draft}
+                placeholder="Add a note…"
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={commit}
+                onKeyDown={(e) => inlineKeyDown(e, cancel)}
+                className="mt-0.5 h-6 w-full max-w-xs rounded border border-border bg-background px-1.5 text-xs"
+            />
+        );
+    }
+
+    return (
+        <button
+            type="button"
+            onClick={start}
+            className="mt-0.5 flex max-w-xs items-center gap-1 text-left text-xs text-muted-foreground hover:text-foreground"
+            title="Edit note"
+        >
+            <StickyNote className="size-3 shrink-0" />
+            {value ? (
+                <span className="truncate">{value}</span>
+            ) : (
+                <span className="italic">Add note</span>
+            )}
+        </button>
     );
 }
 
