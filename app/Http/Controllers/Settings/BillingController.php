@@ -6,6 +6,8 @@ use App\Actions\Billing\BuyCreditPack;
 use App\Actions\Billing\CancelSubscription;
 use App\Actions\Billing\StartCheckout;
 use App\Http\Controllers\Controller;
+use App\Models\BillingTransaction;
+use App\Models\User;
 use App\Support\Membership\ScanQuota;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,7 +34,30 @@ class BillingController extends Controller
             'plans' => $this->plans(),
             'creditPacks' => $this->creditPacks(),
             'usage' => ScanQuota::for($user)->snapshot(),
+            'transactions' => $this->transactions($user),
         ]);
+    }
+
+    /**
+     * The user's own billing history (most recent first).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function transactions(User $user): array
+    {
+        return $user->billingTransactions()
+            ->take(50)
+            ->get()
+            ->map(fn (BillingTransaction $t) => [
+                'id' => $t->id,
+                'type' => $t->type,
+                'status' => $t->status,
+                'description' => $t->description,
+                'amount' => $t->amount,
+                'currency' => $t->currency,
+                'created_at' => $t->created_at?->toIso8601String(),
+            ])
+            ->all();
     }
 
     public function checkout(Request $request, StartCheckout $start): Response|RedirectResponse

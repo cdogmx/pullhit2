@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\ImageController;
 use App\Http\Controllers\Admin\ReconcileController;
 use App\Http\Controllers\Admin\SetController;
 use App\Http\Controllers\Admin\SuggestionController;
+use App\Http\Controllers\Admin\TransactionController;
+use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -48,6 +50,17 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('suggestions', [SuggestionController::class, 'index'])->name('suggestions.index');
     Route::post('suggestions/{itemEditSuggestion}/approve', [SuggestionController::class, 'approve'])->name('suggestions.approve');
     Route::post('suggestions/{itemEditSuggestion}/reject', [SuggestionController::class, 'reject'])->name('suggestions.reject');
+
+    // Users — roster + account management (tier, admin, credits, ban, cancel).
+    Route::get('users', [UserController::class, 'index'])->name('users.index');
+    Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::post('users/{user}/credits', [UserController::class, 'credits'])->name('users.credits');
+    Route::post('users/{user}/cancel', [UserController::class, 'cancel'])->name('users.cancel');
+    Route::post('users/{user}/ban', [UserController::class, 'ban'])->name('users.ban');
+    Route::post('users/{user}/unban', [UserController::class, 'unban'])->name('users.unban');
+
+    // Billing ledger — all recorded transactions (read-only).
+    Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');
 
     // Cards
     Route::get('cards', [CardController::class, 'index'])->name('cards.index');

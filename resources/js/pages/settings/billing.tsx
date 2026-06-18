@@ -18,6 +18,16 @@ type Plan = {
 
 type CreditPack = { key: string; credits: number; price_label: string };
 
+type Transaction = {
+    id: number;
+    type: string;
+    status: string;
+    description: string | null;
+    amount: number | null;
+    currency: string | null;
+    created_at: string | null;
+};
+
 type Usage = {
     used: number;
     cap: number | null;
@@ -33,6 +43,7 @@ type Props = {
     plans: Plan[];
     creditPacks: CreditPack[];
     usage: Usage;
+    transactions: Transaction[];
 };
 
 const POPULAR = 'collector';
@@ -60,6 +71,28 @@ function splitPrice(label: string): [string, string] {
     return i === -1 ? [label, ''] : [label.slice(0, i), label.slice(i)];
 }
 
+/** Cents -> "$4.99", honouring the transaction's currency. */
+function formatMoney(amount: number | null, currency: string | null): string {
+    if (amount === null) {
+        return '—';
+    }
+
+    try {
+        return new Intl.NumberFormat(undefined, {
+            style: 'currency',
+            currency: currency || 'USD',
+        }).format(amount / 100);
+    } catch {
+        return `$${(amount / 100).toFixed(2)}`;
+    }
+}
+
+const STATUS_STYLE: Record<string, string> = {
+    succeeded: 'text-emerald-600 dark:text-emerald-400',
+    failed: 'text-red-600 dark:text-red-400',
+    refunded: 'text-amber-600 dark:text-amber-400',
+};
+
 export default function Billing({
     tier,
     isAdmin,
@@ -68,6 +101,7 @@ export default function Billing({
     plans,
     creditPacks,
     usage,
+    transactions,
 }: Props) {
     const [busy, setBusy] = useState<string | null>(null);
 
@@ -321,6 +355,71 @@ export default function Billing({
                         </div>
                     </>
                 )}
+
+                {/* Transaction history */}
+                <div>
+                    <Heading
+                        variant="small"
+                        title="Transaction history"
+                        description="Your subscription charges, credit-pack purchases, and refunds."
+                    />
+                    {transactions.length === 0 ? (
+                        <p className="mt-4 rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+                            No transactions yet.
+                        </p>
+                    ) : (
+                        <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card">
+                            <table className="w-full text-sm">
+                                <thead className="text-left text-xs text-muted-foreground">
+                                    <tr className="border-b border-border">
+                                        <th className="px-4 py-2.5 font-medium">
+                                            Date
+                                        </th>
+                                        <th className="px-4 py-2.5 font-medium">
+                                            Description
+                                        </th>
+                                        <th className="px-4 py-2.5 font-medium">
+                                            Status
+                                        </th>
+                                        <th className="px-4 py-2.5 text-right font-medium">
+                                            Amount
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {transactions.map((t) => (
+                                        <tr
+                                            key={t.id}
+                                            className="border-b border-border/60 last:border-0"
+                                        >
+                                            <td className="px-4 py-2.5 whitespace-nowrap text-muted-foreground">
+                                                {formatDate(t.created_at)}
+                                            </td>
+                                            <td className="px-4 py-2.5">
+                                                {t.description ?? t.type}
+                                            </td>
+                                            <td
+                                                className={cn(
+                                                    'px-4 py-2.5 capitalize',
+                                                    STATUS_STYLE[t.status] ??
+                                                        'text-muted-foreground',
+                                                )}
+                                            >
+                                                {t.status}
+                                            </td>
+                                            <td className="px-4 py-2.5 text-right font-medium tabular-nums">
+                                                {formatMoney(
+                                                    t.amount,
+                                                    t.currency,
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             </div>
         </>
     );

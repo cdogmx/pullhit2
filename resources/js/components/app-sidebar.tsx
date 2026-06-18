@@ -3,6 +3,7 @@ import {
     Anchor,
     Bell,
     Boxes,
+    CreditCard,
     GitCompare,
     Globe,
     Heart,
@@ -16,6 +17,7 @@ import {
     Search,
     Shield,
     Sparkles,
+    Users,
     Zap,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
@@ -85,6 +87,8 @@ const pokemonNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
     { title: 'Admin', href: '/admin', icon: Shield },
+    { title: 'Users', href: '/admin/users', icon: Users },
+    { title: 'Transactions', href: '/admin/transactions', icon: CreditCard },
     { title: 'Brands', href: '/admin/brands', icon: Boxes },
     { title: 'Sets', href: '/admin/sets', icon: Library },
     { title: 'Cards', href: '/admin/cards', icon: PencilRuler },

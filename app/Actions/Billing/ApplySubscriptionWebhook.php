@@ -20,6 +20,10 @@ class ApplySubscriptionWebhook
         'subscription.failed', 'subscription.on_hold',
     ];
 
+    public function __construct(
+        protected RecordBillingTransaction $record,
+    ) {}
+
     /** @param  array<string, mixed>  $payload */
     public function __invoke(array $payload): ?User
     {
@@ -30,6 +34,9 @@ class ApplySubscriptionWebhook
         if (! $user) {
             return null;
         }
+
+        // Record the money movement (payment/refund events) for the history views.
+        ($this->record)($payload, $user);
 
         // One-time scan-credit-pack purchase: grant the credits and stop here.
         $credits = (int) data_get($data, 'metadata.credits', 0);

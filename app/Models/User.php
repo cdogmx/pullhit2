@@ -52,6 +52,7 @@ class User extends Authenticatable implements PasskeyUser
             'is_wishlist_public' => 'boolean',
             'membership_renews_at' => 'datetime',
             'membership_cancel_scheduled' => 'boolean',
+            'banned_at' => 'datetime',
             'notification_preferences' => 'array',
         ];
     }
@@ -110,6 +111,18 @@ class User extends Authenticatable implements PasskeyUser
     public function isAdmin(): bool
     {
         return (bool) $this->is_admin;
+    }
+
+    /** Whether this account is banned (access denied by EnsureNotBanned). */
+    public function isBanned(): bool
+    {
+        return $this->banned_at !== null;
+    }
+
+    /** @return HasMany<BillingTransaction, $this> */
+    public function billingTransactions(): HasMany
+    {
+        return $this->hasMany(BillingTransaction::class)->latest();
     }
 
     /** @return HasMany<CollectionItem, $this> */

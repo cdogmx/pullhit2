@@ -83,6 +83,63 @@ export type AdminCardFilters = {
     sort: string;
 };
 
+export type AdminPagination = {
+    page: number;
+    last_page: number;
+    total: number;
+};
+
+export type AdminUser = {
+    id: number;
+    name: string;
+    username: string | null;
+    email: string;
+    tier: string;
+    is_admin: boolean;
+    banned_at: string | null;
+    banned_reason: string | null;
+    credits: number;
+    has_subscription: boolean;
+    cancel_scheduled: boolean;
+    renews_at: string | null;
+    transactions_count: number;
+    lifetime_amount: number;
+    created_at: string | null;
+};
+
+export type AdminUserFilters = {
+    q: string;
+    tier: string;
+    role: string;
+    sort: string;
+};
+
+export type AdminTransaction = {
+    id: number;
+    type: string;
+    status: string;
+    description: string | null;
+    amount: number | null;
+    currency: string | null;
+    tier: string | null;
+    credits: number | null;
+    dodo_payment_id: string | null;
+    created_at: string | null;
+    user: { id: number; name: string; email: string } | null;
+};
+
+export type AdminTransactionFilters = {
+    q: string;
+    type: string;
+    status: string;
+};
+
+export type AdminTransactionTotals = {
+    gross: number;
+    refunded: number;
+    count: number;
+};
+
 export type MissingReport = {
     expected: number;
     present: number;
