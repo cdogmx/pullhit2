@@ -1,4 +1,14 @@
 import { Head } from '@inertiajs/react';
+import { Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { formatMoney } from '@/lib/format';
 
 type Holding = {
@@ -26,9 +36,36 @@ type Props = {
     holdings: Holding[];
 };
 
+const ALL = '__all__';
+
+const SORTS = [
+    { value: 'value_desc', label: 'Value: high to low' },
+    { value: 'value_asc', label: 'Value: low to high' },
+    { value: 'name', label: 'Name: A to Z' },
+    { value: 'quantity', label: 'Quantity' },
+];
+
+/** Sort nulls last regardless of direction. */
+function byValue(a: number | null, b: number | null, dir: 1 | -1): number {
+    if (a == null && b == null) {
+        return 0;
+    }
+
+    if (a == null) {
+        return 1;
+    }
+
+    if (b == null) {
+        return -1;
+    }
+
+    return (a - b) * dir;
+}
+
 /**
  * Public, read-only view of a user's collection. Shows cards + market values,
  * but never cost basis or P&L (those stay private). Chrome from AppShell.
+ * Sorting/filtering is client-side over the fully server-rendered list.
  */
 export default function PublicCollection({
     owner,
@@ -39,6 +76,55 @@ export default function PublicCollection({
     const title = collection.is_default
         ? `${owner.username}'s collection`
         : `${owner.username} · ${collection.name}`;
+
+    const [q, setQ] = useState('');
+    const [set, setSet] = useState(ALL);
+    const [sort, setSort] = useState('value_desc');
+
+    // Sets present in this collection, for the filter dropdown.
+    const sets = useMemo(
+        () =>
+            Array.from(
+                new Set(holdings.map((h) => h.set).filter((s): s is string => !!s)),
+            ).sort((a, b) => a.localeCompare(b)),
+        [holdings],
+    );
+
+    const visible = useMemo(() => {
+        const needle = q.trim().toLowerCase();
+
+        const filtered = holdings.filter((h) => {
+            if (set !== ALL && h.set !== set) {
+                return false;
+            }
+
+            if (needle === '') {
+                return true;
+            }
+
+            return (
+                (h.name ?? '').toLowerCase().includes(needle) ||
+                (h.number ?? '').toLowerCase().includes(needle) ||
+                (h.set ?? '').toLowerCase().includes(needle)
+            );
+        });
+
+        const sorted = [...filtered];
+        sorted.sort((a, b) => {
+            switch (sort) {
+                case 'value_asc':
+                    return byValue(a.market_value, b.market_value, 1);
+                case 'name':
+                    return (a.name ?? '').localeCompare(b.name ?? '');
+                case 'quantity':
+                    return b.quantity - a.quantity;
+                default:
+                    return byValue(a.market_value, b.market_value, -1);
+            }
+        });
+
+        return sorted;
+    }, [holdings, q, set, sort]);
 
     return (
         <>
@@ -64,58 +150,117 @@ export default function PublicCollection({
                         This collection is empty.
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                        {holdings.map((h, i) => (
-                            <a
-                                key={i}
-                                href={`/catalog/${h.catalog_item_id}`}
-                                className="group overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring"
-                            >
-                                <div className="aspect-[3/4] overflow-hidden bg-muted">
-                                    {h.image_url ? (
-                                        <img
-                                            src={h.image_url}
-                                            alt={h.name ?? ''}
-                                            loading="lazy"
-                                            className="size-full object-contain transition-transform group-hover:scale-105"
-                                        />
-                                    ) : (
-                                        <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
-                                            No image
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="space-y-1 p-3">
-                                    <p
-                                        className="truncate text-sm font-medium"
-                                        title={h.name ?? ''}
+                    <>
+                        {/* Controls */}
+                        <div className="mb-4 flex flex-wrap items-center gap-2">
+                            <div className="relative">
+                                <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    value={q}
+                                    onChange={(e) => setQ(e.target.value)}
+                                    placeholder="Search cards"
+                                    className="w-52 pl-8"
+                                />
+                            </div>
+
+                            {sets.length > 1 && (
+                                <Select value={set} onValueChange={setSet}>
+                                    <SelectTrigger className="w-44">
+                                        <SelectValue placeholder="All sets" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value={ALL}>
+                                            All sets
+                                        </SelectItem>
+                                        {sets.map((s) => (
+                                            <SelectItem key={s} value={s}>
+                                                {s}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+
+                            <Select value={sort} onValueChange={setSort}>
+                                <SelectTrigger className="w-48">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {SORTS.map((s) => (
+                                        <SelectItem key={s.value} value={s.value}>
+                                            Sort: {s.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            <span className="ml-auto text-xs text-muted-foreground">
+                                {visible.length.toLocaleString()} of{' '}
+                                {holdings.length.toLocaleString()}
+                            </span>
+                        </div>
+
+                        {visible.length === 0 ? (
+                            <div className="rounded-lg border border-dashed border-border py-20 text-center text-sm text-muted-foreground">
+                                No cards match your filters.
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                                {visible.map((h, i) => (
+                                    <a
+                                        key={`${h.catalog_item_id}-${i}`}
+                                        href={`/catalog/${h.catalog_item_id}`}
+                                        className="group overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring"
                                     >
-                                        {h.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {h.set}
-                                        {h.number ? ` · ${h.number}` : ''}
-                                    </p>
-                                    <div className="flex items-center justify-between gap-2 text-xs">
-                                        <span className="truncate text-muted-foreground">
-                                            {h.state_label}
-                                            {h.quantity > 1
-                                                ? ` · ×${h.quantity}`
-                                                : ''}
-                                        </span>
-                                        {h.market_value != null && (
-                                            <span className="shrink-0 font-semibold">
-                                                {formatMoney(
-                                                    h.market_value,
-                                                    h.currency,
+                                        <div className="aspect-[3/4] overflow-hidden bg-muted">
+                                            {h.image_url ? (
+                                                <img
+                                                    src={h.image_url}
+                                                    alt={h.name ?? ''}
+                                                    loading="lazy"
+                                                    className="size-full object-contain transition-transform group-hover:scale-105"
+                                                />
+                                            ) : (
+                                                <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
+                                                    No image
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="space-y-1 p-3">
+                                            <p
+                                                className="truncate text-sm font-medium"
+                                                title={h.name ?? ''}
+                                            >
+                                                {h.name}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {h.set}
+                                                {h.number
+                                                    ? ` · ${h.number}`
+                                                    : ''}
+                                            </p>
+                                            <div className="flex items-center justify-between gap-2 text-xs">
+                                                <span className="truncate text-muted-foreground">
+                                                    {h.state_label}
+                                                    {h.quantity > 1
+                                                        ? ` · ×${h.quantity}`
+                                                        : ''}
+                                                </span>
+                                                {h.market_value != null && (
+                                                    <span className="shrink-0 font-semibold">
+                                                        {formatMoney(
+                                                            h.market_value,
+                                                            h.currency,
+                                                        )}
+                                                    </span>
                                                 )}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </a>
-                        ))}
-                    </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                ))}
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </>
