@@ -21,7 +21,7 @@ class BuildImportPreview
     ) {}
 
     /**
-     * @return array{importable: list<array<string, mixed>>, counts: array<string, int>, skipped: list<array{bucket: string, count: int}>}
+     * @return array{token: string, importable: list<array<string, mixed>>, counts: array<string, int>, skipped: list<array{bucket: string, count: int}>}
      */
     public function __invoke(string $csv): array
     {
@@ -80,7 +80,11 @@ class BuildImportPreview
             $skippedList[] = ['bucket' => $bucket, 'count' => $count];
         }
 
-        return ['importable' => $importable, 'counts' => $counts, 'skipped' => $skippedList];
+        // A content signature so the review UI can remount its editable form
+        // fresh for each distinct upload (Inertia preserves the component).
+        $token = substr(md5((string) json_encode($importable)), 0, 16);
+
+        return ['token' => $token, 'importable' => $importable, 'counts' => $counts, 'skipped' => $skippedList];
     }
 
     /** A human label for a printing, e.g. "Reverse Holo · Double Rare". */

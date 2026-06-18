@@ -28,6 +28,7 @@ type ImportableRow = {
 };
 
 type Props = {
+    token?: string;
     importable?: ImportableRow[];
     counts?: {
         parsed: number;
@@ -39,30 +40,17 @@ type Props = {
 };
 
 export default function ImportCollection({
+    token,
     importable,
     counts,
     skipped,
 }: Props) {
     const upload = useForm<{ file: File | null }>({ file: null });
-    const commit = useForm<{ rows: ImportableRow[] }>({ rows: importable ?? [] });
 
     const submitUpload = (e: React.FormEvent) => {
         e.preventDefault();
         upload.post('/collection/import/preview', { forceFormData: true });
     };
-
-    const submitImport = () => {
-        commit.post('/collection/import');
-    };
-
-    // Resolve an ambiguous row by choosing its printing (catalog item).
-    const setRowCard = (index: number, id: number) =>
-        commit.setData(
-            'rows',
-            commit.data.rows.map((r, i) =>
-                i === index ? { ...r, catalog_item_id: id } : r,
-            ),
-        );
 
     const importableCount = importable?.length ?? 0;
 
@@ -138,148 +126,169 @@ export default function ImportCollection({
                             Cards from sets we don&rsquo;t carry yet are skipped.
                         </p>
 
-                        {importable && importable.length > 0 && (
-                            <div className="overflow-hidden rounded-xl border border-border">
-                                <div className="max-h-96 overflow-y-auto">
-                                    <table className="w-full text-sm">
-                                        <thead className="sticky top-0 bg-muted text-left text-xs text-muted-foreground">
-                                            <tr>
-                                                <th className="px-3 py-2 font-medium">
-                                                    Card
-                                                </th>
-                                                <th className="px-3 py-2 font-medium">
-                                                    State
-                                                </th>
-                                                <th className="px-3 py-2 text-right font-medium">
-                                                    Qty
-                                                </th>
-                                                <th className="px-3 py-2 text-right font-medium">
-                                                    Cost
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-border">
-                                            {commit.data.rows.map((row, i) => (
-                                                <tr key={i}>
-                                                    <td className="px-3 py-2">
-                                                        <div className="flex items-center gap-1.5 font-medium">
-                                                            {row.ambiguous && (
-                                                                <span
-                                                                    className="size-1.5 shrink-0 rounded-full bg-amber-500"
-                                                                    title="Confirm the printing"
-                                                                    aria-hidden
-                                                                />
-                                                            )}
-                                                            {row.name}
-                                                        </div>
-                                                        <div className="text-xs text-muted-foreground">
-                                                            {row.set}
-                                                            {row.number
-                                                                ? ` · ${row.number}`
-                                                                : ''}
-                                                            {row.folder
-                                                                ? ` · ${row.folder}`
-                                                                : ''}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-3 py-2 text-muted-foreground">
-                                                        <div>
-                                                            {row.state_label}
-                                                        </div>
-                                                        {row.ambiguous &&
-                                                            row.candidates && (
-                                                                <select
-                                                                    value={
-                                                                        row.catalog_item_id
-                                                                    }
-                                                                    onChange={(
-                                                                        e,
-                                                                    ) =>
-                                                                        setRowCard(
-                                                                            i,
-                                                                            Number(
-                                                                                e
-                                                                                    .target
-                                                                                    .value,
-                                                                            ),
-                                                                        )
-                                                                    }
-                                                                    className="mt-1 w-full max-w-[12rem] rounded-md border border-amber-500/40 bg-background px-2 py-1 text-xs text-foreground"
-                                                                >
-                                                                    {row.candidates.map(
-                                                                        (c) => (
-                                                                            <option
-                                                                                key={
-                                                                                    c.catalog_item_id
-                                                                                }
-                                                                                value={
-                                                                                    c.catalog_item_id
-                                                                                }
-                                                                            >
-                                                                                {
-                                                                                    c.label
-                                                                                }
-                                                                            </option>
-                                                                        ),
-                                                                    )}
-                                                                </select>
-                                                            )}
-                                                    </td>
-                                                    <td className="px-3 py-2 text-right">
-                                                        {row.quantity}
-                                                    </td>
-                                                    <td className="px-3 py-2 text-right text-muted-foreground">
-                                                        {row.unit_cost
-                                                            ? formatMoney(
-                                                                  row.unit_cost,
-                                                              )
-                                                            : '—'}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-
-                        {skipped && skipped.length > 0 && (
-                            <div className="rounded-xl border border-dashed border-border p-4">
-                                <h3 className="text-sm font-semibold">
-                                    Skipped — sets we don&rsquo;t carry yet
-                                </h3>
-                                <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                                    {skipped.map((s) => (
-                                        <li key={s.bucket}>
-                                            <span className="tabular-nums">
-                                                {s.count}
-                                            </span>{' '}
-                                            · {s.bucket}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-
-                        <div className="flex items-center gap-3">
-                            <Button
-                                onClick={submitImport}
-                                disabled={
-                                    !importable ||
-                                    importable.length === 0 ||
-                                    commit.processing
-                                }
-                            >
-                                Import {importableCount} cards
-                            </Button>
-                            <Button asChild variant="ghost">
-                                <Link href="/collection/import">
-                                    Upload a different file
-                                </Link>
-                            </Button>
-                        </div>
+                        {/* Keyed by the upload's token so the editable form
+                            re-initialises from props on each new preview
+                            (Inertia preserves the component otherwise). */}
+                        <ImportPreview
+                            key={token ?? 'preview'}
+                            importable={importable ?? []}
+                            skipped={skipped ?? []}
+                        />
                     </div>
                 )}
+            </div>
+        </>
+    );
+}
+
+function ImportPreview({
+    importable,
+    skipped,
+}: {
+    importable: ImportableRow[];
+    skipped: { bucket: string; count: number }[];
+}) {
+    const commit = useForm<{ rows: ImportableRow[] }>({ rows: importable });
+
+    const submitImport = () => {
+        commit.post('/collection/import');
+    };
+
+    // Resolve an ambiguous row by choosing its printing (catalog item).
+    const setRowCard = (index: number, id: number) =>
+        commit.setData(
+            'rows',
+            commit.data.rows.map((r, i) =>
+                i === index ? { ...r, catalog_item_id: id } : r,
+            ),
+        );
+
+    return (
+        <>
+            {commit.data.rows.length > 0 && (
+                <div className="overflow-hidden rounded-xl border border-border">
+                    <div className="max-h-96 overflow-y-auto">
+                        <table className="w-full text-sm">
+                            <thead className="sticky top-0 bg-muted text-left text-xs text-muted-foreground">
+                                <tr>
+                                    <th className="px-3 py-2 font-medium">
+                                        Card
+                                    </th>
+                                    <th className="px-3 py-2 font-medium">
+                                        State
+                                    </th>
+                                    <th className="px-3 py-2 text-right font-medium">
+                                        Qty
+                                    </th>
+                                    <th className="px-3 py-2 text-right font-medium">
+                                        Cost
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {commit.data.rows.map((row, i) => (
+                                    <tr key={i}>
+                                        <td className="px-3 py-2">
+                                            <div className="flex items-center gap-1.5 font-medium">
+                                                {row.ambiguous && (
+                                                    <span
+                                                        className="size-1.5 shrink-0 rounded-full bg-amber-500"
+                                                        title="Confirm the printing"
+                                                        aria-hidden
+                                                    />
+                                                )}
+                                                {row.name}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {row.set}
+                                                {row.number
+                                                    ? ` · ${row.number}`
+                                                    : ''}
+                                                {row.folder
+                                                    ? ` · ${row.folder}`
+                                                    : ''}
+                                            </div>
+                                        </td>
+                                        <td className="px-3 py-2 text-muted-foreground">
+                                            <div>{row.state_label}</div>
+                                            {row.ambiguous &&
+                                                row.candidates && (
+                                                    <select
+                                                        value={
+                                                            row.catalog_item_id
+                                                        }
+                                                        onChange={(e) =>
+                                                            setRowCard(
+                                                                i,
+                                                                Number(
+                                                                    e.target
+                                                                        .value,
+                                                                ),
+                                                            )
+                                                        }
+                                                        className="mt-1 w-full max-w-[12rem] rounded-md border border-amber-500/40 bg-background px-2 py-1 text-xs text-foreground"
+                                                    >
+                                                        {row.candidates.map(
+                                                            (cand) => (
+                                                                <option
+                                                                    key={
+                                                                        cand.catalog_item_id
+                                                                    }
+                                                                    value={
+                                                                        cand.catalog_item_id
+                                                                    }
+                                                                >
+                                                                    {cand.label}
+                                                                </option>
+                                                            ),
+                                                        )}
+                                                    </select>
+                                                )}
+                                        </td>
+                                        <td className="px-3 py-2 text-right">
+                                            {row.quantity}
+                                        </td>
+                                        <td className="px-3 py-2 text-right text-muted-foreground">
+                                            {row.unit_cost
+                                                ? formatMoney(row.unit_cost)
+                                                : '—'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {skipped.length > 0 && (
+                <div className="rounded-xl border border-dashed border-border p-4">
+                    <h3 className="text-sm font-semibold">
+                        Skipped — sets we don&rsquo;t carry yet
+                    </h3>
+                    <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                        {skipped.map((s) => (
+                            <li key={s.bucket}>
+                                <span className="tabular-nums">{s.count}</span> ·{' '}
+                                {s.bucket}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            <div className="flex items-center gap-3">
+                <Button
+                    onClick={submitImport}
+                    disabled={
+                        commit.data.rows.length === 0 || commit.processing
+                    }
+                >
+                    Import {commit.data.rows.length} cards
+                </Button>
+                <Button asChild variant="ghost">
+                    <Link href="/collection/import">Upload a different file</Link>
+                </Button>
             </div>
         </>
     );
