@@ -3,8 +3,10 @@
 use App\Http\Controllers\Web\CatalogController;
 use App\Http\Controllers\Web\CollectionController;
 use App\Http\Controllers\Web\CollectionsController;
+use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\ScanController;
+use App\Http\Controllers\Web\SitemapController;
 use App\Http\Controllers\Web\SuggestionController;
 use App\Http\Controllers\Web\WishlistController;
 use App\Http\Controllers\Web\WishlistsController;
@@ -22,10 +24,10 @@ Route::get('browse/{productLine}', [CatalogController::class, 'browseLine'])->na
 Route::get('browse/{productLine}/{set}', [CatalogController::class, 'browseSet'])->name('catalog.browse.set');
 Route::get('catalog/{catalogItem}', [CatalogController::class, 'show'])->name('catalog.show');
 
-Route::get('sitemap.xml', \App\Http\Controllers\Web\SitemapController::class)->name('sitemap');
+Route::get('sitemap.xml', SitemapController::class)->name('sitemap');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Collection + portfolio (always free for logged-in users).
     Route::get('collection', [CollectionController::class, 'index'])->name('collection.index');
