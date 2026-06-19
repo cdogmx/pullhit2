@@ -55,7 +55,14 @@
             $description = $pageMeta['description'] ?? 'Value your trading cards and collectibles with confidence-scored market prices — sealed product, raw singles, and graded items. Wax on.';
             $ogTitle = $pageMeta['title'] ?? $appName.' — Wax on.';
             $pageTitle = $pageMeta['title'] ?? $appName.' — Trading card prices, values & collection tracker';
-            $ogImage = \Illuminate\Support\Facades\Storage::disk('s3')->url('phb/og/cardfoo-wax-on.jpg');
+            // A page may supply its own share image (e.g. the card itself); fall
+            // back to the branded banner. The banner is 1500×500; per-page images
+            // (card scans) aren't, so only assert dimensions for the banner.
+            $ogImage = $pageMeta['image'] ?? \Illuminate\Support\Facades\Storage::disk('s3')->url('phb/og/cardfoo-wax-on.jpg');
+            $ogImageIsBanner = empty($pageMeta['image']);
+            $ogType = $pageMeta['og_type'] ?? 'website';
+            $twitterCard = $pageMeta['twitter_card'] ?? 'summary_large_image';
+            $jsonLd = $pageMeta['jsonld'] ?? null;
         @endphp
 
         <meta name="description" content="{{ $description }}">
@@ -64,19 +71,28 @@
         <meta name="theme-color" content="#111317">
         <link rel="canonical" href="{{ url()->current() }}">
 
-        <meta property="og:type" content="website">
+        <meta property="og:type" content="{{ $ogType }}">
         <meta property="og:site_name" content="{{ $appName }}">
         <meta property="og:title" content="{{ $ogTitle }}">
         <meta property="og:description" content="{{ $description }}">
         <meta property="og:url" content="{{ url()->current() }}">
         <meta property="og:image" content="{{ $ogImage }}">
+        @if($ogImageIsBanner)
         <meta property="og:image:width" content="1500">
         <meta property="og:image:height" content="500">
+        @endif
+        @isset($pageMeta['image_alt'])
+        <meta property="og:image:alt" content="{{ $pageMeta['image_alt'] }}">
+        @endisset
 
-        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:card" content="{{ $twitterCard }}">
         <meta name="twitter:title" content="{{ $ogTitle }}">
         <meta name="twitter:description" content="{{ $description }}">
         <meta name="twitter:image" content="{{ $ogImage }}">
+
+        @if($jsonLd)
+        <script type="application/ld+json">{!! json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) !!}</script>
+        @endif
 
         {{-- Kaushan Script — brush font used for the "Wax on." slogan. --}}
         <link rel="preconnect" href="https://fonts.googleapis.com">

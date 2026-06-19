@@ -122,6 +122,12 @@ class CatalogController extends Controller
             'gradingCompanies' => GradingCompany::orderBy('name')
                 ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
             'seo' => $seo,
+            // Server-rendered SEO/share meta for the brand/set landing pages.
+            'meta' => $seo ? [
+                'title' => $seo['title'].' | '.config('app.name'),
+                'description' => $blurb
+                    ?: "Browse {$seo['heading']} cards with confidence-scored market prices, sets, and values on ".config('app.name').'.',
+            ] : null,
             // Language selector shows while browsing a brand's series/sets.
             'tileLanguages' => in_array($mode, ['series', 'sets'], true) && ! empty($filters['product_line'])
                 ? $tiles->languagesFor($filters['product_line'])
@@ -199,6 +205,9 @@ class CatalogController extends Controller
         $model = $show($catalogItem); // has marketValues + relations loaded
 
         return Inertia::render('catalog/show', [
+            // Server-rendered share + SEO meta (read by the Blade root for OG /
+            // Twitter / JSON-LD before any JS runs).
+            'meta' => $this->shareMeta($model),
             // The resource wraps under `data` (consistent with the API + the
             // browse collection); the page reads props.item.data.
             'item' => new CatalogItemResource($model),
@@ -217,6 +226,62 @@ class CatalogController extends Controller
             // "More in this set" — other base cards from the same set.
             'moreInSet' => $this->moreInSet($catalogItem),
         ]);
+    }
+
+    /**
+     * Card-specific share + SEO meta: a descriptive title, a description that
+     * includes the current market value when known, the card image as the OG /
+     * Twitter image (so a shared link previews the actual card), and Product
+     * JSON-LD for search rich results.
+     *
+     * @return array<string, mixed>
+     */
+    protected function shareMeta(CatalogItem $item): array
+    {
+        $name = $item->display_name ?: $item->name;
+        $set = $item->set?->name;
+        $brand = $item->productLine?->name ?? $set;
+        $where = trim(implode(' ', array_filter([$set, $item->number ? "#{$item->number}" : null])));
+        $image = $item->primary_image_path ?? ($item->external_ids['ptcgio_image'] ?? null);
+        $value = $item->defaultMarketValue?->median;
+        $price = $value !== null ? '$'.number_format($value / 100, 2) : null;
+
+        $title = trim($name.($where !== '' ? " · {$where}" : '')).' — price & value';
+        $description = $price
+            ? "{$name}".($where !== '' ? " ({$where})" : '')." market value: {$price}. Confidence-scored prices from real sales on ".config('app.name').'.'
+            : "Track the market value of {$name}".($where !== '' ? " ({$where})" : '').' with confidence-scored prices on '.config('app.name').'.';
+
+        $meta = [
+            'title' => $title,
+            'description' => $description,
+            'og_type' => 'product',
+        ];
+
+        if ($image) {
+            $meta['image'] = $image;
+            $meta['image_alt'] = $name;
+        }
+
+        $meta['jsonld'] = array_filter([
+            '@context' => 'https://schema.org',
+            '@type' => 'Product',
+            'name' => $name,
+            'image' => $image,
+            'category' => 'Trading Cards',
+            'sku' => (string) $item->id,
+            'brand' => $brand ? ['@type' => 'Brand', 'name' => $brand] : null,
+            // The market value as a single Offer — accurate for a price guide and
+            // what surfaces price in search results.
+            'offers' => $value !== null ? [
+                '@type' => 'Offer',
+                'price' => number_format($value / 100, 2, '.', ''),
+                'priceCurrency' => 'USD',
+                'availability' => 'https://schema.org/InStock',
+                'url' => url()->current(),
+            ] : null,
+        ], fn ($v) => $v !== null);
+
+        return $meta;
     }
 
     /**
