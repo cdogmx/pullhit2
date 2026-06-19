@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/react';
-import { Search } from 'lucide-react';
+import { Pencil, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { EditHoldingDialog } from '@/components/collection/edit-holding-dialog';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -10,6 +11,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { formatMoney } from '@/lib/format';
+import type { GradingCompanyOption } from '@/types';
 
 type Holding = {
     catalog_item_id: number | null;
@@ -22,11 +24,19 @@ type Holding = {
     unit_value: number | null;
     market_value: number | null;
     currency: string;
+    // Owner-only edit fields (present when canEdit).
+    id?: number;
+    condition?: string | null;
+    grade?: number | null;
+    grading_company?: { id: number } | null;
+    is_for_sale?: boolean;
+    notes?: string | null;
+    folder?: string | null;
 };
 
 type Props = {
     owner: { username: string };
-    collection: { name: string; is_default: boolean };
+    collection: { name: string; slug: string; is_default: boolean };
     summary: {
         total_value: number;
         item_count: number;
@@ -34,6 +44,9 @@ type Props = {
         currency: string;
     };
     holdings: Holding[];
+    canEdit?: boolean;
+    collections?: { id: number; name: string; slug: string }[];
+    gradingCompanies?: GradingCompanyOption[];
 };
 
 const ALL = '__all__';
@@ -72,6 +85,9 @@ export default function PublicCollection({
     collection,
     summary,
     holdings,
+    canEdit = false,
+    collections = [],
+    gradingCompanies = [],
 }: Props) {
     const title = collection.is_default
         ? `${owner.username}'s collection`
@@ -80,6 +96,7 @@ export default function PublicCollection({
     const [q, setQ] = useState('');
     const [set, setSet] = useState(ALL);
     const [sort, setSort] = useState('value_desc');
+    const [editing, setEditing] = useState<Holding | null>(null);
 
     // Sets present in this collection, for the filter dropdown.
     const sets = useMemo(
@@ -207,12 +224,26 @@ export default function PublicCollection({
                         ) : (
                             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                                 {visible.map((h, i) => (
-                                    <a
+                                    <div
                                         key={`${h.catalog_item_id}-${i}`}
-                                        href={`/catalog/${h.catalog_item_id}`}
-                                        className="group overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring"
+                                        className="relative"
                                     >
-                                        <div className="aspect-[3/4] overflow-hidden bg-muted">
+                                        {canEdit && h.id != null && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditing(h)}
+                                                className="absolute top-2 right-2 z-10 flex size-7 items-center justify-center rounded-md border border-border bg-background/90 text-muted-foreground shadow-sm hover:text-foreground"
+                                                aria-label="Edit holding"
+                                                title="Edit holding"
+                                            >
+                                                <Pencil className="size-3.5" />
+                                            </button>
+                                        )}
+                                        <a
+                                            href={`/catalog/${h.catalog_item_id}`}
+                                            className="group block overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring"
+                                        >
+                                            <div className="aspect-[3/4] overflow-hidden bg-muted">
                                             {h.image_url ? (
                                                 <img
                                                     src={h.image_url}
@@ -256,13 +287,38 @@ export default function PublicCollection({
                                                 )}
                                             </div>
                                         </div>
-                                    </a>
+                                        </a>
+                                    </div>
                                 ))}
                             </div>
                         )}
                     </>
                 )}
             </div>
+
+            <EditHoldingDialog
+                holding={
+                    editing && editing.id != null
+                        ? {
+                              id: editing.id,
+                              name: editing.name ?? 'Holding',
+                              condition: editing.condition ?? null,
+                              grade: editing.grade ?? null,
+                              grading_company: editing.grading_company ?? null,
+                              quantity: editing.quantity,
+                              is_for_sale: editing.is_for_sale ?? false,
+                              notes: editing.notes ?? null,
+                              folder: editing.folder ?? null,
+                          }
+                        : null
+                }
+                collections={collections
+                    .filter((col) => col.slug !== collection.slug)
+                    .map((col) => ({ id: col.id, name: col.name }))}
+                gradingCompanies={gradingCompanies}
+                open={editing !== null}
+                onOpenChange={(o) => !o && setEditing(null)}
+            />
         </>
     );
 }

@@ -4,7 +4,7 @@ export type Holding = {
     state_label: string;
     condition: string | null;
     grade: number | null;
-    grading_company?: { slug: string; name: string } | null;
+    grading_company?: { id: number; slug: string; name: string } | null;
     quantity: number;
     is_for_sale: boolean;
     notes: string | null;

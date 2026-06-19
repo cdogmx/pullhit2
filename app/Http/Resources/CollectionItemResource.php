@@ -27,7 +27,7 @@ class CollectionItemResource extends JsonResource
             'condition' => $this->condition?->value,
             'grade' => $this->grade,
             'grading_company' => $this->whenLoaded('gradingCompany', fn () => $this->gradingCompany
-                ? ['slug' => $this->gradingCompany->slug, 'name' => $this->gradingCompany->name]
+                ? ['id' => $this->gradingCompany->id, 'slug' => $this->gradingCompany->slug, 'name' => $this->gradingCompany->name]
                 : null),
             'quantity' => $this->quantity,
             'is_for_sale' => $this->is_for_sale,

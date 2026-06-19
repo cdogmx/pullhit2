@@ -1,10 +1,12 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Heart, Tag, X } from 'lucide-react';
+import { Heart, Pencil, Tag, X } from 'lucide-react';
 import { useState } from 'react';
-import { ListTabs, type ListSummary } from '@/components/shared/list-tabs';
+import { ListTabs  } from '@/components/shared/list-tabs';
+import type {ListSummary} from '@/components/shared/list-tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { EditWishlistItemDialog } from '@/components/wishlist/edit-wishlist-item-dialog';
 import { formatMoney } from '@/lib/format';
 import type { WishlistRow, WishlistSummary } from '@/types';
 
@@ -26,6 +28,8 @@ export default function WishlistIndex({
     publicUrl,
 }: Props) {
     const otherWishlists = wishlists.filter((w) => w.slug !== activeWishlist);
+    const [editing, setEditing] = useState<WishlistRow | null>(null);
+
     return (
         <>
             <Head title="Wishlist" />
@@ -97,11 +101,34 @@ export default function WishlistIndex({
                                 key={row.id}
                                 row={row}
                                 otherWishlists={otherWishlists}
+                                onEdit={() => setEditing(row)}
                             />
                         ))}
                     </div>
                 )}
             </div>
+
+            <EditWishlistItemDialog
+                item={
+                    editing
+                        ? {
+                              id: editing.id,
+                              name:
+                                  editing.catalog_item?.display_name ??
+                                  editing.catalog_item?.name ??
+                                  'Wishlist item',
+                              target_price: editing.target_price,
+                              notes: editing.notes,
+                          }
+                        : null
+                }
+                wishlists={otherWishlists.map((w) => ({
+                    id: w.id,
+                    name: w.name,
+                }))}
+                open={editing !== null}
+                onOpenChange={(o) => !o && setEditing(null)}
+            />
         </>
     );
 }
@@ -109,9 +136,11 @@ export default function WishlistIndex({
 function WishRow({
     row,
     otherWishlists,
+    onEdit,
 }: {
     row: WishlistRow;
     otherWishlists: ListSummary[];
+    onEdit: () => void;
 }) {
     const card = row.catalog_item;
     const [target, setTarget] = useState(
@@ -122,9 +151,11 @@ function WishRow({
         const dollars = target.trim();
         const cents =
             dollars === '' ? null : Math.round(parseFloat(dollars) * 100);
+
         if (cents === row.target_price) {
             return;
         }
+
         router.patch(
             `/wishlist/${row.id}`,
             { target_price: Number.isFinite(cents as number) ? cents : null },
@@ -214,6 +245,16 @@ function WishRow({
                     className="h-8 w-24"
                     aria-label="Target price"
                 />
+                <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-8"
+                    onClick={onEdit}
+                    aria-label="Edit wishlist item"
+                    title="Edit"
+                >
+                    <Pencil className="size-4" />
+                </Button>
                 <Button
                     size="icon"
                     variant="ghost"

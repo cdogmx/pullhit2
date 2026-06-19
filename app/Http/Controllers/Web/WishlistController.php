@@ -9,10 +9,11 @@ use App\Http\Requests\Wishlist\StoreWishlistItemRequest;
 use App\Http\Resources\WishlistItemResource;
 use App\Models\CatalogItem;
 use App\Models\User;
-use App\Support\Membership\Entitlements;
 use App\Models\WishlistItem;
+use App\Support\Membership\Entitlements;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -87,7 +88,9 @@ class WishlistController extends Controller
 
         abort_unless($wishlist && $wishlist->is_public, 404);
 
-        $data = $build($wishlist);
+        // The owner viewing their own public page can edit items in place.
+        $owner = auth()->id() === $user->id;
+        $data = $build($wishlist, $owner);
 
         // Server-rendered share meta (social scrapers don't run JS).
         $title = $wishlist->is_default
@@ -120,7 +123,7 @@ class WishlistController extends Controller
             'target_price' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:1000'],
             // Move an item to another of the user's wishlists.
-            'wishlist_id' => ['sometimes', 'integer', \Illuminate\Validation\Rule::exists('wishlists', 'id')->where('user_id', $request->user()->id)],
+            'wishlist_id' => ['sometimes', 'integer', Rule::exists('wishlists', 'id')->where('user_id', $request->user()->id)],
         ]));
 
         return back()->with('success', 'Wishlist updated.');

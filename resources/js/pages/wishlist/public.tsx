@@ -1,4 +1,7 @@
 import { Head } from '@inertiajs/react';
+import { Pencil } from 'lucide-react';
+import { useState } from 'react';
+import { EditWishlistItemDialog } from '@/components/wishlist/edit-wishlist-item-dialog';
 import { formatMoney } from '@/lib/format';
 
 type Item = {
@@ -9,28 +12,38 @@ type Item = {
     set: string | null;
     current_value: number | null;
     currency: string;
+    // Owner-only edit fields (present when canEdit).
+    id?: number;
+    target_price?: number | null;
+    notes?: string | null;
 };
 
 type Props = {
     owner: { username: string };
-    wishlist: { name: string; is_default: boolean };
+    wishlist: { name: string; slug: string; is_default: boolean };
     summary: { item_count: number; total_value: number; currency: string };
     items: Item[];
+    canEdit?: boolean;
+    wishlists?: { id: number; name: string; slug: string }[];
 };
 
 /**
  * Public, read-only view of a user's wishlist — the cards they want + current
- * market value. Never shows target prices or notes (those stay private).
+ * market value. The owner viewing their own page can edit items in place.
  */
 export default function PublicWishlist({
     owner,
     wishlist,
     summary,
     items,
+    canEdit = false,
+    wishlists = [],
 }: Props) {
     const title = wishlist.is_default
         ? `${owner.username}'s wishlist`
         : `${owner.username} · ${wishlist.name}`;
+
+    const [editing, setEditing] = useState<Item | null>(null);
 
     return (
         <>
@@ -57,50 +70,80 @@ export default function PublicWishlist({
                 ) : (
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                         {items.map((h, i) => (
-                            <a
-                                key={i}
-                                href={`/catalog/${h.catalog_item_id}`}
-                                className="group overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring"
-                            >
-                                <div className="aspect-[3/4] overflow-hidden bg-muted">
-                                    {h.image_url ? (
-                                        <img
-                                            src={h.image_url}
-                                            alt={h.name ?? ''}
-                                            loading="lazy"
-                                            className="size-full object-contain transition-transform group-hover:scale-105"
-                                        />
-                                    ) : (
-                                        <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
-                                            No image
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="space-y-1 p-3">
-                                    <p
-                                        className="truncate text-sm font-medium"
-                                        title={h.name ?? ''}
+                            <div key={i} className="relative">
+                                {canEdit && h.id != null && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditing(h)}
+                                        className="absolute top-2 right-2 z-10 flex size-7 items-center justify-center rounded-md border border-border bg-background/90 text-muted-foreground shadow-sm hover:text-foreground"
+                                        aria-label="Edit wishlist item"
+                                        title="Edit wishlist item"
                                     >
-                                        {h.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {h.set}
-                                        {h.number ? ` · ${h.number}` : ''}
-                                    </p>
-                                    {h.current_value != null && (
-                                        <p className="text-sm font-semibold">
-                                            {formatMoney(
-                                                h.current_value,
-                                                h.currency,
-                                            )}
+                                        <Pencil className="size-3.5" />
+                                    </button>
+                                )}
+                                <a
+                                    href={`/catalog/${h.catalog_item_id}`}
+                                    className="group block overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring"
+                                >
+                                    <div className="aspect-[3/4] overflow-hidden bg-muted">
+                                        {h.image_url ? (
+                                            <img
+                                                src={h.image_url}
+                                                alt={h.name ?? ''}
+                                                loading="lazy"
+                                                className="size-full object-contain transition-transform group-hover:scale-105"
+                                            />
+                                        ) : (
+                                            <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
+                                                No image
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="space-y-1 p-3">
+                                        <p
+                                            className="truncate text-sm font-medium"
+                                            title={h.name ?? ''}
+                                        >
+                                            {h.name}
                                         </p>
-                                    )}
-                                </div>
-                            </a>
+                                        <p className="text-xs text-muted-foreground">
+                                            {h.set}
+                                            {h.number ? ` · ${h.number}` : ''}
+                                        </p>
+                                        {h.current_value != null && (
+                                            <p className="text-sm font-semibold">
+                                                {formatMoney(
+                                                    h.current_value,
+                                                    h.currency,
+                                                )}
+                                            </p>
+                                        )}
+                                    </div>
+                                </a>
+                            </div>
                         ))}
                     </div>
                 )}
             </div>
+
+            <EditWishlistItemDialog
+                item={
+                    editing && editing.id != null
+                        ? {
+                              id: editing.id,
+                              name: editing.name ?? 'Wishlist item',
+                              target_price: editing.target_price ?? null,
+                              notes: editing.notes ?? null,
+                          }
+                        : null
+                }
+                wishlists={wishlists
+                    .filter((w) => w.slug !== wishlist.slug)
+                    .map((w) => ({ id: w.id, name: w.name }))}
+                open={editing !== null}
+                onOpenChange={(o) => !o && setEditing(null)}
+            />
         </>
     );
 }

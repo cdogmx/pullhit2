@@ -1,7 +1,16 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Download, Search, StickyNote, Tag, Trash2, Upload } from 'lucide-react';
+import {
+    Download,
+    Pencil,
+    Search,
+    StickyNote,
+    Tag,
+    Trash2,
+    Upload,
+} from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { EditHoldingDialog } from '@/components/collection/edit-holding-dialog';
 import { ListTabs } from '@/components/shared/list-tabs';
 import type { ListSummary } from '@/components/shared/list-tabs';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +33,7 @@ import { formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type {
     Allocation,
+    GradingCompanyOption,
     Holding,
     PortfolioMover,
     PortfolioSummary,
@@ -39,6 +49,7 @@ type Props = {
     gainers: PortfolioMover[];
     decliners: PortfolioMover[];
     publicUrl: string | null;
+    gradingCompanies: GradingCompanyOption[];
 };
 
 const ALL = '__all__';
@@ -103,12 +114,14 @@ export default function CollectionIndex({
     gainers,
     decliners,
     publicUrl,
+    gradingCompanies,
 }: Props) {
     const c = summary.currency;
     const otherCollections = collections.filter(
         (x) => x.slug !== activeCollection,
     );
 
+    const [editing, setEditing] = useState<Holding | null>(null);
     const [q, setQ] = useState('');
     const [setFilter, setSetFilter] = useState(ALL);
     const [forSaleOnly, setForSaleOnly] = useState(false);
@@ -539,6 +552,17 @@ export default function CollectionIndex({
                                                         <button
                                                             type="button"
                                                             onClick={() =>
+                                                                setEditing(h)
+                                                            }
+                                                            className="text-muted-foreground hover:text-foreground"
+                                                            aria-label="Edit holding"
+                                                            title="Edit holding"
+                                                        >
+                                                            <Pencil className="size-4" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
                                                                 router.patch(
                                                                     `/collection/${h.id}`,
                                                                     {
@@ -652,6 +676,36 @@ export default function CollectionIndex({
                     </>
                 )}
             </div>
+
+            <EditHoldingDialog
+                holding={
+                    editing
+                        ? {
+                              id: editing.id,
+                              name:
+                                  editing.catalog_item?.display_name ??
+                                  editing.catalog_item?.name ??
+                                  'Holding',
+                              condition: editing.condition,
+                              grade: editing.grade,
+                              grading_company: editing.grading_company
+                                  ? { id: editing.grading_company.id }
+                                  : null,
+                              quantity: editing.quantity,
+                              is_for_sale: editing.is_for_sale,
+                              notes: editing.notes,
+                              folder: editing.folder,
+                          }
+                        : null
+                }
+                collections={otherCollections.map((col) => ({
+                    id: col.id,
+                    name: col.name,
+                }))}
+                gradingCompanies={gradingCompanies}
+                open={editing !== null}
+                onOpenChange={(o) => !o && setEditing(null)}
+            />
         </>
     );
 }

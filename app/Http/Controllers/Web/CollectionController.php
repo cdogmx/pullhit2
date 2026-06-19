@@ -5,20 +5,23 @@ namespace App\Http\Controllers\Web;
 use App\Actions\Collection\AddToCollection;
 use App\Actions\Collection\BuildPortfolio;
 use App\Actions\Collection\ExportCollectionCsv;
+use App\Actions\Collection\PublicCollection;
 use App\Actions\Collection\RemoveFromCollection;
 use App\Actions\Collection\UpdateCollectionItem;
-use App\Actions\Collection\PublicCollection;
 use App\Actions\Import\BuildImportPreview;
 use App\Actions\Import\ImportCollection;
-use App\Models\User;
-use App\Support\Membership\Entitlements;
+use App\Enums\Condition;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Collection\StoreCollectionItemRequest;
 use App\Http\Resources\CollectionItemResource;
 use App\Models\CatalogItem;
 use App\Models\CollectionItem;
+use App\Models\GradingCompany;
+use App\Models\User;
+use App\Support\Membership\Entitlements;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -63,6 +66,9 @@ class CollectionController extends Controller
             'gainers' => $portfolio['gainers'],
             'decliners' => $portfolio['decliners'],
             'publicUrl' => $publicUrl,
+            // Options for the full-edit modal's graded-state picker.
+            'gradingCompanies' => GradingCompany::orderBy('name')
+                ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
         ]);
     }
 
@@ -105,7 +111,9 @@ class CollectionController extends Controller
 
         abort_unless($collection && $collection->is_public, 404);
 
-        $data = $build($collection);
+        // The owner viewing their own public page can edit holdings in place.
+        $owner = auth()->id() === $user->id;
+        $data = $build($collection, $owner);
 
         // Server-rendered share meta (social scrapers don't run JS).
         $title = $collection->is_default
@@ -175,8 +183,13 @@ class CollectionController extends Controller
             'quantity' => ['sometimes', 'integer', 'min:0', 'max:100000'],
             'is_for_sale' => ['sometimes', 'boolean'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'folder' => ['sometimes', 'nullable', 'string', 'max:255'],
+            // Priced state: raw condition OR graded company + grade.
+            'condition' => ['sometimes', 'nullable', Rule::enum(Condition::class)],
+            'grading_company_id' => ['sometimes', 'nullable', 'integer', 'exists:grading_companies,id'],
+            'grade' => ['sometimes', 'nullable', 'numeric', 'min:1', 'max:10', 'required_with:grading_company_id'],
             // Move a holding to another of the user's collections.
-            'collection_id' => ['sometimes', 'integer', \Illuminate\Validation\Rule::exists('collections', 'id')->where('user_id', $request->user()->id)],
+            'collection_id' => ['sometimes', 'integer', Rule::exists('collections', 'id')->where('user_id', $request->user()->id)],
         ]));
 
         return back()->with('success', 'Collection updated.');
