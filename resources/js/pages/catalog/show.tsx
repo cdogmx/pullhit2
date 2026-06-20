@@ -53,6 +53,8 @@ import type {
 
 type Props = {
     item: { data: CatalogItem };
+    /** Server-built SEO/share meta — its title drives the page <title>. */
+    meta: { title: string };
     gradingCompanies: GradingCompanyOption[];
     /** A background eBay refresh is in flight; poll for the new values. */
     refreshing: boolean;
@@ -101,6 +103,7 @@ const SECTION_LABEL =
 
 export default function Show({
     item: { data: item },
+    meta,
     gradingCompanies,
     wishlisted,
     refreshing,
@@ -274,7 +277,12 @@ export default function Show({
 
     return (
         <>
-            <Head title={item.display_name ?? item.name} />
+            {/* Use the server meta title verbatim (Card #Num - Set - Brand) so
+                the tab matches the server-rendered <title>; a child <title>
+                bypasses the global "… - CardFoo" suffix. */}
+            <Head>
+                <title>{meta.title}</title>
+            </Head>
 
             <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
                 <Breadcrumb className="mb-6">

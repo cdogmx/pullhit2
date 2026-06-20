@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Actions\Catalog\SearchCatalog;
+use App\Actions\Scanning\RecordScanFeedback;
 use App\Actions\Scanning\ScanCards;
 use App\Exceptions\TooManyScansException;
 use App\Http\Controllers\Controller;
@@ -63,6 +64,26 @@ class ScanController extends Controller
             (int) $request->input('catalog_item_id'),
             $request->user()->id,
         );
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Record whether a detection was correct. Self-heals the cache on a wrong
+     * cache hit and learns the correction; vision misses are logged for tuning.
+     */
+    public function feedback(Request $request, RecordScanFeedback $record): JsonResponse
+    {
+        $data = $request->validate([
+            'source' => ['required', 'in:cache,vision'],
+            'was_correct' => ['required', 'boolean'],
+            'phash' => ['nullable', 'string', 'max:32'],
+            'identified' => ['nullable', 'array'],
+            'detected_catalog_item_id' => ['nullable', 'integer', 'exists:catalog_items,id'],
+            'corrected_catalog_item_id' => ['nullable', 'integer', 'exists:catalog_items,id'],
+        ]);
+
+        $record($request->user(), $data);
 
         return response()->json(['ok' => true]);
     }

@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CardController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ImageController;
 use App\Http\Controllers\Admin\ReconcileController;
+use App\Http\Controllers\Admin\ScanFeedbackController;
 use App\Http\Controllers\Admin\SetController;
 use App\Http\Controllers\Admin\SuggestionController;
 use App\Http\Controllers\Admin\TransactionController;
@@ -61,6 +62,9 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
 
     // Billing ledger — all recorded transactions (read-only).
     Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');
+
+    // Scan-detection feedback review (cache vs AI accuracy).
+    Route::get('scan-feedback', [ScanFeedbackController::class, 'index'])->name('scan-feedback.index');
 
     // Cards
     Route::get('cards', [CardController::class, 'index'])->name('cards.index');

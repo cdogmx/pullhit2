@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { Check, Search, X } from 'lucide-react';
+import { Check, Search, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { CardPickTile } from '@/components/scan/card-pick-tile';
@@ -54,6 +54,8 @@ export function ScanConfirmCard({
     // A card the user picked via catalog search when the scan got it wrong.
     const [manualCard, setManualCard] = useState<CatalogItem | null>(null);
     const [searchOpen, setSearchOpen] = useState(false);
+    // "Was this right?" — null until the user answers.
+    const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
 
     const chosen = manualCard
         ? { card: manualCard, score: 1, reasons: ['manual'] }
@@ -85,6 +87,44 @@ export function ScanConfirmCard({
                 catalog_item_id: chosen.card.id,
             }),
         }).catch(() => {});
+    };
+
+    /**
+     * Record whether the auto-suggested top match was right. On "wrong" the
+     * server self-heals the cache; if the user has already picked a different
+     * card, send it as the correction so the cache learns it.
+     */
+    const sendFeedback = (wasCorrect: boolean) => {
+        const detectedId = detected.candidates[0]?.card.id ?? null;
+        const correctedId =
+            !wasCorrect && chosen && chosen.card.id !== detectedId
+                ? chosen.card.id
+                : null;
+
+        setFeedback(wasCorrect ? 'correct' : 'wrong');
+
+        const m = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+        void fetch('/scan/feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': m ? decodeURIComponent(m[1]) : '',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                source: detected.source,
+                was_correct: wasCorrect,
+                phash: detected.fingerprint,
+                identified: id,
+                detected_catalog_item_id: detectedId,
+                corrected_catalog_item_id: correctedId,
+            }),
+        }).catch(() => {});
+
+        toast.success(
+            wasCorrect ? 'Thanks for confirming!' : 'Thanks — we’ll fix it.',
+        );
     };
 
     const add = () => {
@@ -160,16 +200,53 @@ export function ScanConfirmCard({
                         <Badge
                             variant="secondary"
                             className="ml-2 text-[10px]"
-                            title="Matched from a previous scan — no AI read used"
+                            title="Matched from a previous confirmed scan — no AI read used"
                         >
-                            Recognized
+                            Via cache
                         </Badge>
                     ) : (
-                        <Badge variant="outline" className="ml-2 text-[10px]">
-                            {Math.round(id.confidence * 100)}% read
+                        <Badge
+                            variant="outline"
+                            className="ml-2 text-[10px]"
+                            title="Read by AI"
+                        >
+                            Via AI · {Math.round(id.confidence * 100)}%
                         </Badge>
                     )}
                 </div>
+
+                {/* Detection-quality feedback — teaches the cache + flags AI misses. */}
+                {detected.candidates.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs">
+                        {feedback ? (
+                            <span className="text-muted-foreground">
+                                {feedback === 'correct'
+                                    ? '✓ Marked correct'
+                                    : '✗ Marked wrong — pick the right card below'}
+                            </span>
+                        ) : (
+                            <>
+                                <span className="text-muted-foreground">
+                                    Detection correct?
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => sendFeedback(true)}
+                                    className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-muted-foreground transition-colors hover:border-emerald-500/40 hover:text-emerald-600 dark:hover:text-emerald-400"
+                                >
+                                    <ThumbsUp className="size-3.5" /> Yes
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => sendFeedback(false)}
+                                    className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-muted-foreground transition-colors hover:border-red-500/40 hover:text-red-600 dark:hover:text-red-400"
+                                >
+                                    <ThumbsDown className="size-3.5" /> No
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )}
 
                 {manualCard ? (
                     <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-accent/30 px-2 py-1.5 text-sm">

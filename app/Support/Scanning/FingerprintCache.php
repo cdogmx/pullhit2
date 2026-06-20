@@ -73,4 +73,28 @@ class FingerprintCache
 
         return $fingerprint;
     }
+
+    /**
+     * Walk back a wrong cache hit: drop a confirmation from the (hash, item)
+     * association and delete it once it has no confidence left. A single bad
+     * report can't erase a well-confirmed entry, but an unproven one is purged.
+     */
+    public function demote(string $phash, int $catalogItemId): void
+    {
+        $fingerprint = ScanFingerprint::where('phash', $phash)
+            ->where('catalog_item_id', $catalogItemId)
+            ->first();
+
+        if ($fingerprint === null) {
+            return;
+        }
+
+        if ($fingerprint->confirmations <= 1) {
+            $fingerprint->delete();
+
+            return;
+        }
+
+        $fingerprint->decrement('confirmations');
+    }
 }
