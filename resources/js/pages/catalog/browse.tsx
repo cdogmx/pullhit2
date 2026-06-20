@@ -12,7 +12,6 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { PriceTag } from '@/components/catalog/price-tag';
 import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
-import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +31,8 @@ import {
 } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { languageLabel } from '@/lib/format';
+import { WishlistButton } from '@/components/wishlist/wishlist-button';
+import { cardHref, languageLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type {
     CatalogFilterOptions,
@@ -287,6 +287,7 @@ export default function Browse({
     // Breadcrumb up the brand → series → set → subset path. Each crumb clears the
     // deeper filters; the last (current location) is rendered as plain text.
     const crumbs: { label: string; go?: () => void }[] = [];
+
     if (
         filters.product_line ||
         filters.series ||
@@ -294,6 +295,7 @@ export default function Browse({
         filters.subset
     ) {
         crumbs.push({ label: 'All brands', go: reset });
+
         if (brandName) {
             crumbs.push({
                 label: brandName,
@@ -306,18 +308,21 @@ export default function Browse({
                     }),
             });
         }
+
         if (seriesName) {
             crumbs.push({
                 label: seriesName,
                 go: () => update({ set: null, subset: null, q: null }),
             });
         }
+
         if (setName) {
             crumbs.push({
                 label: setName,
                 go: () => update({ subset: null, q: null }),
             });
         }
+
         if (subsetName) {
             crumbs.push({ label: subsetName });
         }
@@ -975,7 +980,7 @@ function CardTile({
 }) {
     return (
         <div className="group relative overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring">
-            <Link href={`/catalog/${item.id}${returnTo}`} className="block">
+            <Link href={`${cardHref(item)}${returnTo}`} className="block">
                 <div className="aspect-[3/4] overflow-hidden bg-muted">
                     <ItemImage
                         item={item}
@@ -1031,7 +1036,7 @@ function ListRow({
     return (
         <div className="flex items-center bg-card hover:bg-accent/40">
             <Link
-                href={`/catalog/${item.id}${returnTo}`}
+                href={`${cardHref(item)}${returnTo}`}
                 className="flex min-w-0 flex-1 items-center gap-3 p-3"
             >
                 <div className="h-16 w-12 shrink-0 overflow-hidden rounded bg-muted">

@@ -22,13 +22,14 @@ class PublicWishlist
     {
         $user = $wishlist->user;
         $rows = $wishlist->items()
-            ->with(['catalogItem.set', 'catalogItem.defaultMarketValue'])
+            ->with(['catalogItem.set', 'catalogItem.productLine', 'catalogItem.defaultMarketValue'])
             ->get()
             ->map(function (WishlistItem $w) use ($owner) {
                 $catalog = $w->catalogItem;
 
                 $item = [
                     'catalog_item_id' => $catalog?->id,
+                    'url' => $catalog?->path(),
                     'name' => $catalog?->display_name,
                     'number' => $catalog?->number,
                     'image_url' => $catalog?->primary_image_path

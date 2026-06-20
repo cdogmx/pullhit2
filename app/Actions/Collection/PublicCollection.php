@@ -24,7 +24,7 @@ class PublicCollection
     {
         $user = $collection->user;
         $items = $collection->items()
-            ->with(['catalogItem.set', 'catalogItem.marketValues', 'gradingCompany'])
+            ->with(['catalogItem.set', 'catalogItem.productLine', 'catalogItem.marketValues', 'gradingCompany'])
             ->get();
 
         $rows = $items->map(function (CollectionItem $ci) use ($owner) {
@@ -34,6 +34,7 @@ class PublicCollection
 
             $holding = [
                 'catalog_item_id' => $catalog?->id,
+                'url' => $catalog?->path(),
                 'name' => $catalog?->display_name,
                 'number' => $catalog?->number,
                 'image_url' => $catalog?->primary_image_path

@@ -16,7 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { formatMoney, relativeTime } from '@/lib/format';
+import { cardHref, formatMoney, relativeTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
@@ -60,6 +60,7 @@ type Scans = {
 type RecentItem = {
     id: number;
     catalog_item_id: number | null;
+    url?: string | null;
     name: string | null;
     number: string | null;
     set: string | null;
@@ -449,7 +450,7 @@ function RecentCard({
     );
 
     return item.catalog_item_id ? (
-        <Link href={`/catalog/${item.catalog_item_id}`} className="group block">
+        <Link href={cardHref(item)} className="group block">
             {body}
         </Link>
     ) : (

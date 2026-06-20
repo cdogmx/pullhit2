@@ -23,6 +23,10 @@ class CatalogItemResource extends JsonResource
             'name' => $this->name,
             'display_name' => $this->display_name,
             'number' => $this->number,
+            'slug' => $this->slug,
+            // Canonical /{brand}/{set}/{card} path; null when relations/slug are
+            // missing, so the client falls back to /catalog/{id}.
+            'url' => $this->path(),
             'item_type' => $this->item_type->value,
             'language' => $this->language,
             'rarity' => $attributes['rarity'] ?? null,

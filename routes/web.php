@@ -80,3 +80,10 @@ Route::get('wishlist/{username}/{wishlistSlug}', [WishlistController::class, 'pu
 
 require __DIR__.'/settings.php';
 require __DIR__.'/admin.php';
+
+// Canonical card page at /{brand}/{set}/{card-slug}. Registered LAST so it only
+// catches 3-segment paths that no earlier (literal-prefixed) route claimed. The
+// slug constraint keeps it from swallowing dotted/static paths.
+Route::get('{productLine}/{set}/{card}', [CatalogController::class, 'showBySlug'])
+    ->where(['productLine' => '[a-z0-9-]+', 'set' => '[a-z0-9-]+', 'card' => '[a-z0-9-]+'])
+    ->name('catalog.card');

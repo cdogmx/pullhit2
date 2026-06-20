@@ -86,6 +86,7 @@ class DashboardController extends Controller
                 return [
                     'id' => $ci->id,
                     'catalog_item_id' => $catalog?->id,
+                    'url' => $catalog?->path(),
                     'name' => $catalog?->name,
                     'number' => $catalog?->number,
                     'set' => $catalog?->set?->name,

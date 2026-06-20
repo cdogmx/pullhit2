@@ -2,10 +2,11 @@ import { Head } from '@inertiajs/react';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { EditWishlistItemDialog } from '@/components/wishlist/edit-wishlist-item-dialog';
-import { formatMoney } from '@/lib/format';
+import { cardHref, formatMoney } from '@/lib/format';
 
 type Item = {
     catalog_item_id: number | null;
+    url?: string | null;
     name: string | null;
     number: string | null;
     image_url: string | null;
@@ -83,7 +84,7 @@ export default function PublicWishlist({
                                     </button>
                                 )}
                                 <a
-                                    href={`/catalog/${h.catalog_item_id}`}
+                                    href={cardHref(h)}
                                     className="group block overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring"
                                 >
                                     <div className="aspect-[3/4] overflow-hidden bg-muted">

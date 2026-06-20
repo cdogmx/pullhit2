@@ -11,6 +11,7 @@ export type WishlistRow = {
         name: string;
         display_name?: string;
         number: string | null;
+        url?: string | null;
         image_url: string | null;
         set: { name: string; code: string | null } | null;
     };

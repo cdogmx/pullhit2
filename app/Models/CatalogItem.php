@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 /**
  * The value-bearing unit — generic across all verticals (§4.1). Vertical-specific
@@ -53,6 +54,63 @@ class CatalogItem extends Model
             'last_viewed_at' => 'datetime',
             'ebay_refreshed_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // New cards get a URL slug, unique within their set.
+        static::creating(function (CatalogItem $item) {
+            if (empty($item->slug)) {
+                $item->slug = $item->buildUniqueSlug();
+            }
+        });
+    }
+
+    /**
+     * The card's canonical path: /{brand}/{set}/{card-slug}. Null when the brand,
+     * set, or slug is missing — callers fall back to /catalog/{id}. Requires the
+     * productLine + set relations to be loaded (no lazy query in list contexts).
+     */
+    public function path(): ?string
+    {
+        $brand = $this->productLine?->slug;
+        $set = $this->set?->slug;
+
+        return $brand && $set && $this->slug ? "/{$brand}/{$set}/{$this->slug}" : null;
+    }
+
+    /**
+     * The slug stem from the display name + collector number, e.g.
+     * "Charizard ex (Reverse Holo)" #199 → "charizard-ex-reverse-holo-199".
+     */
+    public function slugBase(): string
+    {
+        $base = Str::slug($this->display_name);
+        if ($this->number) {
+            $base = trim($base.'-'.Str::slug((string) $this->number), '-');
+        }
+
+        return $base !== '' ? $base : 'card-'.($this->id ?? Str::random(6));
+    }
+
+    /** A slug that doesn't collide with another card in the same set. */
+    public function buildUniqueSlug(): string
+    {
+        $base = $this->slugBase();
+        $slug = $base;
+        $n = 2;
+
+        while (self::query()
+            ->where('set_id', $this->set_id)
+            ->where('slug', $slug)
+            ->when($this->exists, fn (Builder $q) => $q->whereKeyNot($this->getKey()))
+            ->exists()
+        ) {
+            $slug = "{$base}-{$n}";
+            $n++;
+        }
+
+        return $slug;
     }
 
     /** @return BelongsTo<Vertical, $this> */

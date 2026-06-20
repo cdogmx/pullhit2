@@ -10,11 +10,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { formatMoney } from '@/lib/format';
+import { cardHref, formatMoney } from '@/lib/format';
 import type { GradingCompanyOption } from '@/types';
 
 type Holding = {
     catalog_item_id: number | null;
+    url?: string | null;
     name: string | null;
     number: string | null;
     image_url: string | null;
@@ -240,7 +241,7 @@ export default function PublicCollection({
                                             </button>
                                         )}
                                         <a
-                                            href={`/catalog/${h.catalog_item_id}`}
+                                            href={cardHref(h)}
                                             className="group block overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring"
                                         >
                                             <div className="aspect-[3/4] overflow-hidden bg-muted">

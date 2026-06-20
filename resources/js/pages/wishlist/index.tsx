@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { EditWishlistItemDialog } from '@/components/wishlist/edit-wishlist-item-dialog';
-import { formatMoney } from '@/lib/format';
+import { cardHref, formatMoney } from '@/lib/format';
 import type { WishlistRow, WishlistSummary } from '@/types';
 
 type Props = {
@@ -170,7 +170,7 @@ function WishRow({
     return (
         <div className="flex items-center gap-3 bg-card p-3 hover:bg-accent/40">
             <Link
-                href={card ? `/catalog/${card.id}` : '#'}
+                href={card ? cardHref(card) : '#'}
                 className="flex min-w-0 flex-1 items-center gap-3"
             >
                 <div className="h-16 w-12 shrink-0 overflow-hidden rounded bg-muted">

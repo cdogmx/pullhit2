@@ -16,11 +16,12 @@ class ShowCatalogItem
         // All priced states for this item (raw + graded), with grading company.
         $item->load(['vertical', 'productLine', 'set', 'marketValues.gradingCompany']);
 
-        // Sibling printings, each with its headline value for the printings list.
+        // Sibling printings, each with its headline value + relations for its
+        // canonical URL (so printing links use slugs, not /catalog/{id}).
         $item->setRelation(
             'variants',
             $item->variants()
-                ->with('defaultMarketValue')
+                ->with(['defaultMarketValue', 'set', 'productLine'])
                 ->orderBy('number')
                 ->orderBy('id')
                 ->get(),

@@ -17,6 +17,7 @@ use App\Models\GradingCompany;
 use App\Models\ProductLine;
 use App\Models\Set;
 use App\Support\Verticals\Definitions\TcgVertical;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -183,7 +184,44 @@ class CatalogController extends Controller
         };
     }
 
+    /**
+     * Legacy /catalog/{id} — 301 to the canonical /{brand}/{set}/{card} URL so
+     * old links and shares consolidate. Cards without a slug path still render.
+     */
     public function show(
+        Request $request,
+        CatalogItem $catalogItem,
+        ShowCatalogItem $show,
+        MaybeRefreshEbay $maybeRefresh,
+        PriceHistory $history,
+    ): Response|RedirectResponse {
+        $catalogItem->loadMissing('productLine', 'set');
+
+        if ($path = $catalogItem->path()) {
+            return redirect()->to($path, 301);
+        }
+
+        return $this->renderShow($request, $catalogItem, $show, $maybeRefresh, $history);
+    }
+
+    /** Canonical card page at /{brand}/{set}/{card-slug}. */
+    public function showBySlug(
+        Request $request,
+        string $productLine,
+        string $set,
+        string $card,
+        ShowCatalogItem $show,
+        MaybeRefreshEbay $maybeRefresh,
+        PriceHistory $history,
+    ): Response {
+        $line = ProductLine::where('slug', $productLine)->firstOrFail();
+        $setModel = Set::where('slug', $set)->where('product_line_id', $line->id)->firstOrFail();
+        $item = CatalogItem::where('set_id', $setModel->id)->where('slug', $card)->firstOrFail();
+
+        return $this->renderShow($request, $item, $show, $maybeRefresh, $history);
+    }
+
+    private function renderShow(
         Request $request,
         CatalogItem $catalogItem,
         ShowCatalogItem $show,
@@ -309,7 +347,7 @@ class CatalogController extends Controller
             ->pluck('id');
 
         $cards = CatalogItem::whereIn('id', $repIds)
-            ->with('defaultMarketValue')
+            ->with(['defaultMarketValue', 'set', 'productLine'])
             ->orderByDesc('popularity')
             ->orderBy('id')
             ->get();

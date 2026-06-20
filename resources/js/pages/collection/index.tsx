@@ -29,7 +29,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { formatMoney } from '@/lib/format';
+import { cardHref, formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type {
     Allocation,
@@ -478,7 +478,9 @@ export default function CollectionIndex({
                                                             <div className="flex items-center gap-1.5">
                                                                 {h.catalog_item ? (
                                                                     <Link
-                                                                        href={`/catalog/${h.catalog_item.id}`}
+                                                                        href={cardHref(
+                                                                            h.catalog_item,
+                                                                        )}
                                                                         className="font-medium hover:underline"
                                                                     >
                                                                         {h

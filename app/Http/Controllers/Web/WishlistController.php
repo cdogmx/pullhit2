@@ -34,7 +34,7 @@ class WishlistController extends Controller
         $active = $wishlists->firstWhere('slug', $request->query('wishlist')) ?? $default;
 
         $items = $active->items()
-            ->with(['catalogItem.set', 'catalogItem.defaultMarketValue'])
+            ->with(['catalogItem.set', 'catalogItem.productLine', 'catalogItem.defaultMarketValue'])
             ->latest()
             ->get();
 

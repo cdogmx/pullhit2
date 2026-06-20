@@ -15,6 +15,24 @@ export function formatMoney(
     }).format(cents / 100);
 }
 
+/**
+ * Canonical link to a card: the slug URL (/{brand}/{set}/{card}) when present,
+ * else the legacy /catalog/{id} (which 301s to the slug).
+ */
+export function cardHref(card: {
+    url?: string | null;
+    id?: number | null;
+    catalog_item_id?: number | null;
+}): string {
+    if (card.url) {
+        return card.url;
+    }
+
+    const id = card.id ?? card.catalog_item_id;
+
+    return id != null ? `/catalog/${id}` : '#';
+}
+
 /** Compact "as of" age, e.g. "today", "4d ago", "3mo ago". */
 export function relativeTime(iso?: string | null): string {
     if (!iso) {

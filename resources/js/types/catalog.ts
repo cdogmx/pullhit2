@@ -37,6 +37,9 @@ export type CatalogItem = {
     /** Display name with edition/variant/error qualifiers, e.g. "Charizard (1st Edition)". */
     display_name?: string;
     number: string | null;
+    slug?: string | null;
+    /** Canonical /{brand}/{set}/{card} path; null → fall back to /catalog/{id}. */
+    url?: string | null;
     item_type: string;
     language: string | null;
     rarity: string | null;
