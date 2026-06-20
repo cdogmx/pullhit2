@@ -1,5 +1,13 @@
 import { Link, router } from '@inertiajs/react';
-import { LogOut, Settings } from 'lucide-react';
+import {
+    Bell,
+    Heart,
+    LayoutGrid,
+    LibraryBig,
+    LogOut,
+    ScanLine,
+    Settings,
+} from 'lucide-react';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -8,13 +16,21 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
-import { logout } from '@/routes';
+import { dashboard, logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import type { User } from '@/types';
 
 type Props = {
     user: User;
 };
+
+const NAV_LINKS = [
+    { title: 'Dashboard', href: dashboard().url, icon: LayoutGrid },
+    { title: 'Scan', href: '/scan', icon: ScanLine },
+    { title: 'Collection', href: '/collection', icon: LibraryBig },
+    { title: 'Wishlist', href: '/wishlist', icon: Heart },
+    { title: 'Notifications', href: '/notifications', icon: Bell },
+];
 
 export function UserMenuContent({ user }: Props) {
     const cleanup = useMobileNavigation();
@@ -31,6 +47,22 @@ export function UserMenuContent({ user }: Props) {
                     <UserInfo user={user} showEmail={true} />
                 </div>
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+                {NAV_LINKS.map((link) => (
+                    <DropdownMenuItem key={link.href} asChild>
+                        <Link
+                            className="block w-full cursor-pointer"
+                            href={link.href}
+                            prefetch
+                            onClick={cleanup}
+                        >
+                            <link.icon className="mr-2" />
+                            {link.title}
+                        </Link>
+                    </DropdownMenuItem>
+                ))}
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
                 <DropdownMenuItem asChild>

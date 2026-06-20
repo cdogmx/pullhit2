@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import {
     ArrowRight,
     Heart,
+    Home,
     LibraryBig,
     Package,
     Plus,
@@ -127,7 +128,14 @@ export default function Dashboard({
                 {/* Greeting */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight">
+                        <Link
+                            href="/"
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                        >
+                            <Home className="size-3.5" />
+                            Back to homepage
+                        </Link>
+                        <h1 className="mt-1 text-xl font-bold tracking-tight">
                             Welcome back, {firstName}
                         </h1>
                         <p className="text-sm text-muted-foreground">
