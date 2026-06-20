@@ -37,7 +37,16 @@ class CandidateMatcher
                     $q->orWhere('name', 'like', '%'.$t.'%');
                 }
             })
-            ->limit(50)
+            // A broad name token (e.g. "vmax") matches hundreds of cards, so an
+            // unordered window could drop the exact match. Pull number-matching
+            // rows to the front so the right card is always scored; popularity
+            // breaks ties among the name-only matches.
+            ->when($numerator !== null, fn (Builder $q) => $q->orderByRaw(
+                'CASE WHEN `number` = ? THEN 0 WHEN `number` LIKE ? THEN 1 ELSE 2 END',
+                [$numerator, $numerator.'/%'],
+            ))
+            ->orderByDesc('popularity')
+            ->limit(100)
             ->get();
 
         return $items

@@ -64,6 +64,33 @@ test('the detected edition ranks the matching printing first', function () {
         ->toBeLessThan($matches[0]['score']);
 });
 
+test('an exact number match is not crowded out by a flood of shared-name cards', function () {
+    // A broad token like "VMAX" matches hundreds of (more popular) cards. The
+    // real card must still be scored — regression for an unordered fetch window
+    // that dropped the exact match, leaving only a weak base-name match on top.
+    CatalogItem::factory()->count(105)->create([
+        'name' => 'Decoy VMAX',
+        'number' => '999',
+        'popularity' => 1000,
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    $exact = CatalogItem::factory()->create([
+        'name' => 'Gengar VMAX',
+        'number' => '271',
+        'popularity' => 0,
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    $matches = app(CandidateMatcher::class)->match(new IdentifiedCard(
+        name: 'Gengar VMAX', number: '271/264', setName: 'Fusion Strike',
+        language: 'en', confidence: 0.97, variant: 'holo',
+    ));
+
+    expect($matches[0]['item']->id)->toBe($exact->id)
+        ->and($matches[0]['reasons'])->toContain('number');
+});
+
 test('a detected reverse holo demotes the non-reverse printing', function () {
     $holo = CatalogItem::factory()->create(['name' => 'Pikachu', 'number' => '58',
         'attributes' => ['language' => 'en', 'rarity' => 'Common', 'variant' => 'holo']]);
