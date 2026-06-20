@@ -16,6 +16,7 @@ use App\Models\CollectionItem;
 use App\Models\GradingCompany;
 use App\Models\ProductLine;
 use App\Models\Set;
+use App\Models\ValueSnapshot;
 use App\Support\Verticals\Definitions\TcgVertical;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -252,6 +253,8 @@ class CatalogController extends Controller
             'refreshing' => $refreshing,
             'refreshedAt' => $catalogItem->ebay_refreshed_at?->toIso8601String(),
             'priceHistory' => $history($catalogItem),
+            // Snapshot-based value-over-time series (the card's headline state).
+            'valueHistory' => $this->valueHistory($catalogItem),
             'ownership' => $this->ownership($request, $model),
             'wishlisted' => (bool) $request->user()?->wishlistItems()
                 ->where('catalog_item_id', $catalogItem->id)->exists(),
@@ -264,6 +267,24 @@ class CatalogController extends Controller
             // "More in this set" — other base cards from the same set.
             'moreInSet' => $this->moreInSet($catalogItem),
         ]);
+    }
+
+    /**
+     * The card's value-over-time series from value_snapshots (headline state).
+     * Empty until the card has ≥2 snapshot days. Points are {t, price(cents)}.
+     *
+     * @return array<int, array{t: string, price: int}>
+     */
+    protected function valueHistory(CatalogItem $item): array
+    {
+        return ValueSnapshot::where('catalog_item_id', $item->id)
+            ->orderBy('captured_on')
+            ->get(['captured_on', 'median_cents'])
+            ->map(fn (ValueSnapshot $s) => [
+                't' => $s->captured_on->toDateString(),
+                'price' => (int) $s->median_cents,
+            ])
+            ->all();
     }
 
     /**
@@ -284,7 +305,12 @@ class CatalogController extends Controller
         $value = $item->defaultMarketValue?->median;
         $price = $value !== null ? '$'.number_format($value / 100, 2) : null;
 
-        $title = trim($name.($where !== '' ? " · {$where}" : '')).' — price & value';
+        // "Card Name #123 - Set - Brand" (each part only when present).
+        $title = implode(' - ', array_filter([
+            $name.($item->number ? " #{$item->number}" : ''),
+            $set,
+            $item->productLine?->name,
+        ]));
         $description = $price
             ? "{$name}".($where !== '' ? " ({$where})" : '')." market value: {$price}. Confidence-scored prices from real sales on ".config('app.name').'.'
             : "Track the market value of {$name}".($where !== '' ? " ({$where})" : '').' with confidence-scored prices on '.config('app.name').'.';

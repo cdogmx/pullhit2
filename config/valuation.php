@@ -38,6 +38,21 @@ return [
         'concentration_floor' => 0.6,    // confidence multiplier at 100% single-seller
     ],
 
+    // Daily value/portfolio snapshots (valuation:snapshot). We only snapshot
+    // higher-rarity / valued cards (plus anything owned or wishlisted) to avoid
+    // tracking the long tail of bulk commons.
+    'snapshot' => [
+        // Minimum headline median (cents) for a card to be snapshotted on value alone.
+        'min_value' => (int) env('SNAPSHOT_MIN_VALUE', 300),
+
+        // Rarities excluded unless the card is owned/wishlisted (reuses the eBay
+        // skip notion — bulk commons aren't worth a daily row).
+        'skip_rarities' => array_filter(array_map(
+            'trim',
+            explode(',', (string) env('SNAPSHOT_SKIP_RARITIES', 'Common,Uncommon')),
+        )),
+    ],
+
     // Real eBay sold-comp ingestion via Oxylabs. Lazy + cost-capped.
     'ebay' => [
         'enabled' => env('EBAY_REFRESH_ENABLED', true),

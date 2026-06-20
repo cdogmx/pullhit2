@@ -17,6 +17,10 @@ Schedule::command('catalog:reconcile --apply')->weeklyOn(1, '08:00')->withoutOve
 // Alert users when a wishlisted card drops to/below their target price.
 Schedule::command('wishlist:check-targets')->dailyAt('09:00')->withoutOverlapping();
 
+// Daily value + portfolio snapshots (price-history seam). Runs after the
+// PriceCharting import so the day's medians are fresh.
+Schedule::command('valuation:snapshot')->dailyAt('06:30')->withoutOverlapping();
+
 // Valuation recompute seam (§7). Wire on Laravel Cloud's scheduler when ready —
 // hot items hourly, the long tail daily. Kept off by default.
 // Schedule::command('valuation:recompute')->hourly();

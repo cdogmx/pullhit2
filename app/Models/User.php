@@ -172,4 +172,10 @@ class User extends Authenticatable implements PasskeyUser
     {
         return $this->hasMany(ScanUsage::class);
     }
+
+    /** @return HasMany<PortfolioSnapshot, $this> */
+    public function portfolioSnapshots(): HasMany
+    {
+        return $this->hasMany(PortfolioSnapshot::class);
+    }
 }

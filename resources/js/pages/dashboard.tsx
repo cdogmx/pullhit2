@@ -14,12 +14,14 @@ import {
     Wallet,
     Zap,
 } from 'lucide-react';
+import { ValueLineChart } from '@/components/charts/value-line-chart';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cardHref, formatMoney, relativeTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import type { PricePoint } from '@/types';
 
 type PortfolioSummary = {
     total_value: number;
@@ -84,6 +86,7 @@ type Props = {
     allocation: Allocation[];
     scans: Scans;
     wishlist: { item_count: number; below_target: number };
+    portfolioHistory: PricePoint[];
     recent: RecentItem[];
     counts: { collections: number; wishlists: number };
 };
@@ -113,6 +116,7 @@ export default function Dashboard({
     allocation,
     scans,
     wishlist,
+    portfolioHistory,
     recent,
     counts,
 }: Props) {
@@ -216,6 +220,21 @@ export default function Dashboard({
                                 href="/scan"
                             />
                         </div>
+
+                        {/* Portfolio value over time */}
+                        {portfolioHistory.length > 1 && (
+                            <Card>
+                                <CardContent className="pt-6">
+                                    <h2 className="mb-3 text-sm font-semibold">
+                                        Portfolio value over time
+                                    </h2>
+                                    <ValueLineChart
+                                        points={portfolioHistory}
+                                        height={220}
+                                    />
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* Movers + allocation */}
                         <div className="grid gap-4 lg:grid-cols-3">

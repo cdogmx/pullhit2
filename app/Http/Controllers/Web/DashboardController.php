@@ -42,12 +42,31 @@ class DashboardController extends Controller
             'allocation' => array_slice($portfolio['allocation'], 0, 6),
             'scans' => ScanQuota::for($user)->snapshot(),
             'wishlist' => $this->wishlistSummary($user),
+            'portfolioHistory' => $this->portfolioHistory($user),
             'recent' => $this->recentAdditions($portfolio['items']),
             'counts' => [
                 'collections' => $user->collections()->count(),
                 'wishlists' => $user->wishlists()->count(),
             ],
         ]);
+    }
+
+    /**
+     * The user's portfolio value over time from portfolio_snapshots. Points are
+     * {t, price(cents)}; empty until there are ≥2 snapshot days.
+     *
+     * @return array<int, array{t: string, price: int}>
+     */
+    private function portfolioHistory(User $user): array
+    {
+        return $user->portfolioSnapshots()
+            ->orderBy('captured_on')
+            ->get(['captured_on', 'total_value_cents'])
+            ->map(fn ($s) => [
+                't' => $s->captured_on->toDateString(),
+                'price' => (int) $s->total_value_cents,
+            ])
+            ->all();
     }
 
     /** Wishlist totals across all of the user's lists, with at-or-below-target count. */
