@@ -44,12 +44,13 @@ class PokemonIdentifierStrategy implements IdentifierStrategy
 
         $boxes = array_slice($boxes, 0, (int) config('scanning.bulk_max_cards', 20));
         $binary = base64_decode($base64);
+        $pad = (float) config('scanning.bulk_crop_padding', 0.08);
 
         // Crop each detected card to its own full-resolution JPEG, fingerprint it,
         // and check the recognition cache so seen-before cards skip the AI read.
         $crops = [];
         foreach ($boxes as $box) {
-            $jpeg = $this->cropper->crop($binary, $box);
+            $jpeg = $this->cropper->crop($binary, $box, $pad);
             $phash = PerceptualHash::fromBinary($jpeg);
             $thumbnail = 'data:image/jpeg;base64,'.base64_encode($jpeg);
 

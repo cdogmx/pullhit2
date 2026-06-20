@@ -8,6 +8,11 @@ return [
     // Safety cap on how many cards a single bulk photo will process.
     'bulk_max_cards' => (int) env('SCAN_BULK_MAX_CARDS', 20),
 
+    // Margin added around each detected bulk card before cropping, as a fraction
+    // of the card's own size. Vision boxes run tight/imprecise, so a little
+    // padding stops borders being clipped. Clamped to the image bounds.
+    'bulk_crop_padding' => (float) env('SCAN_BULK_CROP_PADDING', 0.08),
+
     // Longest image edge accepted server-side (the client also downscales).
     'max_image_px' => (int) env('SCAN_MAX_IMAGE_PX', 1568),
 

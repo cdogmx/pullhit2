@@ -26,8 +26,10 @@ class AnthropicVisionClient
     {
         $input = $this->parse(
             $this->call($base64, $mediaType, $this->detectTool(),
-                'Detect every distinct trading card in this photo. For each card return a tight '.
-                'bounding box as normalized coordinates (0–1, origin top-left). Ignore sleeves, '.
+                'Detect every distinct trading card in this photo. For each card return a '.
+                'bounding box as normalized coordinates (0–1, origin top-left) that fully '.
+                'contains the ENTIRE card — all four corners and its outer border. Err on the '.
+                'side of slightly too large rather than clipping any edge. Ignore sleeves, '.
                 'binders, hands, and anything that is not a card.'),
             self::DETECT_TOOL,
         );
