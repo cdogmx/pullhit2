@@ -8,22 +8,17 @@ import {
     RefreshCw,
 } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
+import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
 import { EbayListings } from '@/components/catalog/ebay-listings';
 import { EbayShopButton } from '@/components/catalog/ebay-shop-button';
 import { PriceBreakdownDrawer } from '@/components/catalog/price-breakdown-drawer';
 import { PriceTag } from '@/components/catalog/price-tag';
+import { ShareButtons } from '@/components/catalog/share-buttons';
 import { Sparkline } from '@/components/catalog/sparkline';
-import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
-import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
 import { SuggestEditDialog } from '@/components/catalog/suggest-edit-dialog';
+import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
 import { HScroller } from '@/components/shared/h-scroller';
-import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { Badge } from '@/components/ui/badge';
-import {
-    Dialog,
-    DialogContent,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -34,6 +29,13 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import {
+    Dialog,
+    DialogContent,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { WishlistButton } from '@/components/wishlist/wishlist-button';
+import {
+    cardHref,
     confidenceVariant,
     formatMoney,
     languageLabel,
@@ -340,6 +342,17 @@ export default function Show({
                                 {item.variant && (
                                     <Badge>{humanize(item.variant)}</Badge>
                                 )}
+                            </div>
+
+                            <div className="mt-4">
+                                <ShareButtons
+                                    title={item.display_name ?? item.name}
+                                    text={`${item.display_name ?? item.name}${
+                                        item.set
+                                            ? ` (${item.set.name}${item.number ? ` #${item.number}` : ''})`
+                                            : ''
+                                    } — price & value on CardFoo`}
+                                />
                             </div>
                         </div>
 
@@ -658,7 +671,7 @@ export default function Show({
                                 return (
                                     <Link
                                         key={printing.id}
-                                        href={`/catalog/${printing.id}${carryReturn}`}
+                                        href={`${cardHref(printing)}${carryReturn}`}
                                         className={cn(
                                             'flex items-center gap-3 p-3 transition-colors hover:bg-accent/40',
                                             isCurrent && 'bg-accent/60',
@@ -730,7 +743,7 @@ export default function Show({
                             {moreInSet.map((card) => (
                                 <Link
                                     key={card.id}
-                                    href={`/catalog/${card.id}`}
+                                    href={cardHref(card)}
                                     draggable={false}
                                     className="group w-28 shrink-0 snap-start"
                                 >
