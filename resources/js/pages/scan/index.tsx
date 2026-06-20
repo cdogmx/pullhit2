@@ -1,15 +1,77 @@
 import { Head } from '@inertiajs/react';
-import { Camera, Loader2 } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Camera, Loader2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ScanConfirmCard } from '@/components/scan/scan-confirm-card';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import type { GradingCompanyOption, ScanDetected, ScanResult, ScanUsage } from '@/types';
+import type {
+    GradingCompanyOption,
+    ScanDetected,
+    ScanResult,
+    ScanUsage,
+} from '@/types';
 
 type Props = { usage: ScanUsage; gradingCompanies: GradingCompanyOption[] };
 
 const MAX_PX = 1568;
+
+// Persist the most recent scan so an accidental navigation away doesn't lose it.
+const STORAGE_KEY = 'cardfoo:last-scan';
+const STORAGE_TTL_MS = 24 * 60 * 60 * 1000;
+
+// Rotating progress copy shown while the AI read is in flight (the request is a
+// single round-trip, so these are illustrative of the real pipeline, not live).
+const STEP_COPY: Record<'single' | 'bulk', string[]> = {
+    single: [
+        'Framing the card…',
+        'Checking the cache…',
+        'Reading with AI…',
+        'Matching to the catalog…',
+    ],
+    bulk: [
+        'Detecting cards…',
+        'Checking the cache…',
+        'Reading with AI…',
+        'Matching to the catalog…',
+    ],
+};
+
+function readStoredScan(): ScanDetected[] | null {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+
+        if (!raw) {
+            return null;
+        }
+
+        const parsed = JSON.parse(raw) as { at: number; detected: ScanDetected[] };
+
+        if (!parsed?.detected?.length || Date.now() - parsed.at > STORAGE_TTL_MS) {
+            return null;
+        }
+
+        return parsed.detected;
+    } catch {
+        return null;
+    }
+}
+
+function storeScan(detected: ScanDetected[] | null): void {
+    try {
+        if (detected && detected.length > 0) {
+            localStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify({ at: Date.now(), detected }),
+            );
+        } else {
+            localStorage.removeItem(STORAGE_KEY);
+        }
+    } catch {
+        // Ignore storage failures (private mode, quota, etc.).
+    }
+}
 
 /** Read the XSRF-TOKEN cookie Laravel set, for the POST header. */
 function xsrfToken(): string {
@@ -43,16 +105,50 @@ function downscale(file: File): Promise<string> {
     });
 }
 
-export default function ScanIndex({ usage: initialUsage, gradingCompanies }: Props) {
+export default function ScanIndex({
+    usage: initialUsage,
+    gradingCompanies,
+}: Props) {
     const [mode, setMode] = useState<'single' | 'bulk'>('single');
     const [busy, setBusy] = useState(false);
+    const [step, setStep] = useState(0);
     const [usage, setUsage] = useState(initialUsage);
-    const [detected, setDetected] = useState<ScanDetected[] | null>(null);
+    const [detected, setDetected] = useState<ScanDetected[] | null>(
+        readStoredScan,
+    );
+    // Whether the shown results were restored from a previous session.
+    const [fromStorage, setFromStorage] = useState<boolean>(
+        () => readStoredScan() !== null,
+    );
     const fileRef = useRef<HTMLInputElement>(null);
 
+    const steps = STEP_COPY[mode];
+
+    // Rotate the progress copy while a scan is in flight.
+    useEffect(() => {
+        if (!busy) {
+            return;
+        }
+
+        const id = setInterval(
+            () => setStep((s) => (s + 1) % steps.length),
+            1800,
+        );
+
+        return () => clearInterval(id);
+    }, [busy, steps.length]);
+
+    const clearScan = () => {
+        setDetected(null);
+        setFromStorage(false);
+        storeScan(null);
+    };
+
     const onFile = async (file: File) => {
+        setStep(0);
         setBusy(true);
         setDetected(null);
+        setFromStorage(false);
 
         try {
             const image = await downscale(file);
@@ -84,6 +180,7 @@ export default function ScanIndex({ usage: initialUsage, gradingCompanies }: Pro
             const result: ScanResult = await res.json();
             setUsage(result.usage);
             setDetected(result.detected);
+            storeScan(result.detected);
 
             if (result.detected.length === 0) {
                 toast.message('No cards detected in that photo.');
@@ -147,11 +244,26 @@ export default function ScanIndex({ usage: initialUsage, gradingCompanies }: Pro
                             )}
                             <span className="text-sm font-medium">
                                 {busy
-                                    ? 'Reading the card…'
+                                    ? steps[step]
                                     : mode === 'single'
                                       ? 'Take or upload a photo of one card'
                                       : 'Take or upload a photo of a binder page'}
                             </span>
+                            {busy && (
+                                <span className="flex gap-1">
+                                    {steps.map((_, i) => (
+                                        <span
+                                            key={i}
+                                            className={cn(
+                                                'size-1.5 rounded-full transition-colors',
+                                                i === step
+                                                    ? 'bg-primary'
+                                                    : 'bg-muted-foreground/30',
+                                            )}
+                                        />
+                                    ))}
+                                </span>
+                            )}
                         </button>
                         <input
                             ref={fileRef}
@@ -172,10 +284,28 @@ export default function ScanIndex({ usage: initialUsage, gradingCompanies }: Pro
 
                 {detected && detected.length > 0 && (
                     <div className="space-y-3">
-                        <h2 className="text-sm font-semibold text-muted-foreground">
-                            Detected {detected.length}{' '}
-                            {detected.length === 1 ? 'card' : 'cards'} — confirm and add
-                        </h2>
+                        <div className="flex items-center justify-between gap-3">
+                            <h2 className="text-sm font-semibold text-muted-foreground">
+                                {fromStorage
+                                    ? 'Your recent scan'
+                                    : `Detected ${detected.length} ${detected.length === 1 ? 'card' : 'cards'} — confirm and add`}
+                            </h2>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={clearScan}
+                            >
+                                <X className="size-4" />
+                                Clear
+                            </Button>
+                        </div>
+                        {fromStorage && (
+                            <p className="text-xs text-muted-foreground">
+                                Picked up where you left off. Confirm and add, or
+                                clear to start a new scan.
+                            </p>
+                        )}
                         {detected.map((d, i) => (
                             <ScanConfirmCard
                                 key={i}
