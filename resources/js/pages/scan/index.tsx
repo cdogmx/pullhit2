@@ -120,6 +120,8 @@ export default function ScanIndex({
     const [fromStorage, setFromStorage] = useState<boolean>(
         () => readStoredScan() !== null,
     );
+    // The photo the user just scanned (data URL), shown alongside each match.
+    const [photo, setPhoto] = useState<string | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const libraryRef = useRef<HTMLInputElement>(null);
 
@@ -142,6 +144,7 @@ export default function ScanIndex({
     const clearScan = () => {
         setDetected(null);
         setFromStorage(false);
+        setPhoto(null);
         storeScan(null);
     };
 
@@ -153,6 +156,7 @@ export default function ScanIndex({
 
         try {
             const image = await downscale(file);
+            setPhoto(`data:image/jpeg;base64,${image}`);
             const res = await fetch('/scan', {
                 method: 'POST',
                 headers: {
@@ -343,6 +347,7 @@ export default function ScanIndex({
                             <ScanConfirmCard
                                 key={i}
                                 detected={d}
+                                scanPhoto={photo}
                                 gradingCompanies={gradingCompanies}
                             />
                         ))}

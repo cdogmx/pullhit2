@@ -35,11 +35,16 @@ const CONDITIONS = [
 export function ScanConfirmCard({
     detected,
     gradingCompanies,
+    scanPhoto = null,
 }: {
     detected: ScanDetected;
     gradingCompanies: GradingCompanyOption[];
+    /** The whole scanned photo — shown when there's no per-card crop (single mode). */
+    scanPhoto?: string | null;
 }) {
     const id = detected.identified;
+    // The per-card crop (bulk) or the whole scanned photo (single) to show.
+    const scanImage = detected.thumbnail ?? scanPhoto;
     const [candidateIdx, setCandidateIdx] = useState(detected.candidates.length ? 0 : -1);
     const [mode, setMode] = useState<'raw' | 'graded'>(id.is_graded ? 'graded' : 'raw');
     const [condition, setCondition] = useState('NM');
@@ -155,16 +160,15 @@ export function ScanConfirmCard({
 
     return (
         <div className="flex flex-col gap-3 rounded-lg border border-border p-3 sm:flex-row">
-            {/* Side-by-side: the scanned photo (bulk only) and the matched card's
-                reference image, so the user can confirm the match at a glance.
-                Only shown when there's a scan photo to compare against — otherwise
-                the selected candidate tile already shows the image. */}
-            {detected.thumbnail && (
+            {/* Side-by-side: the scanned photo (the per-card crop in bulk, or the
+                whole uploaded photo in single) and the matched card's reference
+                image, so the user can confirm the match at a glance. */}
+            {scanImage && (
                 <div className="flex gap-2 self-center sm:self-start">
-                    {detected.thumbnail && (
+                    {scanImage && (
                         <figure className="m-0 text-center">
                             <img
-                                src={detected.thumbnail}
+                                src={scanImage}
                                 alt=""
                                 className="h-32 w-auto rounded"
                             />
