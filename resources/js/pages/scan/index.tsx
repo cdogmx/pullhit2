@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { Camera, Loader2, X } from 'lucide-react';
+import { Camera, ImagePlus, Loader2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ScanConfirmCard } from '@/components/scan/scan-confirm-card';
@@ -121,6 +121,7 @@ export default function ScanIndex({
         () => readStoredScan() !== null,
     );
     const fileRef = useRef<HTMLInputElement>(null);
+    const libraryRef = useRef<HTMLInputElement>(null);
 
     const steps = STEP_COPY[mode];
 
@@ -190,8 +191,13 @@ export default function ScanIndex({
         } finally {
             setBusy(false);
 
+            // Reset both inputs so re-picking the same file fires onChange again.
             if (fileRef.current) {
                 fileRef.current.value = '';
+            }
+
+            if (libraryRef.current) {
+                libraryRef.current.value = '';
             }
         }
     };
@@ -265,11 +271,38 @@ export default function ScanIndex({
                                 </span>
                             )}
                         </button>
+
+                        {/* Camera forces the rear camera; the library button has
+                            no capture, so it opens the photo picker / files. */}
+                        {!busy && (
+                            <button
+                                type="button"
+                                onClick={() => libraryRef.current?.click()}
+                                className="mt-3 flex w-full items-center justify-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                                <ImagePlus className="size-4" />
+                                Choose from library
+                            </button>
+                        )}
+
                         <input
                             ref={fileRef}
                             type="file"
                             accept="image/*"
                             capture="environment"
+                            className="hidden"
+                            onChange={(e) => {
+                                const f = e.target.files?.[0];
+
+                                if (f) {
+                                    void onFile(f);
+                                }
+                            }}
+                        />
+                        <input
+                            ref={libraryRef}
+                            type="file"
+                            accept="image/*"
                             className="hidden"
                             onChange={(e) => {
                                 const f = e.target.files?.[0];
