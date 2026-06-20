@@ -26,6 +26,22 @@ class CandidateMatcher
             return []; // nothing to match on
         }
 
+        // Both a number (hundreds share one) and a broad name token (e.g. "vmax",
+        // also hundreds) are individually weak, so an unordered window can drop
+        // the real card. Order by a relevance proxy that rewards matching the
+        // number AND the name together, so the exact card is always in the window.
+        $relevance = [];
+        $bindings = [];
+        if ($numerator !== null) {
+            $relevance[] = '(CASE WHEN `number` = ? THEN 2 WHEN `number` LIKE ? THEN 1 ELSE 0 END)';
+            $bindings[] = $numerator;
+            $bindings[] = $numerator.'/%';
+        }
+        if ($card->name) {
+            $relevance[] = '(CASE WHEN `name` LIKE ? THEN 2 ELSE 0 END)';
+            $bindings[] = '%'.$card->name.'%';
+        }
+
         $items = CatalogItem::query()
             ->with(['set', 'productLine', 'defaultMarketValue.gradingCompany'])
             ->when($card->language, fn (Builder $q) => $q->where('language', $card->language))
@@ -37,14 +53,7 @@ class CandidateMatcher
                     $q->orWhere('name', 'like', '%'.$t.'%');
                 }
             })
-            // A broad name token (e.g. "vmax") matches hundreds of cards, so an
-            // unordered window could drop the exact match. Pull number-matching
-            // rows to the front so the right card is always scored; popularity
-            // breaks ties among the name-only matches.
-            ->when($numerator !== null, fn (Builder $q) => $q->orderByRaw(
-                'CASE WHEN `number` = ? THEN 0 WHEN `number` LIKE ? THEN 1 ELSE 2 END',
-                [$numerator, $numerator.'/%'],
-            ))
+            ->when($relevance !== [], fn (Builder $q) => $q->orderByRaw(implode(' + ', $relevance).' DESC', $bindings))
             ->orderByDesc('popularity')
             ->limit(100)
             ->get();
@@ -77,10 +86,12 @@ class CandidateMatcher
             }
         }
 
+        $nameHit = false;
         if ($nameTokens !== []) {
             $itemTokens = $this->tokens($item->name);
             $hits = count(array_intersect($nameTokens, $itemTokens));
             if ($hits > 0) {
+                $nameHit = true;
                 $score += 0.4 * ($hits / count($nameTokens));
                 $reasons[] = 'name';
             }
@@ -118,10 +129,24 @@ class CandidateMatcher
             }
         }
 
+        // A read name that shares NOTHING with this item, kept alive only by a
+        // number coincidence (and no set/edition corroboration), is almost always
+        // the wrong card from a catalog gap. Drop it so the scanner asks the user
+        // to search rather than confidently showing an unrelated card.
+        if ($nameTokens !== [] && ! $nameHit
+            && array_intersect(['name', 'set', 'edition'], $reasons) === []) {
+            return ['item' => $item, 'score' => 0.0, 'reasons' => $reasons];
+        }
+
         return ['item' => $item, 'score' => round(min(1.0, max(0.0, $score)), 2), 'reasons' => $reasons];
     }
 
-    /** Leading number of a "029/086" style collector number. */
+    /**
+     * Leading number of a "029/086" style collector number, normalized so the
+     * vision read and the stored number compare equal regardless of zero-padding
+     * ("096" == "96"). Alphanumeric forms (promos like "SWSH004", "SV086") are
+     * left intact — they're matched verbatim.
+     */
     protected function numerator(?string $number): ?string
     {
         if (! $number) {
@@ -131,7 +156,18 @@ class CandidateMatcher
         $head = trim(explode('/', $number)[0]);
         $head = preg_replace('/[^0-9A-Za-z]/', '', $head);
 
-        return $head !== '' ? $head : null;
+        if ($head === '') {
+            return null;
+        }
+
+        // Purely numeric → drop leading zeros (keep a single "0").
+        if (ctype_digit($head)) {
+            $head = ltrim($head, '0');
+
+            return $head === '' ? '0' : $head;
+        }
+
+        return $head;
     }
 
     /**

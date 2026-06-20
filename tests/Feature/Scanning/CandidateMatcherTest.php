@@ -91,6 +91,40 @@ test('an exact number match is not crowded out by a flood of shared-name cards',
         ->and($matches[0]['reasons'])->toContain('number');
 });
 
+test('a zero-padded collector number matches the catalog plain number', function () {
+    $nymble = CatalogItem::factory()->create([
+        'name' => 'Nymble', 'number' => '96',
+        'attributes' => ['language' => 'en', 'rarity' => 'Rare'],
+    ]);
+    // A different printing with the everyday number, to ensure number wins.
+    CatalogItem::factory()->create([
+        'name' => 'Nymble', 'number' => '15',
+        'attributes' => ['language' => 'en', 'rarity' => 'Common'],
+    ]);
+
+    $matches = app(CandidateMatcher::class)->match(new IdentifiedCard(
+        name: 'Nymble', number: '096/094', setName: null, language: 'en', confidence: 0.9,
+    ));
+
+    expect($matches[0]['item']->id)->toBe($nymble->id)
+        ->and($matches[0]['reasons'])->toContain('number');
+});
+
+test('a number-only match with a mismatched name is dropped', function () {
+    // A Trainer that happens to share the number but nothing else — the real
+    // card (Meowth #105) isn't in the catalog.
+    CatalogItem::factory()->create([
+        'name' => 'N', 'number' => '105',
+        'attributes' => ['language' => 'en', 'rarity' => 'Uncommon'],
+    ]);
+
+    $matches = app(CandidateMatcher::class)->match(new IdentifiedCard(
+        name: 'Meowth', number: '105/091', setName: null, language: 'en', confidence: 0.9,
+    ));
+
+    expect($matches)->toBe([]);
+});
+
 test('a detected reverse holo demotes the non-reverse printing', function () {
     $holo = CatalogItem::factory()->create(['name' => 'Pikachu', 'number' => '58',
         'attributes' => ['language' => 'en', 'rarity' => 'Common', 'variant' => 'holo']]);
