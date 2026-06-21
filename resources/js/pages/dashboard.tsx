@@ -87,8 +87,18 @@ type Props = {
     scans: Scans;
     wishlist: { item_count: number; below_target: number };
     portfolioHistory: PricePoint[];
+    recentScans: RecentScan[];
     recent: RecentItem[];
     counts: { collections: number; wishlists: number };
+};
+
+type RecentScan = {
+    id: number;
+    mode: string;
+    image_url: string | null;
+    card_count: number;
+    results: { match: { image_url: string | null } | null }[];
+    created_at: string | null;
 };
 
 function gainColor(n: number): string {
@@ -117,6 +127,7 @@ export default function Dashboard({
     scans,
     wishlist,
     portfolioHistory,
+    recentScans,
     recent,
     counts,
 }: Props) {
@@ -314,6 +325,57 @@ export default function Dashboard({
                                 </CardContent>
                             </Card>
                         </div>
+
+                        {/* Recent scans */}
+                        {recentScans.length > 0 && (
+                            <Card>
+                                <CardContent className="pt-6">
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <h2 className="text-sm font-semibold">
+                                            Recent scans
+                                        </h2>
+                                        <Link
+                                            href="/scan/history"
+                                            className="text-xs font-medium text-primary hover:underline"
+                                        >
+                                            View all →
+                                        </Link>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                        {recentScans.map((s) => (
+                                            <Link
+                                                key={s.id}
+                                                href="/scan/history"
+                                                className="group"
+                                            >
+                                                <div className="aspect-[4/3] overflow-hidden rounded-md border border-border bg-muted">
+                                                    {s.image_url ? (
+                                                        <img
+                                                            src={s.image_url}
+                                                            alt=""
+                                                            className="size-full object-cover"
+                                                            loading="lazy"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex size-full items-center justify-center">
+                                                            <ScanLine className="size-5 text-muted-foreground/40" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                    {s.card_count} card
+                                                    {s.card_count === 1
+                                                        ? ''
+                                                        : 's'}{' '}
+                                                    ·{' '}
+                                                    {relativeTime(s.created_at)}
+                                                </p>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* Recent additions */}
                         {recent.length > 0 && (

@@ -11,6 +11,7 @@ use App\Http\Requests\Scanning\ScanConfirmRequest;
 use App\Http\Requests\Scanning\ScanRequest;
 use App\Http\Resources\CatalogItemResource;
 use App\Models\GradingCompany;
+use App\Models\ScanLog;
 use App\Support\Membership\ScanQuota;
 use App\Support\Scanning\FingerprintCache;
 use Illuminate\Http\JsonResponse;
@@ -86,6 +87,39 @@ class ScanController extends Controller
         $record($request->user(), $data);
 
         return response()->json(['ok' => true]);
+    }
+
+    /** The signed-in user's scan history — the scanned photo + what was detected. */
+    public function history(Request $request): Response
+    {
+        $paginator = $request->user()->scanLogs()
+            ->whereNotNull('image_path')
+            ->latest()
+            ->paginate(20);
+
+        return Inertia::render('scan/history', [
+            'scans' => collect($paginator->items())->map(fn ($log) => $this->scanRow($log)),
+            'pagination' => [
+                'page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function scanRow(ScanLog $log): array
+    {
+        return [
+            'id' => $log->id,
+            'mode' => $log->mode,
+            'image_url' => $log->image_path,
+            'card_count' => (int) $log->cards,
+            'ai_reads' => (int) $log->ai_reads,
+            'cache_hits' => (int) $log->cache_hits,
+            'results' => $log->results ?? [],
+            'created_at' => $log->created_at?->toIso8601String(),
+        ];
     }
 
     /**

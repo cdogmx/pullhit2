@@ -97,12 +97,9 @@ class CandidateMatcher
             }
         }
 
-        if ($card->setName && $item->set) {
-            $setTokens = $this->tokens($item->set->name);
-            if (array_intersect($this->tokens($card->setName), $setTokens) !== []) {
-                $score += 0.2;
-                $reasons[] = 'set';
-            }
+        if ($card->setName && $item->set && $this->setMatches($card->setName, $item->set->name)) {
+            $score += 0.2;
+            $reasons[] = 'set';
         }
 
         // Printing: the vision-detected edition/variant breaks the tie between
@@ -168,6 +165,29 @@ class CandidateMatcher
         }
 
         return $head;
+    }
+
+    /**
+     * Whether two set names refer to the same set. A single shared token isn't
+     * enough — many sets share a common word ("Hidden Fates" vs "Paldean Fates",
+     * "Crimson Haze" vs "Crimson Invasion") — so require either one name to
+     * contain the other (handles "151" ⊂ "Scarlet & Violet 151") or ≥2 shared
+     * tokens.
+     */
+    protected function setMatches(string $a, string $b): bool
+    {
+        $la = mb_strtolower(trim($a));
+        $lb = mb_strtolower(trim($b));
+
+        if ($la === '' || $lb === '') {
+            return false;
+        }
+
+        if (mb_strlen($la) >= 3 && (str_contains($lb, $la) || str_contains($la, $lb))) {
+            return true;
+        }
+
+        return count(array_intersect($this->tokens($a), $this->tokens($b))) >= 2;
     }
 
     /**

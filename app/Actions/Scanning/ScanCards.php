@@ -9,6 +9,7 @@ use App\Support\Membership\ScanQuota;
 use App\Support\Scanning\CandidateMatcher;
 use App\Support\Scanning\IdentifiedCard;
 use App\Support\Scanning\IdentifierStrategy;
+use App\Support\Scanning\ScanArchive;
 
 /**
  * Orchestrates a scan: enforce the user's monthly quota, identify the card(s) via
@@ -21,6 +22,7 @@ class ScanCards
     public function __construct(
         protected IdentifierStrategy $strategy,
         protected CandidateMatcher $matcher,
+        protected ScanArchive $archive,
     ) {}
 
     /**
@@ -41,19 +43,23 @@ class ScanCards
         $aiReads = count(array_filter($cards, fn (IdentifiedCard $c) => $c->source !== 'cache'));
         $creditsSpent = $aiReads > 0 ? $quota->record($aiReads) : 0;
 
-        // Audit log: one row per scan, for user history + admin record-keeping.
+        $detected = array_map(fn (IdentifiedCard $card) => $this->present($card), $cards);
+
+        // Record the scan for the user's history (thumbnail + results snapshot).
         if ($total > 0) {
+            $archived = $this->archive->build($user, $base64, $detected);
+
             ScanLog::create([
                 'user_id' => $user->id,
                 'mode' => $mode,
+                'image_path' => $archived['image_path'],
+                'results' => $archived['results'],
                 'cards' => $total,
                 'ai_reads' => $aiReads,
                 'cache_hits' => $total - $aiReads,
                 'credits_spent' => $creditsSpent,
             ]);
         }
-
-        $detected = array_map(fn (IdentifiedCard $card) => $this->present($card), $cards);
 
         return ['detected' => $detected, 'usage' => $quota->snapshot()];
     }

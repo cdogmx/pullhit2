@@ -125,6 +125,23 @@ test('a number-only match with a mismatched name is dropped', function () {
     expect($matches)->toBe([]);
 });
 
+test('a single shared set-name word is not a set match', function () {
+    // "Hidden Fates" vs "Paldean Fates" share only "Fates" — a wrong-name,
+    // number-only coincidence must still be dropped, not propped up by it.
+    CatalogItem::factory()->create([
+        'name' => 'Varoom', 'number' => '64',
+        'set_id' => \App\Models\Set::factory()->create(['name' => 'Paldean Fates']),
+        'attributes' => ['language' => 'en', 'rarity' => 'Common'],
+    ]);
+
+    $matches = app(CandidateMatcher::class)->match(new IdentifiedCard(
+        name: 'Ho-Oh & Reshiram-GX', number: '64/68', setName: 'Hidden Fates',
+        language: 'en', confidence: 0.7,
+    ));
+
+    expect($matches)->toBe([]);
+});
+
 test('a detected reverse holo demotes the non-reverse printing', function () {
     $holo = CatalogItem::factory()->create(['name' => 'Pikachu', 'number' => '58',
         'attributes' => ['language' => 'en', 'rarity' => 'Common', 'variant' => 'holo']]);

@@ -173,6 +173,12 @@ class User extends Authenticatable implements PasskeyUser
         return $this->hasMany(ScanUsage::class);
     }
 
+    /** @return HasMany<ScanLog, $this> */
+    public function scanLogs(): HasMany
+    {
+        return $this->hasMany(ScanLog::class)->latest();
+    }
+
     /** @return HasMany<PortfolioSnapshot, $this> */
     public function portfolioSnapshots(): HasMany
     {

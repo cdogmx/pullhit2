@@ -43,6 +43,7 @@ class DashboardController extends Controller
             'scans' => ScanQuota::for($user)->snapshot(),
             'wishlist' => $this->wishlistSummary($user),
             'portfolioHistory' => $this->portfolioHistory($user),
+            'recentScans' => $this->recentScans($user),
             'recent' => $this->recentAdditions($portfolio['items']),
             'counts' => [
                 'collections' => $user->collections()->count(),
@@ -65,6 +66,28 @@ class DashboardController extends Controller
             ->map(fn ($s) => [
                 't' => $s->captured_on->toDateString(),
                 'price' => (int) $s->total_value_cents,
+            ])
+            ->all();
+    }
+
+    /**
+     * The user's most recent scans (with a thumbnail) for the dashboard card.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function recentScans(User $user): array
+    {
+        return $user->scanLogs()
+            ->whereNotNull('image_path')
+            ->take(4)
+            ->get()
+            ->map(fn ($log) => [
+                'id' => $log->id,
+                'mode' => $log->mode,
+                'image_url' => $log->image_path,
+                'card_count' => (int) $log->cards,
+                'results' => array_slice($log->results ?? [], 0, 6),
+                'created_at' => $log->created_at?->toIso8601String(),
             ])
             ->all();
     }

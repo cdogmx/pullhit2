@@ -1,5 +1,5 @@
-import { Head } from '@inertiajs/react';
-import { Camera, ImagePlus, Loader2, X } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { Camera, History, ImagePlus, Loader2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ScanConfirmCard } from '@/components/scan/scan-confirm-card';
@@ -238,6 +238,14 @@ export default function ScanIndex({
                         )}
                     </p>
                 </div>
+
+                <Link
+                    href="/scan/history"
+                    className="-mt-2 inline-flex w-fit items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                    <History className="size-4" />
+                    Scan history
+                </Link>
 
                 <Card>
                     <CardContent className="pt-6">
