@@ -3,8 +3,10 @@
 use App\Http\Controllers\Web\CatalogController;
 use App\Http\Controllers\Web\CollectionController;
 use App\Http\Controllers\Web\CollectionsController;
+use App\Http\Controllers\Web\ContributeController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\NotificationController;
+use App\Http\Controllers\Web\RankingsController;
 use App\Http\Controllers\Web\ScanController;
 use App\Http\Controllers\Web\SitemapController;
 use App\Http\Controllers\Web\SuggestionController;
@@ -25,6 +27,9 @@ Route::get('browse/{productLine}/{set}', [CatalogController::class, 'browseSet']
 Route::get('catalog/{catalogItem}', [CatalogController::class, 'show'])->name('catalog.show');
 
 Route::get('sitemap.xml', SitemapController::class)->name('sitemap');
+
+// Public community rankings (leaderboard + monthly giveaway entries).
+Route::get('rankings', RankingsController::class)->name('rankings');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -59,6 +64,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('wishlists', [WishlistsController::class, 'store'])->name('wishlists.store');
     Route::patch('wishlists/{wishlist}', [WishlistsController::class, 'update'])->name('wishlists.update');
     Route::delete('wishlists/{wishlist}', [WishlistsController::class, 'destroy'])->name('wishlists.destroy');
+
+    // Community contributions — report a missing card/set, see your standing.
+    Route::get('contribute', [ContributeController::class, 'index'])->name('contribute.index');
+    Route::post('contribute', [ContributeController::class, 'store'])->name('contribute.store');
 
     // Card scanner (Claude vision).
     Route::get('scan', [ScanController::class, 'index'])->name('scan.index');

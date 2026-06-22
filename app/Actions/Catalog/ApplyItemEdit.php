@@ -2,6 +2,8 @@
 
 namespace App\Actions\Catalog;
 
+use App\Actions\Community\AwardPoints;
+use App\Enums\ContributionType;
 use App\Models\CatalogItem;
 use App\Models\ItemEditSuggestion;
 use App\Models\User;
@@ -17,7 +19,10 @@ use Illuminate\Support\Carbon;
  */
 class ApplyItemEdit
 {
-    public function __construct(protected VerticalRegistry $registry) {}
+    public function __construct(
+        protected VerticalRegistry $registry,
+        protected AwardPoints $award,
+    ) {}
 
     public function apply(ItemEditSuggestion $suggestion, User $reviewer): CatalogItem
     {
@@ -65,6 +70,16 @@ class ApplyItemEdit
             'review_note' => $note,
             'reviewed_at' => Carbon::now(),
         ])->save();
+
+        // Reward the submitter for an accepted fix (idempotent per suggestion).
+        if ($status === 'approved' && $suggestion->user) {
+            ($this->award)(
+                $suggestion->user,
+                ContributionType::EditSuggestion,
+                $suggestion,
+                'Edit approved',
+            );
+        }
 
         // Let the submitter know the outcome.
         $suggestion->user?->notify(new ItemEditReviewed($suggestion));

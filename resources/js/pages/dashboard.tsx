@@ -1,6 +1,8 @@
 import { Head, Link } from '@inertiajs/react';
 import {
     ArrowRight,
+    Award,
+    Gift,
     Heart,
     Home,
     LibraryBig,
@@ -85,6 +87,11 @@ type Props = {
     movers: { gainers: Mover[]; decliners: Mover[] };
     allocation: Allocation[];
     scans: Scans;
+    community: {
+        level: { name: string; to_next: number | null };
+        points: number;
+        entries: number;
+    };
     wishlist: { item_count: number; below_target: number };
     portfolioHistory: PricePoint[];
     recentScans: RecentScan[];
@@ -125,6 +132,7 @@ export default function Dashboard({
     movers,
     allocation,
     scans,
+    community,
     wishlist,
     portfolioHistory,
     recentScans,
@@ -325,6 +333,43 @@ export default function Dashboard({
                                 </CardContent>
                             </Card>
                         </div>
+
+                        {/* Community standing */}
+                        <Card>
+                            <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
+                                <div className="flex items-center gap-3">
+                                    <span className="flex size-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                                        <Award className="size-5" />
+                                    </span>
+                                    <div>
+                                        <p className="text-sm font-semibold">
+                                            {community.level.name} ·{' '}
+                                            {community.points.toLocaleString()}{' '}
+                                            pts
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            <span className="inline-flex items-center gap-1">
+                                                <Gift className="size-3 text-primary" />
+                                                {community.entries.toLocaleString()}{' '}
+                                                giveaway entries this month
+                                            </span>
+                                            {community.level.to_next != null &&
+                                                ` · ${community.level.to_next} to next level`}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link href="/rankings">Rankings</Link>
+                                    </Button>
+                                    <Button asChild size="sm">
+                                        <Link href="/contribute">
+                                            Contribute
+                                        </Link>
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
 
                         {/* Recent scans */}
                         {recentScans.length > 0 && (

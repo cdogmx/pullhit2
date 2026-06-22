@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CardController;
+use App\Http\Controllers\Admin\CardReportController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ImageController;
 use App\Http\Controllers\Admin\ReconcileController;
@@ -65,6 +66,11 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
 
     // Scan-detection feedback review (cache vs AI accuracy).
     Route::get('scan-feedback', [ScanFeedbackController::class, 'index'])->name('scan-feedback.index');
+
+    // Community: review user "missing card/set" reports (accept awards points).
+    Route::get('card-reports', [CardReportController::class, 'index'])->name('card-reports.index');
+    Route::post('card-reports/{cardReport}/approve', [CardReportController::class, 'approve'])->name('card-reports.approve');
+    Route::post('card-reports/{cardReport}/reject', [CardReportController::class, 'reject'])->name('card-reports.reject');
 
     // Cards
     Route::get('cards', [CardController::class, 'index'])->name('cards.index');

@@ -1,9 +1,11 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     Anchor,
+    Award,
     Bell,
     Boxes,
     CreditCard,
+    FlagTriangleRight,
     GitCompare,
     Globe,
     Heart,
@@ -62,6 +64,11 @@ const mainNavItems: NavItem[] = [
         icon: Bell,
     },
     {
+        title: 'Contribute',
+        href: '/contribute',
+        icon: Award,
+    },
+    {
         title: 'Browse',
         href: '/browse',
         icon: Search,
@@ -93,6 +100,7 @@ const adminNavItems: NavItem[] = [
     { title: 'Sets', href: '/admin/sets', icon: Library },
     { title: 'Cards', href: '/admin/cards', icon: PencilRuler },
     { title: 'Suggestions', href: '/admin/suggestions', icon: Inbox },
+    { title: 'Card reports', href: '/admin/card-reports', icon: FlagTriangleRight },
     { title: 'Scan feedback', href: '/admin/scan-feedback', icon: ScanLine },
     { title: 'Reconcile', href: '/admin/reconcile', icon: GitCompare },
 ];

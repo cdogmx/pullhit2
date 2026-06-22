@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\MembershipTier;
+use App\Support\Community\Level;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -33,6 +34,7 @@ class User extends Authenticatable implements PasskeyUser
         'membership_tier' => 'free',
         'is_admin' => false,
         'purchased_scan_credits' => 0,
+        'contribution_points' => 0,
     ];
 
     /**
@@ -53,6 +55,7 @@ class User extends Authenticatable implements PasskeyUser
             'membership_renews_at' => 'datetime',
             'membership_cancel_scheduled' => 'boolean',
             'banned_at' => 'datetime',
+            'contribution_points' => 'integer',
             'notification_preferences' => 'array',
         ];
     }
@@ -177,6 +180,32 @@ class User extends Authenticatable implements PasskeyUser
     public function scanLogs(): HasMany
     {
         return $this->hasMany(ScanLog::class)->latest();
+    }
+
+    /** @return HasMany<Contribution, $this> */
+    public function contributions(): HasMany
+    {
+        return $this->hasMany(Contribution::class);
+    }
+
+    /** @return HasMany<CardReport, $this> */
+    public function cardReports(): HasMany
+    {
+        return $this->hasMany(CardReport::class)->latest();
+    }
+
+    /** Level (name + progress) from lifetime contribution points. */
+    public function level(): array
+    {
+        return Level::for((int) $this->contribution_points);
+    }
+
+    /** Points earned this calendar month — the user's giveaway entries. */
+    public function monthlyEntries(): int
+    {
+        return (int) $this->contributions()
+            ->where('created_at', '>=', now()->startOfMonth())
+            ->sum('points');
     }
 
     /** @return HasMany<PortfolioSnapshot, $this> */

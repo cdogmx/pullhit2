@@ -41,6 +41,11 @@ class DashboardController extends Controller
             ],
             'allocation' => array_slice($portfolio['allocation'], 0, 6),
             'scans' => ScanQuota::for($user)->snapshot(),
+            'community' => [
+                'level' => $user->level(),
+                'points' => (int) $user->contribution_points,
+                'entries' => $user->monthlyEntries(),
+            ],
             'wishlist' => $this->wishlistSummary($user),
             'portfolioHistory' => $this->portfolioHistory($user),
             'recentScans' => $this->recentScans($user),

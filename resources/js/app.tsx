@@ -17,6 +17,7 @@ createInertiaApp({
             case name === 'brand':
             case name === 'terms':
             case name === 'privacy':
+            case name === 'rankings':
             case name === 'collection/public':
             case name === 'wishlist/public':
             case name.startsWith('catalog/'):
