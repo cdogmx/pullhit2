@@ -243,8 +243,10 @@ export default function Show({
     ]
         .filter(Boolean)
         .join(' · ');
-    const crumbs: { label: string; href?: string }[] = [
-        { label: 'Browse', href: backHref },
+    const crumbs: { label: string; href?: string; back?: boolean }[] = [
+        // When we arrived from a browse search, "Browse" goes back through history
+        // so Inertia restores that page's loaded list + scroll position.
+        { label: 'Browse', href: backHref, back: !!returnSearch },
         ...(line ? [{ label: line.name, href: `/browse/${line.slug}` }] : []),
         ...(line && set
             ? [{ label: set.name, href: `/browse/${line.slug}/${set.slug}` }]
@@ -296,7 +298,24 @@ export default function Show({
                                 <BreadcrumbItem>
                                     {c.href && i < crumbs.length - 1 ? (
                                         <BreadcrumbLink asChild>
-                                            <Link href={c.href}>{c.label}</Link>
+                                            <Link
+                                                href={c.href}
+                                                onClick={
+                                                    c.back
+                                                        ? (e) => {
+                                                              if (
+                                                                  window.history
+                                                                      .length > 1
+                                                              ) {
+                                                                  e.preventDefault();
+                                                                  window.history.back();
+                                                              }
+                                                          }
+                                                        : undefined
+                                                }
+                                            >
+                                                {c.label}
+                                            </Link>
                                         </BreadcrumbLink>
                                     ) : (
                                         <BreadcrumbPage>

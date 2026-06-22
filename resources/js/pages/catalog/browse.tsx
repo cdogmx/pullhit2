@@ -196,6 +196,50 @@ export default function Browse({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [q]);
 
+    // Scroll memory: remember where the user was in this browse view so that
+    // loading more → opening a card → coming back (browser Back or the "Browse"
+    // crumb, which history-restores the accumulated list) lands in place.
+    const scrollKey = `browse-scroll:${JSON.stringify(buildQuery(filters))}`;
+    useEffect(() => {
+        const save = () => {
+            try {
+                sessionStorage.setItem(scrollKey, String(window.scrollY));
+            } catch {
+                // ignore (private mode / quota)
+            }
+        };
+
+        // Inertia fires "before" on any visit away (opening a card, loading more).
+        const stop = router.on('before', save);
+        window.addEventListener('pagehide', save);
+
+        return () => {
+            stop();
+            window.removeEventListener('pagehide', save);
+        };
+    }, [scrollKey]);
+
+    // Restore once when this view comes back with more than the first page
+    // loaded — i.e. an accumulated list restored from history, not a fresh visit.
+    const restoredScroll = useRef(false);
+    useEffect(() => {
+        if (restoredScroll.current || items.length <= pagination.per_page) {
+            return;
+        }
+
+        const saved = sessionStorage.getItem(scrollKey);
+
+        if (saved !== null) {
+            restoredScroll.current = true;
+            const y = Number(saved);
+            // Two frames so the restored rows are painted before we scroll.
+            requestAnimationFrame(() =>
+                requestAnimationFrame(() => window.scrollTo(0, y)),
+            );
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [items.length, pagination.per_page]);
+
     // A filter/sort/group change resets the infinite-scroll list back to page 1.
     // Props the list/filters visits need to refresh (shared across update/reset).
     const LIST_PROPS = [
