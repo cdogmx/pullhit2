@@ -2,6 +2,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import {
     BarChart3,
     ExternalLink,
+    ImagePlus,
     Loader2,
     Maximize2,
     Pencil,
@@ -9,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
+import { EditCardImageDialog } from '@/components/admin/edit-card-image-dialog';
 import { EbayListings } from '@/components/catalog/ebay-listings';
 import { EbayShopButton } from '@/components/catalog/ebay-shop-button';
 import { PriceBreakdownDrawer } from '@/components/catalog/price-breakdown-drawer';
@@ -139,6 +141,7 @@ export default function Show({
     } | null>(null);
     const [editingSealed, setEditingSealed] = useState(false);
     const [zoomed, setZoomed] = useState(false);
+    const [editingImage, setEditingImage] = useState(false);
     const isSealed = item.item_type === 'sealed';
 
     // Buy links + live listings (lazy — drives the prominent "Shop on eBay" CTA).
@@ -332,6 +335,17 @@ export default function Show({
                                 </div>
                             )}
                         </div>
+                        {isAdmin && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="mt-2 w-full max-w-[300px]"
+                                onClick={() => setEditingImage(true)}
+                            >
+                                <ImagePlus className="size-4" />
+                                Edit image
+                            </Button>
+                        )}
                     </div>
 
                     {/* Detail column — one consistent vertical rhythm */}
@@ -814,6 +828,16 @@ export default function Show({
                         />
                     </DialogContent>
                 </Dialog>
+            )}
+
+            {isAdmin && (
+                <EditCardImageDialog
+                    catalogItemId={item.id}
+                    name={item.display_name ?? item.name}
+                    currentUrl={item.image_url ?? null}
+                    open={editingImage}
+                    onOpenChange={setEditingImage}
+                />
             )}
 
             <PriceBreakdownDrawer
