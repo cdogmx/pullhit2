@@ -4,15 +4,32 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 
 /**
- * Social share row for a card page. Shares the current (canonical slug) URL with
+ * Social share row for a card page. Shares the card's CANONICAL slug URL (never
+ * the current address, which may carry query strings like ?return=…) with a
  * card-specific title/text. X, Facebook, Reddit, copy-link, and — where the
  * browser supports it — the native share sheet.
  */
-export function ShareButtons({ title, text }: { title: string; text: string }) {
+export function ShareButtons({
+    title,
+    text,
+    path,
+}: {
+    title: string;
+    text: string;
+    /** The canonical slug path (e.g. /pokemon/151/pikachu-58); falls back to the
+     *  current path without its query string. */
+    path?: string | null;
+}) {
     const [copied, setCopied] = useState(false);
 
-    const currentUrl = () =>
-        typeof window !== 'undefined' ? window.location.href : '';
+    const currentUrl = () => {
+        if (typeof window === 'undefined') {
+            return '';
+        }
+
+        // Canonical URL: origin + slug path, dropping any query string.
+        return window.location.origin + (path ?? window.location.pathname);
+    };
 
     const popup = (href: string) =>
         window.open(

@@ -373,6 +373,7 @@ export default function Show({
                             <div className="mt-4">
                                 <ShareButtons
                                     title={item.display_name ?? item.name}
+                                    path={item.url}
                                     text={`${item.display_name ?? item.name}${
                                         item.set
                                             ? ` (${item.set.name}${item.number ? ` #${item.number}` : ''})`
