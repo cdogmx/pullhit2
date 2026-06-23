@@ -1,17 +1,35 @@
 import { Head, router } from '@inertiajs/react';
 import { ImageOff, Pencil, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { DataTable } from '@/components/admin/data-table';
+import type { DataTableColumn } from '@/components/admin/data-table';
 import { EditBrandDialog } from '@/components/admin/edit-brand-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import type { AdminBrand, AdminVertical } from '@/types';
 
 type Props = { brands: AdminBrand[]; verticals: AdminVertical[] };
 
+const ALL = '__all__';
+
 export default function AdminBrands({ brands, verticals }: Props) {
     const [editing, setEditing] = useState<AdminBrand | null>(null);
     const [creating, setCreating] = useState(false);
+    const [vertical, setVertical] = useState('');
+
+    const shown = useMemo(
+        () =>
+            vertical ? brands.filter((b) => b.vertical === vertical) : brands,
+        [brands, vertical],
+    );
 
     const remove = (brand: AdminBrand) => {
         const tail =
@@ -29,6 +47,87 @@ export default function AdminBrands({ brands, verticals }: Props) {
         });
     };
 
+    const columns: DataTableColumn<AdminBrand>[] = [
+        {
+            key: 'name',
+            header: 'Brand',
+            sortable: true,
+            value: (b) => b.name,
+            cell: (b) => (
+                <div className="flex items-center gap-3">
+                    <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
+                        {b.logo_url ? (
+                            <img
+                                src={b.logo_url}
+                                alt={b.name}
+                                className="size-full object-contain"
+                            />
+                        ) : (
+                            <ImageOff className="size-4 text-muted-foreground" />
+                        )}
+                    </div>
+                    <div className="min-w-0">
+                        <p className="font-medium">{b.name}</p>
+                        {b.description && (
+                            <p className="line-clamp-1 text-xs text-muted-foreground">
+                                {b.description}
+                            </p>
+                        )}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: 'vertical',
+            header: 'Vertical',
+            sortable: true,
+            value: (b) => b.vertical,
+            cell: (b) => (
+                <span className="text-muted-foreground">{b.vertical}</span>
+            ),
+        },
+        {
+            key: 'sets',
+            header: 'Sets',
+            align: 'right',
+            sortable: true,
+            value: (b) => b.sets,
+        },
+        {
+            key: 'items',
+            header: 'Cards',
+            align: 'right',
+            sortable: true,
+            value: (b) => b.items,
+            cell: (b) => b.items.toLocaleString(),
+        },
+        {
+            key: 'actions',
+            header: '',
+            align: 'right',
+            cellClassName: 'whitespace-nowrap',
+            cell: (b) => (
+                <>
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditing(b)}
+                    >
+                        <Pencil className="size-4" /> Edit
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => remove(b)}
+                        className="text-muted-foreground hover:text-red-600"
+                    >
+                        <Trash2 className="size-4" />
+                    </Button>
+                </>
+            ),
+        },
+    ];
+
     return (
         <>
             <Head title="Admin · Brands" />
@@ -44,56 +143,44 @@ export default function AdminBrands({ brands, verticals }: Props) {
                     </Button>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {brands.map((brand) => (
-                        <Card key={brand.id}>
-                            <CardContent className="flex gap-4 pt-6">
-                                <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
-                                    {brand.logo_url ? (
-                                        <img
-                                            src={brand.logo_url}
-                                            alt={brand.name}
-                                            className="size-full object-contain"
-                                        />
-                                    ) : (
-                                        <ImageOff className="size-6 text-muted-foreground" />
-                                    )}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <p className="truncate font-medium">
-                                        {brand.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {brand.vertical} · {brand.sets} sets ·{' '}
-                                        {brand.items.toLocaleString()} cards
-                                    </p>
-                                    {brand.description && (
-                                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                                            {brand.description}
-                                        </p>
-                                    )}
-                                    <div className="mt-2 flex gap-2">
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => setEditing(brand)}
-                                        >
-                                            <Pencil className="size-4" /> Edit
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="text-muted-foreground hover:text-red-600"
-                                            onClick={() => remove(brand)}
-                                        >
-                                            <Trash2 className="size-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
+                <Card>
+                    <CardContent className="pt-6">
+                        <DataTable
+                            data={shown}
+                            columns={columns}
+                            getRowKey={(b) => b.id}
+                            searchPlaceholder="Search brands…"
+                            initialSort={{ key: 'name', dir: 'asc' }}
+                            toolbar={
+                                verticals.length > 1 ? (
+                                    <Select
+                                        value={vertical || ALL}
+                                        onValueChange={(v) =>
+                                            setVertical(v === ALL ? '' : v)
+                                        }
+                                    >
+                                        <SelectTrigger className="w-40">
+                                            <SelectValue placeholder="All verticals" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={ALL}>
+                                                All verticals
+                                            </SelectItem>
+                                            {verticals.map((v) => (
+                                                <SelectItem
+                                                    key={v.id}
+                                                    value={v.name}
+                                                >
+                                                    {v.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                ) : null
+                            }
+                        />
+                    </CardContent>
+                </Card>
             </div>
 
             <EditBrandDialog

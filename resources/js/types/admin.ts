@@ -82,6 +82,7 @@ export type AdminCard = {
     hp: number | null;
     type: string | null;
     views: number;
+    updated_at: string | null;
 };
 
 export type AdminCardOptions = {

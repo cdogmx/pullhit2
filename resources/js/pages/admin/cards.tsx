@@ -3,6 +3,8 @@ import { Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { CreateCardDialog } from '@/components/admin/create-card-dialog';
+import { SortHeader } from '@/components/admin/data-table';
+import type { SortDir } from '@/components/admin/data-table';
 import { EditCardDialog } from '@/components/admin/edit-card-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,7 +17,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { languageLabel } from '@/lib/format';
+import { languageLabel, relativeTime } from '@/lib/format';
 import type {
     AdminCard,
     AdminCardCreateOptions,
@@ -31,12 +33,13 @@ type Props = {
     filters: AdminCardFilters;
 };
 
-const SORTS = [
-    { value: 'name', label: 'Name' },
-    { value: 'number', label: 'Number' },
-    { value: 'views', label: 'Most viewed' },
-    { value: 'updated', label: 'Recently updated' },
-];
+// The server sorts each key in a fixed direction; the header arrow reflects it.
+const SORT_DIR: Record<string, SortDir> = {
+    name: 'asc',
+    number: 'asc',
+    views: 'desc',
+    updated: 'desc',
+};
 
 const ALL = '__all__';
 
@@ -60,6 +63,17 @@ export default function AdminCards({
 
     const onFilter = (key: keyof AdminCardFilters, value: string) =>
         apply({ [key]: value === ALL ? '' : value });
+
+    // A column header that drives the server-side `sort` param.
+    const sortable = (key: string, label: string, align?: 'right') => (
+        <SortHeader
+            label={label}
+            align={align}
+            active={filters.sort === key}
+            dir={filters.sort === key ? SORT_DIR[key] : null}
+            onClick={() => onFilter('sort', key)}
+        />
+    );
 
     const remove = (card: AdminCard) => {
         if (!confirm(`Delete ${card.name} ${card.number ?? ''}?`)) {
@@ -90,39 +104,38 @@ export default function AdminCards({
                         placeholder="All sets"
                         value={filters.set}
                         onChange={(v) => onFilter('set', v)}
-                        options={options.sets.map((s) => ({ value: s.slug, label: s.name }))}
+                        options={options.sets.map((s) => ({
+                            value: s.slug,
+                            label: s.name,
+                        }))}
                     />
                     <FilterSelect
                         placeholder="All rarities"
                         value={filters.rarity}
                         onChange={(v) => onFilter('rarity', v)}
-                        options={options.rarities.map((r) => ({ value: r, label: r }))}
+                        options={options.rarities.map((r) => ({
+                            value: r,
+                            label: r,
+                        }))}
                     />
                     <FilterSelect
                         placeholder="All variants"
                         value={filters.variant}
                         onChange={(v) => onFilter('variant', v)}
-                        options={options.variants.map((v) => ({ value: v, label: v }))}
+                        options={options.variants.map((v) => ({
+                            value: v,
+                            label: v,
+                        }))}
                     />
                     <FilterSelect
                         placeholder="All languages"
                         value={filters.language}
                         onChange={(v) => onFilter('language', v)}
-                        options={options.languages.map((l) => ({ value: l, label: languageLabel(l) }))}
+                        options={options.languages.map((l) => ({
+                            value: l,
+                            label: languageLabel(l),
+                        }))}
                     />
-
-                    <Select value={filters.sort} onValueChange={(v) => onFilter('sort', v)}>
-                        <SelectTrigger className="w-44">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {SORTS.map((s) => (
-                                <SelectItem key={s.value} value={s.value}>
-                                    Sort: {s.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
 
                     {(filters.set ||
                         filters.rarity ||
@@ -162,17 +175,40 @@ export default function AdminCards({
                         <table className="w-full text-sm">
                             <thead className="text-left text-xs text-muted-foreground">
                                 <tr className="border-b border-border">
-                                    <th className="py-2 pr-3 font-medium">Card</th>
-                                    <th className="py-2 pr-3 font-medium">Set</th>
-                                    <th className="py-2 pr-3 font-medium">Rarity</th>
-                                    <th className="py-2 pr-3 font-medium">Variant</th>
-                                    <th className="py-2 pr-3 text-right font-medium">Views</th>
+                                    <th className="py-2 pr-3 font-medium">
+                                        {sortable('name', 'Card')}
+                                    </th>
+                                    <th className="py-2 pr-3 font-medium">
+                                        {sortable('number', 'No.')}
+                                    </th>
+                                    <th className="py-2 pr-3 font-medium">
+                                        Set
+                                    </th>
+                                    <th className="py-2 pr-3 font-medium">
+                                        Rarity
+                                    </th>
+                                    <th className="py-2 pr-3 font-medium">
+                                        Variant
+                                    </th>
+                                    <th className="py-2 pr-3 text-right font-medium">
+                                        {sortable('views', 'Views', 'right')}
+                                    </th>
+                                    <th className="py-2 pr-3 text-right font-medium">
+                                        {sortable(
+                                            'updated',
+                                            'Updated',
+                                            'right',
+                                        )}
+                                    </th>
                                     <th className="py-2" />
                                 </tr>
                             </thead>
                             <tbody>
                                 {items.map((c) => (
-                                    <tr key={c.id} className="border-b border-border/60 last:border-0">
+                                    <tr
+                                        key={c.id}
+                                        className="border-b border-border/60 last:border-0"
+                                    >
                                         <td className="py-2 pr-3">
                                             <div className="flex items-center gap-2">
                                                 {c.image_url && (
@@ -184,19 +220,34 @@ export default function AdminCards({
                                                     />
                                                 )}
                                                 <div className="min-w-0">
-                                                    <p className="font-medium">{c.name}</p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {c.number}
-                                                        {c.language ? ` · ${languageLabel(c.language)}` : ''}
+                                                    <p className="font-medium">
+                                                        {c.name}
                                                     </p>
+                                                    {c.language && (
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {languageLabel(
+                                                                c.language,
+                                                            )}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="py-2 pr-3 text-muted-foreground">{c.set}</td>
-                                        <td className="py-2 pr-3">{c.rarity}</td>
+                                        <td className="py-2 pr-3 text-muted-foreground">
+                                            {c.number}
+                                        </td>
+                                        <td className="py-2 pr-3 text-muted-foreground">
+                                            {c.set}
+                                        </td>
+                                        <td className="py-2 pr-3">
+                                            {c.rarity}
+                                        </td>
                                         <td className="py-2 pr-3">
                                             {c.variant && (
-                                                <Badge variant="secondary" className="text-[10px]">
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="text-[10px]"
+                                                >
                                                     {c.variant}
                                                 </Badge>
                                             )}
@@ -206,6 +257,9 @@ export default function AdminCards({
                                                 <Eye className="size-3" />
                                                 {c.views}
                                             </span>
+                                        </td>
+                                        <td className="py-2 pr-3 text-right text-xs text-muted-foreground">
+                                            {relativeTime(c.updated_at)}
                                         </td>
                                         <td className="py-2 text-right whitespace-nowrap">
                                             <Button
@@ -235,18 +289,25 @@ export default function AdminCards({
                                     variant="outline"
                                     size="sm"
                                     disabled={pagination.page <= 1}
-                                    onClick={() => apply({ page: pagination.page - 1 })}
+                                    onClick={() =>
+                                        apply({ page: pagination.page - 1 })
+                                    }
                                 >
                                     Previous
                                 </Button>
                                 <span className="text-muted-foreground">
-                                    Page {pagination.page} of {pagination.last_page}
+                                    Page {pagination.page} of{' '}
+                                    {pagination.last_page}
                                 </span>
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    disabled={pagination.page >= pagination.last_page}
-                                    onClick={() => apply({ page: pagination.page + 1 })}
+                                    disabled={
+                                        pagination.page >= pagination.last_page
+                                    }
+                                    onClick={() =>
+                                        apply({ page: pagination.page + 1 })
+                                    }
                                 >
                                     Next
                                 </Button>

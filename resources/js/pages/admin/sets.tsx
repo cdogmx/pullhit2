@@ -8,9 +8,11 @@ import {
     Search,
     Trash2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
+import { DataTable } from '@/components/admin/data-table';
+import type { DataTableColumn } from '@/components/admin/data-table';
 import { EditSetDialog } from '@/components/admin/edit-set-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,12 +24,22 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { languageLabel } from '@/lib/format';
 import type {
     AdminOption,
     AdminSet,
     MissingReport,
     SetSearchResult,
 } from '@/types';
+
+const ALL = '__all__';
 
 type Props = {
     sets: AdminSet[];
@@ -45,11 +57,29 @@ export default function AdminSets({
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SetSearchResult[] | null>(null);
     const [searching, setSearching] = useState(false);
-    const [missing, setMissing] = useState<{ name: string; report: MissingReport } | null>(null);
+    const [missing, setMissing] = useState<{
+        name: string;
+        report: MissingReport;
+    } | null>(null);
     const [checking, setChecking] = useState<number | null>(null);
     const [sealedSet, setSealedSet] = useState<AdminSet | null>(null);
     const [editingSet, setEditingSet] = useState<AdminSet | null>(null);
     const [creatingSet, setCreatingSet] = useState(false);
+    const [lang, setLang] = useState('');
+
+    // Languages actually present, for the table's language filter.
+    const setLanguages = useMemo(
+        () =>
+            Array.from(
+                new Set(sets.map((s) => s.language).filter(Boolean)),
+            ) as string[],
+        [sets],
+    );
+
+    const shownSets = useMemo(
+        () => (lang ? sets.filter((s) => s.language === lang) : sets),
+        [sets, lang],
+    );
 
     const removeSet = (set: AdminSet) => {
         const tail =
@@ -75,9 +105,12 @@ export default function AdminSets({
         setSearching(true);
 
         try {
-            const res = await fetch(`/admin/sets/search?q=${encodeURIComponent(query)}`, {
-                headers: { Accept: 'application/json' },
-            });
+            const res = await fetch(
+                `/admin/sets/search?q=${encodeURIComponent(query)}`,
+                {
+                    headers: { Accept: 'application/json' },
+                },
+            );
             const body = await res.json();
             setResults(body.results ?? []);
         } finally {
@@ -89,14 +122,20 @@ export default function AdminSets({
         router.post(
             '/admin/sets/import',
             { set_id: id },
-            { preserveScroll: true, onSuccess: () => toast.success(`Import queued: ${id}`) },
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success(`Import queued: ${id}`),
+            },
         );
 
     const resync = (set: AdminSet) =>
         router.post(
             `/admin/sets/${set.id}/resync`,
             {},
-            { preserveScroll: true, onSuccess: () => toast.success(`Re-sync queued: ${set.name}`) },
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success(`Re-sync queued: ${set.name}`),
+            },
         );
 
     const checkMissing = async (set: AdminSet) => {
@@ -112,14 +151,113 @@ export default function AdminSets({
         }
     };
 
+    const columns: DataTableColumn<AdminSet>[] = [
+        {
+            key: 'name',
+            header: 'Set',
+            sortable: true,
+            value: (s) => s.name,
+            cell: (s) => (
+                <>
+                    <span className="font-medium">{s.name}</span>{' '}
+                    <span className="text-xs text-muted-foreground">
+                        {s.ptcgio_id}
+                        {s.series ? ` · ${s.series}` : ''}
+                    </span>
+                </>
+            ),
+        },
+        {
+            key: 'released',
+            header: 'Released',
+            sortable: true,
+            value: (s) => s.released_at,
+            cell: (s) => s.released_at ?? '—',
+        },
+        {
+            key: 'language',
+            header: 'Lang',
+            sortable: true,
+            value: (s) => s.language,
+            cell: (s) => (s.language ? languageLabel(s.language) : '—'),
+        },
+        {
+            key: 'items',
+            header: 'Items',
+            align: 'right',
+            sortable: true,
+            value: (s) => s.items,
+        },
+        {
+            key: 'valued',
+            header: 'Valued',
+            align: 'right',
+            sortable: true,
+            value: (s) => s.valued,
+        },
+        {
+            key: 'images',
+            header: 'Images',
+            align: 'right',
+            sortable: true,
+            value: (s) => s.images,
+        },
+        {
+            key: 'actions',
+            header: '',
+            align: 'right',
+            cellClassName: 'whitespace-nowrap',
+            cell: (s) => (
+                <>
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditingSet(s)}
+                    >
+                        <Pencil className="size-4" /> Edit
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => checkMissing(s)}
+                        disabled={checking === s.id}
+                    >
+                        {checking === s.id ? (
+                            <Loader2 className="size-4 animate-spin" />
+                        ) : null}
+                        Check missing
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSealedSet(s)}
+                    >
+                        <Package className="size-4" /> Add sealed
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => resync(s)}>
+                        <RefreshCw className="size-4" /> Re-sync
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => removeSet(s)}
+                        className="text-muted-foreground hover:text-red-600"
+                    >
+                        <Trash2 className="size-4" />
+                    </Button>
+                </>
+            ),
+        },
+    ];
+
     return (
         <>
             <Head title="Admin · Sets" />
             <div className="flex flex-1 flex-col gap-6 p-4">
                 <div className="flex items-center justify-between gap-4">
                     <p className="text-sm text-muted-foreground">
-                        Import sets from PokémonTCG.io, or create one by hand and
-                        add cards afterwards.
+                        Import sets from PokémonTCG.io, or create one by hand
+                        and add cards afterwards.
                     </p>
                     <Button size="sm" onClick={() => setCreatingSet(true)}>
                         <Plus className="size-4" /> New set
@@ -137,7 +275,11 @@ export default function AdminSets({
                                 onChange={(e) => setQuery(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && search()}
                             />
-                            <Button onClick={search} disabled={searching} variant="secondary">
+                            <Button
+                                onClick={search}
+                                disabled={searching}
+                                variant="secondary"
+                            >
                                 {searching ? (
                                     <Loader2 className="size-4 animate-spin" />
                                 ) : (
@@ -145,7 +287,10 @@ export default function AdminSets({
                                 )}
                                 Search
                             </Button>
-                            <Button onClick={() => importSet(query.trim())} disabled={!query.trim()}>
+                            <Button
+                                onClick={() => importSet(query.trim())}
+                                disabled={!query.trim()}
+                            >
                                 Import id
                             </Button>
                         </div>
@@ -153,7 +298,9 @@ export default function AdminSets({
                         {results && (
                             <ul className="divide-y divide-border rounded-md border border-border">
                                 {results.length === 0 && (
-                                    <li className="p-3 text-sm text-muted-foreground">No matches.</li>
+                                    <li className="p-3 text-sm text-muted-foreground">
+                                        No matches.
+                                    </li>
                                 )}
                                 {results.map((r) => (
                                     <li
@@ -163,13 +310,19 @@ export default function AdminSets({
                                         <span className="min-w-0 truncate">
                                             {r.name}{' '}
                                             <span className="text-xs text-muted-foreground">
-                                                {r.id} · {r.series} · {r.total} cards
+                                                {r.id} · {r.series} · {r.total}{' '}
+                                                cards
                                             </span>
                                         </span>
                                         {r.imported ? (
-                                            <Badge variant="secondary">Imported</Badge>
+                                            <Badge variant="secondary">
+                                                Imported
+                                            </Badge>
                                         ) : (
-                                            <Button size="sm" onClick={() => importSet(r.id)}>
+                                            <Button
+                                                size="sm"
+                                                onClick={() => importSet(r.id)}
+                                            >
                                                 Import
                                             </Button>
                                         )}
@@ -182,77 +335,38 @@ export default function AdminSets({
 
                 {/* Imported sets */}
                 <Card>
-                    <CardContent className="overflow-x-auto pt-6">
-                        <table className="w-full text-sm">
-                            <thead className="text-left text-xs text-muted-foreground">
-                                <tr className="border-b border-border">
-                                    <th className="py-2 pr-3 font-medium">Set</th>
-                                    <th className="py-2 pr-3 text-right font-medium">Items</th>
-                                    <th className="py-2 pr-3 text-right font-medium">Valued</th>
-                                    <th className="py-2 pr-3 text-right font-medium">Images</th>
-                                    <th className="py-2" />
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sets.map((s) => (
-                                    <tr key={s.id} className="border-b border-border/60 last:border-0">
-                                        <td className="py-2 pr-3">
-                                            <span className="font-medium">{s.name}</span>{' '}
-                                            <span className="text-xs text-muted-foreground">
-                                                {s.ptcgio_id}
-                                                {s.released_at ? ` · ${s.released_at}` : ''}
-                                            </span>
-                                        </td>
-                                        <td className="py-2 pr-3 text-right">{s.items}</td>
-                                        <td className="py-2 pr-3 text-right">{s.valued}</td>
-                                        <td className="py-2 pr-3 text-right">{s.images}</td>
-                                        <td className="py-2 text-right whitespace-nowrap">
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => setEditingSet(s)}
-                                            >
-                                                <Pencil className="size-4" />{' '}
-                                                Edit
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => checkMissing(s)}
-                                                disabled={checking === s.id}
-                                            >
-                                                {checking === s.id ? (
-                                                    <Loader2 className="size-4 animate-spin" />
-                                                ) : null}
-                                                Check missing
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => setSealedSet(s)}
-                                            >
-                                                <Package className="size-4" /> Add sealed
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => resync(s)}
-                                            >
-                                                <RefreshCw className="size-4" /> Re-sync
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => removeSet(s)}
-                                                className="text-muted-foreground hover:text-red-600"
-                                            >
-                                                <Trash2 className="size-4" />
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    <CardContent className="pt-6">
+                        <DataTable
+                            data={shownSets}
+                            columns={columns}
+                            getRowKey={(s) => s.id}
+                            searchPlaceholder="Search sets…"
+                            initialSort={{ key: 'released', dir: 'desc' }}
+                            toolbar={
+                                setLanguages.length > 1 ? (
+                                    <Select
+                                        value={lang || ALL}
+                                        onValueChange={(v) =>
+                                            setLang(v === ALL ? '' : v)
+                                        }
+                                    >
+                                        <SelectTrigger className="w-36">
+                                            <SelectValue placeholder="All languages" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={ALL}>
+                                                All languages
+                                            </SelectItem>
+                                            {setLanguages.map((l) => (
+                                                <SelectItem key={l} value={l}>
+                                                    {languageLabel(l)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                ) : null
+                            }
+                        />
                     </CardContent>
                 </Card>
             </div>
@@ -278,15 +392,21 @@ export default function AdminSets({
                 }}
             />
 
-            <Dialog open={missing !== null} onOpenChange={(o) => !o && setMissing(null)}>
+            <Dialog
+                open={missing !== null}
+                onOpenChange={(o) => !o && setMissing(null)}
+            >
                 <DialogContent className="max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Missing cards · {missing?.name}</DialogTitle>
+                        <DialogTitle>
+                            Missing cards · {missing?.name}
+                        </DialogTitle>
                     </DialogHeader>
                     {missing && (
                         <div className="space-y-2 text-sm">
                             <p className="text-muted-foreground">
-                                {missing.report.present} of {missing.report.expected} imported ·{' '}
+                                {missing.report.present} of{' '}
+                                {missing.report.expected} imported ·{' '}
                                 {missing.report.missing.length} missing
                             </p>
                             {missing.report.missing.length === 0 ? (

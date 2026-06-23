@@ -164,6 +164,7 @@ class CardController extends Controller
             'hp' => $a['hp'] ?? null,
             'type' => $a['type'] ?? null,
             'views' => (int) $item->popularity,
+            'updated_at' => $item->updated_at?->toIso8601String(),
         ];
     }
 }
