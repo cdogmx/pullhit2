@@ -55,8 +55,10 @@ export function SiteHeader() {
     const { auth } = page.props;
     const getInitials = useInitials();
 
-    // Browse pages have their own prominent search bar — don't double up.
-    const onBrowse = page.url.startsWith('/browse');
+    // The homepage hero and the browse pages already have a prominent search
+    // bar — don't double up with the header one there.
+    const path = page.url.split('?')[0];
+    const hideSearch = path === '/' || path.startsWith('/browse');
 
     return (
         <header className="sticky top-0 z-40 w-full border-b border-border bg-background/80 backdrop-blur">
@@ -115,7 +117,7 @@ export function SiteHeader() {
                     </nav>
                 </div>
 
-                {!onBrowse && (
+                {!hideSearch && (
                     <SiteSearch className="hidden max-w-sm flex-1 md:block" />
                 )}
 
