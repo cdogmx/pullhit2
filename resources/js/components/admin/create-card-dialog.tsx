@@ -1,6 +1,7 @@
 import { useForm } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
+import { Combobox } from '@/components/admin/combobox';
 import { ImageUploadField } from '@/components/admin/image-upload-field';
 import { Button } from '@/components/ui/button';
 import {
@@ -85,26 +86,18 @@ export function CreateCardDialog({
 
                     <div className="grid gap-3 py-4">
                         <Field label="Set" error={form.errors.set_id}>
-                            <Select
+                            <Combobox
                                 value={String(form.data.set_id)}
-                                onValueChange={(v) =>
+                                onChange={(v) =>
                                     form.setData('set_id', Number(v))
                                 }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a set" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {options.sets.map((s) => (
-                                        <SelectItem
-                                            key={s.id}
-                                            value={String(s.id)}
-                                        >
-                                            {s.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                placeholder="Select a set"
+                                searchPlaceholder="Search sets…"
+                                options={options.sets.map((s) => ({
+                                    value: String(s.id),
+                                    label: s.name,
+                                }))}
+                            />
                         </Field>
 
                         <Field label="Name" error={form.errors.name}>

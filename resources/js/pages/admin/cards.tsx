@@ -2,6 +2,7 @@ import { Head, router } from '@inertiajs/react';
 import { Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Combobox } from '@/components/admin/combobox';
 import { CreateCardDialog } from '@/components/admin/create-card-dialog';
 import { SortHeader } from '@/components/admin/data-table';
 import type { SortDir } from '@/components/admin/data-table';
@@ -100,14 +101,19 @@ export default function AdminCards({
                         className="w-56"
                     />
 
-                    <FilterSelect
+                    <Combobox
+                        triggerClassName="w-44"
                         placeholder="All sets"
+                        searchPlaceholder="Search sets…"
                         value={filters.set}
-                        onChange={(v) => onFilter('set', v)}
-                        options={options.sets.map((s) => ({
-                            value: s.slug,
-                            label: s.name,
-                        }))}
+                        onChange={(v) => apply({ set: v })}
+                        options={[
+                            { value: '', label: 'All sets' },
+                            ...options.sets.map((s) => ({
+                                value: s.slug,
+                                label: s.name,
+                            })),
+                        ]}
                     />
                     <FilterSelect
                         placeholder="All rarities"

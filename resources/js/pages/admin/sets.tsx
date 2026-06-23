@@ -11,6 +11,7 @@ import {
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
+import { Combobox } from '@/components/admin/combobox';
 import { DataTable } from '@/components/admin/data-table';
 import type { DataTableColumn } from '@/components/admin/data-table';
 import { EditSetDialog } from '@/components/admin/edit-set-dialog';
@@ -360,29 +361,23 @@ export default function AdminSets({
                             toolbar={
                                 <>
                                     {productLines.length > 1 && (
-                                        <Select
-                                            value={brand || ALL}
-                                            onValueChange={(v) =>
-                                                setBrand(v === ALL ? '' : v)
-                                            }
-                                        >
-                                            <SelectTrigger className="w-40">
-                                                <SelectValue placeholder="All brands" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value={ALL}>
-                                                    All brands
-                                                </SelectItem>
-                                                {productLines.map((p) => (
-                                                    <SelectItem
-                                                        key={p.id}
-                                                        value={p.name}
-                                                    >
-                                                        {p.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <Combobox
+                                            triggerClassName="w-40"
+                                            placeholder="All brands"
+                                            searchPlaceholder="Search brands…"
+                                            value={brand}
+                                            onChange={setBrand}
+                                            options={[
+                                                {
+                                                    value: '',
+                                                    label: 'All brands',
+                                                },
+                                                ...productLines.map((p) => ({
+                                                    value: p.name,
+                                                    label: p.name,
+                                                })),
+                                            ]}
+                                        />
                                     )}
                                     {setLanguages.length > 1 && (
                                         <Select
