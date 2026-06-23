@@ -30,11 +30,23 @@ type Flat = {
 const EMPTY: Results = { brands: [], sets: [], cards: [] };
 
 /**
- * Public header type-ahead. Debounced fetch to /search/suggest, results grouped
+ * Public type-ahead. Debounced fetch to /search/suggest, results grouped
  * brand → set → card with thumbnails. Click (or Enter on a highlighted row) goes
  * to that page; Enter with nothing highlighted runs the full /browse search.
+ *
+ * `variant` switches the input chrome: `header` is the compact bordered box in
+ * the site header; `hero` is the rounded white pill (+ Search button) used on
+ * the homepage hero. The suggestions dropdown is identical for both.
  */
-export function SiteSearch({ className }: { className?: string }) {
+export function SiteSearch({
+    className,
+    variant = 'header',
+    placeholder = 'Search cards, sets, brands…',
+}: {
+    className?: string;
+    variant?: 'header' | 'hero';
+    placeholder?: string;
+}) {
     const [q, setQ] = useState('');
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -142,6 +154,17 @@ export function SiteSearch({ className }: { className?: string }) {
         }
     };
 
+    const handleChange = (value: string) => {
+        setQ(value);
+        setOpen(true);
+
+        // Show the spinner immediately (the fetch is debounced), so the panel
+        // never flashes "No matches" mid-type.
+        if (value.trim().length >= 2) {
+            setLoading(true);
+        }
+    };
+
     const onKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Escape') {
             setOpen(false);
@@ -166,30 +189,47 @@ export function SiteSearch({ className }: { className?: string }) {
 
     return (
         <div ref={ref} className={cn('relative', className)}>
-            <div className="relative">
-                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                    value={q}
-                    onChange={(e) => {
-                        setQ(e.target.value);
-                        setOpen(true);
-
-                        // Show the spinner immediately (the fetch is debounced),
-                        // so the panel never flashes "No matches" mid-type.
-                        if (e.target.value.trim().length >= 2) {
-                            setLoading(true);
-                        }
-                    }}
-                    onFocus={() => setOpen(true)}
-                    onKeyDown={onKeyDown}
-                    placeholder="Search cards, sets, brands…"
-                    className="h-9 w-full rounded-md border border-input bg-background/60 pr-3 pl-9 text-sm transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                    aria-label="Search the catalog"
-                />
-                {loading && (
-                    <Loader2 className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-                )}
-            </div>
+            {variant === 'hero' ? (
+                <div className="flex w-full items-center gap-2 rounded-full bg-white p-1.5 shadow-xl ring-1 ring-black/5">
+                    <Search className="ml-3 size-5 shrink-0 text-neutral-400" />
+                    <input
+                        type="search"
+                        value={q}
+                        onChange={(e) => handleChange(e.target.value)}
+                        onFocus={() => setOpen(true)}
+                        onKeyDown={onKeyDown}
+                        placeholder={placeholder}
+                        aria-label="Search the catalog"
+                        className="min-w-0 flex-1 bg-transparent py-2 text-base text-neutral-900 outline-none placeholder:text-neutral-500"
+                    />
+                    {loading && (
+                        <Loader2 className="size-5 shrink-0 animate-spin text-neutral-400" />
+                    )}
+                    <button
+                        type="button"
+                        onClick={submit}
+                        className="shrink-0 rounded-full bg-[#111317] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#111317]/90"
+                    >
+                        Search
+                    </button>
+                </div>
+            ) : (
+                <div className="relative">
+                    <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                        value={q}
+                        onChange={(e) => handleChange(e.target.value)}
+                        onFocus={() => setOpen(true)}
+                        onKeyDown={onKeyDown}
+                        placeholder={placeholder}
+                        className="h-9 w-full rounded-md border border-input bg-background/60 pr-3 pl-9 text-sm transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                        aria-label="Search the catalog"
+                    />
+                    {loading && (
+                        <Loader2 className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                    )}
+                </div>
+            )}
 
             {open && q.trim().length >= 2 && (
                 <div className="absolute left-0 z-50 mt-1 w-full overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md">

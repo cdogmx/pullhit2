@@ -1,8 +1,8 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import { BadgeCheck, LineChart, ScanLine, Search, Store } from 'lucide-react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { BadgeCheck, LineChart, ScanLine, Store } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState } from 'react';
 import AppLogoIcon from '@/components/app-logo-icon';
+import { SiteSearch } from '@/components/site-search';
 import { dashboard, register } from '@/routes';
 
 /**
@@ -60,13 +60,6 @@ const popularSearches = ['Charizard', 'Pikachu', 'PSA 10', 'Booster box'];
 
 export default function Welcome() {
     const { auth } = usePage().props;
-    const [query, setQuery] = useState('');
-
-    const onSearch = (event: React.FormEvent) => {
-        event.preventDefault();
-        const term = query.trim();
-        router.get('/browse', term ? { q: term } : {});
-    };
 
     return (
         <>
@@ -118,28 +111,11 @@ export default function Welcome() {
                             — sealed, raw, or graded, with a confidence score.
                         </p>
 
-                        <form
-                            onSubmit={onSearch}
-                            className="mx-auto mt-8 flex w-full max-w-xl items-center gap-2 rounded-full bg-white p-1.5 shadow-xl ring-1 ring-black/5"
-                        >
-                            <Search className="ml-3 size-5 shrink-0 text-neutral-400" />
-                            <input
-                                type="search"
-                                value={query}
-                                onChange={(event) =>
-                                    setQuery(event.target.value)
-                                }
-                                placeholder="Search cards, sets, or players…"
-                                aria-label="Search the catalog"
-                                className="min-w-0 flex-1 bg-transparent py-2 text-base text-neutral-900 outline-none placeholder:text-neutral-500"
-                            />
-                            <button
-                                type="submit"
-                                className="shrink-0 rounded-full bg-[#111317] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#111317]/90"
-                            >
-                                Search
-                            </button>
-                        </form>
+                        <SiteSearch
+                            variant="hero"
+                            placeholder="Search cards, sets, or players…"
+                            className="mx-auto mt-8 w-full max-w-xl"
+                        />
 
                         <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
                             <span className="text-primary-foreground/70">
