@@ -15,6 +15,7 @@ import {
     LibraryBig,
     Library,
     PencilRuler,
+    Radar,
     ScanLine,
     Search,
     Shield,
@@ -101,6 +102,7 @@ const adminNavItems: NavItem[] = [
     { title: 'Cards', href: '/admin/cards', icon: PencilRuler },
     { title: 'Suggestions', href: '/admin/suggestions', icon: Inbox },
     { title: 'Card reports', href: '/admin/card-reports', icon: FlagTriangleRight },
+    { title: 'eBay sweep', href: '/admin/ebay-sweep', icon: Radar },
     { title: 'Scan feedback', href: '/admin/scan-feedback', icon: ScanLine },
     { title: 'Reconcile', href: '/admin/reconcile', icon: GitCompare },
 ];
