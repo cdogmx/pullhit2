@@ -11,7 +11,7 @@ test('the home page renders the welcome page with catalog sections', function ()
             ->has('trending')
             ->has('movers')
             ->has('recent')
-            ->has('newestSets')
+            ->has('popularSets')
             ->has('community.points')
             ->has('community.levels')
             ->where('community.month', now()->format('F')));

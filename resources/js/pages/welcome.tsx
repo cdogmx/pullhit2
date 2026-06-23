@@ -65,7 +65,7 @@ type Props = {
     trending: CardTileData[];
     movers: CardTileData[];
     recent: CardTileData[];
-    newestSets: SetTileData[];
+    popularSets: SetTileData[];
     community: Community;
 };
 
@@ -232,7 +232,7 @@ export default function Welcome({
     trending,
     movers,
     recent,
-    newestSets,
+    popularSets,
     community,
 }: Props) {
     const { auth } = usePage().props;
@@ -404,15 +404,15 @@ export default function Welcome({
                         </Section>
                     )}
 
-                    {newestSets.length > 0 && (
+                    {popularSets.length > 0 && (
                         <Section
-                            title="Newest sets"
-                            sub="The latest releases in the catalog."
+                            title="Popular sets"
+                            sub="The most-viewed sets right now."
                             href="/browse"
                             cta="All sets"
                         >
                             <HScroller>
-                                {newestSets.map((s, i) => (
+                                {popularSets.map((s, i) => (
                                     <SetTile key={i} set={s} />
                                 ))}
                             </HScroller>

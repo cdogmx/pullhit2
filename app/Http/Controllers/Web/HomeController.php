@@ -23,12 +23,12 @@ class HomeController extends Controller
 {
     public function index(): Response
     {
-        $sections = Cache::remember('home:sections:v1', Carbon::now()->addMinutes(10), fn () => [
+        $sections = Cache::remember('home:sections:v2', Carbon::now()->addMinutes(10), fn () => [
             'brands' => $this->brands(),
             'trending' => $this->trending(),
             'movers' => $this->movers(),
             'recent' => $this->recent(),
-            'newestSets' => $this->newestSets(),
+            'popularSets' => $this->popularSets(),
         ]);
 
         return Inertia::render('welcome', [
@@ -119,19 +119,18 @@ class HomeController extends Controller
             ->all();
     }
 
-    /** Most recently released sets. */
-    private function newestSets(): array
+    /** Most popular sets — ranked by their cards' total views. */
+    private function popularSets(): array
     {
         return Set::query()
-            ->whereNotNull('released_at')
             ->with('productLine:id,slug')
-            ->selectSub(
-                CatalogItem::selectRaw('count(*)')->whereColumn('set_id', 'sets.id'),
-                'item_count',
-            )
-            ->orderByDesc('released_at')
-            ->limit(12)
+            ->addSelect(['item_count' => CatalogItem::selectRaw('count(*)')->whereColumn('set_id', 'sets.id')])
+            ->addSelect(['views' => CatalogItem::selectRaw('coalesce(sum(popularity), 0)')->whereColumn('set_id', 'sets.id')])
+            ->orderByDesc('views')
+            ->limit(20)
             ->get()
+            ->filter(fn (Set $s) => $s->item_count > 0)
+            ->take(12)
             ->map(fn (Set $s) => [
                 'name' => $s->name,
                 'code' => $s->code,
@@ -140,6 +139,7 @@ class HomeController extends Controller
                 'count' => (int) $s->item_count,
                 'href' => $s->productLine ? "/browse/{$s->productLine->slug}/{$s->slug}" : null,
             ])
+            ->values()
             ->all();
     }
 
