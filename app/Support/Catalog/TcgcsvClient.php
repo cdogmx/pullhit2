@@ -8,30 +8,35 @@ use RuntimeException;
 
 /**
  * Thin wrapper over TCGCSV (a free public JSON mirror of TCGplayer's API). Used
- * for the "Pokemon Japan" category (85) — Japanese sets, cards, and prices that
- * pokemontcg.io doesn't carry. Endpoints return a `{results: [...]}` envelope.
+ * for Japanese Pokémon (category 85) — sets/cards/prices pokemontcg.io doesn't
+ * carry — and English Pokémon (category 3) to backfill late-arriving secret
+ * rares pokemontcg.io is slow to add. Endpoints return a `{results: [...]}`
+ * envelope. Pass $category to target a different TCGplayer category.
  */
 class TcgcsvClient
 {
     /** TCGplayer category id for Japanese Pokémon. */
     public const POKEMON_JAPAN = 85;
 
+    /** TCGplayer category id for English Pokémon. */
+    public const POKEMON = 3;
+
     /** @return array<int, array<string, mixed>> the category's groups (sets) */
-    public function groups(): array
+    public function groups(int $category = self::POKEMON_JAPAN): array
     {
-        return $this->get('tcgplayer/'.self::POKEMON_JAPAN.'/groups');
+        return $this->get("tcgplayer/{$category}/groups");
     }
 
     /** @return array<int, array<string, mixed>> products (cards) in a group */
-    public function products(int $groupId): array
+    public function products(int $groupId, int $category = self::POKEMON_JAPAN): array
     {
-        return $this->get('tcgplayer/'.self::POKEMON_JAPAN."/{$groupId}/products");
+        return $this->get("tcgplayer/{$category}/{$groupId}/products");
     }
 
     /** @return array<int, array<string, mixed>> price rows (one per product × subtype) */
-    public function prices(int $groupId): array
+    public function prices(int $groupId, int $category = self::POKEMON_JAPAN): array
     {
-        return $this->get('tcgplayer/'.self::POKEMON_JAPAN."/{$groupId}/prices");
+        return $this->get("tcgplayer/{$category}/{$groupId}/prices");
     }
 
     /**
