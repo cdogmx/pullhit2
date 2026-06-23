@@ -76,13 +76,13 @@ class SetController extends Controller
 
         $set = $create($productLine, [
             'name' => $data['name'],
-            'code' => $data['code'] ?: null,
-            'language' => $data['language'] ?: null,
-            'series' => $data['series'] ?: null,
-            'set_family' => $data['set_family'] ?: null,
-            'released_at' => $data['released_at'] ?: null,
-            'description' => $data['description'] ?: null,
-            'logo_url' => $data['logo_url'] ?: null,
+            'code' => ($data['code'] ?? null) ?: null,
+            'language' => ($data['language'] ?? null) ?: null,
+            'series' => ($data['series'] ?? null) ?: null,
+            'set_family' => ($data['set_family'] ?? null) ?: null,
+            'released_at' => ($data['released_at'] ?? null) ?: null,
+            'description' => ($data['description'] ?? null) ?: null,
+            'logo_url' => ($data['logo_url'] ?? null) ?: null,
         ]);
 
         return back()->with('success', "Created {$set->name}.");

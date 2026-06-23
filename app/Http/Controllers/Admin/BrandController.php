@@ -55,8 +55,8 @@ class BrandController extends Controller
 
         $line = $create($vertical, [
             'name' => $data['name'],
-            'description' => $data['description'] ?: null,
-            'logo_url' => $data['logo_url'] ?: null,
+            'description' => ($data['description'] ?? null) ?: null,
+            'logo_url' => ($data['logo_url'] ?? null) ?: null,
         ]);
 
         return back()->with('success', "Created {$line->name}.");
