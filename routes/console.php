@@ -24,3 +24,8 @@ Schedule::command('valuation:snapshot')->dailyAt('06:30')->withoutOverlapping();
 // Valuation recompute seam (§7). Wire on Laravel Cloud's scheduler when ready —
 // hot items hourly, the long tail daily. Kept off by default.
 // Schedule::command('valuation:recompute')->hourly();
+
+// Broad eBay sold-comp sweeps. Ticks often; each configured search self-throttles
+// to its own interval (config valuation.ebay.sweep), so this stays under the
+// daily Oxylabs cap. Needs Laravel Cloud's scheduler enabled to run.
+Schedule::command('valuation:sweep-ebay')->everyTenMinutes()->withoutOverlapping();

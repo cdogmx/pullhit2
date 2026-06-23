@@ -84,5 +84,42 @@ return [
             'sticker', 'jumbo', 'oversized', 'choose', 'pick your', 'you pick',
             'you will receive', 'raffle', 'giveaway', 'spin', 'read description',
         ],
+
+        // Broad sold-listing sweeps: one paid query returns many recent sales
+        // that we match back to catalog cards (vs the per-card pull above). The
+        // scheduler runs valuation:sweep-ebay; each search only fires when its
+        // own interval has elapsed, staggering calls under the daily cap.
+        'sweep' => [
+            'enabled' => env('EBAY_SWEEP_ENABLED', true),
+
+            // Minimum title→card match score to auto-apply a sale (0..1). Below
+            // this the listing is logged to ebay_sweep_misses for tuning, never
+            // applied to a value.
+            'min_score' => (float) env('EBAY_SWEEP_MIN_SCORE', 0.75),
+
+            // Configured graded searches. `interval_minutes` throttles each one
+            // independently. `_dcat=183454` is eBay's "CCG Individual Cards"
+            // category (covers every TCG); `_ipg=240` pulls a full page of comps.
+            'searches' => [
+                [
+                    'label' => 'pokemon-psa10',
+                    'language' => 'en',
+                    'interval_minutes' => 20,
+                    'url' => 'https://www.ebay.com/sch/i.html?_nkw=pokemon+psa+10&_sacat=0&LH_Sold=1&LH_Complete=1&Language=English&_dcat=183454&_ipg=240',
+                ],
+                [
+                    'label' => 'onepiece-psa10',
+                    'language' => 'en',
+                    'interval_minutes' => 60,
+                    'url' => 'https://www.ebay.com/sch/i.html?_nkw=one+piece+card+psa+10&_sacat=0&LH_Sold=1&LH_Complete=1&Language=English&_dcat=183454&_ipg=240',
+                ],
+                [
+                    'label' => 'lorcana-psa10',
+                    'language' => 'en',
+                    'interval_minutes' => 120,
+                    'url' => 'https://www.ebay.com/sch/i.html?_nkw=disney+lorcana+psa+10&_sacat=0&LH_Sold=1&LH_Complete=1&Language=English&_dcat=183454&_ipg=240',
+                ],
+            ],
+        ],
     ],
 ];
