@@ -21,11 +21,28 @@ type Me = {
     level: { name: string; to_next: number | null; next_at: number | null };
 } | null;
 
+type Giveaway = {
+    title: string;
+    prize: string;
+    description: string | null;
+    period_label: string;
+    total_entries: number;
+    my_entries: number;
+} | null;
+
+type PastWinner = {
+    period_label: string;
+    prize: string;
+    winner: string | null;
+};
+
 type Props = {
     allTime: AllTimeRow[];
     monthly: MonthlyRow[];
     month: string;
     me: Me;
+    giveaway: Giveaway;
+    pastWinners: PastWinner[];
 };
 
 function medal(rank: number): string {
@@ -38,7 +55,14 @@ function medal(rank: number): string {
             : 'text-muted-foreground';
 }
 
-export default function Rankings({ allTime, monthly, month, me }: Props) {
+export default function Rankings({
+    allTime,
+    monthly,
+    month,
+    me,
+    giveaway,
+    pastWinners,
+}: Props) {
     return (
         <>
             <Head title="Community rankings" />
@@ -57,6 +81,51 @@ export default function Rankings({ allTime, monthly, month, me }: Props) {
                         ’s giveaway.
                     </p>
                 </div>
+
+                {/* This month's giveaway + the viewer's entries */}
+                {giveaway && (
+                    <Card className="mb-6 border-primary/40 bg-primary/5">
+                        <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
+                            <div className="flex items-start gap-3">
+                                <span className="flex size-11 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                                    <Gift className="size-5" />
+                                </span>
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                                        {giveaway.period_label} giveaway
+                                    </p>
+                                    <p className="text-lg font-bold">
+                                        {giveaway.prize}
+                                    </p>
+                                    {giveaway.description && (
+                                        <p className="mt-0.5 max-w-md text-sm text-muted-foreground">
+                                            {giveaway.description}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4 rounded-xl bg-background px-4 py-3 text-center">
+                                <div>
+                                    <p className="text-xl font-bold text-primary">
+                                        {giveaway.my_entries.toLocaleString()}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                        your entries
+                                    </p>
+                                </div>
+                                <div className="h-8 w-px bg-border" />
+                                <div>
+                                    <p className="text-xl font-bold">
+                                        {giveaway.total_entries.toLocaleString()}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                        total pool
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* The viewer's standing */}
                 {me && (
@@ -121,6 +190,39 @@ export default function Rankings({ allTime, monthly, month, me }: Props) {
                         sub={(r) => (r as AllTimeRow).level}
                     />
                 </div>
+
+                {pastWinners.length > 0 && (
+                    <div className="mt-8">
+                        <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold">
+                            <Trophy className="size-4 text-amber-500" />
+                            Past winners
+                        </h2>
+                        <div className="overflow-hidden rounded-xl border border-border">
+                            <table className="w-full text-sm">
+                                <tbody>
+                                    {pastWinners.map((w, i) => (
+                                        <tr
+                                            key={i}
+                                            className="border-b border-border/60 last:border-0"
+                                        >
+                                            <td className="px-3 py-2 font-medium">
+                                                {w.winner
+                                                    ? `@${w.winner}`
+                                                    : '—'}
+                                            </td>
+                                            <td className="px-3 py-2 text-muted-foreground">
+                                                {w.prize}
+                                            </td>
+                                            <td className="px-3 py-2 text-right text-xs text-muted-foreground">
+                                                {w.period_label}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
             </div>
         </>
     );

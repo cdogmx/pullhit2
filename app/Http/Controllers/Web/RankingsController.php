@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Contribution;
+use App\Models\Giveaway;
 use App\Models\User;
 use App\Support\Community\Level;
 use Illuminate\Http\Request;
@@ -26,7 +27,56 @@ class RankingsController extends Controller
             'monthly' => $this->monthly($size),
             'month' => now()->format('F Y'),
             'me' => $this->me($request->user()),
+            'giveaway' => $this->currentGiveaway($request->user()),
+            'pastWinners' => $this->pastWinners(),
         ]);
+    }
+
+    /** The open giveaway for this month, with prize + the viewer's entries. */
+    private function currentGiveaway(?User $user): ?array
+    {
+        $giveaway = Giveaway::current();
+
+        if (! $giveaway) {
+            return null;
+        }
+
+        return [
+            'title' => $giveaway->title,
+            'prize' => $giveaway->prize,
+            'description' => $giveaway->description,
+            'period_label' => $giveaway->periodLabel(),
+            'total_entries' => $this->poolEntries($giveaway),
+            'my_entries' => $user?->monthlyEntries() ?? 0,
+        ];
+    }
+
+    /** Recent drawn giveaways with their winners. */
+    private function pastWinners(): array
+    {
+        return Giveaway::drawn()
+            ->whereNotNull('winner_user_id')
+            ->with('winner:id,username,name')
+            ->orderByDesc('period')
+            ->take(6)
+            ->get()
+            ->map(fn (Giveaway $g) => [
+                'period_label' => $g->periodLabel(),
+                'prize' => $g->prize,
+                'winner' => $g->winner?->username ?? $g->winner?->name,
+            ])
+            ->all();
+    }
+
+    /** Total eligible entries (points by username'd users) in a giveaway's month. */
+    private function poolEntries(Giveaway $giveaway): int
+    {
+        return (int) Contribution::query()
+            ->whereBetween('contributions.created_at', [$giveaway->periodStart(), $giveaway->periodEnd()])
+            ->join('users', 'users.id', '=', 'contributions.user_id')
+            ->whereNotNull('users.username')
+            ->where('contributions.points', '>', 0)
+            ->sum('contributions.points');
     }
 
     /** Top contributors by lifetime points. */

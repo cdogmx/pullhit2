@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CardController;
 use App\Http\Controllers\Admin\CardReportController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EbaySweepController;
+use App\Http\Controllers\Admin\GiveawayController;
 use App\Http\Controllers\Admin\ImageController;
 use App\Http\Controllers\Admin\ReconcileController;
 use App\Http\Controllers\Admin\ScanFeedbackController;
@@ -76,6 +77,12 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('card-reports', [CardReportController::class, 'index'])->name('card-reports.index');
     Route::post('card-reports/{cardReport}/approve', [CardReportController::class, 'approve'])->name('card-reports.approve');
     Route::post('card-reports/{cardReport}/reject', [CardReportController::class, 'reject'])->name('card-reports.reject');
+
+    // Monthly community giveaways — create + draw a weighted-random winner.
+    Route::get('giveaways', [GiveawayController::class, 'index'])->name('giveaways.index');
+    Route::post('giveaways', [GiveawayController::class, 'store'])->name('giveaways.store');
+    Route::post('giveaways/{giveaway}/draw', [GiveawayController::class, 'draw'])->name('giveaways.draw');
+    Route::delete('giveaways/{giveaway}', [GiveawayController::class, 'destroy'])->name('giveaways.destroy');
 
     // eBay sweep: watch broad sold-comp match quality (applied vs misses), and
     // reject / reassign applied sales (sticky across future re-pulls).
