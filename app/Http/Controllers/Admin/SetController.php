@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Catalog\AddSealedProduct;
+use App\Actions\Catalog\CreateSet;
+use App\Actions\Catalog\DeleteSet;
 use App\Actions\Catalog\MissingCardsReport;
 use App\Actions\Catalog\UpdateSealedProduct;
 use App\Enums\ItemType;
@@ -10,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\ImportSetJob;
 use App\Models\CatalogItem;
 use App\Models\MarketValue;
+use App\Models\ProductLine;
 use App\Models\Set;
 use App\Support\Catalog\PokemonTcgClient;
 use App\Support\Verticals\Definitions\TcgVertical;
@@ -51,7 +54,47 @@ class SetController extends Controller
             'sets' => $sets,
             'sealedTypes' => TcgVertical::SEALED_TYPES,
             'languages' => TcgVertical::LANGUAGES,
+            'productLines' => ProductLine::orderBy('name')->get(['id', 'name']),
         ]);
+    }
+
+    public function store(Request $request, CreateSet $create): RedirectResponse
+    {
+        $data = $request->validate([
+            'product_line_id' => ['required', 'integer', 'exists:product_lines,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'code' => ['nullable', 'string', 'max:50'],
+            'language' => ['nullable', Rule::in(TcgVertical::LANGUAGES)],
+            'series' => ['nullable', 'string', 'max:255'],
+            'set_family' => ['nullable', 'string', 'max:255'],
+            'released_at' => ['nullable', 'date'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'logo_url' => ['nullable', 'url', 'max:1000'],
+        ]);
+
+        $productLine = ProductLine::findOrFail($data['product_line_id']);
+
+        $set = $create($productLine, [
+            'name' => $data['name'],
+            'code' => $data['code'] ?: null,
+            'language' => $data['language'] ?: null,
+            'series' => $data['series'] ?: null,
+            'set_family' => $data['set_family'] ?: null,
+            'released_at' => $data['released_at'] ?: null,
+            'description' => $data['description'] ?: null,
+            'logo_url' => $data['logo_url'] ?: null,
+        ]);
+
+        return back()->with('success', "Created {$set->name}.");
+    }
+
+    public function destroy(Set $set, DeleteSet $delete): RedirectResponse
+    {
+        $name = $set->name;
+
+        $delete($set);
+
+        return back()->with('success', "Deleted {$name} and its cards.");
     }
 
     public function update(Request $request, Set $set): RedirectResponse

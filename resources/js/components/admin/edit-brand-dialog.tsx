@@ -13,49 +13,81 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { AdminBrand } from '@/types';
+import type { AdminBrand, AdminVertical } from '@/types';
 
-/** Admin: edit a brand's display name, logo, and description. */
+/**
+ * Admin: create a brand (pass `brand={null}` + `verticals`) or edit one (pass
+ * `brand`). The vertical is only chosen on create — it's fixed once a brand
+ * exists (it's coupled to the card-attribute schema).
+ */
 export function EditBrandDialog({
     brand,
+    verticals = [],
     open,
     onOpenChange,
 }: {
     brand: AdminBrand | null;
+    verticals?: AdminVertical[];
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
+    const creating = brand === null;
+
     const form = useForm({
+        vertical_id: '' as number | string,
         name: '',
         description: '',
         logo_url: '',
     });
 
     useEffect(() => {
-        if (open && brand) {
+        if (!open) {
+            return;
+        }
+
+        if (brand) {
             form.setData({
+                vertical_id: '',
                 name: brand.name,
                 description: brand.description ?? '',
                 logo_url: brand.logo_url ?? '',
+            });
+        } else {
+            form.setData({
+                vertical_id: verticals[0]?.id ?? '',
+                name: '',
+                description: '',
+                logo_url: '',
             });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, brand?.id]);
 
-    if (!brand) {
-        return null;
-    }
-
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        form.patch(`/admin/brands/${brand.id}`, {
+
+        const opts = {
             preserveScroll: true,
             onSuccess: () => {
-                toast.success('Brand updated.');
+                toast.success(creating ? 'Brand created.' : 'Brand updated.');
+                form.reset();
                 onOpenChange(false);
             },
-        });
+        };
+
+        if (brand) {
+            form.patch(`/admin/brands/${brand.id}`, opts);
+        } else {
+            form.post('/admin/brands', opts);
+        }
     };
 
     return (
@@ -63,11 +95,48 @@ export function EditBrandDialog({
             <DialogContent className="max-h-[85vh] overflow-y-auto">
                 <form onSubmit={submit}>
                     <DialogHeader>
-                        <DialogTitle>Edit brand</DialogTitle>
-                        <DialogDescription>{brand.slug}</DialogDescription>
+                        <DialogTitle>
+                            {creating ? 'New brand' : 'Edit brand'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {creating
+                                ? 'Create a product line under a vertical.'
+                                : brand?.slug}
+                        </DialogDescription>
                     </DialogHeader>
 
                     <div className="grid gap-3 py-4">
+                        {creating && (
+                            <div className="grid gap-1.5">
+                                <Label className="text-xs">Vertical</Label>
+                                <Select
+                                    value={String(form.data.vertical_id)}
+                                    onValueChange={(v) =>
+                                        form.setData('vertical_id', Number(v))
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a vertical" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {verticals.map((v) => (
+                                            <SelectItem
+                                                key={v.id}
+                                                value={String(v.id)}
+                                            >
+                                                {v.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {form.errors.vertical_id && (
+                                    <p className="text-xs text-red-600">
+                                        {form.errors.vertical_id}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
                         <div className="grid gap-1.5">
                             <Label className="text-xs">Name</Label>
                             <Input
@@ -75,6 +144,7 @@ export function EditBrandDialog({
                                 onChange={(e) =>
                                     form.setData('name', e.target.value)
                                 }
+                                placeholder="Pokémon"
                             />
                             {form.errors.name && (
                                 <p className="text-xs text-red-600">
@@ -105,7 +175,7 @@ export function EditBrandDialog({
 
                     <DialogFooter>
                         <Button type="submit" disabled={form.processing}>
-                            Save changes
+                            {creating ? 'Create brand' : 'Save changes'}
                         </Button>
                     </DialogFooter>
                 </form>

@@ -42,6 +42,23 @@ export type AdminBrand = {
     items: number;
 };
 
+export type AdminVertical = {
+    id: number;
+    name: string;
+};
+
+/** A {id, name} pick-list entry used by the catalog create forms. */
+export type AdminOption = {
+    id: number;
+    name: string;
+};
+
+export type AdminCardCreateOptions = {
+    sets: AdminOption[];
+    languages: string[];
+    variants: string[];
+};
+
 export type SetSearchResult = {
     id: string;
     name: string;

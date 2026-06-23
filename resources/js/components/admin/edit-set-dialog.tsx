@@ -13,53 +13,97 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { AdminSet } from '@/types';
+import { languageLabel } from '@/lib/format';
+import type { AdminOption, AdminSet } from '@/types';
 
-/** Admin: edit a set's name, code, release date, logo, and description. */
+/**
+ * Admin: create a set (pass `set={null}` + `productLines` + `languages`) or edit
+ * one (pass `set`). On create the brand, language, and series are chosen; on edit
+ * they're fixed (brand/language feed the card identity hash) and only name, code,
+ * release date, description, and logo are editable.
+ */
 export function EditSetDialog({
     set,
+    productLines = [],
+    languages = [],
     open,
     onOpenChange,
 }: {
     set: AdminSet | null;
+    productLines?: AdminOption[];
+    languages?: string[];
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
+    const creating = set === null;
+
     const form = useForm({
+        product_line_id: '' as number | string,
         name: '',
         code: '',
+        language: 'en',
+        series: '',
         released_at: '',
         description: '',
         logo_url: '',
     });
 
     useEffect(() => {
-        if (open && set) {
+        if (!open) {
+            return;
+        }
+
+        if (set) {
             form.setData({
+                product_line_id: '',
                 name: set.name,
                 code: set.code ?? '',
+                language: set.language ?? 'en',
+                series: set.series ?? '',
                 released_at: set.released_at ?? '',
                 description: set.description ?? '',
                 logo_url: set.logo_url ?? '',
+            });
+        } else {
+            form.setData({
+                product_line_id: productLines[0]?.id ?? '',
+                name: '',
+                code: '',
+                language: 'en',
+                series: '',
+                released_at: '',
+                description: '',
+                logo_url: '',
             });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, set?.id]);
 
-    if (!set) {
-        return null;
-    }
-
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        form.patch(`/admin/sets/${set.id}`, {
+
+        const opts = {
             preserveScroll: true,
             onSuccess: () => {
-                toast.success('Set updated.');
+                toast.success(creating ? 'Set created.' : 'Set updated.');
+                form.reset();
                 onOpenChange(false);
             },
-        });
+        };
+
+        if (set) {
+            form.patch(`/admin/sets/${set.id}`, opts);
+        } else {
+            form.post('/admin/sets', opts);
+        }
     };
 
     return (
@@ -67,14 +111,51 @@ export function EditSetDialog({
             <DialogContent className="max-h-[85vh] overflow-y-auto">
                 <form onSubmit={submit}>
                     <DialogHeader>
-                        <DialogTitle>Edit set</DialogTitle>
+                        <DialogTitle>
+                            {creating ? 'New set' : 'Edit set'}
+                        </DialogTitle>
                         <DialogDescription>
-                            {set.ptcgio_id}
-                            {set.language ? ` · ${set.language}` : ''}
+                            {creating
+                                ? 'Create a set under a brand. Add cards afterwards.'
+                                : `${set?.ptcgio_id ?? ''}${set?.language ? ` · ${languageLabel(set.language)}` : ''}`}
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="grid gap-3 py-4">
+                        {creating && (
+                            <div className="grid gap-1.5">
+                                <Label className="text-xs">Brand</Label>
+                                <Select
+                                    value={String(form.data.product_line_id)}
+                                    onValueChange={(v) =>
+                                        form.setData(
+                                            'product_line_id',
+                                            Number(v),
+                                        )
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a brand" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {productLines.map((p) => (
+                                            <SelectItem
+                                                key={p.id}
+                                                value={String(p.id)}
+                                            >
+                                                {p.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {form.errors.product_line_id && (
+                                    <p className="text-xs text-red-600">
+                                        {form.errors.product_line_id}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
                         <div className="grid gap-1.5">
                             <Label className="text-xs">Name</Label>
                             <Input
@@ -82,6 +163,7 @@ export function EditSetDialog({
                                 onChange={(e) =>
                                     form.setData('name', e.target.value)
                                 }
+                                placeholder="Surging Sparks"
                             />
                             {form.errors.name && (
                                 <p className="text-xs text-red-600">
@@ -116,6 +198,46 @@ export function EditSetDialog({
                             </div>
                         </div>
 
+                        {creating && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="grid gap-1.5">
+                                    <Label className="text-xs">Language</Label>
+                                    <Select
+                                        value={form.data.language}
+                                        onValueChange={(v) =>
+                                            form.setData('language', v)
+                                        }
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {languages.map((l) => (
+                                                <SelectItem key={l} value={l}>
+                                                    {languageLabel(l)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid gap-1.5">
+                                    <Label className="text-xs">
+                                        Series (optional)
+                                    </Label>
+                                    <Input
+                                        value={form.data.series}
+                                        onChange={(e) =>
+                                            form.setData(
+                                                'series',
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder="Scarlet & Violet"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
                         <div className="grid gap-1.5">
                             <Label className="text-xs">Description</Label>
                             <Textarea
@@ -138,7 +260,7 @@ export function EditSetDialog({
 
                     <DialogFooter>
                         <Button type="submit" disabled={form.processing}>
-                            Save changes
+                            {creating ? 'Create set' : 'Save changes'}
                         </Button>
                     </DialogFooter>
                 </form>

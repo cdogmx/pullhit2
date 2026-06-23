@@ -1,9 +1,9 @@
 import { Head, router } from '@inertiajs/react';
-import { Eye, Pencil, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { CreateCardDialog } from '@/components/admin/create-card-dialog';
 import { EditCardDialog } from '@/components/admin/edit-card-dialog';
-import { languageLabel } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,12 +15,19 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import type { AdminCard, AdminCardFilters, AdminCardOptions } from '@/types';
+import { languageLabel } from '@/lib/format';
+import type {
+    AdminCard,
+    AdminCardCreateOptions,
+    AdminCardFilters,
+    AdminCardOptions,
+} from '@/types';
 
 type Props = {
     items: AdminCard[];
     pagination: { page: number; last_page: number; total: number };
     options: AdminCardOptions;
+    createOptions: AdminCardCreateOptions;
     filters: AdminCardFilters;
 };
 
@@ -33,9 +40,16 @@ const SORTS = [
 
 const ALL = '__all__';
 
-export default function AdminCards({ items, pagination, options, filters }: Props) {
+export default function AdminCards({
+    items,
+    pagination,
+    options,
+    createOptions,
+    filters,
+}: Props) {
     const [q, setQ] = useState(filters.q);
     const [editing, setEditing] = useState<AdminCard | null>(null);
+    const [creating, setCreating] = useState(false);
 
     const apply = (changes: Record<string, string | number> = {}) =>
         router.get(
@@ -130,6 +144,14 @@ export default function AdminCards({ items, pagination, options, filters }: Prop
                             Clear
                         </Button>
                     )}
+
+                    <Button
+                        size="sm"
+                        className="ml-auto"
+                        onClick={() => setCreating(true)}
+                    >
+                        <Plus className="size-4" /> New card
+                    </Button>
                 </div>
 
                 <Card>
@@ -238,6 +260,12 @@ export default function AdminCards({ items, pagination, options, filters }: Prop
                 card={editing}
                 open={editing !== null}
                 onOpenChange={(o) => !o && setEditing(null)}
+            />
+
+            <CreateCardDialog
+                options={createOptions}
+                open={creating}
+                onOpenChange={setCreating}
             />
         </>
     );

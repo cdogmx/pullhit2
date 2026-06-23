@@ -3,12 +3,17 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Catalog\CatalogFilterOptions;
+use App\Actions\Catalog\CreateCatalogItem;
 use App\Actions\Catalog\UpdateCatalogItem;
+use App\Enums\ItemType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreCardRequest;
 use App\Http\Requests\Admin\UpdateCardRequest;
 use App\Jobs\RefreshEbaySoldComps;
 use App\Models\CatalogItem;
 use App\Models\CollectionItem;
+use App\Models\Set;
+use App\Support\Verticals\Definitions\TcgVertical;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -62,8 +67,46 @@ class CardController extends Controller
                 'variants' => $o['variants'],
                 'languages' => $o['languages'],
             ],
+            // Options for the "New card" form: every set to attach to, plus the
+            // full TCG language + variant vocabularies (not just what's present).
+            'createOptions' => [
+                'sets' => Set::orderBy('name')->get(['id', 'name'])
+                    ->map(fn (Set $s) => ['id' => $s->id, 'name' => $s->name]),
+                'languages' => TcgVertical::LANGUAGES,
+                'variants' => $o['variants'] ?: ['normal', 'holo', 'reverse_holo'],
+            ],
             'filters' => $f,
         ]);
+    }
+
+    public function store(StoreCardRequest $request, CreateCatalogItem $create): RedirectResponse
+    {
+        $data = $request->validated();
+
+        $set = Set::with('productLine.vertical')->findOrFail($data['set_id']);
+
+        $attributes = array_filter([
+            'language' => $data['language'],
+            'variant' => $data['variant'],
+            'rarity' => $data['rarity'] ?? null,
+            'illustrator' => $data['illustrator'] ?? null,
+            'hp' => isset($data['hp']) && $data['hp'] !== '' ? (int) $data['hp'] : null,
+            'type' => $data['type'] ?? null,
+        ], fn ($v) => $v !== null && $v !== '');
+
+        $create(
+            vertical: $set->productLine->vertical,
+            productLine: $set->productLine,
+            set: $set,
+            itemType: ItemType::Single,
+            name: $data['name'],
+            number: $data['number'] ?? null,
+            attributes: $attributes,
+            externalIds: [],
+            primaryImagePath: $data['primary_image_path'] ?? null,
+        );
+
+        return back()->with('success', 'Card created.');
     }
 
     /** @param  Builder<CatalogItem>  $query */

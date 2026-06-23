@@ -1,5 +1,13 @@
 import { Head, router } from '@inertiajs/react';
-import { Loader2, Package, Pencil, RefreshCw, Search } from 'lucide-react';
+import {
+    Loader2,
+    Package,
+    Pencil,
+    Plus,
+    RefreshCw,
+    Search,
+    Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
@@ -14,11 +22,26 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import type { AdminSet, MissingReport, SetSearchResult } from '@/types';
+import type {
+    AdminOption,
+    AdminSet,
+    MissingReport,
+    SetSearchResult,
+} from '@/types';
 
-type Props = { sets: AdminSet[]; sealedTypes: string[]; languages: string[] };
+type Props = {
+    sets: AdminSet[];
+    sealedTypes: string[];
+    languages: string[];
+    productLines: AdminOption[];
+};
 
-export default function AdminSets({ sets, sealedTypes, languages }: Props) {
+export default function AdminSets({
+    sets,
+    sealedTypes,
+    languages,
+    productLines,
+}: Props) {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SetSearchResult[] | null>(null);
     const [searching, setSearching] = useState(false);
@@ -26,6 +49,23 @@ export default function AdminSets({ sets, sealedTypes, languages }: Props) {
     const [checking, setChecking] = useState<number | null>(null);
     const [sealedSet, setSealedSet] = useState<AdminSet | null>(null);
     const [editingSet, setEditingSet] = useState<AdminSet | null>(null);
+    const [creatingSet, setCreatingSet] = useState(false);
+
+    const removeSet = (set: AdminSet) => {
+        const tail =
+            set.items > 0
+                ? ` This permanently deletes ${set.items} card(s), and removes them from every user's collection and wishlist.`
+                : '';
+
+        if (!confirm(`Delete ${set.name}?${tail}`)) {
+            return;
+        }
+
+        router.delete(`/admin/sets/${set.id}`, {
+            preserveScroll: true,
+            onSuccess: () => toast.success(`Deleted ${set.name}.`),
+        });
+    };
 
     const search = async () => {
         if (!query.trim()) {
@@ -76,6 +116,16 @@ export default function AdminSets({ sets, sealedTypes, languages }: Props) {
         <>
             <Head title="Admin · Sets" />
             <div className="flex flex-1 flex-col gap-6 p-4">
+                <div className="flex items-center justify-between gap-4">
+                    <p className="text-sm text-muted-foreground">
+                        Import sets from PokémonTCG.io, or create one by hand and
+                        add cards afterwards.
+                    </p>
+                    <Button size="sm" onClick={() => setCreatingSet(true)}>
+                        <Plus className="size-4" /> New set
+                    </Button>
+                </div>
+
                 {/* Find + import */}
                 <Card>
                     <CardContent className="space-y-3 pt-6">
@@ -190,6 +240,14 @@ export default function AdminSets({ sets, sealedTypes, languages }: Props) {
                                             >
                                                 <RefreshCw className="size-4" /> Re-sync
                                             </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => removeSet(s)}
+                                                className="text-muted-foreground hover:text-red-600"
+                                            >
+                                                <Trash2 className="size-4" />
+                                            </Button>
                                         </td>
                                     </tr>
                                 ))}
@@ -208,9 +266,16 @@ export default function AdminSets({ sets, sealedTypes, languages }: Props) {
             />
 
             <EditSetDialog
-                set={editingSet}
-                open={editingSet !== null}
-                onOpenChange={(o) => !o && setEditingSet(null)}
+                set={creatingSet ? null : editingSet}
+                productLines={productLines}
+                languages={languages}
+                open={editingSet !== null || creatingSet}
+                onOpenChange={(o) => {
+                    if (!o) {
+                        setEditingSet(null);
+                        setCreatingSet(false);
+                    }
+                }}
             />
 
             <Dialog open={missing !== null} onOpenChange={(o) => !o && setMissing(null)}>

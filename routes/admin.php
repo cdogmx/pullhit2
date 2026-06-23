@@ -27,13 +27,17 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     // Image intake (file upload or URL → stored in our bucket, never hot-linked).
     Route::post('images', [ImageController::class, 'store'])->name('images.store');
 
-    // Brands (product lines) — logo + description.
+    // Brands (product lines) — create, edit (logo + description), delete (cascades).
     Route::get('brands', [BrandController::class, 'index'])->name('brands.index');
+    Route::post('brands', [BrandController::class, 'store'])->name('brands.store');
     Route::patch('brands/{productLine}', [BrandController::class, 'update'])->name('brands.update');
+    Route::delete('brands/{productLine}', [BrandController::class, 'destroy'])->name('brands.destroy');
 
     // Sets
     Route::get('sets', [SetController::class, 'index'])->name('sets.index');
+    Route::post('sets', [SetController::class, 'store'])->name('sets.store');
     Route::patch('sets/{set}', [SetController::class, 'update'])->name('sets.update');
+    Route::delete('sets/{set}', [SetController::class, 'destroy'])->name('sets.destroy');
     Route::get('sets/search', [SetController::class, 'search'])->name('sets.search');
     Route::post('sets/import', [SetController::class, 'import'])->name('sets.import');
     Route::post('sets/{set}/resync', [SetController::class, 'resync'])->name('sets.resync');
@@ -74,6 +78,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
 
     // Cards
     Route::get('cards', [CardController::class, 'index'])->name('cards.index');
+    Route::post('cards', [CardController::class, 'store'])->name('cards.store');
     Route::post('cards/{catalogItem}/refresh', [CardController::class, 'refresh'])->name('cards.refresh');
     Route::patch('cards/{catalogItem}', [CardController::class, 'update'])->name('cards.update');
     Route::delete('cards/{catalogItem}', [CardController::class, 'destroy'])->name('cards.destroy');
