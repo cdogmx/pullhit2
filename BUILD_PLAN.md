@@ -4,9 +4,9 @@
 
 ---
 
-## Status snapshot — updated 2026-06-14
+## Status snapshot — updated 2026-06-23
 
-**Phases 0–4 are built and live** (CardFoo.com / pullhit.com). **Phase 5 (marketplace) is the next major build.** Substantial scope was added on top of the original brief — see **§14**.
+**Phases 0–4 are built and live** (CardFoo.com / pullhit.com). **Phase 5 (marketplace) is the next major build.** Substantial scope was added on top of the original brief — see **§14** (and **§14.1** for the 2026-06 sprint: community/giveaways, multi-game image backfill, broad eBay sweeps, homepage remodel).
 
 | Phase | Status |
 |---|---|
@@ -19,7 +19,7 @@
 | 6 — Mobile/PWA + API hardening | 🟡 Partial (`/api/v1` + AppShell exist; PWA install/offline + bottom-tab not built) |
 | 7 — Second vertical (Sports) | ⬜ Not started (core stayed vertical-agnostic — architecture ready) |
 
-**Catalog today:** ~172 English Pokémon sets (+ some Japanese), ~35k `catalog_items` back to Base Set 1999, with editions/variants modeled and PriceCharting-reconciled (see §14).
+**Catalog today (2026-06-23):** **3 games — Pokémon (179 sets, ~35.9k cards, EN + JA), One Piece (112 sets, ~11.3k, EN + JA), Disney Lorcana (14 sets, ~2.6k)** = **305 sets / ~49.8k `catalog_items`**, back to Base Set 1999, editions/variants modeled and PriceCharting-reconciled. **~98% of cards now have stored images** (S3) after the multi-source backfill (§14.1). Valuation: ~65k `market_values`, ~22k real sold observations.
 
 ---
 
@@ -384,10 +384,23 @@ Shipped on top of Phases 0–4, roughly by impact. All of this respects §13 (no
 - **Billing scaffold** — Dodo Payments (merchant of record), membership tiers, scan quota.
 - **Marketing/brand** — CardFoo brand + theme, beta notices, default OG share image, terms/privacy.
 
+## 14.1 Sprint — 2026-06 (community, multi-game catalog, live pricing, homepage)
+
+Layered on §14, same guardrails (§13). Roughly by impact:
+
+- **Broad eBay sold-comp sweeps** *(biggest pricing addition).* Inverts the per-card pull: one paid Oxylabs query (e.g. "pokemon psa 10" sold) returns ~240 listings that `EbayTitleResolver` matches **back** to catalog cards by collector number + identity, classifies with the same guardrails, and ingests as `sale_observations` → real values. `valuation:sweep-ebay` runs config-driven graded searches, each self-throttled under the shared daily Oxylabs cap (scheduled every 10 min in `routes/console.php`). Admin **eBay-sweep quality view** (`/admin/ebay-sweep`) shows applied sales vs. logged misses (by reason), with **reject / reassign** actions that persist per-listing **overrides** (`ebay_sweep_overrides`) so a correction sticks across every future re-pull. Classifier now also rejects **multi-card set/bundle** listings (the "collection series" inflation fix).
+- **Multi-game image backfill** — pushed image coverage to ~98%. Sources by game/language: pokemontcg.io secret-rare gaps and Japanese Pokémon from **TCGCSV** (TCGplayer mirror, cat 3 / 85) via `catalog:backfill-tcg-images`; **One Piece (EN + JA, ~10k images)** from the official card-list CDN via `catalog:backfill-op-images`. All store our own S3 copy (`CardImageStore`); idempotent, image-less rows only. (Diagnostic lesson: high row counts are legit printing variants — backfill, don't delete/re-import.)
+- **Community rankings & giveaways** — append-only `contributions` points ledger + denormalized `users.contribution_points`, config-driven points & 6-level ladder (`config/community.php`). Earn points for approved edit suggestions and **new "report missing card/set"** submissions (`card_reports`, admin review at `/admin/card-reports`). Public **`/rankings`** leaderboard (all-time + monthly), **`/contribute`** flow, and "monthly points = giveaway entries" framing (draw mechanics deferred). *Advances the competitor-strategy "loud, manipulation-resistant community" wedge.*
+- **Auth email hardening** — enforced **email verification** (`MustVerifyEmail`) so new signups confirm; **welcome email** on the `Verified` event; existing users grandfathered via a backfill migration. Root-caused why no mail sent: the Postmark transport needs **`symfony/http-client`** (was missing) — now installed.
+- **Admin "Get values"** — synchronous on-card eBay refresh button, **always available** (even when a card has no values yet); honours the daily cap; returns the comp count.
+- **Homepage remodel** — cached `HomeController` feeds the landing page under the hero: brand shortcuts, **trending cards**, **biggest movers** (real 30-day swings), **recently-updated prices** (the sweep pulse), **popular sets** (by card views), and a **points/giveaways explainer**.
+
 ### Suggested next focus
-1. **Phase 5 — Marketplace** (the strategic differentiator: first-party sold data unlocks the wash-trade-detection wedge noted in the competitor strategy).
-2. **Phase 6 — PWA + mobile bottom-tab nav** (the brief's mobile-first goal is only partly met).
-3. **Reconciliation backlog** (separate note): graded re-seed, eBay-refresh backfill for new printings, the ~5.3k review queue, Japanese editions.
+1. **Phase 5 — Marketplace** (the strategic differentiator: first-party sold data unlocks the wash-trade-detection wedge — now partly seeded by the community/transparency work).
+2. **Giveaway draw mechanics** — entries are tracked monthly; the weighted winner draw + giveaway model is still deferred.
+3. **Phase 6 — PWA + mobile bottom-tab nav** (the brief's mobile-first goal is only partly met).
+4. **Pricing coverage** — extend broad sweeps beyond graded PSA-10 (raw sweeps, more games), and tune `EbayTitleResolver` against the logged sweep misses (`no_number` is the largest bucket).
+5. **Reconciliation backlog**: graded re-seed, eBay-refresh backfill for new printings, the review queue, Japanese editions.
 
 ---
 
