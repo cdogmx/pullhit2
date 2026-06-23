@@ -1,16 +1,74 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { BadgeCheck, LineChart, ScanLine, Store } from 'lucide-react';
+import {
+    BadgeCheck,
+    Boxes,
+    Gift,
+    LineChart,
+    ScanLine,
+    Sparkles,
+    Store,
+    TrendingDown,
+    TrendingUp,
+    Trophy,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';
+import { HScroller } from '@/components/shared/h-scroller';
 import { SiteSearch } from '@/components/site-search';
+import { Button } from '@/components/ui/button';
+import { formatMoney } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { dashboard, register } from '@/routes';
 
-/**
- * Marketing landing page. Chrome (header/footer/mobile tabs) is provided by the
- * AppShell layout — this page renders content only. The hero is a full-bleed
- * gold band with the "Wax on." slogan and a catalog search that submits to
- * /browse.
- */
+type CardTileData = {
+    name: string;
+    number: string | null;
+    set: string | null;
+    href: string | null;
+    image: string | null;
+    value: number | null;
+    estimated: boolean;
+    trend: number | null;
+    state?: string;
+    updated_at?: string;
+};
+
+type SetTileData = {
+    name: string;
+    code: string | null;
+    logo: string | null;
+    released: string | null;
+    count: number;
+    href: string | null;
+};
+
+type Brand = {
+    slug: string;
+    name: string;
+    logo: string | null;
+    count: number;
+    href: string;
+};
+
+type Community = {
+    points: {
+        edit_suggestion: number;
+        missing_card: number;
+        missing_set: number;
+    };
+    levels: { name: string; min: number }[];
+    month: string;
+};
+
+type Props = {
+    brands: Brand[];
+    trending: CardTileData[];
+    movers: CardTileData[];
+    recent: CardTileData[];
+    newestSets: SetTileData[];
+    community: Community;
+};
+
 const features: { title: string; description: string; icon: LucideIcon }[] = [
     {
         title: 'Distributions, not points',
@@ -38,27 +96,145 @@ const features: { title: string; description: string; icon: LucideIcon }[] = [
     },
 ];
 
-const steps: { title: string; description: string }[] = [
-    {
-        title: 'Build your catalog',
-        description:
-            'Sealed product, singles, and graded items across every collectible vertical.',
-    },
-    {
-        title: 'Value with confidence',
-        description:
-            'Robust stats reject outliers and weight recent sales by velocity.',
-    },
-    {
-        title: 'Track and trade',
-        description:
-            'Portfolio analytics and a marketplace over one API — web today, native app next.',
-    },
-];
-
 const popularSearches = ['Charizard', 'Pikachu', 'PSA 10', 'Booster box'];
 
-export default function Welcome() {
+function TrendBadge({ trend }: { trend: number }) {
+    const up = trend > 0;
+    const Icon = up ? TrendingUp : TrendingDown;
+
+    return (
+        <span
+            className={cn(
+                'inline-flex items-center gap-0.5 text-xs font-semibold',
+                up
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-red-600 dark:text-red-400',
+            )}
+        >
+            <Icon className="size-3" />
+            {Math.abs(trend).toFixed(0)}%
+        </span>
+    );
+}
+
+function CardTile({ card }: { card: CardTileData }) {
+    const inner = (
+        <div className="w-36 shrink-0 snap-start sm:w-40">
+            <div className="aspect-[5/7] overflow-hidden rounded-lg border border-border bg-muted">
+                {card.image && (
+                    <img
+                        src={card.image}
+                        alt={card.name}
+                        loading="lazy"
+                        className="size-full object-cover"
+                    />
+                )}
+            </div>
+            <p className="mt-2 truncate text-sm font-medium">{card.name}</p>
+            <p className="truncate text-xs text-muted-foreground">
+                {card.set}
+                {card.number ? ` · ${card.number}` : ''}
+            </p>
+            <div className="mt-1 flex items-center gap-2">
+                <span className="text-sm font-semibold">
+                    {card.value != null ? formatMoney(card.value) : '—'}
+                </span>
+                {card.trend != null && card.trend !== 0 && (
+                    <TrendBadge trend={card.trend} />
+                )}
+            </div>
+        </div>
+    );
+
+    return card.href ? (
+        <Link href={card.href} className="block">
+            {inner}
+        </Link>
+    ) : (
+        inner
+    );
+}
+
+function SetTile({ set }: { set: SetTileData }) {
+    const inner = (
+        <div className="flex w-44 shrink-0 snap-start flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 text-center transition-colors hover:border-primary/40">
+            <div className="flex h-16 w-full items-center justify-center">
+                {set.logo ? (
+                    <img
+                        src={set.logo}
+                        alt={set.name}
+                        loading="lazy"
+                        className="max-h-16 max-w-full object-contain"
+                    />
+                ) : (
+                    <span className="text-sm font-semibold">{set.name}</span>
+                )}
+            </div>
+            <p className="line-clamp-2 text-xs font-medium">{set.name}</p>
+            <p className="text-[11px] text-muted-foreground">
+                {set.count.toLocaleString()} cards
+                {set.released ? ` · ${set.released.slice(0, 4)}` : ''}
+            </p>
+        </div>
+    );
+
+    return set.href ? (
+        <Link href={set.href} className="block">
+            {inner}
+        </Link>
+    ) : (
+        inner
+    );
+}
+
+function Section({
+    title,
+    sub,
+    href,
+    cta,
+    children,
+}: {
+    title: string;
+    sub?: string;
+    href?: string;
+    cta?: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <div>
+            <div className="mb-4 flex items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
+                        {title}
+                    </h2>
+                    {sub && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            {sub}
+                        </p>
+                    )}
+                </div>
+                {href && (
+                    <Link
+                        href={href}
+                        className="shrink-0 text-sm font-semibold text-primary hover:underline"
+                    >
+                        {cta ?? 'See all'} &rarr;
+                    </Link>
+                )}
+            </div>
+            {children}
+        </div>
+    );
+}
+
+export default function Welcome({
+    brands,
+    trending,
+    movers,
+    recent,
+    newestSets,
+    community,
+}: Props) {
     const { auth } = usePage().props;
 
     return (
@@ -153,10 +329,204 @@ export default function Welcome() {
                 </div>
             </section>
 
-            {/* Features */}
+            {/* Brand shortcuts */}
+            {brands.length > 0 && (
+                <section className="border-b border-border">
+                    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+                        <div className="flex flex-wrap items-center justify-center gap-3">
+                            {brands.map((b) => (
+                                <Link
+                                    key={b.slug}
+                                    href={b.href}
+                                    className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition-colors hover:border-primary/50 hover:bg-primary/5"
+                                >
+                                    {b.logo ? (
+                                        <img
+                                            src={b.logo}
+                                            alt=""
+                                            className="size-5 object-contain"
+                                        />
+                                    ) : (
+                                        <Boxes className="size-4 text-primary" />
+                                    )}
+                                    {b.name}
+                                    <span className="text-xs text-muted-foreground">
+                                        {b.count.toLocaleString()}
+                                    </span>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Live catalog sections */}
+            <section className="border-b border-border">
+                <div className="mx-auto flex w-full max-w-7xl flex-col gap-14 px-4 py-14 sm:px-6 lg:px-8">
+                    {trending.length > 0 && (
+                        <Section
+                            title="Trending cards"
+                            sub="What collectors are looking at right now."
+                            href="/browse"
+                            cta="Browse all"
+                        >
+                            <HScroller>
+                                {trending.map((c, i) => (
+                                    <CardTile key={i} card={c} />
+                                ))}
+                            </HScroller>
+                        </Section>
+                    )}
+
+                    {movers.length > 0 && (
+                        <Section
+                            title="Biggest movers"
+                            sub="Largest 30-day swings on real sold-price data."
+                        >
+                            <HScroller>
+                                {movers.map((c, i) => (
+                                    <CardTile key={i} card={c} />
+                                ))}
+                            </HScroller>
+                        </Section>
+                    )}
+
+                    {recent.length > 0 && (
+                        <Section
+                            title="Recently updated prices"
+                            sub="Freshly repriced from new eBay sold comps."
+                        >
+                            <HScroller>
+                                {recent.map((c, i) => (
+                                    <CardTile key={i} card={c} />
+                                ))}
+                            </HScroller>
+                        </Section>
+                    )}
+
+                    {newestSets.length > 0 && (
+                        <Section
+                            title="Newest sets"
+                            sub="The latest releases in the catalog."
+                            href="/browse"
+                            cta="All sets"
+                        >
+                            <HScroller>
+                                {newestSets.map((s, i) => (
+                                    <SetTile key={i} set={s} />
+                                ))}
+                            </HScroller>
+                        </Section>
+                    )}
+                </div>
+            </section>
+
+            {/* Points & giveaways */}
+            <section className="border-b border-border bg-card/40">
+                <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+                    <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+                        <div>
+                            <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                                <Sparkles className="size-3.5" />
+                                Community
+                            </span>
+                            <h2 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
+                                Earn points. Win giveaways.
+                            </h2>
+                            <p className="mt-3 text-muted-foreground">
+                                Help build the most accurate catalog anywhere.
+                                Suggest a fix, or report a missing card or set —
+                                every accepted contribution earns points, levels
+                                you up, and counts as an entry into{' '}
+                                <span className="font-semibold text-foreground">
+                                    {community.month}
+                                </span>
+                                ’s giveaway.
+                            </p>
+
+                            <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                                {[
+                                    {
+                                        label: 'Suggest an edit',
+                                        pts: community.points.edit_suggestion,
+                                    },
+                                    {
+                                        label: 'Report a card',
+                                        pts: community.points.missing_card,
+                                    },
+                                    {
+                                        label: 'Report a set',
+                                        pts: community.points.missing_set,
+                                    },
+                                ].map((row) => (
+                                    <div
+                                        key={row.label}
+                                        className="rounded-lg border border-border bg-card p-3"
+                                    >
+                                        <p className="text-lg font-bold text-primary">
+                                            +{row.pts}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {row.label}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-6 flex flex-wrap gap-3">
+                                <Button asChild>
+                                    <Link href="/contribute">
+                                        Start contributing
+                                    </Link>
+                                </Button>
+                                <Button asChild variant="outline">
+                                    <Link href="/rankings">
+                                        <Trophy className="size-4" />
+                                        View rankings
+                                    </Link>
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-border bg-card p-6">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                Levels
+                            </p>
+                            <ol className="mt-3 space-y-1.5">
+                                {community.levels.map((l, i) => (
+                                    <li
+                                        key={l.name}
+                                        className="flex items-center gap-3"
+                                    >
+                                        <span className="flex size-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                                            {i + 1}
+                                        </span>
+                                        <span className="flex-1 text-sm font-medium">
+                                            {l.name}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            {l.min.toLocaleString()} pts
+                                        </span>
+                                    </li>
+                                ))}
+                            </ol>
+                            <div className="mt-4 flex items-start gap-2 rounded-lg bg-primary/5 p-3 text-sm">
+                                <Gift className="mt-0.5 size-4 shrink-0 text-primary" />
+                                <span className="text-muted-foreground">
+                                    Points earned this month are your entries in
+                                    the {community.month} giveaway — the more you
+                                    contribute, the better your odds.
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Why CardFoo */}
             <section
                 id="features"
-                className="scroll-mt-16 border-t border-border bg-card/40"
+                className="scroll-mt-16 border-b border-border"
             >
                 <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -181,36 +551,6 @@ export default function Welcome() {
                             );
                         })}
                     </div>
-                </div>
-            </section>
-
-            {/* How it works */}
-            <section
-                id="how-it-works"
-                className="scroll-mt-16 border-t border-border"
-            >
-                <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-                    <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                        How it works
-                    </h2>
-                    <ol className="mt-8 grid gap-6 sm:grid-cols-3">
-                        {steps.map((step, index) => (
-                            <li
-                                key={step.title}
-                                className="rounded-xl border border-border bg-card p-6"
-                            >
-                                <span className="flex size-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-                                    {index + 1}
-                                </span>
-                                <h3 className="mt-4 font-semibold">
-                                    {step.title}
-                                </h3>
-                                <p className="mt-2 text-sm text-muted-foreground">
-                                    {step.description}
-                                </p>
-                            </li>
-                        ))}
-                    </ol>
                 </div>
             </section>
         </>
