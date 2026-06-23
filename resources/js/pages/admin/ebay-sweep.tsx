@@ -1,6 +1,15 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { CatalogSearchSelect } from '@/components/scan/catalog-search-select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     Select,
     SelectContent,
@@ -9,7 +18,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import type { AdminPagination } from '@/types';
+import type { AdminPagination, CatalogItem } from '@/types';
 
 type Applied = {
     id: number;
@@ -71,6 +80,40 @@ export default function AdminEbaySweep({
     appliedTotal,
 }: Props) {
     const totalMisses = Object.values(counts).reduce((a, b) => a + b, 0);
+    const [reassign, setReassign] = useState<Applied | null>(null);
+
+    const reject = (a: Applied) => {
+        if (!confirm('Reject this sale and stop it re-applying in future sweeps?')) {
+            return;
+        }
+
+        router.post(
+            `/admin/ebay-sweep/applied/${a.id}/reject`,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success('Rejected and suppressed.'),
+            },
+        );
+    };
+
+    const pickCorrect = (card: CatalogItem) => {
+        if (!reassign) {
+            return;
+        }
+
+        router.post(
+            `/admin/ebay-sweep/applied/${reassign.id}/reassign`,
+            { catalog_item_id: card.id },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Reassigned to the correct card.');
+                    setReassign(null);
+                },
+            },
+        );
+    };
 
     return (
         <>
@@ -142,6 +185,25 @@ export default function AdminEbaySweep({
                                         </td>
                                         <td className="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums">
                                             {money(a.price)}
+                                        </td>
+                                        <td className="whitespace-nowrap px-3 py-2 text-right">
+                                            <div className="flex justify-end gap-1">
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => setReassign(a)}
+                                                >
+                                                    Reassign
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="text-red-600 hover:text-red-600"
+                                                    onClick={() => reject(a)}
+                                                >
+                                                    Reject
+                                                </Button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -276,6 +338,39 @@ export default function AdminEbaySweep({
                     )}
                 </div>
             </div>
+
+            <Dialog
+                open={!!reassign}
+                onOpenChange={(open) => !open && setReassign(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Reassign sale to the correct card</DialogTitle>
+                    </DialogHeader>
+                    {reassign && (
+                        <div className="space-y-3">
+                            <div className="rounded-md border border-border bg-muted/40 p-3 text-xs">
+                                <div className="text-muted-foreground">
+                                    Listing
+                                </div>
+                                <div className="mb-2">{reassign.title}</div>
+                                <div className="text-muted-foreground">
+                                    Matched to
+                                </div>
+                                <div>
+                                    {reassign.card}
+                                    {reassign.grade && ` · ${reassign.grade}`}
+                                </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Search for the correct card — the sale moves there
+                                and future sweeps of this listing follow.
+                            </p>
+                            <CatalogSearchSelect onSelect={pickCorrect} />
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

@@ -4,6 +4,7 @@ namespace App\Actions\Valuation;
 
 use App\Models\CatalogItem;
 use App\Models\EbaySweepMiss;
+use App\Models\EbaySweepOverride;
 use App\Models\GradingCompany;
 use App\Support\Ebay\EbayHtmlParser;
 use App\Support\Ebay\EbayTitleResolver;
@@ -46,6 +47,10 @@ class SweepEbaySold
 
         $companyIds = GradingCompany::pluck('id', 'slug')->all();
 
+        // Sticky admin decisions for the listings on this page (reject / reassign).
+        $listingIds = array_values(array_filter(array_map(fn ($c) => $c->itemId, $candidates)));
+        $overrides = EbaySweepOverride::whereIn('source_listing_id', $listingIds)->get()->keyBy('source_listing_id');
+
         /** @var array<int, CatalogItem> $affected */
         $affected = [];
         $matched = 0;
@@ -53,6 +58,24 @@ class SweepEbaySold
         $missed = 0;
 
         foreach ($candidates as $candidate) {
+            // An admin decision wins over the resolver, and holds across re-pulls.
+            $override = $candidate->itemId ? $overrides->get($candidate->itemId) : null;
+            if ($override) {
+                if ($override->action === EbaySweepOverride::REJECT) {
+                    continue;
+                }
+
+                $forced = $override->catalog_item_id ? CatalogItem::find($override->catalog_item_id) : null;
+                if ($forced && ! $dryRun) {
+                    $this->store($forced, $this->classifier->pricedState($candidate, $companyIds), $label);
+                    $stored++;
+                    $matched++;
+                    $affected[$forced->id] = $forced;
+                }
+
+                continue;
+            }
+
             $resolution = $this->resolver->resolve($candidate->title, $language, $minScore);
             $item = $resolution['item'];
 

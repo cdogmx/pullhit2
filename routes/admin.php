@@ -77,8 +77,11 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('card-reports/{cardReport}/approve', [CardReportController::class, 'approve'])->name('card-reports.approve');
     Route::post('card-reports/{cardReport}/reject', [CardReportController::class, 'reject'])->name('card-reports.reject');
 
-    // eBay sweep: watch broad sold-comp match quality (applied vs misses).
+    // eBay sweep: watch broad sold-comp match quality (applied vs misses), and
+    // reject / reassign applied sales (sticky across future re-pulls).
     Route::get('ebay-sweep', [EbaySweepController::class, 'index'])->name('ebay-sweep.index');
+    Route::post('ebay-sweep/applied/{saleObservation}/reject', [EbaySweepController::class, 'reject'])->name('ebay-sweep.reject');
+    Route::post('ebay-sweep/applied/{saleObservation}/reassign', [EbaySweepController::class, 'reassign'])->name('ebay-sweep.reassign');
 
     // Cards
     Route::get('cards', [CardController::class, 'index'])->name('cards.index');

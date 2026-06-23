@@ -53,7 +53,23 @@ class SoldCompClassifier
             return null;
         }
 
-        // 5) Graded? (company + grade in the title.)
+        // 5/6) Resolve the priced state (graded vs raw condition) from the title.
+        return $this->pricedState($candidate, $companyIds);
+    }
+
+    /**
+     * Resolve a candidate's priced state from its title — graded (company +
+     * grade) or raw (inferred condition, default Near Mint) — without the
+     * accept/reject gates. Used by classify() after its gates, and directly by
+     * an admin reassign where the card is asserted by hand.
+     *
+     * @param  array<string, int>  $companyIds  grading company slug => id
+     */
+    public function pricedState(SoldCandidate $candidate, array $companyIds): SoldComp
+    {
+        $title = $candidate->title;
+        $lower = mb_strtolower($title);
+
         if (preg_match('/\b(psa|bgs|cgc|sgc|tag|ace)\s*(10|[1-9](?:\.5)?)\b/i', $title, $g)) {
             $slug = strtolower($g[1]);
             if (isset($companyIds[$slug])) {
@@ -64,7 +80,6 @@ class SoldCompClassifier
             }
         }
 
-        // 6) Raw — infer condition (default Near Mint).
         $condition = match (true) {
             (bool) preg_match('/\b(dmg|damaged|poor)\b/', $lower) => 'DMG',
             (bool) preg_match('/\bheavily played\b|\bhp\b/', $lower) => 'HP',

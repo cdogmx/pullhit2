@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Valuation\RecomputeCatalogItem;
 use App\Http\Controllers\Controller;
+use App\Models\CatalogItem;
 use App\Models\EbaySweepMiss;
+use App\Models\EbaySweepOverride;
 use App\Models\SaleObservation;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -70,5 +74,85 @@ class EbaySweepController extends Controller
             ]),
             'appliedTotal' => SaleObservation::where('raw->source', 'ebay_sweep')->count(),
         ]);
+    }
+
+    /**
+     * Reject an applied sweep sale: drop the observation, recompute the card,
+     * and remember the listing so future sweeps never re-apply it.
+     */
+    public function reject(SaleObservation $saleObservation, RecomputeCatalogItem $recompute): RedirectResponse
+    {
+        $card = $saleObservation->catalogItem;
+        $listingId = $saleObservation->source_listing_id;
+        $title = $saleObservation->raw['title'] ?? null;
+
+        $saleObservation->delete();
+
+        if ($card) {
+            ($recompute)($card);
+        }
+
+        if ($listingId) {
+            EbaySweepOverride::updateOrCreate(
+                ['source_listing_id' => $listingId],
+                ['action' => EbaySweepOverride::REJECT, 'catalog_item_id' => null, 'title' => $title, 'created_by' => auth()->id()],
+            );
+        }
+
+        return back()->with('success', 'Sale rejected and suppressed.');
+    }
+
+    /**
+     * Reassign an applied sweep sale to the correct card: move the observation,
+     * recompute both cards, and remember the listing → card so future sweeps
+     * apply it there.
+     */
+    public function reassign(Request $request, SaleObservation $saleObservation, RecomputeCatalogItem $recompute): RedirectResponse
+    {
+        $validated = $request->validate([
+            'catalog_item_id' => ['required', 'integer', 'exists:catalog_items,id'],
+        ]);
+
+        $newId = (int) $validated['catalog_item_id'];
+        $oldCard = $saleObservation->catalogItem;
+        $listingId = $saleObservation->source_listing_id;
+
+        if ($newId !== $saleObservation->catalog_item_id) {
+            $new = CatalogItem::findOrFail($newId);
+
+            // Recreate on the correct card (dedup by listing id), then drop the old.
+            $new->saleObservations()->updateOrCreate(
+                ['source_listing_id' => $listingId, 'venue' => $saleObservation->venue],
+                [
+                    'condition' => $saleObservation->condition?->value,
+                    'grading_company_id' => $saleObservation->grading_company_id,
+                    'grade' => $saleObservation->grade,
+                    'grade_label' => $saleObservation->grade_label,
+                    'price' => $saleObservation->price,
+                    'currency' => $saleObservation->currency,
+                    'observed_at' => $saleObservation->observed_at,
+                    'seller' => $saleObservation->seller,
+                    'is_outlier' => false,
+                    'is_synthetic' => false,
+                    'raw' => $saleObservation->raw,
+                ],
+            );
+
+            $saleObservation->delete();
+
+            if ($oldCard) {
+                ($recompute)($oldCard);
+            }
+            ($recompute)($new);
+        }
+
+        if ($listingId) {
+            EbaySweepOverride::updateOrCreate(
+                ['source_listing_id' => $listingId],
+                ['action' => EbaySweepOverride::REASSIGN, 'catalog_item_id' => $newId, 'title' => $saleObservation->raw['title'] ?? null, 'created_by' => auth()->id()],
+            );
+        }
+
+        return back()->with('success', 'Sale reassigned to the correct card.');
     }
 }
