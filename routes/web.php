@@ -30,7 +30,19 @@ Route::get('browse/{productLine}', [CatalogController::class, 'browseLine'])->na
 Route::get('browse/{productLine}/{set}', [CatalogController::class, 'browseSet'])->name('catalog.browse.set');
 Route::get('catalog/{catalogItem}', [CatalogController::class, 'show'])->name('catalog.show');
 
-Route::get('sitemap.xml', SitemapController::class)->name('sitemap');
+// XML sitemaps (index → pages + chunked card sitemaps) for search engines.
+Route::get('sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('sitemap-pages.xml', [SitemapController::class, 'pages'])->name('sitemap.pages');
+Route::get('sitemap-cards-{page}.xml', [SitemapController::class, 'cards'])
+    ->where('page', '[0-9]+')->name('sitemap.cards');
+
+// robots.txt as a route (no static file) so the Sitemap line always points at
+// the current host — cardfoo.com in production — via url().
+Route::get('robots.txt', function () {
+    $body = "User-agent: *\nDisallow:\n\nSitemap: ".url('/sitemap.xml')."\n";
+
+    return response($body, 200)->header('Content-Type', 'text/plain');
+})->name('robots');
 
 // Public community rankings (leaderboard + monthly giveaway entries).
 Route::get('rankings', RankingsController::class)->name('rankings');

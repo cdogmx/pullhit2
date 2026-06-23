@@ -3,21 +3,54 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\CatalogItem;
 use App\Models\ProductLine;
 use App\Models\Set;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
 /**
- * XML sitemap so search engines discover the SEO set landings
- * (/browse/pokemon/surging-sparks), every card page (/{brand}/{set}/{card}),
- * plus the core public pages. Card rows are streamed to keep memory flat.
+ * XML sitemaps for search engines. A sitemap *index* (/sitemap.xml) points to:
+ *   - /sitemap-pages.xml      — core public pages + brand & set landings
+ *   - /sitemap-cards-{n}.xml  — every card page (/{brand}/{set}/{card}), paged
+ *     into CHUNK-sized files so each stays under the spec's 50,000-URL limit.
+ *
+ * Card rows are streamed (cursor) to keep memory flat. There's no public link —
+ * search engines discover it via the Sitemap directive in robots.txt.
  */
 class SitemapController extends Controller
 {
-    public function __invoke(): Response
+    /** URLs per card sitemap; the sitemaps spec caps a single file at 50,000. */
+    private const CHUNK = 40000;
+
+    /** The sitemap index — lists the child sitemaps. */
+    public function index(): Response
     {
-        $paths = ['/', '/browse', '/brand', '/terms', '/privacy'];
+        $cardPages = (int) max(1, ceil(
+            CatalogItem::whereNotNull('slug')->count() / self::CHUNK,
+        ));
+
+        $sitemaps = [url('/sitemap-pages.xml')];
+        for ($p = 1; $p <= $cardPages; $p++) {
+            $sitemaps[] = url("/sitemap-cards-{$p}.xml");
+        }
+
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n"
+            .'<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
+
+        foreach ($sitemaps as $loc) {
+            $xml .= '  <sitemap><loc>'.e($loc).'</loc></sitemap>'."\n";
+        }
+
+        $xml .= '</sitemapindex>'."\n";
+
+        return $this->xml($xml);
+    }
+
+    /** Core public pages + every brand and set landing page. */
+    public function pages(): Response
+    {
+        $paths = ['/', '/browse', '/brand', '/terms', '/privacy', '/rankings'];
 
         foreach (ProductLine::pluck('slug') as $slug) {
             $paths[] = "/browse/{$slug}";
@@ -31,27 +64,52 @@ class SitemapController extends Controller
                 }
             });
 
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n"
-            .'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
+        $xml = $this->urlsetOpen();
 
         foreach (array_unique($paths) as $path) {
             $xml .= '  <url><loc>'.e(url($path)).'</loc></url>'."\n";
         }
 
-        // Every slugged card, joined to its set + brand for the canonical path.
+        $xml .= '</urlset>'."\n";
+
+        return $this->xml($xml);
+    }
+
+    /** One CHUNK-sized page of card URLs (/{brand}/{set}/{card}), with lastmod. */
+    public function cards(int $page): Response
+    {
+        $xml = $this->urlsetOpen();
+
         DB::table('catalog_items as ci')
             ->join('sets as s', 'ci.set_id', '=', 's.id')
             ->join('product_lines as pl', 'ci.product_line_id', '=', 'pl.id')
             ->whereNotNull('ci.slug')
             ->orderBy('ci.id')
-            ->select('pl.slug as brand', 's.slug as set', 'ci.slug as card')
+            ->forPage(max(1, $page), self::CHUNK)
+            ->select('pl.slug as brand', 's.slug as set', 'ci.slug as card', 'ci.updated_at')
             ->cursor()
             ->each(function (object $row) use (&$xml) {
-                $xml .= '  <url><loc>'.e(url("/{$row->brand}/{$row->set}/{$row->card}")).'</loc></url>'."\n";
+                $loc = e(url("/{$row->brand}/{$row->set}/{$row->card}"));
+                $lastmod = $row->updated_at ? substr((string) $row->updated_at, 0, 10) : null;
+
+                $xml .= '  <url><loc>'.$loc.'</loc>'
+                    .($lastmod ? '<lastmod>'.$lastmod.'</lastmod>' : '')
+                    .'</url>'."\n";
             });
 
         $xml .= '</urlset>'."\n";
 
+        return $this->xml($xml);
+    }
+
+    private function urlsetOpen(): string
+    {
+        return '<?xml version="1.0" encoding="UTF-8"?>'."\n"
+            .'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
+    }
+
+    private function xml(string $xml): Response
+    {
         return response($xml, 200)->header('Content-Type', 'application/xml');
     }
 }
