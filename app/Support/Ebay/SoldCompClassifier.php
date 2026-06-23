@@ -36,6 +36,13 @@ class SoldCompClassifier
             return null;
         }
 
+        // 2b) Multi-card bundles that name several cards (e.g. the First Partners
+        //     "Charmander 038 + Squirtle 039 + Bulbasaur 037" / "37 38 39" sets) —
+        //     these aren't a single-card sale and badly inflate value.
+        if ($this->isMultiCardTitle($lower)) {
+            return null;
+        }
+
         // 3) The card's primary name token must appear.
         $primary = mb_strtolower((string) preg_replace('/[^a-z0-9]/i', '', (string) strtok($item->name, ' ')));
         if ($primary !== '' && ! str_contains((string) preg_replace('/[^a-z0-9]/', '', $lower), $primary)) {
@@ -89,6 +96,36 @@ class SoldCompClassifier
         };
 
         return new SoldComp($candidate->priceCents, $candidate->soldAt, $condition, null, null, null, $candidate->itemId ?? '', $title, $candidate->url, $candidate->seller);
+    }
+
+    /**
+     * Does the title list several different cards (a multi-card bundle/set), so
+     * it isn't a single-card comp? Two tells, both robust to graded titles:
+     *  - a "+"-joined bundle ("038 + Squirtle 039", "Charizard + Pikachu"), or
+     *  - 3+ distinct collector numbers once set totals (N/M), years, grades, HP
+     *    and levels are stripped (e.g. "37 38 39", "037, 038, 039").
+     * The 3-number threshold avoids false positives from set names that contain
+     * a number (e.g. "151") sitting next to the card's own number.
+     */
+    private function isMultiCardTitle(string $lower): bool
+    {
+        if (preg_match('/\d\s*\+\s*[a-z]|[a-z]\s*\+\s*\d/', $lower)) {
+            return true;
+        }
+
+        $t = (string) preg_replace('#(\d{1,4})\s*/\s*\d{1,4}#', ' $1 ', $lower);   // N/M -> N
+        $t = (string) preg_replace('/\b(?:19|20)\d{2}\b/', ' ', $t);               // years
+        $t = (string) preg_replace('/\b(?:psa|bgs|cgc|sgc|tag|ace)\s*\d+(?:\.\d)?\b/', ' ', $t); // grades
+        $t = (string) preg_replace('/\b\d{1,3}\s*hp\b/', ' ', $t);                 // HP
+        $t = (string) preg_replace('/\b(?:lv|level)\.?\s*\d+\b/', ' ', $t);        // levels
+
+        preg_match_all('/(?<![\w.])\d{1,3}(?![\w.\/])/', $t, $m);
+        $distinct = array_unique(array_filter(array_map(
+            fn ($n) => (int) ltrim($n, '0'),
+            $m[0],
+        ), fn ($n) => $n >= 1));
+
+        return count($distinct) >= 3;
     }
 
     /**
