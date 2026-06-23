@@ -8,6 +8,7 @@ use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\RankingsController;
 use App\Http\Controllers\Web\ScanController;
+use App\Http\Controllers\Web\SearchController;
 use App\Http\Controllers\Web\SitemapController;
 use App\Http\Controllers\Web\SuggestionController;
 use App\Http\Controllers\Web\WishlistController;
@@ -21,6 +22,8 @@ Route::inertia('privacy', 'privacy')->name('privacy');
 
 // Public catalog browse/search.
 Route::get('browse', [CatalogController::class, 'index'])->name('catalog.browse');
+// Header type-ahead — grouped brand/set/card suggestions (JSON).
+Route::get('search/suggest', [SearchController::class, 'suggest'])->name('search.suggest');
 // SEO landings: /browse/pokemon, /browse/pokemon/surging-sparks.
 Route::get('browse/{productLine}', [CatalogController::class, 'browseLine'])->name('catalog.browse.line');
 Route::get('browse/{productLine}/{set}', [CatalogController::class, 'browseSet'])->name('catalog.browse.set');

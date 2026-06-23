@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { ChevronDown, Zap } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';
+import { SiteSearch } from '@/components/site-search';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -81,9 +82,15 @@ export function SiteHeader() {
                                         <ChevronDown className="size-4" />
                                     </button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="w-44">
+                                <DropdownMenuContent
+                                    align="start"
+                                    className="w-44"
+                                >
                                     {menu.items.map((item) => (
-                                        <DropdownMenuItem key={item.href} asChild>
+                                        <DropdownMenuItem
+                                            key={item.href}
+                                            asChild
+                                        >
                                             <Link href={item.href}>
                                                 {item.label}
                                             </Link>
@@ -103,6 +110,8 @@ export function SiteHeader() {
                         ))}
                     </nav>
                 </div>
+
+                <SiteSearch className="hidden max-w-sm flex-1 md:block" />
 
                 <div className="flex items-center gap-2">
                     {auth.user ? (
@@ -135,7 +144,10 @@ export function SiteHeader() {
                                         <Avatar className="size-8 overflow-hidden rounded-full">
                                             <AvatarImage
                                                 src={auth.user.avatar}
-                                                alt={auth.user.username || auth.user.name}
+                                                alt={
+                                                    auth.user.username ||
+                                                    auth.user.name
+                                                }
                                             />
                                             <AvatarFallback className="rounded-full bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
                                                 {getInitials(
