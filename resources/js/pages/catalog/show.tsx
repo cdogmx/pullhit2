@@ -212,13 +212,28 @@ export default function Show({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [updating, item.id]);
 
-    const forceRefresh = () => {
+    const forceRefresh = async () => {
         setUpdating(true);
-        void fetch(`/admin/cards/${item.id}/refresh`, {
-            method: 'POST',
-            headers: { Accept: 'application/json', 'X-XSRF-TOKEN': xsrfToken() },
-            credentials: 'same-origin',
-        });
+
+        try {
+            // Synchronous pull — values are ready when this resolves; the poll
+            // loop then swaps them in once refreshed_at advances.
+            const res = await fetch(`/admin/cards/${item.id}/refresh`, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'X-XSRF-TOKEN': xsrfToken(),
+                },
+                credentials: 'same-origin',
+            });
+            const body = await res.json().catch(() => ({}));
+
+            if (!res.ok || body.ok === false) {
+                setUpdating(false); // disabled or daily cap reached
+            }
+        } catch {
+            setUpdating(false);
+        }
     };
 
     // The browse query we came from (search/filters/page), threaded via ?return=.
@@ -560,7 +575,27 @@ export default function Show({
                             </div>
                         ) : (
                             <div className={cn(PANEL, 'border-dashed')}>
-                                <span className={SECTION_LABEL}>Market value</span>
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className={SECTION_LABEL}>
+                                        Market value
+                                    </span>
+                                    {isAdmin && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={forceRefresh}
+                                            disabled={updating}
+                                        >
+                                            <RefreshCw
+                                                className={cn(
+                                                    'size-4',
+                                                    updating && 'animate-spin',
+                                                )}
+                                            />
+                                            Get values
+                                        </Button>
+                                    )}
+                                </div>
                                 <div className="mt-2 text-sm text-muted-foreground">
                                     {updating ? (
                                         <Badge className="gap-1 border-transparent bg-amber-500 text-white hover:bg-amber-500">

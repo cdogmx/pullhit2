@@ -5,11 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Catalog\CatalogFilterOptions;
 use App\Actions\Catalog\CreateCatalogItem;
 use App\Actions\Catalog\UpdateCatalogItem;
+use App\Actions\Valuation\IngestEbaySoldComps;
 use App\Enums\ItemType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreCardRequest;
 use App\Http\Requests\Admin\UpdateCardRequest;
-use App\Jobs\RefreshEbaySoldComps;
 use App\Models\CatalogItem;
 use App\Models\CollectionItem;
 use App\Models\Set;
@@ -18,6 +18,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -127,12 +129,28 @@ class CardController extends Controller
         return back()->with('success', 'Card updated.');
     }
 
-    /** Admin "Refresh now" — force an eBay pull, bypassing the 12h freshness guard. */
-    public function refresh(CatalogItem $catalogItem): JsonResponse
+    /**
+     * Admin "Get values" — force a synchronous eBay sold-comp pull for this card,
+     * bypassing the freshness/rarity guards (an admin asked explicitly). Runs
+     * inline so the result is immediate (no queue worker needed); still honours
+     * the shared daily Oxylabs cap. Returns the number of comps ingested.
+     */
+    public function refresh(CatalogItem $catalogItem, IngestEbaySoldComps $ingest): JsonResponse
     {
-        RefreshEbaySoldComps::dispatch($catalogItem->id, force: true);
+        if (! config('valuation.ebay.enabled')) {
+            return response()->json(['ok' => false, 'message' => 'eBay refresh is disabled.'], 422);
+        }
 
-        return response()->json(['ok' => true]);
+        $key = 'ebay:daily:'.Carbon::now()->toDateString();
+        Cache::add($key, 0, Carbon::now()->endOfDay());
+
+        if ((int) Cache::get($key, 0) >= (int) config('valuation.ebay.daily_cap')) {
+            return response()->json(['ok' => false, 'message' => 'Daily eBay request cap reached.'], 429);
+        }
+
+        Cache::increment($key);
+
+        return response()->json(['ok' => true, 'ingested' => $ingest($catalogItem)]);
     }
 
     public function destroy(CatalogItem $catalogItem): RedirectResponse
