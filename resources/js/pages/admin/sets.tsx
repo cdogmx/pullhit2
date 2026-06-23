@@ -66,6 +66,7 @@ export default function AdminSets({
     const [editingSet, setEditingSet] = useState<AdminSet | null>(null);
     const [creatingSet, setCreatingSet] = useState(false);
     const [lang, setLang] = useState('');
+    const [brand, setBrand] = useState('');
 
     // Languages actually present, for the table's language filter.
     const setLanguages = useMemo(
@@ -77,8 +78,13 @@ export default function AdminSets({
     );
 
     const shownSets = useMemo(
-        () => (lang ? sets.filter((s) => s.language === lang) : sets),
-        [sets, lang],
+        () =>
+            sets.filter(
+                (s) =>
+                    (!lang || s.language === lang) &&
+                    (!brand || s.brand === brand),
+            ),
+        [sets, lang, brand],
     );
 
     const removeSet = (set: AdminSet) => {
@@ -165,6 +171,15 @@ export default function AdminSets({
                         {s.series ? ` · ${s.series}` : ''}
                     </span>
                 </>
+            ),
+        },
+        {
+            key: 'brand',
+            header: 'Brand',
+            sortable: true,
+            value: (s) => s.brand,
+            cell: (s) => (
+                <span className="text-muted-foreground">{s.brand ?? '—'}</span>
             ),
         },
         {
@@ -343,28 +358,58 @@ export default function AdminSets({
                             searchPlaceholder="Search sets…"
                             initialSort={{ key: 'released', dir: 'desc' }}
                             toolbar={
-                                setLanguages.length > 1 ? (
-                                    <Select
-                                        value={lang || ALL}
-                                        onValueChange={(v) =>
-                                            setLang(v === ALL ? '' : v)
-                                        }
-                                    >
-                                        <SelectTrigger className="w-36">
-                                            <SelectValue placeholder="All languages" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value={ALL}>
-                                                All languages
-                                            </SelectItem>
-                                            {setLanguages.map((l) => (
-                                                <SelectItem key={l} value={l}>
-                                                    {languageLabel(l)}
+                                <>
+                                    {productLines.length > 1 && (
+                                        <Select
+                                            value={brand || ALL}
+                                            onValueChange={(v) =>
+                                                setBrand(v === ALL ? '' : v)
+                                            }
+                                        >
+                                            <SelectTrigger className="w-40">
+                                                <SelectValue placeholder="All brands" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value={ALL}>
+                                                    All brands
                                                 </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                ) : null
+                                                {productLines.map((p) => (
+                                                    <SelectItem
+                                                        key={p.id}
+                                                        value={p.name}
+                                                    >
+                                                        {p.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                    {setLanguages.length > 1 && (
+                                        <Select
+                                            value={lang || ALL}
+                                            onValueChange={(v) =>
+                                                setLang(v === ALL ? '' : v)
+                                            }
+                                        >
+                                            <SelectTrigger className="w-36">
+                                                <SelectValue placeholder="All languages" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value={ALL}>
+                                                    All languages
+                                                </SelectItem>
+                                                {setLanguages.map((l) => (
+                                                    <SelectItem
+                                                        key={l}
+                                                        value={l}
+                                                    >
+                                                        {languageLabel(l)}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                </>
                             }
                         />
                     </CardContent>

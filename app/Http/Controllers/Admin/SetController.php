@@ -31,12 +31,13 @@ class SetController extends Controller
 {
     public function index(): Response
     {
-        $sets = Set::orderByDesc('released_at')->orderBy('name')->get()->map(function (Set $set) {
+        $sets = Set::with('productLine:id,name')->orderByDesc('released_at')->orderBy('name')->get()->map(function (Set $set) {
             $itemIds = $set->catalogItems()->pluck('id');
 
             return [
                 'id' => $set->id,
                 'name' => $set->name,
+                'brand' => $set->productLine?->name,
                 'code' => $set->code,
                 'series' => $set->series,
                 'language' => $set->language,

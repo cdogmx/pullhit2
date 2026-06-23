@@ -19,6 +19,7 @@ export type SetHealth = {
 export type AdminSet = {
     id: number;
     name: string;
+    brand: string | null;
     code: string | null;
     series: string | null;
     language: string | null;
