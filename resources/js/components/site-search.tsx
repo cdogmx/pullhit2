@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react';
 import { ImageOff, Loader2, Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 
 type BrandHit = { name: string; thumb: string | null; url: string };
@@ -52,7 +53,15 @@ export function SiteSearch({
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState<Results>(EMPTY);
     const [active, setActive] = useState(-1);
+    // Anchored panel position (the dropdown renders in a portal so no ancestor's
+    // overflow/stacking context can clip it — e.g. the hero's overflow-hidden).
+    const [pos, setPos] = useState<{
+        top: number;
+        left: number;
+        width: number;
+    } | null>(null);
     const ref = useRef<HTMLDivElement>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
 
     // Flattened, in render order — drives keyboard navigation.
     const flat = useMemo<Flat[]>(
@@ -123,14 +132,44 @@ export function SiteSearch({
         };
     }, [q]);
 
-    // Close on outside click.
+    // Anchor the portal panel under the input; keep it pinned on scroll/resize.
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        const update = () => {
+            const el = ref.current;
+
+            if (el) {
+                const r = el.getBoundingClientRect();
+                setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+            }
+        };
+
+        // rAF (not a synchronous call) so the first position is set off the
+        // effect body, then track viewport changes while open.
+        const raf = requestAnimationFrame(update);
+        window.addEventListener('resize', update);
+        window.addEventListener('scroll', update, true);
+
+        return () => {
+            cancelAnimationFrame(raf);
+            window.removeEventListener('resize', update);
+            window.removeEventListener('scroll', update, true);
+        };
+    }, [open]);
+
+    // Close on click outside both the input and the (portaled) panel.
     useEffect(() => {
         if (!open) {
             return;
         }
 
         const onDown = (e: MouseEvent) => {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
+            const t = e.target as Node;
+
+            if (!ref.current?.contains(t) && !panelRef.current?.contains(t)) {
                 setOpen(false);
             }
         };
@@ -231,78 +270,103 @@ export function SiteSearch({
                 </div>
             )}
 
-            {open && q.trim().length >= 2 && (
-                <div className="absolute left-0 z-50 mt-1 w-full overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md">
-                    <div className="max-h-[70vh] overflow-y-auto p-1">
-                        {!hasResults ? (
-                            <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                                {loading
-                                    ? 'Searching…'
-                                    : `No matches for “${q.trim()}”.`}
-                            </p>
-                        ) : (
-                            <>
-                                {results.brands.length > 0 && (
-                                    <Group label="Brands">
-                                        {results.brands.map((b) => {
-                                            index++;
+            {open &&
+                q.trim().length >= 2 &&
+                pos &&
+                createPortal(
+                    <div
+                        ref={panelRef}
+                        style={{
+                            position: 'fixed',
+                            top: pos.top,
+                            left: pos.left,
+                            width: pos.width,
+                        }}
+                        className="z-[60] overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md"
+                    >
+                        <div className="max-h-[70vh] overflow-y-auto p-1">
+                            {!hasResults ? (
+                                <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                                    {loading
+                                        ? 'Searching…'
+                                        : `No matches for “${q.trim()}”.`}
+                                </p>
+                            ) : (
+                                <>
+                                    {results.brands.length > 0 && (
+                                        <Group label="Brands">
+                                            {results.brands.map((b) => {
+                                                index++;
 
-                                            return (
-                                                <Row
-                                                    key={`b-${b.url}`}
-                                                    thumb={b.thumb}
-                                                    title={b.name}
-                                                    subtitle="Brand"
-                                                    rounded
-                                                    active={index === active}
-                                                    onSelect={() => go(b.url)}
-                                                />
-                                            );
-                                        })}
-                                    </Group>
-                                )}
-                                {results.sets.length > 0 && (
-                                    <Group label="Sets">
-                                        {results.sets.map((s) => {
-                                            index++;
+                                                return (
+                                                    <Row
+                                                        key={`b-${b.url}`}
+                                                        thumb={b.thumb}
+                                                        title={b.name}
+                                                        subtitle="Brand"
+                                                        rounded
+                                                        active={
+                                                            index === active
+                                                        }
+                                                        onSelect={() =>
+                                                            go(b.url)
+                                                        }
+                                                    />
+                                                );
+                                            })}
+                                        </Group>
+                                    )}
+                                    {results.sets.length > 0 && (
+                                        <Group label="Sets">
+                                            {results.sets.map((s) => {
+                                                index++;
 
-                                            return (
-                                                <Row
-                                                    key={`s-${s.url}`}
-                                                    thumb={s.thumb}
-                                                    title={s.name}
-                                                    subtitle={s.brand}
-                                                    rounded
-                                                    active={index === active}
-                                                    onSelect={() => go(s.url)}
-                                                />
-                                            );
-                                        })}
-                                    </Group>
-                                )}
-                                {results.cards.length > 0 && (
-                                    <Group label="Cards">
-                                        {results.cards.map((c) => {
-                                            index++;
+                                                return (
+                                                    <Row
+                                                        key={`s-${s.url}`}
+                                                        thumb={s.thumb}
+                                                        title={s.name}
+                                                        subtitle={s.brand}
+                                                        rounded
+                                                        active={
+                                                            index === active
+                                                        }
+                                                        onSelect={() =>
+                                                            go(s.url)
+                                                        }
+                                                    />
+                                                );
+                                            })}
+                                        </Group>
+                                    )}
+                                    {results.cards.length > 0 && (
+                                        <Group label="Cards">
+                                            {results.cards.map((c) => {
+                                                index++;
 
-                                            return (
-                                                <Row
-                                                    key={`c-${c.url}`}
-                                                    thumb={c.thumb}
-                                                    title={c.name}
-                                                    subtitle={c.set}
-                                                    active={index === active}
-                                                    onSelect={() => go(c.url)}
-                                                />
-                                            );
-                                        })}
-                                    </Group>
-                                )}
-                            </>
-                        )}
-                    </div>
-                </div>
-            )}
+                                                return (
+                                                    <Row
+                                                        key={`c-${c.url}`}
+                                                        thumb={c.thumb}
+                                                        title={c.name}
+                                                        subtitle={c.set}
+                                                        active={
+                                                            index === active
+                                                        }
+                                                        onSelect={() =>
+                                                            go(c.url)
+                                                        }
+                                                    />
+                                                );
+                                            })}
+                                        </Group>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </div>,
+                    document.body,
+                )}
         </div>
     );
 }
