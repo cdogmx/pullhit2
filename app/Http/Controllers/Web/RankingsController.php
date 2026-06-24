@@ -42,12 +42,7 @@ class RankingsController extends Controller
         }
 
         return [
-            'title' => $giveaway->title,
-            'prize' => $giveaway->prize,
-            'image' => $giveaway->image_path,
-            'description' => $giveaway->description,
-            'period_label' => $giveaway->periodLabel(),
-            'total_entries' => $this->poolEntries($giveaway),
+            ...$giveaway->toCard(),
             'my_entries' => $user?->monthlyEntries() ?? 0,
         ];
     }
@@ -68,17 +63,6 @@ class RankingsController extends Controller
                 'winner' => $g->winner?->username ?? $g->winner?->name,
             ])
             ->all();
-    }
-
-    /** Total eligible entries (points by username'd users) in a giveaway's month. */
-    private function poolEntries(Giveaway $giveaway): int
-    {
-        return (int) Contribution::query()
-            ->whereBetween('contributions.created_at', [$giveaway->periodStart(), $giveaway->periodEnd()])
-            ->join('users', 'users.id', '=', 'contributions.user_id')
-            ->whereNotNull('users.username')
-            ->where('contributions.points', '>', 0)
-            ->sum('contributions.points');
     }
 
     /** Top contributors by lifetime points. */

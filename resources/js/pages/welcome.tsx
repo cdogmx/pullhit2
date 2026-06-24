@@ -60,6 +60,15 @@ type Community = {
     month: string;
 };
 
+type Giveaway = {
+    title: string;
+    prize: string;
+    image: string | null;
+    description: string | null;
+    period_label: string;
+    total_entries: number;
+};
+
 type Props = {
     brands: Brand[];
     trending: CardTileData[];
@@ -67,6 +76,7 @@ type Props = {
     recent: CardTileData[];
     popularSets: SetTileData[];
     community: Community;
+    giveaway: Giveaway | null;
 };
 
 const features: { title: string; description: string; icon: LucideIcon }[] = [
@@ -234,6 +244,7 @@ export default function Welcome({
     recent,
     popularSets,
     community,
+    giveaway,
 }: Props) {
     const { auth } = usePage().props;
 
@@ -424,6 +435,56 @@ export default function Welcome({
             {/* Points & giveaways */}
             <section className="border-b border-border bg-card/40">
                 <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+                    {giveaway && (
+                        <div className="mb-12 overflow-hidden rounded-2xl border border-primary/30 bg-primary/5">
+                            <div className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:p-8">
+                                {giveaway.image && (
+                                    <img
+                                        src={giveaway.image}
+                                        alt={giveaway.prize}
+                                        className="h-44 w-full shrink-0 rounded-xl border border-border bg-card object-contain sm:h-36 sm:w-56"
+                                    />
+                                )}
+                                <div className="min-w-0 flex-1">
+                                    <span className="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                                        <Gift className="size-3.5" />
+                                        {giveaway.period_label} giveaway
+                                    </span>
+                                    <h2 className="mt-3 text-2xl font-bold tracking-tight">
+                                        {giveaway.title}
+                                    </h2>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        Win{' '}
+                                        <span className="font-semibold text-foreground">
+                                            {giveaway.prize}
+                                        </span>
+                                        {' · '}
+                                        {giveaway.total_entries.toLocaleString()}{' '}
+                                        entries so far
+                                    </p>
+                                    {giveaway.description && (
+                                        <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                                            {giveaway.description}
+                                        </p>
+                                    )}
+                                    <div className="mt-5 flex flex-wrap gap-3">
+                                        <Button asChild>
+                                            <Link href="/contribute">
+                                                Earn entries
+                                            </Link>
+                                        </Button>
+                                        <Button asChild variant="outline">
+                                            <Link href="/rankings">
+                                                <Trophy className="size-4" />
+                                                Giveaway details
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
                         <div>
                             <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">

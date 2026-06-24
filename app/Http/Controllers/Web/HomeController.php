@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\CatalogItem;
+use App\Models\Giveaway;
 use App\Models\MarketValue;
 use App\Models\ProductLine;
 use App\Models\Set;
@@ -34,6 +35,7 @@ class HomeController extends Controller
         return Inertia::render('welcome', [
             ...$sections,
             'community' => $this->community(),
+            'giveaway' => Giveaway::current()?->toCard(),
         ]);
     }
 

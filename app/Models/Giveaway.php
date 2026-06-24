@@ -65,4 +65,35 @@ class Giveaway extends Model
     {
         return Carbon::createFromFormat('Y-m', $this->period)->format('F Y');
     }
+
+    /**
+     * Total eligible entries in this giveaway's month — the sum of contribution
+     * points earned by users who have a username (the entry requirement).
+     */
+    public function entries(): int
+    {
+        return (int) Contribution::query()
+            ->whereBetween('contributions.created_at', [$this->periodStart(), $this->periodEnd()])
+            ->join('users', 'users.id', '=', 'contributions.user_id')
+            ->whereNotNull('users.username')
+            ->where('contributions.points', '>', 0)
+            ->sum('contributions.points');
+    }
+
+    /**
+     * Public-facing card payload (homepage banner + rankings page).
+     *
+     * @return array<string, mixed>
+     */
+    public function toCard(): array
+    {
+        return [
+            'title' => $this->title,
+            'prize' => $this->prize,
+            'image' => $this->image_path,
+            'description' => $this->description,
+            'period_label' => $this->periodLabel(),
+            'total_entries' => $this->entries(),
+        ];
+    }
 }

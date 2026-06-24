@@ -21,6 +21,7 @@ import {
     Search,
     Shield,
     Sparkles,
+    Trophy,
     Users,
     Zap,
 } from 'lucide-react';
@@ -69,6 +70,11 @@ const mainNavItems: NavItem[] = [
         title: 'Contribute',
         href: '/contribute',
         icon: Award,
+    },
+    {
+        title: 'Rankings',
+        href: '/rankings',
+        icon: Trophy,
     },
     {
         title: 'Browse',

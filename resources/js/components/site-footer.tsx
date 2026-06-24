@@ -28,6 +28,7 @@ const footerNav: {
     {
         heading: 'Company',
         links: [
+            { title: 'Giveaways & rankings', href: '/rankings' },
             { title: 'About', href: '#' },
             { title: 'Brand', href: '/brand' },
             { title: 'Contact', href: '#' },
