@@ -7,10 +7,15 @@ use App\Http\Controllers\Controller;
 use App\Models\CatalogItem;
 use App\Models\EbaySweepMiss;
 use App\Models\EbaySweepOverride;
+use App\Models\GradingCompany;
 use App\Models\SaleObservation;
+use App\Support\Ebay\SoldCandidate;
+use App\Support\Ebay\SoldCompClassifier;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -156,5 +161,60 @@ class EbaySweepController extends Controller
         }
 
         return back()->with('success', 'Sale reassigned to the correct card.');
+    }
+
+    /**
+     * Manually assign an unmatched / low-confidence listing to a card: ingest it
+     * as a real sale on the chosen card, remember the listing → card so future
+     * sweeps follow, and clear the miss.
+     */
+    public function assign(Request $request, EbaySweepMiss $ebaySweepMiss, SoldCompClassifier $classifier, RecomputeCatalogItem $recompute): RedirectResponse
+    {
+        $validated = $request->validate([
+            'catalog_item_id' => ['required', 'integer', 'exists:catalog_items,id'],
+        ]);
+
+        abort_if((int) $ebaySweepMiss->price <= 0, 422, 'This listing has no usable price.');
+
+        $card = CatalogItem::findOrFail((int) $validated['catalog_item_id']);
+        $listingId = $ebaySweepMiss->source_listing_id;
+
+        // Read the priced state (graded/raw) from the title; the admin asserts
+        // the card, so the resolver/name gates are skipped.
+        $candidate = new SoldCandidate(
+            $ebaySweepMiss->title,
+            (int) $ebaySweepMiss->price,
+            $ebaySweepMiss->sold_at ? CarbonImmutable::parse($ebaySweepMiss->sold_at) : null,
+            $listingId,
+            "https://www.ebay.com/itm/{$listingId}",
+        );
+        $comp = $classifier->pricedState($candidate, GradingCompany::pluck('id', 'slug')->all());
+
+        $card->saleObservations()->updateOrCreate(
+            ['source_listing_id' => $comp->sourceListingId, 'venue' => 'ebay'],
+            [
+                'condition' => $comp->condition,
+                'grading_company_id' => $comp->gradingCompanyId,
+                'grade' => $comp->grade,
+                'grade_label' => $comp->gradeLabel,
+                'price' => $comp->priceCents,
+                'currency' => 'USD',
+                'observed_at' => $comp->soldAt ?? Carbon::now(),
+                'seller' => $comp->seller,
+                'is_outlier' => false,
+                'is_synthetic' => false,
+                'raw' => ['title' => $comp->title, 'url' => $comp->url, 'source' => 'ebay_sweep', 'sweep' => 'manual'],
+            ],
+        );
+
+        EbaySweepOverride::updateOrCreate(
+            ['source_listing_id' => $listingId],
+            ['action' => EbaySweepOverride::REASSIGN, 'catalog_item_id' => $card->id, 'title' => $ebaySweepMiss->title, 'created_by' => auth()->id()],
+        );
+
+        $ebaySweepMiss->delete();
+        ($recompute)($card);
+
+        return back()->with('success', "Assigned to #{$card->number} {$card->name}.");
     }
 }

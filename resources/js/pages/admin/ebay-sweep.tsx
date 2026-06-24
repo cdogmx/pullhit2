@@ -117,6 +117,33 @@ export default function AdminEbaySweep({
         );
     };
 
+    const [assignMiss, setAssignMiss] = useState<Miss | null>(null);
+
+    const postAssign = (missId: number, cardId: number, done?: () => void) =>
+        router.post(
+            `/admin/ebay-sweep/misses/${missId}/assign`,
+            { catalog_item_id: cardId },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Assigned to the card.');
+                    done?.();
+                },
+            },
+        );
+
+    const assignToBest = (m: Miss) => {
+        if (m.best_id) {
+            postAssign(m.id, m.best_id);
+        }
+    };
+
+    const pickForMiss = (card: CatalogItem) => {
+        if (assignMiss) {
+            postAssign(assignMiss.id, card.id, () => setAssignMiss(null));
+        }
+    };
+
     return (
         <>
             <Head title="Admin · eBay sweep" />
@@ -319,6 +346,30 @@ export default function AdminEbaySweep({
                                         <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-muted-foreground">
                                             {money(m.price)}
                                         </td>
+                                        <td className="whitespace-nowrap px-3 py-2 text-right">
+                                            <div className="flex justify-end gap-1">
+                                                {m.best_id && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() =>
+                                                            assignToBest(m)
+                                                        }
+                                                    >
+                                                        Assign to best
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() =>
+                                                        setAssignMiss(m)
+                                                    }
+                                                >
+                                                    Assign…
+                                                </Button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -391,6 +442,33 @@ export default function AdminEbaySweep({
                                 and future sweeps of this listing follow.
                             </p>
                             <CatalogSearchSelect onSelect={pickCorrect} />
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={!!assignMiss}
+                onOpenChange={(open) => !open && setAssignMiss(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Assign listing to a card</DialogTitle>
+                    </DialogHeader>
+                    {assignMiss && (
+                        <div className="space-y-3">
+                            <div className="rounded-md border border-border bg-muted/40 p-3 text-xs">
+                                <div className="text-muted-foreground">
+                                    Listing
+                                </div>
+                                <div>{assignMiss.title}</div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Pick the card this sale belongs to — it's ingested
+                                as a real comp and future sweeps of this listing
+                                follow.
+                            </p>
+                            <CatalogSearchSelect onSelect={pickForMiss} />
                         </div>
                     )}
                 </DialogContent>
