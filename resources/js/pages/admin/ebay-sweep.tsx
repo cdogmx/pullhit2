@@ -27,6 +27,7 @@ type Applied = {
     grade: string | null;
     price: number | null;
     title: string | null;
+    url: string | null;
     search: string | null;
     observed_at: string | null;
 };
@@ -34,6 +35,7 @@ type Applied = {
 type Miss = {
     id: number;
     title: string;
+    url: string | null;
     reason: string;
     number: string | null;
     price: number | null;
@@ -159,9 +161,20 @@ export default function AdminEbaySweep({
                                         className="border-b border-border/60 last:border-0"
                                     >
                                         <td className="px-3 py-2">
-                                            <div className="truncate text-xs text-muted-foreground">
-                                                {a.title}
-                                            </div>
+                                            {a.url ? (
+                                                <a
+                                                    href={a.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="block truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
+                                                >
+                                                    {a.title}
+                                                </a>
+                                            ) : (
+                                                <div className="truncate text-xs text-muted-foreground">
+                                                    {a.title}
+                                                </div>
+                                            )}
                                             <div className="font-medium">
                                                 {a.card_id ? (
                                                     <Link
@@ -258,9 +271,20 @@ export default function AdminEbaySweep({
                                         className="border-b border-border/60 last:border-0"
                                     >
                                         <td className="px-3 py-2">
-                                            <div className="truncate">
-                                                {m.title}
-                                            </div>
+                                            {m.url ? (
+                                                <a
+                                                    href={m.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="block truncate hover:underline"
+                                                >
+                                                    {m.title}
+                                                </a>
+                                            ) : (
+                                                <div className="truncate">
+                                                    {m.title}
+                                                </div>
+                                            )}
                                             <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
                                                 <span
                                                     className={cn(

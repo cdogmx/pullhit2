@@ -44,6 +44,7 @@ class EbaySweepController extends Controller
             'misses' => collect($misses->items())->map(fn (EbaySweepMiss $m) => [
                 'id' => $m->id,
                 'title' => $m->title,
+                'url' => "https://www.ebay.com/itm/{$m->source_listing_id}",
                 'reason' => $m->reason,
                 'number' => $m->parsed_number,
                 'price' => $m->price,
@@ -69,6 +70,7 @@ class EbaySweepController extends Controller
                 'grade' => $o->grade_label,
                 'price' => $o->price,
                 'title' => $o->raw['title'] ?? null,
+                'url' => $o->raw['url'] ?? ($o->source_listing_id ? "https://www.ebay.com/itm/{$o->source_listing_id}" : null),
                 'search' => $o->raw['sweep'] ?? null,
                 'observed_at' => $o->observed_at?->toIso8601String(),
             ]),
