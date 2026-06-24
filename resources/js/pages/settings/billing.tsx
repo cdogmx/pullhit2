@@ -4,6 +4,14 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
 type Plan = {
@@ -123,11 +131,15 @@ export default function Billing({
         );
     };
 
+    const [confirmingCancel, setConfirmingCancel] = useState(false);
+
     const cancel = () => {
         router.delete('/settings/billing', {
             preserveScroll: true,
-            onSuccess: () =>
-                toast.success('Subscription will cancel at period end.'),
+            onSuccess: () => {
+                toast.success('Subscription will cancel at period end.');
+                setConfirmingCancel(false);
+            },
         });
     };
 
@@ -181,7 +193,11 @@ export default function Billing({
                         </div>
                     </div>
                     {isPaid && !cancelScheduled && (
-                        <Button variant="ghost" size="sm" onClick={cancel}>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setConfirmingCancel(true)}
+                        >
                             Cancel plan
                         </Button>
                     )}
@@ -421,6 +437,36 @@ export default function Billing({
                     )}
                 </div>
             </div>
+
+            <Dialog
+                open={confirmingCancel}
+                onOpenChange={setConfirmingCancel}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Cancel your subscription?</DialogTitle>
+                        <DialogDescription>
+                            Your plan stays active until{' '}
+                            <span className="font-medium text-foreground">
+                                {renewsAt ? formatDate(renewsAt) : 'the end of the current period'}
+                            </span>
+                            . You keep all benefits until then, and you won't be
+                            charged again.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setConfirmingCancel(false)}
+                        >
+                            Keep plan
+                        </Button>
+                        <Button variant="destructive" onClick={cancel}>
+                            Cancel subscription
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

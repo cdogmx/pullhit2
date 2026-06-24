@@ -2,7 +2,9 @@
 
 use App\Enums\MembershipTier;
 use App\Models\User;
+use App\Notifications\PaymentReceipt;
 use App\Support\Billing\DodoWebhookVerifier;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Testing\TestResponse;
 
 beforeEach(function () {
@@ -72,6 +74,23 @@ test('a credit-pack payment grants scan credits without changing tier', function
     $user->refresh();
     expect($user->purchased_scan_credits)->toBe(500)
         ->and($user->membership_tier)->toBe(MembershipTier::Free);
+});
+
+test('a successful payment emails a receipt', function () {
+    Notification::fake();
+    $user = User::factory()->create();
+
+    postDodo([
+        'type' => 'payment.succeeded',
+        'data' => [
+            'payment_id' => 'pay_rcpt_1',
+            'total_amount' => 1999,
+            'currency' => 'USD',
+            'metadata' => ['user_id' => (string) $user->id, 'tier' => 'guru'],
+        ],
+    ])->assertOk();
+
+    Notification::assertSentTo($user, PaymentReceipt::class);
 });
 
 test('a signed subscription.cancelled webhook downgrades to free', function () {

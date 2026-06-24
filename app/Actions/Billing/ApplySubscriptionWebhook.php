@@ -4,6 +4,7 @@ namespace App\Actions\Billing;
 
 use App\Enums\MembershipTier;
 use App\Models\User;
+use App\Notifications\PaymentReceipt;
 use Illuminate\Support\Carbon;
 
 /**
@@ -35,8 +36,14 @@ class ApplySubscriptionWebhook
             return null;
         }
 
-        // Record the money movement (payment/refund events) for the history views.
-        ($this->record)($payload, $user);
+        // Record the money movement (payment/refund events) for the history views,
+        // and email a receipt the first time a successful payment is recorded.
+        $transaction = ($this->record)($payload, $user);
+        if ($transaction
+            && $transaction->wasRecentlyCreated
+            && $transaction->status === 'succeeded') {
+            $user->notify(new PaymentReceipt($transaction));
+        }
 
         // One-time scan-credit-pack purchase: grant the credits and stop here.
         $credits = (int) data_get($data, 'metadata.credits', 0);
