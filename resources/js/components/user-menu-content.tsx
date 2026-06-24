@@ -1,6 +1,7 @@
 import { Link, router } from '@inertiajs/react';
 import {
     Bell,
+    CircleUserRound,
     Heart,
     LayoutGrid,
     LibraryBig,
@@ -65,6 +66,18 @@ export function UserMenuContent({ user }: Props) {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
+                {user.username && (
+                    <DropdownMenuItem asChild>
+                        <Link
+                            className="block w-full cursor-pointer"
+                            href={`/u/${user.username}`}
+                            onClick={cleanup}
+                        >
+                            <CircleUserRound className="mr-2" />
+                            My profile
+                        </Link>
+                    </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                     <Link
                         className="block w-full cursor-pointer"
