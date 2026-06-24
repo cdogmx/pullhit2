@@ -29,3 +29,6 @@ Schedule::command('valuation:snapshot')->dailyAt('06:30')->withoutOverlapping();
 // to its own interval (config valuation.ebay.sweep), so this stays under the
 // daily Oxylabs cap. Needs Laravel Cloud's scheduler enabled to run.
 Schedule::command('valuation:sweep-ebay')->everyTenMinutes()->withoutOverlapping();
+
+// Weekly refresh of set social-share (OG) collage images (top cards + prices).
+Schedule::command('catalog:set-share-images')->weeklyOn(1, '04:00')->withoutOverlapping();

@@ -74,6 +74,10 @@ class CatalogController extends Controller
         return $this->renderBrowse($filters, $search, $options, seo: [
             'title' => "{$setModel->name} — {$line->name} cards & prices",
             'heading' => $setModel->name,
+            // Weekly-generated top-cards collage; cache-bust on its refresh time.
+            'image' => $setModel->og_image_path
+                ? $setModel->og_image_path.'?v='.($setModel->og_image_at?->timestamp ?? 0)
+                : null,
         ]);
     }
 
@@ -125,11 +129,14 @@ class CatalogController extends Controller
                 ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
             'seo' => $seo,
             // Server-rendered SEO/share meta for the brand/set landing pages.
-            'meta' => $seo ? [
+            'meta' => $seo ? array_filter([
                 'title' => $seo['title'].' | '.config('app.name'),
                 'description' => $blurb
                     ?: "Browse {$seo['heading']} cards with confidence-scored market prices, sets, and values on ".config('app.name').'.',
-            ] : null,
+                // Generated set collage as the OG/Twitter image, when available.
+                'image' => $seo['image'] ?? null,
+                'image_alt' => isset($seo['image']) ? "{$seo['heading']} top cards" : null,
+            ], fn ($v) => $v !== null) : null,
             // Language selector shows while browsing a brand's series/sets.
             'tileLanguages' => in_array($mode, ['series', 'sets'], true) && ! empty($filters['product_line'])
                 ? $tiles->languagesFor($filters['product_line'])

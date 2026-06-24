@@ -18,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'slug',
     'name',
     'logo_path',
+    'og_image_path',
+    'og_image_at',
     'description',
     'code',
     'language',
@@ -35,6 +37,7 @@ class Set extends Model
     {
         return [
             'released_at' => 'date',
+            'og_image_at' => 'datetime',
             'external_ids' => 'array',
         ];
     }
