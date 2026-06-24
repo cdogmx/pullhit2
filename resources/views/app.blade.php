@@ -84,6 +84,9 @@
         @isset($pageMeta['image_alt'])
         <meta property="og:image:alt" content="{{ $pageMeta['image_alt'] }}">
         @endisset
+        @if($fbAppId = config('services.facebook.client_id'))
+        <meta property="fb:app_id" content="{{ $fbAppId }}">
+        @endif
 
         <meta name="twitter:card" content="{{ $twitterCard }}">
         <meta name="twitter:title" content="{{ $ogTitle }}">
