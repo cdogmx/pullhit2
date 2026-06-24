@@ -12,6 +12,7 @@ use App\Http\Controllers\Web\ScanController;
 use App\Http\Controllers\Web\SearchController;
 use App\Http\Controllers\Web\SitemapController;
 use App\Http\Controllers\Web\SuggestionController;
+use App\Http\Controllers\Web\UserProfileController;
 use App\Http\Controllers\Web\WishlistController;
 use App\Http\Controllers\Web\WishlistsController;
 use Illuminate\Support\Facades\Route;
@@ -46,6 +47,9 @@ Route::get('robots.txt', function () {
 
 // Public community rankings (leaderboard + monthly giveaway entries).
 Route::get('rankings', RankingsController::class)->name('rankings');
+
+// Public user profile (community face of an account).
+Route::get('u/{username}', [UserProfileController::class, 'show'])->name('profile.show');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');

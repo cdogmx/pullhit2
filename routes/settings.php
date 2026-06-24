@@ -13,6 +13,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('settings/collection', [ProfileController::class, 'updateCollection'])->name('profile.collection');
+    Route::post('settings/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
+    Route::delete('settings/avatar', [ProfileController::class, 'deleteAvatar'])->name('profile.avatar.destroy');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

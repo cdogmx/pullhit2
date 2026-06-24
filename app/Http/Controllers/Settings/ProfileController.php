@@ -6,6 +6,7 @@ use App\Concerns\ProfileValidationRules;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Support\Catalog\CardImageStore;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -69,6 +70,35 @@ class ProfileController extends Controller
         $user->defaultWishlist()->update(['is_public' => $user->is_wishlist_public]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Sharing settings updated.')]);
+
+        return to_route('profile.edit');
+    }
+
+    /**
+     * Upload (or replace) the user's avatar. Stored as our own S3 copy.
+     */
+    public function updateAvatar(Request $request, CardImageStore $images): RedirectResponse
+    {
+        $request->validate(['avatar' => ['required', 'image', 'max:5120']]);
+
+        $url = $images->storeUpload($request->file('avatar'));
+        abort_if($url === null, 422, 'Could not store that image.');
+
+        $request->user()->forceFill(['avatar_path' => $url])->save();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Avatar updated.')]);
+
+        return to_route('profile.edit');
+    }
+
+    /**
+     * Remove the user's avatar (revert to initials).
+     */
+    public function deleteAvatar(Request $request): RedirectResponse
+    {
+        $request->user()->forceFill(['avatar_path' => null])->save();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Avatar removed.')]);
 
         return to_route('profile.edit');
     }

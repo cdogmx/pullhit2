@@ -8,6 +8,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -36,6 +37,21 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         'purchased_scan_credits' => 0,
         'contribution_points' => 0,
     ];
+
+    /**
+     * Expose the stored avatar URL as `avatar` everywhere a user serializes
+     * (the shared auth.user prop + public profile). Null when unset — the UI
+     * falls back to initials.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = ['avatar'];
+
+    /** The user's avatar URL (stored S3 copy), or null. */
+    protected function avatar(): Attribute
+    {
+        return Attribute::get(fn () => $this->avatar_path);
+    }
 
     /**
      * Get the attributes that should be cast.

@@ -1,13 +1,17 @@
-import { Form, Head, useForm, usePage } from '@inertiajs/react';
+import { Form, Head, router, useForm, usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
+import { Loader2, Upload } from 'lucide-react';
+import { useRef, useState } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/delete-user';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useInitials } from '@/hooks/use-initials';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
 import type { Auth } from '@/types';
@@ -30,6 +34,38 @@ export default function Profile({
     isWishlistPublic: boolean;
 }) {
     const { auth } = usePage<PageProps>().props;
+    const getInitials = useInitials();
+    const avatarRef = useRef<HTMLInputElement>(null);
+    const [avatarBusy, setAvatarBusy] = useState(false);
+    const handle = auth.user.username || auth.user.name;
+
+    const onAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        router.post(
+            '/settings/avatar',
+            { avatar: file },
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onStart: () => setAvatarBusy(true),
+                onFinish: () => {
+                    setAvatarBusy(false);
+
+                    if (avatarRef.current) {
+                        avatarRef.current.value = '';
+                    }
+                },
+            },
+        );
+    };
+
+    const removeAvatar = () =>
+        router.delete('/settings/avatar', { preserveScroll: true });
 
     const collection = useForm({
         username: username ?? '',
@@ -47,6 +83,57 @@ export default function Profile({
             <Head title="Profile settings" />
 
             <h1 className="sr-only">Profile settings</h1>
+
+            <div className="mb-6 space-y-4">
+                <Heading
+                    variant="small"
+                    title="Avatar"
+                    description="Your public profile picture, shown across the site."
+                />
+                <div className="flex items-center gap-4">
+                    <Avatar className="size-16 rounded-xl">
+                        <AvatarImage
+                            src={auth.user.avatar ?? undefined}
+                            alt={handle}
+                        />
+                        <AvatarFallback className="rounded-xl bg-primary/15 text-lg font-bold text-primary">
+                            {getInitials(handle)}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div className="flex gap-2">
+                        <input
+                            ref={avatarRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={onAvatarFile}
+                        />
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => avatarRef.current?.click()}
+                            disabled={avatarBusy}
+                        >
+                            {avatarBusy ? (
+                                <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                                <Upload className="size-4" />
+                            )}
+                            Upload
+                        </Button>
+                        {auth.user.avatar && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={removeAvatar}
+                                disabled={avatarBusy}
+                            >
+                                Remove
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            </div>
 
             <div className="space-y-6">
                 <Heading

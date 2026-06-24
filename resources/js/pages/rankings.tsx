@@ -216,9 +216,16 @@ export default function Rankings({
                                             className="border-b border-border/60 last:border-0"
                                         >
                                             <td className="px-3 py-2 font-medium">
-                                                {w.winner
-                                                    ? `@${w.winner}`
-                                                    : '—'}
+                                                {w.winner ? (
+                                                    <Link
+                                                        href={`/u/${w.winner}`}
+                                                        className="hover:underline"
+                                                    >
+                                                        @{w.winner}
+                                                    </Link>
+                                                ) : (
+                                                    '—'
+                                                )}
                                             </td>
                                             <td className="px-3 py-2 text-muted-foreground">
                                                 <span className="flex items-center gap-2">
@@ -291,7 +298,16 @@ function Board({
                                     {r.rank}
                                 </span>
                                 <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                                    {r.username ? `@${r.username}` : 'Anonymous'}
+                                    {r.username ? (
+                                        <Link
+                                            href={`/u/${r.username}`}
+                                            className="hover:underline"
+                                        >
+                                            @{r.username}
+                                        </Link>
+                                    ) : (
+                                        'Anonymous'
+                                    )}
                                 </span>
                                 {sub && (
                                     <Badge
