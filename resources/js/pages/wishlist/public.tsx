@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/react';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
+import { OwnerLink } from '@/components/shared/owner-link';
 import { EditWishlistItemDialog } from '@/components/wishlist/edit-wishlist-item-dialog';
 import { cardHref, formatMoney } from '@/lib/format';
 
@@ -20,7 +21,7 @@ type Item = {
 };
 
 type Props = {
-    owner: { username: string };
+    owner: { username: string; avatar?: string | null };
     wishlist: { name: string; slug: string; is_default: boolean };
     summary: { item_count: number; total_value: number; currency: string };
     items: Item[];
@@ -52,7 +53,11 @@ export default function PublicWishlist({
 
             <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="mb-6">
-                    <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                    <OwnerLink
+                        username={owner.username}
+                        avatar={owner.avatar}
+                    />
+                    <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
                         {title}
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">

@@ -55,6 +55,7 @@ class PublicWishlist
             'owner' => [
                 // Public pages identify the owner by their handle, never their real name.
                 'username' => $user->username,
+                'avatar' => $user->avatar,
             ],
             'wishlist' => [
                 'name' => $wishlist->name,

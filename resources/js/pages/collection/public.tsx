@@ -2,6 +2,7 @@ import { Head } from '@inertiajs/react';
 import { Pencil, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { EditHoldingDialog } from '@/components/collection/edit-holding-dialog';
+import { OwnerLink } from '@/components/shared/owner-link';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -36,7 +37,7 @@ type Holding = {
 };
 
 type Props = {
-    owner: { username: string };
+    owner: { username: string; avatar?: string | null };
     collection: { name: string; slug: string; is_default: boolean };
     summary: {
         total_value: number;
@@ -150,7 +151,11 @@ export default function PublicCollection({
 
             <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="mb-6">
-                    <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                    <OwnerLink
+                        username={owner.username}
+                        avatar={owner.avatar}
+                    />
+                    <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
                         {title}
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">

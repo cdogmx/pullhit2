@@ -21,16 +21,18 @@ class UserProfileController extends Controller
         $user = User::where('username', $username)->firstOrFail();
 
         $points = (int) $user->contribution_points;
+        $rank = $points > 0
+            ? User::where('contribution_points', '>', $points)->count() + 1
+            : null;
 
         return Inertia::render('profile/show', [
+            'meta' => $this->shareMeta($user, $points, $rank),
             'profile' => [
                 'username' => $user->username,
                 'avatar' => $user->avatar,
                 'level' => $user->level(),
                 'points' => $points,
-                'rank' => $points > 0
-                    ? User::where('contribution_points', '>', $points)->count() + 1
-                    : null,
+                'rank' => $rank,
                 'entries' => $user->monthlyEntries(),
                 'contributions' => $user->contributions()->count(),
                 'member_since' => $user->created_at?->toIso8601String(),
@@ -49,5 +51,37 @@ class UserProfileController extends Controller
                 ]),
             'month' => now()->format('F Y'),
         ]);
+    }
+
+    /**
+     * Server-rendered share/SEO meta so a shared /u/{handle} link previews with
+     * the user's avatar + standing (social scrapers don't run JS).
+     *
+     * @return array<string, mixed>
+     */
+    private function shareMeta(User $user, int $points, ?int $rank): array
+    {
+        $level = $user->level()['name'] ?? 'Rookie';
+        $description = trim(implode(' · ', array_filter([
+            $level,
+            $points > 0 ? number_format($points).' contribution points' : null,
+            $rank ? "#{$rank} all-time" : null,
+        ]))).' on CardFoo.';
+
+        $meta = [
+            'title' => "@{$user->username} on CardFoo",
+            'description' => $description,
+            'og_type' => 'profile',
+        ];
+
+        // A custom (square) avatar uses the small Twitter card; otherwise the
+        // page falls back to the branded banner via the Blade defaults.
+        if ($user->avatar) {
+            $meta['image'] = $user->avatar;
+            $meta['image_alt'] = "{$user->username}'s avatar";
+            $meta['twitter_card'] = 'summary';
+        }
+
+        return $meta;
     }
 }

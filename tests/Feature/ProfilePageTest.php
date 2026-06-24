@@ -19,7 +19,9 @@ test('the public profile page renders for a username', function () {
             ->where('profile.username', 'collector')
             ->where('profile.points', 100)
             ->has('profile.level')
-            ->has('recent'));
+            ->has('recent')
+            ->where('meta.og_type', 'profile')
+            ->where('meta.title', '@collector on CardFoo'));
 });
 
 test('an unknown profile username 404s', function () {
