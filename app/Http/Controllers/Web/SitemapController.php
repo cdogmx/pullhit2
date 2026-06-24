@@ -20,8 +20,13 @@ use Illuminate\Support\Facades\DB;
  */
 class SitemapController extends Controller
 {
-    /** URLs per card sitemap; the sitemaps spec caps a single file at 50,000. */
-    private const CHUNK = 40000;
+    /**
+     * URLs per card sitemap. The spec caps a file at 50,000, but a file that
+     * large (~4-5MB) is slow to generate/transfer and Googlebot times out
+     * fetching it. ~10k fetches reliably, so we chunk small and let the index
+     * list however many files that yields.
+     */
+    private const CHUNK = 10000;
 
     /** The sitemap index — lists the child sitemaps. */
     public function index(): Response
