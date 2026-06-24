@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
  * A monthly community giveaway. A user's entries are the points they earned in
  * the giveaway's `period` (YYYY-MM) — see App\Actions\Community\DrawGiveaway.
  */
-#[Fillable(['period', 'title', 'prize', 'description', 'status'])]
+#[Fillable(['period', 'title', 'prize', 'image_path', 'description', 'status'])]
 class Giveaway extends Model
 {
     public const OPEN = 'open';

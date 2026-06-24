@@ -30,6 +30,7 @@ class GiveawayController extends Controller
                 'period_label' => $g->periodLabel(),
                 'title' => $g->title,
                 'prize' => $g->prize,
+                'image' => $g->image_path,
                 'status' => $g->status,
                 'winner' => $g->winner?->username ?? $g->winner?->name,
                 'winner_entries' => $g->winner_entries,
@@ -56,6 +57,7 @@ class GiveawayController extends Controller
             'period' => ['required', 'regex:/^\d{4}-\d{2}$/', 'unique:giveaways,period'],
             'title' => ['required', 'string', 'max:120'],
             'prize' => ['required', 'string', 'max:160'],
+            'image_path' => ['nullable', 'string', 'max:2000'],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
 

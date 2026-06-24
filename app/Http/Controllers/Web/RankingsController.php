@@ -44,6 +44,7 @@ class RankingsController extends Controller
         return [
             'title' => $giveaway->title,
             'prize' => $giveaway->prize,
+            'image' => $giveaway->image_path,
             'description' => $giveaway->description,
             'period_label' => $giveaway->periodLabel(),
             'total_entries' => $this->poolEntries($giveaway),
@@ -63,6 +64,7 @@ class RankingsController extends Controller
             ->map(fn (Giveaway $g) => [
                 'period_label' => $g->periodLabel(),
                 'prize' => $g->prize,
+                'image' => $g->image_path,
                 'winner' => $g->winner?->username ?? $g->winner?->name,
             ])
             ->all();

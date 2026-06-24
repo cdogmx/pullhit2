@@ -1,6 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { Gift, Sparkles, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
+import { ImageUploadField } from '@/components/admin/image-upload-field';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,6 +16,7 @@ type Giveaway = {
     period_label: string;
     title: string;
     prize: string;
+    image: string | null;
     status: 'open' | 'drawn';
     winner: string | null;
     winner_entries: number | null;
@@ -40,6 +42,7 @@ export default function AdminGiveaways({
         period: currentMonth,
         title: '',
         prize: '',
+        image_path: '',
         description: '',
     });
 
@@ -49,7 +52,7 @@ export default function AdminGiveaways({
             preserveScroll: true,
             onSuccess: () => {
                 toast.success('Giveaway created.');
-                form.reset('title', 'prize', 'description');
+                form.reset('title', 'prize', 'image_path', 'description');
             },
         });
     };
@@ -177,6 +180,17 @@ export default function AdminGiveaways({
                             </div>
                             <div className="grid gap-1.5">
                                 <Label className="text-xs">
+                                    Prize image (optional)
+                                </Label>
+                                <ImageUploadField
+                                    value={form.data.image_path}
+                                    onChange={(url) =>
+                                        form.setData('image_path', url)
+                                    }
+                                />
+                            </div>
+                            <div className="grid gap-1.5">
+                                <Label className="text-xs">
                                     Description (optional)
                                 </Label>
                                 <Textarea
@@ -210,7 +224,15 @@ export default function AdminGiveaways({
                     {giveaways.map((g) => (
                         <Card key={g.id}>
                             <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-start sm:justify-between">
-                                <div className="min-w-0">
+                                <div className="flex min-w-0 gap-3">
+                                    {g.image && (
+                                        <img
+                                            src={g.image}
+                                            alt={g.prize}
+                                            className="size-14 shrink-0 rounded-md border border-border bg-muted object-contain"
+                                        />
+                                    )}
+                                    <div className="min-w-0">
                                     <div className="flex items-center gap-2">
                                         <span className="font-medium">
                                             {g.title}
@@ -242,6 +264,7 @@ export default function AdminGiveaways({
                                             )}
                                         </p>
                                     )}
+                                    </div>
                                 </div>
                                 <div className="flex shrink-0 gap-2">
                                     {g.status === 'open' && (

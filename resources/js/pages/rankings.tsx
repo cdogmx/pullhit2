@@ -24,6 +24,7 @@ type Me = {
 type Giveaway = {
     title: string;
     prize: string;
+    image: string | null;
     description: string | null;
     period_label: string;
     total_entries: number;
@@ -33,6 +34,7 @@ type Giveaway = {
 type PastWinner = {
     period_label: string;
     prize: string;
+    image: string | null;
     winner: string | null;
 };
 
@@ -87,9 +89,17 @@ export default function Rankings({
                     <Card className="mb-6 border-primary/40 bg-primary/5">
                         <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
                             <div className="flex items-start gap-3">
-                                <span className="flex size-11 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                                    <Gift className="size-5" />
-                                </span>
+                                {giveaway.image ? (
+                                    <img
+                                        src={giveaway.image}
+                                        alt={giveaway.prize}
+                                        className="size-16 shrink-0 rounded-xl border border-border bg-background object-contain"
+                                    />
+                                ) : (
+                                    <span className="flex size-11 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                                        <Gift className="size-5" />
+                                    </span>
+                                )}
                                 <div>
                                     <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                                         {giveaway.period_label} giveaway
@@ -211,7 +221,16 @@ export default function Rankings({
                                                     : '—'}
                                             </td>
                                             <td className="px-3 py-2 text-muted-foreground">
-                                                {w.prize}
+                                                <span className="flex items-center gap-2">
+                                                    {w.image && (
+                                                        <img
+                                                            src={w.image}
+                                                            alt=""
+                                                            className="size-8 shrink-0 rounded border border-border bg-background object-contain"
+                                                        />
+                                                    )}
+                                                    {w.prize}
+                                                </span>
                                             </td>
                                             <td className="px-3 py-2 text-right text-xs text-muted-foreground">
                                                 {w.period_label}
