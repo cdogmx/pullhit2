@@ -2,10 +2,12 @@
 
 namespace App\Actions\Catalog;
 
+use App\Enums\ItemType;
 use App\Models\CatalogItem;
+use App\Models\MarketValue;
 use App\Models\Set;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
@@ -66,18 +68,32 @@ class GenerateSetShareImage
     }
 
     /**
+     * Top single cards by the SAME headline value the /browse "sort by price"
+     * uses — the ungraded NM/SEALED market value — so the collage matches the
+     * site exactly.
+     *
      * @return Collection<int, CatalogItem>
      */
     private function topCards(Set $set)
     {
+        $headline = MarketValue::query()
+            ->select('median')
+            ->whereColumn('market_values.catalog_item_id', 'catalog_items.id')
+            ->whereNull('grading_company_id')
+            ->orderByRaw("CASE WHEN state_key IN ('NM', 'SEALED') THEN 0 ELSE 1 END")
+            ->orderBy('id')
+            ->limit(1);
+
         return CatalogItem::query()
             ->where('set_id', $set->id)
+            ->where('item_type', ItemType::Single)
             ->whereNotNull('primary_image_path')
-            ->whereHas('marketValues', fn ($q) => $q->where('median', '>', 0))
-            ->withMax(['marketValues as value' => fn ($q) => $q->where('median', '>', 0)], 'median')
+            ->addSelect(['value' => $headline])
             ->orderByDesc('value')
             ->limit(self::COLS * self::ROWS)
-            ->get();
+            ->get()
+            ->filter(fn (CatalogItem $c) => (int) $c->value > 0)
+            ->values();
     }
 
     private function header(ImageInterface $canvas, ImageManager $manager, Set $set): void
