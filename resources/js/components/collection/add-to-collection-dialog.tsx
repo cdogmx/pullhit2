@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
+import { ListTargetPicker } from '@/components/shared/list-target-picker';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -66,6 +67,8 @@ export function AddToCollectionDialog({
 
     const form = useForm({
         catalog_item_id: catalogItemId,
+        collection_id: null as number | null,
+        new_collection_name: '',
         condition: 'NM',
         grading_company_id: '' as number | '',
         grade: '',
@@ -79,6 +82,8 @@ export function AddToCollectionDialog({
         e.preventDefault();
         form.transform((d) => ({
             catalog_item_id: d.catalog_item_id,
+            collection_id: d.collection_id || null,
+            new_collection_name: d.new_collection_name || null,
             quantity: Number(d.quantity) || 1,
             unit_cost: d.unit_cost ? Math.round(parseFloat(d.unit_cost) * 100) : 0,
             acquired_at: d.acquired_at || null,
@@ -124,6 +129,20 @@ export function AddToCollectionDialog({
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
+                        {/* Which collection (pick existing or create new) */}
+                        <ListTargetPicker
+                            endpoint="/collection/targets"
+                            label="collection"
+                            open={open}
+                            onChange={(id, newName) => {
+                                form.setData('collection_id', id);
+                                form.setData(
+                                    'new_collection_name',
+                                    newName ?? '',
+                                );
+                            }}
+                        />
+
                         {/* Raw vs graded */}
                         <div className="inline-flex rounded-md border border-border p-0.5 text-sm">
                             {(['raw', 'graded'] as const).map((m) => (

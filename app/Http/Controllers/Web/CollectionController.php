@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Actions\Collection\AddToCollection;
 use App\Actions\Collection\BuildPortfolio;
+use App\Actions\Collection\CreateCollection;
 use App\Actions\Collection\ExportCollectionCsv;
 use App\Actions\Collection\PublicCollection;
 use App\Actions\Collection\RemoveFromCollection;
@@ -19,6 +20,7 @@ use App\Models\CollectionItem;
 use App\Models\GradingCompany;
 use App\Models\User;
 use App\Support\Membership\Entitlements;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -165,14 +167,38 @@ class CollectionController extends Controller
         return redirect('/collection')->with('success', "Imported {$count} cards from PriceCharting.");
     }
 
-    public function store(StoreCollectionItemRequest $request, AddToCollection $add): RedirectResponse
+    public function store(StoreCollectionItemRequest $request, AddToCollection $add, CreateCollection $create): RedirectResponse
     {
+        $user = $request->user();
         $data = $request->validated();
         $item = CatalogItem::findOrFail($data['catalog_item_id']);
 
-        $add($request->user(), $item, $data);
+        // "New collection…" from the picker — create it (tier-gated) and add there.
+        if (! empty($data['new_collection_name'])) {
+            $data['collection_id'] = $create($user, $data['new_collection_name'])->id;
+        }
+
+        $add($user, $item, $data);
 
         return back()->with('success', 'Added to your collection.');
+    }
+
+    /**
+     * The user's collections + whether they can create another (for the
+     * "add to collection" picker).
+     */
+    public function targets(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $limit = Entitlements::for($user)->collectionLimit();
+
+        return response()->json([
+            'targets' => $user->collections()->orderByDesc('is_default')->orderBy('name')
+                ->get(['id', 'name', 'is_default'])
+                ->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'is_default' => (bool) $c->is_default]),
+            'can_create' => $user->collections()->count() < $limit,
+            'limit' => $limit === PHP_INT_MAX ? null : $limit,
+        ]);
     }
 
     public function update(Request $request, CollectionItem $collectionItem, UpdateCollectionItem $update): RedirectResponse

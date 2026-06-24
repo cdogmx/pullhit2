@@ -25,6 +25,9 @@ class StoreCollectionItemRequest extends FormRequest
     {
         return [
             'catalog_item_id' => ['required', 'integer', 'exists:catalog_items,id'],
+            // Target an existing collection (must be the user's) or name a new one.
+            'collection_id' => ['nullable', 'integer', Rule::exists('collections', 'id')->where('user_id', $this->user()?->id)],
+            'new_collection_name' => ['nullable', 'string', 'max:60'],
             'condition' => ['nullable', Rule::enum(Condition::class), 'required_without:grading_company_id'],
             'grading_company_id' => ['nullable', 'integer', 'exists:grading_companies,id'],
             'grade' => ['nullable', 'numeric', 'min:1', 'max:10', 'required_with:grading_company_id'],
