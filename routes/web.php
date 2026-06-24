@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Auth\SocialiteController;
+use App\Http\Controllers\Auth\UsernameController;
 use App\Http\Controllers\Web\CatalogController;
 use App\Http\Controllers\Web\CollectionController;
 use App\Http\Controllers\Web\CollectionsController;
@@ -21,6 +23,19 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::inertia('brand', 'brand')->name('brand');
 Route::inertia('terms', 'terms')->name('terms');
 Route::inertia('privacy', 'privacy')->name('privacy');
+
+// Social login (Laravel Socialite) — provider-agnostic; Facebook live, Google
+// ready. Registered before the catch-all card route so /auth/* wins.
+Route::get('auth/{provider}/redirect', [SocialiteController::class, 'redirect'])
+    ->where('provider', 'facebook|google')->name('oauth.redirect');
+Route::get('auth/{provider}/callback', [SocialiteController::class, 'callback'])
+    ->where('provider', 'facebook|google')->name('oauth.callback');
+
+// One-time username picker for social signups (no username yet).
+Route::middleware('auth')->group(function () {
+    Route::get('choose-username', [UsernameController::class, 'edit'])->name('username.edit');
+    Route::post('choose-username', [UsernameController::class, 'store'])->name('username.store');
+});
 
 // Public catalog browse/search.
 Route::get('browse', [CatalogController::class, 'index'])->name('catalog.browse');

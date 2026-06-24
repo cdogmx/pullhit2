@@ -1,6 +1,7 @@
 import { Form, Head } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import { SocialAuthButtons } from '@/components/social-auth-buttons';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -130,6 +131,8 @@ export default function Register({ passwordRules }: Props) {
                     </>
                 )}
             </Form>
+
+            <SocialAuthButtons />
         </>
     );
 }

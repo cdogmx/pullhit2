@@ -114,4 +114,19 @@ return [
         'partner' => env('TCGPLAYER_PARTNER'),
     ],
 
+    // Social login (Laravel Socialite). The callback URL is set per-request in
+    // SocialiteController so it always matches the current host; `redirect` here
+    // is just a fallback. Google keys are optional — wire them to enable Google.
+    'facebook' => [
+        'client_id' => env('FACEBOOK_APP_ID'),
+        'client_secret' => env('FACEBOOK_APP_SECRET'),
+        'redirect' => env('FACEBOOK_REDIRECT_URI'),
+    ],
+
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
 ];
