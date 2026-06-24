@@ -8,9 +8,19 @@ type BrandHit = { name: string; thumb: string | null; url: string };
 type SetHit = {
     name: string;
     brand: string;
+    series: string | null;
+    language: string | null;
+    code: string | null;
     thumb: string | null;
     url: string;
 };
+
+/** "Pokémon · Scarlet & Violet · EN · SSP" — brand + series + language + code. */
+function setSubtitle(s: SetHit): string {
+    return [s.brand, s.series, s.language?.toUpperCase(), s.code]
+        .filter(Boolean)
+        .join(' · ');
+}
 type CardHit = {
     name: string;
     set: string | null;
@@ -77,7 +87,7 @@ export function SiteSearch({
                 url: s.url,
                 thumb: s.thumb,
                 title: s.name,
-                subtitle: s.brand,
+                subtitle: setSubtitle(s),
                 rounded: true,
             })),
             ...results.cards.map((c) => ({

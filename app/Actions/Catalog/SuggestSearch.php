@@ -165,6 +165,9 @@ class SuggestSearch
         return [
             'name' => $set->name,
             'brand' => $set->productLine->name,
+            'series' => $set->series,
+            'language' => $set->language,
+            'code' => $set->code,
             'thumb' => $set->logo_path ?: $set->getAttribute('thumb'),
             'url' => "/browse/{$set->productLine->slug}/{$set->slug}",
         ];
