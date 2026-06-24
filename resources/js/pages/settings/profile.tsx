@@ -190,6 +190,72 @@ export default function Profile({
                                 />
                             </div>
 
+                            <div className="grid gap-2">
+                                <Label htmlFor="bio">Bio</Label>
+                                <textarea
+                                    id="bio"
+                                    name="bio"
+                                    rows={3}
+                                    maxLength={300}
+                                    defaultValue={auth.user.bio ?? ''}
+                                    placeholder="A line or two about you and your collection."
+                                    className="mt-1 block w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                />
+                                <InputError className="mt-2" message={errors.bio} />
+                            </div>
+
+                            <div className="grid gap-2 sm:grid-cols-2">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="location">Location</Label>
+                                    <Input
+                                        id="location"
+                                        name="location"
+                                        defaultValue={auth.user.location ?? ''}
+                                        placeholder="City, Country"
+                                    />
+                                    <InputError message={errors.location} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="website">Website</Label>
+                                    <Input
+                                        id="website"
+                                        name="website"
+                                        defaultValue={auth.user.website ?? ''}
+                                        placeholder="example.com"
+                                    />
+                                    <InputError message={errors.website} />
+                                </div>
+                            </div>
+
+                            <div className="grid gap-2 sm:grid-cols-2">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="x_handle">X (Twitter)</Label>
+                                    <Input
+                                        id="x_handle"
+                                        name="x_handle"
+                                        defaultValue={auth.user.x_handle ?? ''}
+                                        placeholder="handle"
+                                    />
+                                    <InputError message={errors.x_handle} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="instagram_handle">
+                                        Instagram
+                                    </Label>
+                                    <Input
+                                        id="instagram_handle"
+                                        name="instagram_handle"
+                                        defaultValue={
+                                            auth.user.instagram_handle ?? ''
+                                        }
+                                        placeholder="handle"
+                                    />
+                                    <InputError
+                                        message={errors.instagram_handle}
+                                    />
+                                </div>
+                            </div>
+
                             {mustVerifyEmail &&
                                 auth.user.email_verified_at === null && (
                                     <div>

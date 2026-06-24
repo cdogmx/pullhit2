@@ -18,7 +18,7 @@ use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'username', 'email', 'password', 'provider', 'provider_id', 'is_collection_public', 'is_wishlist_public'])]
+#[Fillable(['name', 'username', 'email', 'password', 'provider', 'provider_id', 'bio', 'location', 'website', 'x_handle', 'instagram_handle', 'is_collection_public', 'is_wishlist_public'])]
 #[Hidden(['password', 'provider_id', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
@@ -228,5 +228,11 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function portfolioSnapshots(): HasMany
     {
         return $this->hasMany(PortfolioSnapshot::class);
+    }
+
+    /** Giveaways this user has won (drawn). @return HasMany<Giveaway, $this> */
+    public function wonGiveaways(): HasMany
+    {
+        return $this->hasMany(Giveaway::class, 'winner_user_id');
     }
 }

@@ -5,6 +5,11 @@ export type User = {
     username?: string | null;
     email: string;
     avatar?: string;
+    bio?: string | null;
+    location?: string | null;
+    website?: string | null;
+    x_handle?: string | null;
+    instagram_handle?: string | null;
     /** 'free' | 'collector' | 'guru'. */
     membership_tier?: string;
     is_admin?: boolean;
