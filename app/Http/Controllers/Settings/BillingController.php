@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\Membership\ScanQuota;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -60,7 +61,7 @@ class BillingController extends Controller
             ->all();
     }
 
-    public function checkout(Request $request, StartCheckout $start): Response|RedirectResponse
+    public function checkout(Request $request, StartCheckout $start): HttpResponse|RedirectResponse
     {
         $data = $request->validate(['tier' => ['required', Rule::in(['collector', 'guru'])]]);
         $user = $request->user();
@@ -73,7 +74,7 @@ class BillingController extends Controller
         return Inertia::location($start($user, $data['tier']));
     }
 
-    public function buyCredits(Request $request, BuyCreditPack $buy): Response|RedirectResponse
+    public function buyCredits(Request $request, BuyCreditPack $buy): HttpResponse|RedirectResponse
     {
         $data = $request->validate([
             'pack' => ['required', Rule::in(array_keys((array) config('membership.credit_packs')))],
