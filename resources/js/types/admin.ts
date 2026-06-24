@@ -54,8 +54,17 @@ export type AdminOption = {
     name: string;
 };
 
+export type AdminSetOption = {
+    id: number;
+    name: string;
+    brand: string | null;
+    series: string | null;
+    language: string | null;
+    code: string | null;
+};
+
 export type AdminCardCreateOptions = {
-    sets: AdminOption[];
+    sets: AdminSetOption[];
     languages: string[];
     variants: string[];
 };

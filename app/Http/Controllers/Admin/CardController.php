@@ -72,8 +72,19 @@ class CardController extends Controller
             // Options for the "New card" form: every set to attach to, plus the
             // full TCG language + variant vocabularies (not just what's present).
             'createOptions' => [
-                'sets' => Set::orderBy('name')->get(['id', 'name'])
-                    ->map(fn (Set $s) => ['id' => $s->id, 'name' => $s->name]),
+                // Carry brand/series/language/code so the set picker can show and
+                // search on them (many sets share a name across games/languages).
+                'sets' => Set::with('productLine:id,name')
+                    ->orderBy('name')
+                    ->get(['id', 'name', 'code', 'language', 'series', 'product_line_id'])
+                    ->map(fn (Set $s) => [
+                        'id' => $s->id,
+                        'name' => $s->name,
+                        'brand' => $s->productLine?->name,
+                        'series' => $s->series,
+                        'language' => $s->language,
+                        'code' => $s->code,
+                    ]),
                 'languages' => TcgVertical::LANGUAGES,
                 'variants' => $o['variants'] ?: ['normal', 'holo', 'reverse_holo'],
             ],

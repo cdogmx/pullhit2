@@ -22,10 +22,19 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { languageLabel } from '@/lib/format';
-import type { AdminCardCreateOptions } from '@/types';
+import type { AdminCardCreateOptions, AdminSetOption } from '@/types';
 
 const humanize = (s: string) =>
     s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+/** "Surging Sparks — Pokémon · Scarlet & Violet · EN · SSP" — disambiguates sets that share a name. */
+function setLabel(s: AdminSetOption): string {
+    const meta = [s.brand, s.series, s.language?.toUpperCase(), s.code]
+        .filter(Boolean)
+        .join(' · ');
+
+    return meta ? `${s.name} — ${meta}` : s.name;
+}
 
 /**
  * Admin: hand-create a single card under a set. The card inherits its vertical +
@@ -95,7 +104,7 @@ export function CreateCardDialog({
                                 searchPlaceholder="Search sets…"
                                 options={options.sets.map((s) => ({
                                     value: String(s.id),
-                                    label: s.name,
+                                    label: setLabel(s),
                                 }))}
                             />
                         </Field>
