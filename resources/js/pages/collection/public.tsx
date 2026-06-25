@@ -2,6 +2,8 @@ import { Head } from '@inertiajs/react';
 import { Pencil, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { EditHoldingDialog } from '@/components/collection/edit-holding-dialog';
+import { ProfileLinks } from '@/components/profile-links';
+import type { ProfileSocials } from '@/components/profile-links';
 import { OwnerLink } from '@/components/shared/owner-link';
 import { Input } from '@/components/ui/input';
 import {
@@ -37,7 +39,11 @@ type Holding = {
 };
 
 type Props = {
-    owner: { username: string; avatar?: string | null };
+    owner: {
+        username: string;
+        avatar?: string | null;
+        bio?: string | null;
+    } & ProfileSocials;
     collection: { name: string; slug: string; is_default: boolean };
     summary: {
         total_value: number;
@@ -104,7 +110,9 @@ export default function PublicCollection({
     const sets = useMemo(
         () =>
             Array.from(
-                new Set(holdings.map((h) => h.set).filter((s): s is string => !!s)),
+                new Set(
+                    holdings.map((h) => h.set).filter((s): s is string => !!s),
+                ),
             ).sort((a, b) => a.localeCompare(b)),
         [holdings],
     );
@@ -154,6 +162,18 @@ export default function PublicCollection({
                     <OwnerLink
                         username={owner.username}
                         avatar={owner.avatar}
+                    />
+                    {owner.bio && (
+                        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                            {owner.bio}
+                        </p>
+                    )}
+                    <ProfileLinks
+                        location={owner.location}
+                        website={owner.website}
+                        x_handle={owner.x_handle}
+                        instagram_handle={owner.instagram_handle}
+                        className="mt-2"
                     />
                     <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
                         {title}
@@ -210,7 +230,10 @@ export default function PublicCollection({
                                 </SelectTrigger>
                                 <SelectContent>
                                     {SORTS.map((s) => (
-                                        <SelectItem key={s.value} value={s.value}>
+                                        <SelectItem
+                                            key={s.value}
+                                            value={s.value}
+                                        >
                                             Sort: {s.label}
                                         </SelectItem>
                                     ))}
@@ -250,49 +273,49 @@ export default function PublicCollection({
                                             className="group block overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring"
                                         >
                                             <div className="aspect-[3/4] overflow-hidden bg-muted">
-                                            {h.image_url ? (
-                                                <img
-                                                    src={h.image_url}
-                                                    alt={h.name ?? ''}
-                                                    loading="lazy"
-                                                    className="size-full object-contain transition-transform group-hover:scale-105"
-                                                />
-                                            ) : (
-                                                <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
-                                                    No image
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="space-y-1 p-3">
-                                            <p
-                                                className="truncate text-sm font-medium"
-                                                title={h.name ?? ''}
-                                            >
-                                                {h.name}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {h.set}
-                                                {h.number
-                                                    ? ` · ${h.number}`
-                                                    : ''}
-                                            </p>
-                                            <div className="flex items-center justify-between gap-2 text-xs">
-                                                <span className="truncate text-muted-foreground">
-                                                    {h.state_label}
-                                                    {h.quantity > 1
-                                                        ? ` · ×${h.quantity}`
-                                                        : ''}
-                                                </span>
-                                                {h.market_value != null && (
-                                                    <span className="shrink-0 font-semibold">
-                                                        {formatMoney(
-                                                            h.market_value,
-                                                            h.currency,
-                                                        )}
-                                                    </span>
+                                                {h.image_url ? (
+                                                    <img
+                                                        src={h.image_url}
+                                                        alt={h.name ?? ''}
+                                                        loading="lazy"
+                                                        className="size-full object-contain transition-transform group-hover:scale-105"
+                                                    />
+                                                ) : (
+                                                    <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
+                                                        No image
+                                                    </div>
                                                 )}
                                             </div>
-                                        </div>
+                                            <div className="space-y-1 p-3">
+                                                <p
+                                                    className="truncate text-sm font-medium"
+                                                    title={h.name ?? ''}
+                                                >
+                                                    {h.name}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {h.set}
+                                                    {h.number
+                                                        ? ` · ${h.number}`
+                                                        : ''}
+                                                </p>
+                                                <div className="flex items-center justify-between gap-2 text-xs">
+                                                    <span className="truncate text-muted-foreground">
+                                                        {h.state_label}
+                                                        {h.quantity > 1
+                                                            ? ` · ×${h.quantity}`
+                                                            : ''}
+                                                    </span>
+                                                    {h.market_value != null && (
+                                                        <span className="shrink-0 font-semibold">
+                                                            {formatMoney(
+                                                                h.market_value,
+                                                                h.currency,
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </a>
                                     </div>
                                 ))}

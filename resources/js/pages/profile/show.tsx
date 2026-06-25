@@ -1,13 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
-import {
-    Award,
-    Gift,
-    Globe,
-    Heart,
-    LibraryBig,
-    MapPin,
-    Trophy,
-} from 'lucide-react';
+import { Award, Gift, Heart, LibraryBig, Pencil, Trophy } from 'lucide-react';
+import { ProfileLinks } from '@/components/profile-links';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -69,6 +62,7 @@ type Props = {
     breakdown: Breakdown[];
     wins: Win[];
     showcase: Showcase;
+    isOwner: boolean;
     month: string;
 };
 
@@ -81,20 +75,13 @@ function Stat({ label, value }: { label: string; value: string }) {
     );
 }
 
-function hostname(url: string): string {
-    try {
-        return new URL(url).hostname.replace(/^www\./, '');
-    } catch {
-        return url;
-    }
-}
-
 export default function ProfileShow({
     profile,
     recent,
     breakdown,
     wins,
     showcase,
+    isOwner,
     month,
 }: Props) {
     const getInitials = useInitials();
@@ -130,9 +117,24 @@ export default function ProfileShow({
                         </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                        <h1 className="text-2xl font-bold tracking-tight">
-                            @{profile.username}
-                        </h1>
+                        <div className="flex items-start justify-center gap-3 sm:justify-between">
+                            <h1 className="text-2xl font-bold tracking-tight">
+                                @{profile.username}
+                            </h1>
+                            {isOwner && (
+                                <Button
+                                    asChild
+                                    variant="outline"
+                                    size="sm"
+                                    className="hidden sm:inline-flex"
+                                >
+                                    <Link href="/settings/profile">
+                                        <Pencil className="size-4" />
+                                        Edit profile
+                                    </Link>
+                                </Button>
+                            )}
+                        </div>
                         <div className="mt-1 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                             <Badge className="gap-1">
                                 <Award className="size-3.5" />
@@ -151,48 +153,27 @@ export default function ProfileShow({
                             </p>
                         )}
 
-                        {/* Location + links */}
-                        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-muted-foreground sm:justify-start">
-                            {profile.location && (
-                                <span className="inline-flex items-center gap-1">
-                                    <MapPin className="size-4" />
-                                    {profile.location}
-                                </span>
-                            )}
-                            {profile.website && (
-                                <a
-                                    href={profile.website}
-                                    target="_blank"
-                                    rel="noopener noreferrer nofollow"
-                                    className="inline-flex items-center gap-1 hover:text-foreground"
-                                >
-                                    <Globe className="size-4" />
-                                    {hostname(profile.website)}
-                                </a>
-                            )}
-                            {profile.x_handle && (
-                                <a
-                                    href={`https://x.com/${profile.x_handle}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer nofollow"
-                                    className="inline-flex items-center gap-1 hover:text-foreground"
-                                >
-                                    <XIcon className="size-3.5" />@
-                                    {profile.x_handle}
-                                </a>
-                            )}
-                            {profile.instagram_handle && (
-                                <a
-                                    href={`https://instagram.com/${profile.instagram_handle}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer nofollow"
-                                    className="inline-flex items-center gap-1 hover:text-foreground"
-                                >
-                                    <InstagramIcon className="size-4" />@
-                                    {profile.instagram_handle}
-                                </a>
-                            )}
-                        </div>
+                        <ProfileLinks
+                            location={profile.location}
+                            website={profile.website}
+                            x_handle={profile.x_handle}
+                            instagram_handle={profile.instagram_handle}
+                            className="mt-3 justify-center sm:justify-start"
+                        />
+
+                        {isOwner && (
+                            <Button
+                                asChild
+                                variant="outline"
+                                size="sm"
+                                className="mt-3 sm:hidden"
+                            >
+                                <Link href="/settings/profile">
+                                    <Pencil className="size-4" />
+                                    Edit profile
+                                </Link>
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -417,37 +398,5 @@ export default function ProfileShow({
                 </div>
             </div>
         </>
-    );
-}
-
-function XIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            viewBox="0 0 24 24"
-            className={className}
-            fill="currentColor"
-            aria-hidden="true"
-        >
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-        </svg>
-    );
-}
-
-function InstagramIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            viewBox="0 0 24 24"
-            className={className}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-        >
-            <rect x="2" y="2" width="20" height="20" rx="5" />
-            <circle cx="12" cy="12" r="4" />
-            <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" />
-        </svg>
     );
 }

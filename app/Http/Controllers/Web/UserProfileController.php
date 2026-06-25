@@ -7,6 +7,7 @@ use App\Models\CollectionItem;
 use App\Models\Contribution;
 use App\Models\Giveaway;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,7 +19,7 @@ use Inertia\Response;
  */
 class UserProfileController extends Controller
 {
-    public function show(string $username): Response
+    public function show(Request $request, string $username): Response
     {
         $user = User::where('username', $username)->firstOrFail();
 
@@ -29,6 +30,7 @@ class UserProfileController extends Controller
 
         return Inertia::render('profile/show', [
             'meta' => $this->shareMeta($user, $points, $rank),
+            'isOwner' => $request->user()?->id === $user->id,
             'profile' => [
                 'username' => $user->username,
                 'avatar' => $user->avatar,

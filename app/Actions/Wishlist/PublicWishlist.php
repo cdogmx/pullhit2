@@ -56,6 +56,11 @@ class PublicWishlist
                 // Public pages identify the owner by their handle, never their real name.
                 'username' => $user->username,
                 'avatar' => $user->avatar,
+                'bio' => $user->bio,
+                'location' => $user->location,
+                'website' => $user->website,
+                'x_handle' => $user->x_handle,
+                'instagram_handle' => $user->instagram_handle,
             ],
             'wishlist' => [
                 'name' => $wishlist->name,

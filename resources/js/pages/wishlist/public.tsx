@@ -1,6 +1,8 @@
 import { Head } from '@inertiajs/react';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
+import { ProfileLinks } from '@/components/profile-links';
+import type { ProfileSocials } from '@/components/profile-links';
 import { OwnerLink } from '@/components/shared/owner-link';
 import { EditWishlistItemDialog } from '@/components/wishlist/edit-wishlist-item-dialog';
 import { cardHref, formatMoney } from '@/lib/format';
@@ -21,7 +23,11 @@ type Item = {
 };
 
 type Props = {
-    owner: { username: string; avatar?: string | null };
+    owner: {
+        username: string;
+        avatar?: string | null;
+        bio?: string | null;
+    } & ProfileSocials;
     wishlist: { name: string; slug: string; is_default: boolean };
     summary: { item_count: number; total_value: number; currency: string };
     items: Item[];
@@ -56,6 +62,18 @@ export default function PublicWishlist({
                     <OwnerLink
                         username={owner.username}
                         avatar={owner.avatar}
+                    />
+                    {owner.bio && (
+                        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                            {owner.bio}
+                        </p>
+                    )}
+                    <ProfileLinks
+                        location={owner.location}
+                        website={owner.website}
+                        x_handle={owner.x_handle}
+                        instagram_handle={owner.instagram_handle}
+                        className="mt-2"
                     />
                     <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
                         {title}
