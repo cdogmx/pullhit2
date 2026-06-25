@@ -2,6 +2,7 @@
 
 use App\Models\CatalogItem;
 use App\Models\GradingCompany;
+use App\Models\Set;
 use App\Support\Ebay\SoldCandidate;
 use App\Support\Ebay\SoldCompClassifier;
 use Carbon\CarbonImmutable;
@@ -87,6 +88,21 @@ test('it rejects multi-card set / bundle listings', function () {
     expect($this->classifier->classify(candidate('Charmander First Partner 37, 38, 39 PSA 10', 90000), $charmander, 0, $this->companies))->toBeNull();
     // a genuine single is still accepted.
     expect($this->classifier->classify(candidate('Charmander 038 First Partner Illustration', 5000), $charmander, 0, $this->companies))->not->toBeNull();
+});
+
+test('it rejects a starter-set listing that names several cards from the same set', function () {
+    $set = Set::factory()->create();
+    $chikorita = CatalogItem::factory()->create(['name' => 'Chikorita', 'number' => '46', 'set_id' => $set->id,
+        'attributes' => ['language' => 'en', 'variant' => 'holo']]);
+    CatalogItem::factory()->create(['name' => 'Cyndaquil', 'number' => '47', 'set_id' => $set->id, 'attributes' => ['language' => 'en']]);
+    CatalogItem::factory()->create(['name' => 'Totodile', 'number' => '48', 'set_id' => $set->id, 'attributes' => ['language' => 'en']]);
+
+    // The starter-set listing names all three siblings — not a single-card comp.
+    expect($this->classifier->classify(candidate('Pokemon First Partner Series 2 Johto Starter Set Chikorita Cyndaquil Totodile', 9000), $chikorita, 0, $this->companies))->toBeNull();
+    // "Set of 3" language alone is enough.
+    expect($this->classifier->classify(candidate('First Partner Series 2 Chikorita Set Of 3 Pokemon', 8500), $chikorita, 0, $this->companies))->toBeNull();
+    // A genuine single Chikorita is still accepted.
+    expect($this->classifier->classify(candidate('Pokemon First Partners Series 2 Chikorita 046 Promo', 3000), $chikorita, 0, $this->companies))->not->toBeNull();
 });
 
 test('a set name containing a number is not mistaken for a multi-card listing', function () {

@@ -13,44 +13,17 @@ use App\Models\CatalogItem;
  */
 class SoldCompClassifier
 {
+    /** @var array<int, array<int, string>> set_id => other card name cores (request cache) */
+    private array $setNameCache = [];
+
     /**
      * @param  array<string, int>  $companyIds  grading company slug => id
      */
     public function classify(SoldCandidate $candidate, CatalogItem $item, int $anchorCents, array $companyIds): ?SoldComp
     {
-        $title = $candidate->title;
-        $lower = mb_strtolower($title);
-
-        // 1) Blocklist — mystery boxes, proxies, codes, repacks, etc.
-        foreach ((array) config('valuation.ebay.blocklist', []) as $bad) {
-            if (str_contains($lower, $bad)) {
-                return null;
-            }
-        }
-
-        // 2) Multi-quantity / lots are not single-card comps. Note "sets" (plural)
-        //    only — singular "Set" is part of set names like "Base Set".
-        if (preg_match('/\b(lot|sets|playset|bulk|joblot)\b/', $lower)
-            || preg_match('/\bx\s?\d{2,}\b/', $lower)
-            || preg_match('/\b\d{2,}\s*cards?\b/', $lower)) {
-            return null;
-        }
-
-        // 2b) Multi-card bundles that name several cards (e.g. the First Partners
-        //     "Charmander 038 + Squirtle 039 + Bulbasaur 037" / "37 38 39" sets) —
-        //     these aren't a single-card sale and badly inflate value.
-        if ($this->isMultiCardTitle($lower)) {
-            return null;
-        }
-
-        // 3) The card's primary name token must appear.
-        $primary = mb_strtolower((string) preg_replace('/[^a-z0-9]/i', '', (string) strtok($item->name, ' ')));
-        if ($primary !== '' && ! str_contains((string) preg_replace('/[^a-z0-9]/', '', $lower), $primary)) {
-            return null;
-        }
-
-        // 3b) Printing match — keep an edition's comps from mixing with another's.
-        if (! $this->printingMatches($item, $lower)) {
+        // 1-3) Structural gates: blocklist, multi-quantity, multi-card bundles,
+        //      name presence, printing match. Shared with the comp-pruning pass.
+        if ($this->structurallyInvalid($candidate, $item)) {
             return null;
         }
 
@@ -69,6 +42,47 @@ class SoldCompClassifier
         }
 
         return $comp;
+    }
+
+    /**
+     * The non-price reject gates: a listing fails when it's blocklisted, a
+     * multi-quantity lot, a multi-card bundle (by numbers OR by naming several
+     * cards from the same set), doesn't name this card, or is the wrong printing.
+     * Exposed so the comp-pruning pass can re-judge already-stored sales with the
+     * exact same rules the live classifier uses.
+     */
+    public function structurallyInvalid(SoldCandidate $candidate, CatalogItem $item): bool
+    {
+        $lower = mb_strtolower($candidate->title);
+
+        // Blocklist — mystery boxes, proxies, codes, repacks, etc.
+        foreach ((array) config('valuation.ebay.blocklist', []) as $bad) {
+            if (str_contains($lower, $bad)) {
+                return true;
+            }
+        }
+
+        // Multi-quantity / lots. Note "sets" (plural) only — singular "Set" is
+        // part of set names like "Base Set".
+        if (preg_match('/\b(lot|sets|playset|bulk|joblot)\b/', $lower)
+            || preg_match('/\bx\s?\d{2,}\b/', $lower)
+            || preg_match('/\b\d{2,}\s*cards?\b/', $lower)) {
+            return true;
+        }
+
+        // Multi-card bundles (e.g. First Partners starter sets).
+        if ($this->isMultiCardTitle($lower, $item)) {
+            return true;
+        }
+
+        // The card's primary name token must appear.
+        $primary = mb_strtolower((string) preg_replace('/[^a-z0-9]/i', '', (string) strtok($item->name, ' ')));
+        if ($primary !== '' && ! str_contains((string) preg_replace('/[^a-z0-9]/', '', $lower), $primary)) {
+            return true;
+        }
+
+        // Printing match — keep an edition's comps from mixing with another's.
+        return ! $this->printingMatches($item, $lower);
     }
 
     /**
@@ -113,16 +127,23 @@ class SoldCompClassifier
     }
 
     /**
-     * Does the title list several different cards (a multi-card bundle/set), so
-     * it isn't a single-card comp? Two tells, both robust to graded titles:
+     * Does the title describe several different cards (a multi-card bundle/set),
+     * so it isn't a single-card comp? Tells, all robust to graded titles:
+     *  - explicit set language ("set of 3", "starter set", "starter pack"), or
      *  - a "+"-joined bundle ("038 + Squirtle 039", "Charizard + Pikachu"), or
-     *  - 3+ distinct collector numbers once set totals (N/M), years, grades, HP
-     *    and levels are stripped (e.g. "37 38 39", "037, 038, 039").
-     * The 3-number threshold avoids false positives from set names that contain
-     * a number (e.g. "151") sitting next to the card's own number.
+     *  - 3+ distinct collector numbers once set totals/years/grades/HP/levels
+     *    are stripped ("37 38 39"), or
+     *  - it names 2+ OTHER cards from this card's own set (e.g. a First Partners
+     *    listing that lists "Chikorita Cyndaquil Totodile" — only one is ours).
      */
-    private function isMultiCardTitle(string $lower): bool
+    private function isMultiCardTitle(string $lower, ?CatalogItem $item = null): bool
     {
+        // Explicit multi-card language. "set of N", a "starter/promo/gift set",
+        // or "starters" (plural) never describe a single card.
+        if (preg_match('/\bset of \d+\b|\b(starter|promo|gift|collection)\s+(set|pack|box)\b|\bstarters\b/', $lower)) {
+            return true;
+        }
+
         if (preg_match('/\d\s*\+\s*[a-z]|[a-z]\s*\+\s*\d/', $lower)) {
             return true;
         }
@@ -139,7 +160,54 @@ class SoldCompClassifier
             $m[0],
         ), fn ($n) => $n >= 1));
 
-        return count($distinct) >= 3;
+        if (count($distinct) >= 3) {
+            return true;
+        }
+
+        return $item !== null && $this->namesOtherSetCards($lower, $item);
+    }
+
+    /**
+     * Whether the title names 2+ OTHER cards from this card's set — the tell for a
+     * starter/partner set that lists every character (only one of which is ours).
+     * Matches each sibling's full core name as a whole phrase, so shared-prefix
+     * names ("Iron Hands" vs "Iron Valiant") don't collide.
+     */
+    private function namesOtherSetCards(string $lower, CatalogItem $item): bool
+    {
+        if (! $item->set_id) {
+            return false;
+        }
+
+        $own = $this->nameCore($item->name);
+        $siblings = $this->setNameCache[$item->set_id] ??= CatalogItem::query()
+            ->where('set_id', $item->set_id)
+            ->pluck('name')
+            ->map(fn ($n) => $this->nameCore((string) $n))
+            ->filter(fn ($n) => mb_strlen($n) >= 4)
+            ->unique()
+            ->values()
+            ->all();
+
+        $haystack = ' '.trim((string) preg_replace('/[^a-z0-9]+/', ' ', $lower)).' ';
+
+        $others = 0;
+        foreach ($siblings as $core) {
+            if ($core !== $own && str_contains($haystack, ' '.$core.' ') && ++$others >= 2) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** Normalised core of a card name: lowercased, suffixes (ex/gx/v/…) dropped. */
+    private function nameCore(string $name): string
+    {
+        $s = mb_strtolower($name);
+        $s = (string) preg_replace('/\b(ex|gx|v|vmax|vstar|v-union|vunion|prime|break|lv|tag team)\b/', ' ', $s);
+
+        return trim((string) preg_replace('/[^a-z0-9]+/', ' ', $s));
     }
 
     /**

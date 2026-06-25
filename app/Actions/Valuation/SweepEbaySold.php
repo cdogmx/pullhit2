@@ -257,17 +257,25 @@ class SweepEbaySold
     }
 
     /**
-     * Apply an already-logged miss to a chosen card: ingest the sale (priced
-     * state read from the title by the SAME classifier as everything else), pin
-     * the listing to that card for future sweeps, recompute and clear the miss.
-     * Shared by the AI bulk matcher so grade/condition resolution never diverges.
+     * Apply an already-logged miss to a chosen card, running the SAME reject
+     * gates as the live sweep (blocklist, multi-quantity, multi-card bundle,
+     * name, printing, price band) so a machine match can never ingest a set/lot
+     * listing as a single-card comp. Returns false (ingesting nothing) when the
+     * listing fails a gate; on success it pins the listing, recomputes and clears
+     * the miss. Grade/condition come from the shared classifier.
      */
-    public function applyMissToCard(EbaySweepMiss $miss, CatalogItem $card, string $sweepTag = 'manual'): void
+    public function applyMissToCard(EbaySweepMiss $miss, CatalogItem $card, string $sweepTag = 'manual'): bool
     {
-        $comp = $this->classifier->pricedState(
+        $comp = $this->classifier->classify(
             $this->missCandidate($miss),
+            $card,
+            $this->anchorCents($card),
             GradingCompany::pluck('id', 'slug')->all(),
         );
+
+        if (! $comp) {
+            return false;
+        }
 
         $this->store($card, $comp, $sweepTag);
 
@@ -280,6 +288,8 @@ class SweepEbaySold
 
         ($this->recompute)($card);
         $miss->delete();
+
+        return true;
     }
 
     /** Record a best-guess card on a miss for admin review (no ingest). */

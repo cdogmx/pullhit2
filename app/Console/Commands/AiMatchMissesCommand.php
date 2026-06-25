@@ -100,14 +100,22 @@ class AiMatchMissesCommand extends Command
                 $confidence = (float) ($fields['confidence'] ?? 0);
                 $card = $top['item'];
 
-                if ($apply && $confidence >= $minConfidence && $top['score'] >= $minScore) {
-                    $sweep->applyMissToCard($miss, $card, 'ai-'.$miss->search_label);
-                    $counts['applied']++;
+                $confident = $confidence >= $minConfidence && $top['score'] >= $minScore;
+
+                if ($apply && $confident) {
+                    // Enforces the reject gates; a set/lot listing falls back to a
+                    // best-guess instead of being ingested as a single-card comp.
+                    if ($sweep->applyMissToCard($miss, $card, 'ai-'.$miss->search_label)) {
+                        $counts['applied']++;
+                    } else {
+                        $sweep->suggestMissCard($miss, $card, $top['score']);
+                        $counts['suggested']++;
+                    }
                 } elseif (! $this->option('dry-run')) {
                     $sweep->suggestMissCard($miss, $card, $top['score']);
                     $counts['suggested']++;
                 } else {
-                    $counts[$confidence >= $minConfidence && $top['score'] >= $minScore ? 'applied' : 'suggested']++;
+                    $counts[$confident ? 'applied' : 'suggested']++;
                 }
             }
         }
