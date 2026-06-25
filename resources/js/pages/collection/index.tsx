@@ -61,6 +61,8 @@ const SORTS = [
     { value: 'pl_asc', label: 'P&L: worst first' },
     { value: 'name', label: 'Name: A to Z' },
     { value: 'quantity', label: 'Quantity' },
+    { value: 'newest', label: 'Date added: newest' },
+    { value: 'oldest', label: 'Date added: oldest' },
 ];
 
 /** Compare nullable numbers, always sorting nulls last. */
@@ -182,6 +184,10 @@ export default function CollectionIndex({
                     ).localeCompare(b.catalog_item?.name ?? '');
                 case 'quantity':
                     return b.quantity - a.quantity;
+                case 'newest':
+                    return (b.added_at ?? '').localeCompare(a.added_at ?? '');
+                case 'oldest':
+                    return (a.added_at ?? '').localeCompare(b.added_at ?? '');
                 default:
                     return nullableCompare(a.market_value, b.market_value, -1);
             }

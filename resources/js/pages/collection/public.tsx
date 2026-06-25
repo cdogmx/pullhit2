@@ -29,6 +29,7 @@ type Holding = {
     unit_value: number | null;
     market_value: number | null;
     currency: string;
+    added_at?: string | null;
     // Owner-only edit fields (present when canEdit).
     id?: number;
     condition?: string | null;
@@ -66,6 +67,8 @@ const SORTS = [
     { value: 'value_asc', label: 'Value: low to high' },
     { value: 'name', label: 'Name: A to Z' },
     { value: 'quantity', label: 'Quantity' },
+    { value: 'newest', label: 'Date added: newest' },
+    { value: 'oldest', label: 'Date added: oldest' },
 ];
 
 /** Sort nulls last regardless of direction. */
@@ -147,6 +150,10 @@ export default function PublicCollection({
                     return (a.name ?? '').localeCompare(b.name ?? '');
                 case 'quantity':
                     return b.quantity - a.quantity;
+                case 'newest':
+                    return (b.added_at ?? '').localeCompare(a.added_at ?? '');
+                case 'oldest':
+                    return (a.added_at ?? '').localeCompare(b.added_at ?? '');
                 default:
                     return byValue(a.market_value, b.market_value, -1);
             }

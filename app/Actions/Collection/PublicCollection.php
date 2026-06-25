@@ -45,6 +45,7 @@ class PublicCollection
                 'unit_value' => $unit,
                 'market_value' => $value,
                 'currency' => 'USD',
+                'added_at' => $ci->created_at?->toIso8601String(),
             ];
 
             if ($owner) {
