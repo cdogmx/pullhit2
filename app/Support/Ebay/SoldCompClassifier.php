@@ -54,14 +54,21 @@ class SoldCompClassifier
             return null;
         }
 
-        // 4) Price sanity vs anchor (skip when no anchor; MAD handles the rest).
-        [$min, $max] = (array) config('valuation.ebay.price_band', [0.1, 5.0]);
-        if ($anchorCents > 0 && ($candidate->priceCents < $anchorCents * $min || $candidate->priceCents > $anchorCents * $max)) {
-            return null;
+        // 4) Resolve the priced state first (graded vs raw) so the price band can
+        //    judge RAW comps only — a graded sale legitimately runs many multiples
+        //    of the raw anchor, and the engine's MAD pass guards within-grade.
+        $comp = $this->pricedState($candidate, $companyIds);
+
+        // 5) Price sanity vs the raw NM anchor — raw comps only (skip when there's
+        //    no anchor). Graded premiums are expected, so graded comps bypass it.
+        if ($comp->gradingCompanyId === null) {
+            [$min, $max] = (array) config('valuation.ebay.price_band', [0.1, 5.0]);
+            if ($anchorCents > 0 && ($candidate->priceCents < $anchorCents * $min || $candidate->priceCents > $anchorCents * $max)) {
+                return null;
+            }
         }
 
-        // 5/6) Resolve the priced state (graded vs raw condition) from the title.
-        return $this->pricedState($candidate, $companyIds);
+        return $comp;
     }
 
     /**
@@ -77,8 +84,11 @@ class SoldCompClassifier
         $title = $candidate->title;
         $lower = mb_strtolower($title);
 
-        if (preg_match('/\b(psa|bgs|cgc|sgc|tag|ace)\s*(10|[1-9](?:\.5)?)\b/i', $title, $g)) {
+        // Graded: "PSA 10", "BGS 9.5", "Beckett 10", "PSA-10", and the
+        // company/number-separated-by-grade-words form "PSA GEM MINT 10".
+        if (preg_match('/\b(psa|bgs|cgc|sgc|tag|ace|beckett)[\s-]*(?:(?:gem|mint|mt|pristine|black|label|gm)\s+){0,4}(10|[1-9](?:\.5)?)\b/i', $title, $g)) {
             $slug = strtolower($g[1]);
+            $slug = $slug === 'beckett' ? 'bgs' : $slug;
             if (isset($companyIds[$slug])) {
                 $grade = (float) $g[2];
                 $label = strtoupper($slug).' '.rtrim(rtrim(sprintf('%.1f', $grade), '0'), '.');
@@ -87,11 +97,15 @@ class SoldCompClassifier
             }
         }
 
+        // Pokémon cards print an HP stat ("320 HP") — strip it so it isn't read as
+        // the "HP" (Heavily Played) condition abbreviation.
+        $cond = (string) preg_replace('/\b\d{1,3}\s*hp\b|\bhp\s*\d{1,3}\b/', ' ', $lower);
+
         $condition = match (true) {
-            (bool) preg_match('/\b(dmg|damaged|poor)\b/', $lower) => 'DMG',
-            (bool) preg_match('/\bheavily played\b|\bhp\b/', $lower) => 'HP',
-            (bool) preg_match('/\bmoderately played\b|\bmp\b/', $lower) => 'MP',
-            (bool) preg_match('/\b(lightly played|vlp|lp)\b/', $lower) => 'LP',
+            (bool) preg_match('/\b(dmg|damaged|poor)\b/', $cond) => 'DMG',
+            (bool) preg_match('/\bheavily played\b|\bhp\b/', $cond) => 'HP',
+            (bool) preg_match('/\bmoderately played\b|\bmp\b/', $cond) => 'MP',
+            (bool) preg_match('/\b(lightly played|vlp|lp)\b/', $cond) => 'LP',
             default => 'NM',
         };
 
@@ -115,7 +129,7 @@ class SoldCompClassifier
 
         $t = (string) preg_replace('#(\d{1,4})\s*/\s*\d{1,4}#', ' $1 ', $lower);   // N/M -> N
         $t = (string) preg_replace('/\b(?:19|20)\d{2}\b/', ' ', $t);               // years
-        $t = (string) preg_replace('/\b(?:psa|bgs|cgc|sgc|tag|ace)\s*\d+(?:\.\d)?\b/', ' ', $t); // grades
+        $t = (string) preg_replace('/\b(?:psa|bgs|cgc|sgc|tag|ace|beckett)\s*\d+(?:\.\d)?\b/', ' ', $t); // grades
         $t = (string) preg_replace('/\b\d{1,3}\s*hp\b/', ' ', $t);                 // HP
         $t = (string) preg_replace('/\b(?:lv|level)\.?\s*\d+\b/', ' ', $t);        // levels
 

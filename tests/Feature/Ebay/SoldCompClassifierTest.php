@@ -93,3 +93,47 @@ test('a set name containing a number is not mistaken for a multi-card listing', 
     // "151" (set name) + the card's own 276 = two numbers, under the 3-number bar.
     expect($this->classifier->classify(candidate('Pikachu ex 276/217 Pokemon 151 PSA 10', 380000), $this->item, $this->anchor, $this->companies))->not->toBeNull();
 });
+
+test('a graded sale far above the raw anchor is still accepted (graded bypass band)', function () {
+    // $9,000 graded vs a $1,300 raw anchor = 6.9x — would fail the raw band, but
+    // a graded premium is expected, so it must be ingested as the PSA 10 state.
+    $comp = $this->classifier->classify(candidate('Pikachu ex 276/217 PSA 10 Ascended Heroes', 900000), $this->item, $this->anchor, $this->companies);
+
+    expect($comp)->not->toBeNull()
+        ->and($comp->gradingCompanyId)->toBe($this->psa->id)
+        ->and($comp->grade)->toBe(10.0);
+});
+
+test('a raw sale far above the raw anchor is still rejected by the band', function () {
+    expect($this->classifier->classify(candidate('Pikachu ex 276/217 SIR Ascended Heroes', 900000), $this->item, $this->anchor, $this->companies))->toBeNull();
+});
+
+test('a Pokemon HP stat is not read as Heavily Played condition', function () {
+    $gengar = CatalogItem::factory()->create(['name' => 'Gengar VMAX', 'number' => '271',
+        'attributes' => ['language' => 'en', 'rarity' => 'Alt Art', 'variant' => 'holo']]);
+
+    // "320 HP" is the card's hit points, not a condition.
+    $comp = $this->classifier->classify(candidate('Gengar VMAX Alt Art 271/264 Fusion Strike 320 HP', 20000), $gengar, 0, $this->companies);
+    expect($comp)->not->toBeNull()->and($comp->condition)->toBe('NM');
+
+    // …but a real "Heavily Played" still classifies as HP.
+    $played = $this->classifier->classify(candidate('Gengar VMAX 271/264 Heavily Played', 5000), $gengar, 0, $this->companies);
+    expect($played->condition)->toBe('HP');
+});
+
+test('it parses Beckett, hyphenated, and word-separated grade forms', function () {
+    $bgs = GradingCompany::factory()->create(['slug' => 'bgs', 'name' => 'Beckett (BGS)']);
+    $companies = ['psa' => $this->psa->id, 'bgs' => $bgs->id];
+
+    // "Beckett 9.5" => BGS 9.5
+    $beckett = $this->classifier->classify(candidate('Pikachu ex 276/217 Beckett 9.5', 200000), $this->item, $this->anchor, $companies);
+    expect($beckett->gradingCompanyId)->toBe($bgs->id)->and($beckett->grade)->toBe(9.5);
+
+    // "PSA-10" (hyphen)
+    $hyphen = $this->classifier->classify(candidate('Pikachu ex 276/217 PSA-10', 400000), $this->item, $this->anchor, $companies);
+    expect($hyphen->grade)->toBe(10.0)->and($hyphen->gradingCompanyId)->toBe($this->psa->id);
+
+    // "PSA GEM MINT 10" (grade words between company and number)
+    $words = $this->classifier->classify(candidate('Pikachu ex 276/217 PSA GEM MINT 10', 400000), $this->item, $this->anchor, $companies);
+    expect($words->grade)->toBe(10.0)->and($words->gradingCompanyId)->toBe($this->psa->id);
+});
