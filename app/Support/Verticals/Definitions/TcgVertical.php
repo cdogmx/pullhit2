@@ -66,6 +66,13 @@ final class TcgVertical
                     Attr::make('abilities', 'Abilities', Type::Text),
                     Attr::make('body_text', 'Body Text', Type::Text),
                     Attr::make('flavor_text', 'Flavor Text', Type::Text),
+
+                    // Cyberpunk TCG facets (product line `cyberpunk`). Optional at
+                    // the vertical level — other games never set them. Reuses
+                    // `cost`, `type`, and `rarity` above.
+                    Attr::make('faction', 'Faction', Type::String, searchable: true, indexed: true),
+                    Attr::make('power', 'Power', Type::Integer),
+                    Attr::make('ram', 'RAM', Type::Integer),
                 ],
                 ItemType::Sealed->value => [
                     Attr::make('sealed_type', 'Sealed Type', Type::Enum, required: true, searchable: true, indexed: true, options: self::SEALED_TYPES),
