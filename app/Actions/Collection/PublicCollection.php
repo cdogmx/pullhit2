@@ -3,6 +3,7 @@
 namespace App\Actions\Collection;
 
 use App\Models\Collection;
+use App\Models\CollectionFolder;
 use App\Models\CollectionItem;
 use App\Models\GradingCompany;
 
@@ -20,10 +21,11 @@ class PublicCollection
     /**
      * @return array<string, mixed>
      */
-    public function __invoke(Collection $collection, bool $owner = false): array
+    public function __invoke(Collection $collection, bool $owner = false, ?CollectionFolder $folder = null): array
     {
         $user = $collection->user;
         $items = $collection->items()
+            ->when($folder, fn ($q) => $q->where('folder', $folder->name))
             ->with(['catalogItem.set', 'catalogItem.productLine', 'catalogItem.marketValues', 'gradingCompany'])
             ->get();
 
@@ -83,6 +85,7 @@ class PublicCollection
                 'slug' => $collection->slug,
                 'is_default' => $collection->is_default,
             ],
+            'folder' => $folder ? ['name' => $folder->name, 'slug' => $folder->slug] : null,
             'summary' => [
                 'total_value' => $totalValue,
                 'item_count' => $items->count(),

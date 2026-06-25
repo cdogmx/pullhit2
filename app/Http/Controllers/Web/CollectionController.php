@@ -16,6 +16,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Collection\StoreCollectionItemRequest;
 use App\Http\Resources\CollectionItemResource;
 use App\Models\CatalogItem;
+use App\Models\Collection;
+use App\Models\CollectionFolder;
 use App\Models\CollectionItem;
 use App\Models\GradingCompany;
 use App\Models\User;
@@ -68,10 +70,52 @@ class CollectionController extends Controller
             'gainers' => $portfolio['gainers'],
             'decliners' => $portfolio['decliners'],
             'publicUrl' => $publicUrl,
+            'folders' => $this->buildFolders($active, $user),
             // Options for the full-edit modal's graded-state picker.
             'gradingCompanies' => GradingCompany::orderBy('name')
                 ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
         ]);
+    }
+
+    /**
+     * The active collection's folders (from the holdings' folder names) with their
+     * shareable metadata — slug, public/private, count, and a public link.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildFolders(Collection $collection, User $user): array
+    {
+        $counts = $collection->items()
+            ->whereNotNull('folder')->where('folder', '!=', '')
+            ->selectRaw('folder, count(*) as c')->groupBy('folder')
+            ->pluck('c', 'folder');
+
+        return collect($counts)->map(function ($count, $name) use ($collection, $user) {
+            $folder = $collection->ensureFolder((string) $name);
+
+            return [
+                'id' => $folder->id,
+                'name' => $folder->name,
+                'slug' => $folder->slug,
+                'is_public' => $folder->is_public,
+                'items_count' => (int) $count,
+                'public_url' => $folder->is_public && $user->username
+                    ? url("/collection/{$user->username}/{$collection->slug}/folder/{$folder->slug}")
+                    : null,
+            ];
+        })->values()->all();
+    }
+
+    /** Toggle a folder's public/private visibility (owner only). */
+    public function updateFolder(Request $request, CollectionFolder $collectionFolder): RedirectResponse
+    {
+        abort_unless($collectionFolder->collection->user_id === $request->user()->id, 403);
+
+        $collectionFolder->update($request->validate([
+            'is_public' => ['required', 'boolean'],
+        ]));
+
+        return back()->with('success', 'Folder visibility updated.');
     }
 
     public function export(Request $request, ExportCollectionCsv $export): StreamedResponse
@@ -100,6 +144,35 @@ class CollectionController extends Controller
     public function publicShowCollection(string $username, string $collectionSlug, PublicCollection $build): Response
     {
         return $this->renderPublic($username, $collectionSlug, $build);
+    }
+
+    /**
+     * Public page for a single folder within a collection. Gated on the FOLDER's
+     * own visibility — a public folder is shareable even when its collection is
+     * private, so an owner can expose just one folder.
+     */
+    public function publicFolder(string $username, string $collectionSlug, string $folderSlug, PublicCollection $build): Response
+    {
+        $user = User::where('username', $username)->first();
+        abort_unless((bool) $user, 404);
+
+        $collection = $user->collections()->where('slug', $collectionSlug)->first();
+        abort_unless((bool) $collection, 404);
+
+        $folder = $collection->folders()->where('slug', $folderSlug)->first();
+        abort_unless($folder && $folder->is_public, 404);
+
+        $owner = auth()->id() === $user->id;
+        $data = $build($collection, $owner, $folder);
+
+        $data['meta'] = [
+            'title' => "{$user->username}'s {$folder->name} folder",
+            'description' => number_format($data['summary']['card_count']).' cards · '
+                .'$'.number_format($data['summary']['total_value'] / 100, 2)
+                .' on CardFoo.',
+        ];
+
+        return Inertia::render('collection/public', $data);
     }
 
     private function renderPublic(string $username, ?string $slug, PublicCollection $build): Response

@@ -48,6 +48,7 @@ type Props = {
         bio?: string | null;
     } & ProfileSocials;
     collection: { name: string; slug: string; is_default: boolean };
+    folder?: { name: string; slug: string } | null;
     summary: {
         total_value: number;
         item_count: number;
@@ -96,15 +97,18 @@ function byValue(a: number | null, b: number | null, dir: 1 | -1): number {
 export default function PublicCollection({
     owner,
     collection,
+    folder = null,
     summary,
     holdings,
     canEdit = false,
     collections = [],
     gradingCompanies = [],
 }: Props) {
-    const title = collection.is_default
-        ? `${owner.username}'s collection`
-        : `${owner.username} · ${collection.name}`;
+    const title = folder
+        ? `${owner.username} · ${folder.name}`
+        : collection.is_default
+          ? `${owner.username}'s collection`
+          : `${owner.username} · ${collection.name}`;
 
     const [q, setQ] = useState('');
     const [set, setSet] = useState(ALL);

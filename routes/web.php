@@ -90,6 +90,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('collection/import/preview', [CollectionController::class, 'importPreview'])->name('collection.import.preview');
     Route::post('collection/import', [CollectionController::class, 'importStore'])->name('collection.import.store');
     Route::post('collection', [CollectionController::class, 'store'])->name('collection.store');
+    Route::patch('collection/folders/{collectionFolder}', [CollectionController::class, 'updateFolder'])->name('collection.folders.update');
     Route::patch('collection/{collectionItem}', [CollectionController::class, 'update'])->name('collection.update');
     Route::delete('collection/{collectionItem}', [CollectionController::class, 'destroy'])->name('collection.destroy');
 
@@ -135,6 +136,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // /collection, /collection/export, /collection/import keep precedence; only an
 // unmatched handle (/collection/{username}) falls through to here.
 Route::get('collection/{username}', [CollectionController::class, 'publicShow'])->name('collection.public');
+Route::get('collection/{username}/{collectionSlug}/folder/{folderSlug}', [CollectionController::class, 'publicFolder'])->name('collection.public.folder');
 Route::get('collection/{username}/{collectionSlug}', [CollectionController::class, 'publicShowCollection'])->name('collection.public.named');
 Route::get('wishlist/{username}', [WishlistController::class, 'publicShow'])->name('wishlist.public');
 Route::get('wishlist/{username}/{wishlistSlug}', [WishlistController::class, 'publicShowWishlist'])->name('wishlist.public.named');

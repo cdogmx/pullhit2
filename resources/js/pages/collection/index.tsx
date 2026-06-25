@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { CollectionFolders } from '@/components/collection/collection-folders';
 import { EditHoldingDialog } from '@/components/collection/edit-holding-dialog';
 import { ListTabs } from '@/components/shared/list-tabs';
 import type { ListSummary } from '@/components/shared/list-tabs';
@@ -39,6 +40,15 @@ import type {
     PortfolioSummary,
 } from '@/types';
 
+export type FolderRow = {
+    id: number;
+    name: string;
+    slug: string;
+    is_public: boolean;
+    items_count: number;
+    public_url: string | null;
+};
+
 type Props = {
     collections: ListSummary[];
     activeCollection: string;
@@ -49,6 +59,7 @@ type Props = {
     gainers: PortfolioMover[];
     decliners: PortfolioMover[];
     publicUrl: string | null;
+    folders: FolderRow[];
     gradingCompanies: GradingCompanyOption[];
 };
 
@@ -116,6 +127,7 @@ export default function CollectionIndex({
     gainers,
     decliners,
     publicUrl,
+    folders,
     gradingCompanies,
 }: Props) {
     const c = summary.currency;
@@ -126,6 +138,7 @@ export default function CollectionIndex({
     const [editing, setEditing] = useState<Holding | null>(null);
     const [q, setQ] = useState('');
     const [setFilter, setSetFilter] = useState(ALL);
+    const [folderFilter, setFolderFilter] = useState(ALL);
     const [forSaleOnly, setForSaleOnly] = useState(false);
     const [sort, setSort] = useState('value_desc');
 
@@ -151,6 +164,10 @@ export default function CollectionIndex({
             }
 
             if (setFilter !== ALL && h.catalog_item?.set?.name !== setFilter) {
+                return false;
+            }
+
+            if (folderFilter !== ALL && (h.folder ?? '') !== folderFilter) {
                 return false;
             }
 
@@ -194,10 +211,13 @@ export default function CollectionIndex({
         });
 
         return sorted;
-    }, [holdings, q, setFilter, forSaleOnly, sort]);
+    }, [holdings, q, setFilter, folderFilter, forSaleOnly, sort]);
 
     const filtersActive =
-        q.trim() !== '' || setFilter !== ALL || forSaleOnly;
+        q.trim() !== '' ||
+        setFilter !== ALL ||
+        folderFilter !== ALL ||
+        forSaleOnly;
 
     return (
         <>
@@ -342,6 +362,8 @@ export default function CollectionIndex({
                             <MoversCard title="Top decliners" movers={decliners} currency={c} />
                         </div>
 
+                        <CollectionFolders folders={folders} />
+
                         {/* Holdings */}
                         <Card>
                             <CardHeader className="gap-3">
@@ -386,6 +408,31 @@ export default function CollectionIndex({
                                         </Select>
                                     )}
 
+                                    {folders.length > 0 && (
+                                        <Select
+                                            value={folderFilter}
+                                            onValueChange={setFolderFilter}
+                                        >
+                                            <SelectTrigger className="h-8 w-40">
+                                                <SelectValue placeholder="All folders" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value={ALL}>
+                                                    All folders
+                                                </SelectItem>
+                                                {folders.map((f) => (
+                                                    <SelectItem
+                                                        key={f.id}
+                                                        value={f.name}
+                                                    >
+                                                        {f.name} ({f.items_count}
+                                                        )
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+
                                     <Select value={sort} onValueChange={setSort}>
                                         <SelectTrigger className="h-8 w-44">
                                             <SelectValue />
@@ -423,6 +470,7 @@ export default function CollectionIndex({
                                             onClick={() => {
                                                 setQ('');
                                                 setSetFilter(ALL);
+                                                setFolderFilter(ALL);
                                                 setForSaleOnly(false);
                                             }}
                                             className="h-8"
