@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Billing\CancelSubscription;
 use App\Enums\MembershipTier;
 use App\Http\Controllers\Controller;
+use App\Models\ScanLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -58,6 +61,91 @@ class UserController extends Controller
                 'total' => $paginator->total(),
             ],
             'filters' => $f,
+            'tiers' => collect(MembershipTier::cases())->map(fn (MembershipTier $t) => [
+                'value' => $t->value,
+                'label' => $t->label(),
+            ])->all(),
+        ]);
+    }
+
+    /**
+     * A single account in depth: profile links, activity stats, the sessions
+     * we've seen them from (IP + device), their scan history, and billing.
+     */
+    public function show(User $user): Response
+    {
+        $user->loadCount([
+            'collectionItems', 'collections', 'wishlistItems', 'wishlists',
+            'followers', 'following', 'scanLogs', 'contributions', 'cardReports',
+        ]);
+
+        // Sessions are stored in the DB (SESSION_DRIVER=database), giving us the
+        // IPs and devices this account has signed in from.
+        $sessions = DB::table('sessions')
+            ->where('user_id', $user->id)
+            ->orderByDesc('last_activity')
+            ->limit(15)
+            ->get(['ip_address', 'user_agent', 'last_activity'])
+            ->map(fn ($s) => [
+                'ip_address' => $s->ip_address,
+                'user_agent' => $s->user_agent,
+                'last_activity' => $s->last_activity
+                    ? Carbon::createFromTimestamp($s->last_activity)->toIso8601String()
+                    : null,
+            ]);
+
+        $scans = $user->scanLogs()->latest()->limit(20)->get()->map(fn (ScanLog $log) => [
+            'id' => $log->id,
+            'mode' => $log->mode,
+            'image_url' => $log->image_path,
+            'card_count' => (int) $log->cards,
+            'ai_reads' => (int) $log->ai_reads,
+            'cache_hits' => (int) $log->cache_hits,
+            'results' => $log->results ?? [],
+            'created_at' => $log->created_at?->toIso8601String(),
+        ]);
+
+        $transactions = $user->billingTransactions()->limit(15)->get()->map(fn ($t) => [
+            'id' => $t->id,
+            'type' => $t->type,
+            'status' => $t->status,
+            'description' => $t->description,
+            'amount' => $t->amount,
+            'currency' => $t->currency,
+            'created_at' => $t->created_at?->toIso8601String(),
+        ]);
+
+        $level = $user->level();
+
+        return Inertia::render('admin/users/show', [
+            'user' => $this->row($user) + [
+                'avatar' => $user->avatar,
+                'email_verified_at' => $user->email_verified_at?->toIso8601String(),
+                'provider' => $user->provider,
+                'last_seen_at' => $sessions->first()['last_activity'] ?? null,
+            ],
+            'links' => $user->username ? [
+                'profile' => url('/u/'.$user->username),
+                'collection' => url('/collection/'.$user->username),
+                'wishlist' => url('/wishlist/'.$user->username),
+            ] : null,
+            'stats' => [
+                'collection_items' => (int) $user->collection_items_count,
+                'collections' => (int) $user->collections_count,
+                'wishlist_items' => (int) $user->wishlist_items_count,
+                'wishlists' => (int) $user->wishlists_count,
+                'followers' => (int) $user->followers_count,
+                'following' => (int) $user->following_count,
+                'scans' => (int) $user->scan_logs_count,
+                'contributions' => (int) $user->contributions_count,
+                'card_reports' => (int) $user->card_reports_count,
+                'contribution_points' => (int) $user->contribution_points,
+                'monthly_entries' => $user->monthlyEntries(),
+                'level' => $level['name'] ?? null,
+            ],
+            'sessions' => $sessions,
+            'scans' => $scans,
+            'transactions' => $transactions,
             'tiers' => collect(MembershipTier::cases())->map(fn (MembershipTier $t) => [
                 'value' => $t->value,
                 'label' => $t->label(),

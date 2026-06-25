@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { ManageUserDialog } from '@/components/admin/manage-user-dialog';
 import { Badge } from '@/components/ui/badge';
@@ -171,9 +171,12 @@ export default function AdminUsers({
                                         className="border-b border-border/60 last:border-0"
                                     >
                                         <td className="py-2 pr-3">
-                                            <p className="font-medium">
+                                            <Link
+                                                href={`/admin/users/${u.id}`}
+                                                className="font-medium hover:underline"
+                                            >
                                                 {u.name}
-                                            </p>
+                                            </Link>
                                             <p className="text-xs text-muted-foreground">
                                                 {u.email}
                                             </p>

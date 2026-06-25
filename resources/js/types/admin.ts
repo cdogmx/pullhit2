@@ -142,6 +142,66 @@ export type AdminUserFilters = {
     sort: string;
 };
 
+/** One detection inside a scan log (AI read + top catalog match). */
+export type AdminScanResult = {
+    name: string | null;
+    number: string | null;
+    source: string | null;
+    match: {
+        id: number | null;
+        name: string | null;
+        number: string | null;
+        set: string | null;
+        image_url: string | null;
+        url: string | null;
+    } | null;
+};
+
+export type AdminUserScan = {
+    id: number;
+    mode: string;
+    image_url: string | null;
+    card_count: number;
+    ai_reads: number;
+    cache_hits: number;
+    results: AdminScanResult[];
+    created_at: string | null;
+};
+
+export type AdminUserSession = {
+    ip_address: string | null;
+    user_agent: string | null;
+    last_activity: string | null;
+};
+
+export type AdminUserDetail = AdminUser & {
+    avatar: string | null;
+    email_verified_at: string | null;
+    provider: string | null;
+    last_seen_at: string | null;
+};
+
+export type AdminUserStats = {
+    collection_items: number;
+    collections: number;
+    wishlist_items: number;
+    wishlists: number;
+    followers: number;
+    following: number;
+    scans: number;
+    contributions: number;
+    card_reports: number;
+    contribution_points: number;
+    monthly_entries: number;
+    level: string | null;
+};
+
+export type AdminUserLinks = {
+    profile: string;
+    collection: string;
+    wishlist: string;
+} | null;
+
 export type AdminTransaction = {
     id: number;
     type: string;

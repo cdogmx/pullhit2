@@ -61,6 +61,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
 
     // Users — roster + account management (tier, admin, credits, ban, cancel).
     Route::get('users', [UserController::class, 'index'])->name('users.index');
+    Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
     Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
     Route::post('users/{user}/credits', [UserController::class, 'credits'])->name('users.credits');
     Route::post('users/{user}/cancel', [UserController::class, 'cancel'])->name('users.cancel');
