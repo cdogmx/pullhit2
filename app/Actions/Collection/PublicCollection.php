@@ -70,6 +70,7 @@ class PublicCollection
                 // Public pages identify the owner by their handle, never their real name.
                 'username' => $user->username,
                 'avatar' => $user->avatar,
+                'level' => $user->level()['name'],
                 'bio' => $user->bio,
                 'location' => $user->location,
                 'website' => $user->website,

@@ -19,6 +19,7 @@ createInertiaApp({
             case name === 'privacy':
             case name === 'rankings':
             case name === 'profile/show':
+            case name === 'profile/follows':
             case name === 'collection/public':
             case name === 'wishlist/public':
             case name.startsWith('catalog/'):

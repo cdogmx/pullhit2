@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -234,5 +235,23 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function wonGiveaways(): HasMany
     {
         return $this->hasMany(Giveaway::class, 'winner_user_id');
+    }
+
+    /** Users this user follows. @return BelongsToMany<User, $this> */
+    public function following(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'follows', 'follower_id', 'followed_id')->withTimestamps();
+    }
+
+    /** Users who follow this user. @return BelongsToMany<User, $this> */
+    public function followers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'follows', 'followed_id', 'follower_id')->withTimestamps();
+    }
+
+    /** Whether this user already follows the given one. */
+    public function isFollowing(User $user): bool
+    {
+        return $this->following()->whereKey($user->getKey())->exists();
     }
 }

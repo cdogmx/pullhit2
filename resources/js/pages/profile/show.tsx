@@ -1,6 +1,8 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Award, Gift, Heart, LibraryBig, Pencil, Trophy } from 'lucide-react';
+import { useState } from 'react';
 import { ProfileLinks } from '@/components/profile-links';
+import { ShareButton } from '@/components/share-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +31,8 @@ type Profile = {
     rank: number | null;
     entries: number;
     contributions: number;
+    followers: number;
+    following: number;
     member_since: string | null;
     collection_url: string | null;
     wishlist_url: string | null;
@@ -63,6 +67,8 @@ type Props = {
     wins: Win[];
     showcase: Showcase;
     isOwner: boolean;
+    canFollow: boolean;
+    isFollowing: boolean;
     month: string;
 };
 
@@ -82,9 +88,26 @@ export default function ProfileShow({
     wins,
     showcase,
     isOwner,
+    canFollow,
+    isFollowing,
     month,
 }: Props) {
     const getInitials = useInitials();
+    const [followBusy, setFollowBusy] = useState(false);
+
+    const toggleFollow = () => {
+        const opts = {
+            preserveScroll: true,
+            onStart: () => setFollowBusy(true),
+            onFinish: () => setFollowBusy(false),
+        };
+
+        if (isFollowing) {
+            router.delete(`/u/${profile.username}/follow`, opts);
+        } else {
+            router.post(`/u/${profile.username}/follow`, {}, opts);
+        }
+    };
     const memberSince = profile.member_since
         ? new Date(profile.member_since).toLocaleDateString(undefined, {
               month: 'long',
@@ -117,23 +140,35 @@ export default function ProfileShow({
                         </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-center gap-3 sm:justify-between">
+                        <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <h1 className="text-2xl font-bold tracking-tight">
                                 @{profile.username}
                             </h1>
-                            {isOwner && (
-                                <Button
-                                    asChild
-                                    variant="outline"
-                                    size="sm"
-                                    className="hidden sm:inline-flex"
-                                >
-                                    <Link href="/settings/profile">
-                                        <Pencil className="size-4" />
-                                        Edit profile
-                                    </Link>
-                                </Button>
-                            )}
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                                {canFollow && (
+                                    <Button
+                                        size="sm"
+                                        variant={
+                                            isFollowing ? 'outline' : 'default'
+                                        }
+                                        onClick={toggleFollow}
+                                        disabled={followBusy}
+                                    >
+                                        {isFollowing ? 'Following' : 'Follow'}
+                                    </Button>
+                                )}
+                                {isOwner && (
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link href="/settings/profile">
+                                            <Pencil className="size-4" />
+                                            Edit profile
+                                        </Link>
+                                    </Button>
+                                )}
+                                <ShareButton
+                                    text={`Check out @${profile.username} on CardFoo`}
+                                />
+                            </div>
                         </div>
                         <div className="mt-1 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                             <Badge className="gap-1">
@@ -145,6 +180,32 @@ export default function ProfileShow({
                                     Member since {memberSince}
                                 </span>
                             )}
+                        </div>
+
+                        {/* Follower / following counts */}
+                        <div className="mt-2 flex flex-wrap items-center justify-center gap-4 text-sm sm:justify-start">
+                            <Link
+                                href={`/u/${profile.username}/followers`}
+                                className="hover:underline"
+                            >
+                                <span className="font-bold">
+                                    {profile.followers.toLocaleString()}
+                                </span>{' '}
+                                <span className="text-muted-foreground">
+                                    followers
+                                </span>
+                            </Link>
+                            <Link
+                                href={`/u/${profile.username}/following`}
+                                className="hover:underline"
+                            >
+                                <span className="font-bold">
+                                    {profile.following.toLocaleString()}
+                                </span>{' '}
+                                <span className="text-muted-foreground">
+                                    following
+                                </span>
+                            </Link>
                         </div>
 
                         {profile.bio && (
@@ -160,20 +221,6 @@ export default function ProfileShow({
                             instagram_handle={profile.instagram_handle}
                             className="mt-3 justify-center sm:justify-start"
                         />
-
-                        {isOwner && (
-                            <Button
-                                asChild
-                                variant="outline"
-                                size="sm"
-                                className="mt-3 sm:hidden"
-                            >
-                                <Link href="/settings/profile">
-                                    <Pencil className="size-4" />
-                                    Edit profile
-                                </Link>
-                            </Button>
-                        )}
                     </div>
                 </div>
 

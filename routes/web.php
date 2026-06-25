@@ -7,6 +7,7 @@ use App\Http\Controllers\Web\CollectionController;
 use App\Http\Controllers\Web\CollectionsController;
 use App\Http\Controllers\Web\ContributeController;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\FollowController;
 use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\RankingsController;
@@ -63,14 +64,23 @@ Route::get('robots.txt', function () {
 // Public community rankings (leaderboard + monthly giveaway entries).
 Route::get('rankings', RankingsController::class)->name('rankings');
 
-// Public user profile (community face of an account).
+// Public user profile (community face of an account) + follow graph.
 Route::get('u/{username}', [UserProfileController::class, 'show'])->name('profile.show');
+Route::get('u/{username}/followers', [FollowController::class, 'index'])
+    ->defaults('type', 'followers')->name('profile.followers');
+Route::get('u/{username}/following', [FollowController::class, 'index'])
+    ->defaults('type', 'following')->name('profile.following');
+Route::middleware('auth')->group(function () {
+    Route::post('u/{username}/follow', [FollowController::class, 'store'])->name('profile.follow');
+    Route::delete('u/{username}/follow', [FollowController::class, 'destroy'])->name('profile.unfollow');
+});
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Collection + portfolio (always free for logged-in users).
     Route::get('collection', [CollectionController::class, 'index'])->name('collection.index');
+    Route::get('collection/targets', [CollectionController::class, 'targets'])->name('collection.targets');
     Route::get('collection/export', [CollectionController::class, 'export'])->name('collection.export');
     Route::get('collection/import', [CollectionController::class, 'importForm'])->name('collection.import');
     Route::post('collection/import/preview', [CollectionController::class, 'importPreview'])->name('collection.import.preview');
@@ -91,6 +101,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Wishlist — cards a user wants, with optional target prices.
     Route::get('wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
+    Route::get('wishlist/targets', [WishlistController::class, 'targets'])->name('wishlist.targets');
     Route::post('wishlist', [WishlistController::class, 'store'])->name('wishlist.store');
     Route::patch('wishlist/{wishlistItem}', [WishlistController::class, 'update'])->name('wishlist.update');
     Route::delete('wishlist/{catalogItem}', [WishlistController::class, 'destroy'])->name('wishlist.destroy');

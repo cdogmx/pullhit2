@@ -28,9 +28,15 @@ class UserProfileController extends Controller
             ? User::where('contribution_points', '>', $points)->count() + 1
             : null;
 
+        $viewer = $request->user();
+        $isOwner = $viewer?->id === $user->id;
+
         return Inertia::render('profile/show', [
             'meta' => $this->shareMeta($user, $points, $rank),
-            'isOwner' => $request->user()?->id === $user->id,
+            'isOwner' => $isOwner,
+            // Follow controls: only a signed-in non-owner can follow.
+            'canFollow' => $viewer !== null && ! $isOwner,
+            'isFollowing' => $viewer !== null && ! $isOwner && $viewer->isFollowing($user),
             'profile' => [
                 'username' => $user->username,
                 'avatar' => $user->avatar,
@@ -44,6 +50,8 @@ class UserProfileController extends Controller
                 'rank' => $rank,
                 'entries' => $user->monthlyEntries(),
                 'contributions' => $user->contributions()->count(),
+                'followers' => $user->followers()->count(),
+                'following' => $user->following()->count(),
                 'member_since' => $user->created_at?->toIso8601String(),
                 'collection_url' => $user->is_collection_public ? "/collection/{$user->username}" : null,
                 'wishlist_url' => $user->is_wishlist_public ? "/wishlist/{$user->username}" : null,

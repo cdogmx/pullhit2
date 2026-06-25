@@ -1,9 +1,10 @@
 import { Head } from '@inertiajs/react';
-import { Pencil } from 'lucide-react';
+import { Award, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { ProfileLinks } from '@/components/profile-links';
 import type { ProfileSocials } from '@/components/profile-links';
 import { OwnerLink } from '@/components/shared/owner-link';
+import { Badge } from '@/components/ui/badge';
 import { EditWishlistItemDialog } from '@/components/wishlist/edit-wishlist-item-dialog';
 import { cardHref, formatMoney } from '@/lib/format';
 
@@ -26,6 +27,7 @@ type Props = {
     owner: {
         username: string;
         avatar?: string | null;
+        level?: string | null;
         bio?: string | null;
     } & ProfileSocials;
     wishlist: { name: string; slug: string; is_default: boolean };
@@ -59,10 +61,18 @@ export default function PublicWishlist({
 
             <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="mb-6">
-                    <OwnerLink
-                        username={owner.username}
-                        avatar={owner.avatar}
-                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                        <OwnerLink
+                            username={owner.username}
+                            avatar={owner.avatar}
+                        />
+                        {owner.level && (
+                            <Badge variant="secondary" className="gap-1">
+                                <Award className="size-3.5" />
+                                {owner.level}
+                            </Badge>
+                        )}
+                    </div>
                     {owner.bio && (
                         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
                             {owner.bio}
