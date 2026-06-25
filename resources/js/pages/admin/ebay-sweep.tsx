@@ -74,6 +74,16 @@ const REASON_STYLE: Record<string, string> = {
     classify_rejected: 'text-red-600 dark:text-red-400',
 };
 
+// Plain-English explanation of why the sweep couldn't auto-apply a listing.
+const REASON_HELP: Record<string, string> = {
+    no_number: 'No card number could be read from the title.',
+    unmatched: 'A number was read, but no catalog card has it.',
+    ambiguous: 'Several cards fit the title — none clearly best.',
+    low_score: 'The best match scored too low to apply automatically.',
+    classify_rejected:
+        'Matched a card, but it failed the single-card / price checks.',
+};
+
 const money = (cents: number | null) =>
     cents == null ? '—' : '$' + (cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
@@ -568,6 +578,23 @@ export default function AdminEbaySweep({
                                     Listing
                                 </div>
                                 <div>{assignMiss.title}</div>
+                            </div>
+                            <div className="flex items-start gap-2 text-xs">
+                                <span
+                                    className={cn(
+                                        'shrink-0 font-medium capitalize',
+                                        REASON_STYLE[assignMiss.reason],
+                                    )}
+                                >
+                                    {assignMiss.reason.replace('_', ' ')}
+                                    {assignMiss.score != null &&
+                                        assignMiss.score > 0 &&
+                                        ` · ${assignMiss.score}`}
+                                </span>
+                                <span className="text-muted-foreground">
+                                    {REASON_HELP[assignMiss.reason] ??
+                                        'Could not be matched automatically.'}
+                                </span>
                             </div>
                             {assignMiss.best_id && (
                                 <Button
