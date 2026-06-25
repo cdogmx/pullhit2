@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/select';
 
 type Target = { id: number; name: string; is_default: boolean };
-type TargetsResponse = {
+export type TargetsResponse = {
     targets: Target[];
     can_create: boolean;
     limit: number | null;
@@ -33,15 +33,26 @@ export function ListTargetPicker({
     label,
     open,
     onChange,
+    preloaded,
 }: {
     endpoint: string;
     label: string;
     /** Fetch only once this is true (i.e. the parent dialog is open). */
     open: boolean;
     onChange: (id: number | null, newName: string | null) => void;
+    /** Skip the fetch when the caller already has the targets. */
+    preloaded?: TargetsResponse;
 }) {
-    const [data, setData] = useState<TargetsResponse | null>(null);
-    const [value, setValue] = useState<string>('');
+    const [data, setData] = useState<TargetsResponse | null>(preloaded ?? null);
+    // Seed the displayed selection from preloaded data (display only — an
+    // unchanged selection falls back to the default on the server).
+    const [value, setValue] = useState<string>(() => {
+        const def =
+            preloaded?.targets.find((t) => t.is_default) ??
+            preloaded?.targets[0];
+
+        return def ? String(def.id) : '';
+    });
     const [newName, setNewName] = useState('');
 
     useEffect(() => {
@@ -49,21 +60,22 @@ export function ListTargetPicker({
             return;
         }
 
+        const apply = (d: TargetsResponse) => {
+            setData(d);
+            const def = d.targets.find((t) => t.is_default) ?? d.targets[0];
+
+            if (def) {
+                setValue(String(def.id));
+                onChange(def.id, null);
+            }
+        };
+
         fetch(endpoint, {
             headers: { Accept: 'application/json' },
             credentials: 'same-origin',
         })
             .then((r) => r.json())
-            .then((d: TargetsResponse) => {
-                setData(d);
-                const def =
-                    d.targets.find((t) => t.is_default) ?? d.targets[0];
-
-                if (def) {
-                    setValue(String(def.id));
-                    onChange(def.id, null);
-                }
-            })
+            .then(apply)
             .catch(() => {});
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, endpoint]);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Actions\Wishlist\AddToWishlist;
+use App\Actions\Wishlist\CreateWishlist;
 use App\Actions\Wishlist\PublicWishlist;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Wishlist\StoreWishlistItemRequest;
@@ -11,6 +12,7 @@ use App\Models\CatalogItem;
 use App\Models\User;
 use App\Models\WishlistItem;
 use App\Support\Membership\Entitlements;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -106,13 +108,37 @@ class WishlistController extends Controller
         return Inertia::render('wishlist/public', $data);
     }
 
-    public function store(StoreWishlistItemRequest $request, AddToWishlist $add): RedirectResponse
+    public function store(StoreWishlistItemRequest $request, AddToWishlist $add, CreateWishlist $create): RedirectResponse
     {
-        $item = CatalogItem::findOrFail($request->validated('catalog_item_id'));
+        $user = $request->user();
+        $data = $request->validated();
+        $item = CatalogItem::findOrFail($data['catalog_item_id']);
 
-        $add($request->user(), $item, $request->validated());
+        // "New wishlist…" from the picker — create it (tier-gated) and add there.
+        if (! empty($data['new_wishlist_name'])) {
+            $data['wishlist_id'] = $create($user, $data['new_wishlist_name'])->id;
+        }
+
+        $add($user, $item, $data);
 
         return back()->with('success', 'Added to your wishlist.');
+    }
+
+    /**
+     * The user's wishlists + whether they can create another (for the picker).
+     */
+    public function targets(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $limit = Entitlements::for($user)->wishlistLimit();
+
+        return response()->json([
+            'targets' => $user->wishlists()->orderByDesc('is_default')->orderBy('name')
+                ->get(['id', 'name', 'is_default'])
+                ->map(fn ($w) => ['id' => $w->id, 'name' => $w->name, 'is_default' => (bool) $w->is_default]),
+            'can_create' => $user->wishlists()->count() < $limit,
+            'limit' => $limit === PHP_INT_MAX ? null : $limit,
+        ]);
     }
 
     public function update(Request $request, WishlistItem $wishlistItem): RedirectResponse
