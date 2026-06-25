@@ -7,6 +7,7 @@ use App\Http\Controllers\Web\CollectionController;
 use App\Http\Controllers\Web\CollectionsController;
 use App\Http\Controllers\Web\ContributeController;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\FeedController;
 use App\Http\Controllers\Web\FollowController;
 use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\NotificationController;
@@ -77,6 +78,9 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Following feed — recent activity from people you follow.
+    Route::get('feed', [FeedController::class, 'index'])->name('feed.index');
 
     // Collection + portfolio (always free for logged-in users).
     Route::get('collection', [CollectionController::class, 'index'])->name('collection.index');

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Notifications\NewFollower;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,9 +21,14 @@ class FollowController extends Controller
         $target = User::where('username', $username)->firstOrFail();
         $me = $request->user();
 
-        // No self-follows; syncWithoutDetaching keeps it idempotent.
+        // No self-follows; syncWithoutDetaching keeps it idempotent. Only notify
+        // on a genuinely new follow (attached is empty when already following).
         if ($me->id !== $target->id) {
-            $me->following()->syncWithoutDetaching([$target->id]);
+            $result = $me->following()->syncWithoutDetaching([$target->id]);
+
+            if (! empty($result['attached'])) {
+                $target->notify(new NewFollower($me));
+            }
         }
 
         return back();

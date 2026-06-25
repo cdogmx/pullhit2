@@ -17,6 +17,7 @@ import {
     Library,
     PencilRuler,
     Radar,
+    Rss,
     ScanLine,
     Search,
     Shield,
@@ -60,6 +61,11 @@ const mainNavItems: NavItem[] = [
         title: 'Wishlist',
         href: '/wishlist',
         icon: Heart,
+    },
+    {
+        title: 'Feed',
+        href: '/feed',
+        icon: Rss,
     },
     {
         title: 'Notifications',
