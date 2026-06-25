@@ -256,6 +256,38 @@ class SweepEbaySold
         return $changed ? 'rematched' : 'unchanged';
     }
 
+    /**
+     * Apply an already-logged miss to a chosen card: ingest the sale (priced
+     * state read from the title by the SAME classifier as everything else), pin
+     * the listing to that card for future sweeps, recompute and clear the miss.
+     * Shared by the AI bulk matcher so grade/condition resolution never diverges.
+     */
+    public function applyMissToCard(EbaySweepMiss $miss, CatalogItem $card, string $sweepTag = 'manual'): void
+    {
+        $comp = $this->classifier->pricedState(
+            $this->missCandidate($miss),
+            GradingCompany::pluck('id', 'slug')->all(),
+        );
+
+        $this->store($card, $comp, $sweepTag);
+
+        if ($miss->source_listing_id) {
+            EbaySweepOverride::updateOrCreate(
+                ['source_listing_id' => $miss->source_listing_id],
+                ['action' => EbaySweepOverride::REASSIGN, 'catalog_item_id' => $card->id, 'title' => $miss->title, 'created_by' => auth()->id()],
+            );
+        }
+
+        ($this->recompute)($card);
+        $miss->delete();
+    }
+
+    /** Record a best-guess card on a miss for admin review (no ingest). */
+    public function suggestMissCard(EbaySweepMiss $miss, CatalogItem $card, float $score): void
+    {
+        $miss->update(['best_catalog_item_id' => $card->id, 'best_score' => round($score, 2)]);
+    }
+
     private function missCandidate(EbaySweepMiss $miss): SoldCandidate
     {
         return new SoldCandidate(
