@@ -24,9 +24,11 @@ type Applied = {
     id: number;
     card: string;
     card_id: number | null;
+    card_image: string | null;
     grade: string | null;
     price: number | null;
     title: string | null;
+    image: string | null;
     url: string | null;
     search: string | null;
     observed_at: string | null;
@@ -35,12 +37,14 @@ type Applied = {
 type Miss = {
     id: number;
     title: string;
+    image: string | null;
     url: string | null;
     reason: string;
     number: string | null;
     price: number | null;
     best: string | null;
     best_id: number | null;
+    best_image: string | null;
     score: number | null;
     created_at: string | null;
 };
@@ -72,6 +76,49 @@ const REASON_STYLE: Record<string, string> = {
 
 const money = (cents: number | null) =>
     cents == null ? '—' : '$' + (cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+/** A labelled image panel (or a "no image" placeholder) for the compare view. */
+function ImagePanel({
+    src,
+    label,
+    href,
+}: {
+    src: string | null;
+    label: string;
+    href?: string | null;
+}) {
+    const frame = (
+        <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-md border border-border bg-muted/40">
+            {src ? (
+                <img
+                    src={src}
+                    alt={label}
+                    loading="lazy"
+                    className="size-full object-contain"
+                />
+            ) : (
+                <span className="px-2 text-center text-[10px] text-muted-foreground">
+                    No image
+                </span>
+            )}
+        </div>
+    );
+
+    return (
+        <div className="flex-1 space-y-1">
+            <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                {label}
+            </div>
+            {href ? (
+                <a href={href} target="_blank" rel="noopener noreferrer">
+                    {frame}
+                </a>
+            ) : (
+                frame
+            )}
+        </div>
+    );
+}
 
 export default function AdminEbaySweep({
     misses,
@@ -424,6 +471,22 @@ export default function AdminEbaySweep({
                     </DialogHeader>
                     {reassign && (
                         <div className="space-y-3">
+                            <div className="flex gap-3">
+                                <ImagePanel
+                                    src={reassign.image}
+                                    label="eBay listing"
+                                    href={reassign.url}
+                                />
+                                <ImagePanel
+                                    src={reassign.card_image}
+                                    label="Matched card"
+                                    href={
+                                        reassign.card_id
+                                            ? `/admin/cards/${reassign.card_id}`
+                                            : null
+                                    }
+                                />
+                            </div>
                             <div className="rounded-md border border-border bg-muted/40 p-3 text-xs">
                                 <div className="text-muted-foreground">
                                     Listing
@@ -457,16 +520,52 @@ export default function AdminEbaySweep({
                     </DialogHeader>
                     {assignMiss && (
                         <div className="space-y-3">
+                            <div className="flex gap-3">
+                                <ImagePanel
+                                    src={assignMiss.image}
+                                    label="eBay listing"
+                                    href={assignMiss.url}
+                                />
+                                <ImagePanel
+                                    src={assignMiss.best_image}
+                                    label={
+                                        assignMiss.best_id
+                                            ? `Best guess${assignMiss.score != null ? ` (${assignMiss.score})` : ''}`
+                                            : 'Best guess'
+                                    }
+                                    href={
+                                        assignMiss.best_id
+                                            ? `/admin/cards/${assignMiss.best_id}`
+                                            : null
+                                    }
+                                />
+                            </div>
                             <div className="rounded-md border border-border bg-muted/40 p-3 text-xs">
                                 <div className="text-muted-foreground">
                                     Listing
                                 </div>
                                 <div>{assignMiss.title}</div>
                             </div>
+                            {assignMiss.best_id && (
+                                <Button
+                                    size="sm"
+                                    className="w-full"
+                                    onClick={() => {
+                                        if (assignMiss.best_id) {
+                                            postAssign(
+                                                assignMiss.id,
+                                                assignMiss.best_id,
+                                                () => setAssignMiss(null),
+                                            );
+                                        }
+                                    }}
+                                >
+                                    Assign to best guess — {assignMiss.best}
+                                </Button>
+                            )}
                             <p className="text-xs text-muted-foreground">
-                                Pick the card this sale belongs to — it's ingested
-                                as a real comp and future sweeps of this listing
-                                follow.
+                                …or search for the correct card. It's ingested as a
+                                real comp and future sweeps of this listing follow.
                             </p>
                             <CatalogSearchSelect onSelect={pickForMiss} />
                         </div>

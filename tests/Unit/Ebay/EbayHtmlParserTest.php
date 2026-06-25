@@ -36,6 +36,23 @@ test('it parses listings, skips the promo card, and strips the New Listing label
     expect($cands[0]->url)->toBe('https://www.ebay.com/itm/355111222333');
 });
 
+const EBAY_WITH_IMAGE = <<<'HTML'
+<li class="s-card"><a class="s-card__link" href="https://www.ebay.com/itm/287379458210"><div class="s-card__image-wrapper"><img class="s-card__image" src="https://i.ebayimg.com/images/g/AbCdEf/s-l140.jpg" alt=""></div></a><a class="s-card__link" href="https://www.ebay.com/itm/287379458210"><div class="s-card__title"><span class="su-styled-text">Charizard ex 199/165 PSA 10 SV 151</span></div></a><span class="s-card__price">$420.00</span><span>Sold  Jun 9, 2026</span></li>
+HTML;
+
+test('it extracts the gallery image and upsizes the thumbnail', function () {
+    $cands = EbayHtmlParser::parse(EBAY_WITH_IMAGE);
+
+    expect($cands)->toHaveCount(1)
+        ->and($cands[0]->imageUrl)->toBe('https://i.ebayimg.com/images/g/AbCdEf/s-l500.jpg');
+});
+
+test('a listing with no image yields a null imageUrl', function () {
+    $cands = EbayHtmlParser::parse(EBAY_REAL_CARD);
+
+    expect($cands[0]->imageUrl)->toBeNull();
+});
+
 test('it parses live (quoted) s-card markup and extracts the seller', function () {
     $cands = EbayHtmlParser::parse(EBAY_REAL_CARD);
 

@@ -16,5 +16,6 @@ readonly class SoldCandidate
         public ?string $itemId,
         public ?string $url = null,
         public ?string $seller = null,
+        public ?string $imageUrl = null,
     ) {}
 }

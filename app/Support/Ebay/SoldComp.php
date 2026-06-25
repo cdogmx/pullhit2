@@ -22,5 +22,6 @@ readonly class SoldComp
         public string $title,
         public ?string $url = null,
         public ?string $seller = null,
+        public ?string $imageUrl = null,
     ) {}
 }

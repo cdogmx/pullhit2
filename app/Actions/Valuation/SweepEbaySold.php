@@ -151,7 +151,7 @@ class SweepEbaySold
                 'seller' => $comp->seller,
                 'is_outlier' => false,
                 'is_synthetic' => false,
-                'raw' => ['title' => $comp->title, 'url' => $comp->url, 'seller' => $comp->seller, 'source' => 'ebay_sweep', 'sweep' => $label],
+                'raw' => ['title' => $comp->title, 'url' => $comp->url, 'image' => $comp->imageUrl, 'seller' => $comp->seller, 'source' => 'ebay_sweep', 'sweep' => $label],
             ],
         );
     }
@@ -167,6 +167,7 @@ class SweepEbaySold
             [
                 'search_label' => $label,
                 'title' => mb_substr($candidate->title, 0, 255),
+                'image_url' => $candidate->imageUrl,
                 'price' => $candidate->priceCents,
                 'sold_at' => $candidate->soldAt,
                 'parsed_number' => $number,

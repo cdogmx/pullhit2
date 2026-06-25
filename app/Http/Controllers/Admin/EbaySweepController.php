@@ -33,13 +33,13 @@ class EbaySweepController extends Controller
     {
         $reason = (string) $request->query('reason', 'all');
 
-        $misses = EbaySweepMiss::with('bestCatalogItem:id,name,number')
+        $misses = EbaySweepMiss::with('bestCatalogItem:id,name,number,primary_image_path')
             ->when(in_array($reason, self::REASONS, true), fn (Builder $q) => $q->where('reason', $reason))
             ->latest()
             ->paginate(30)
             ->withQueryString();
 
-        $applied = SaleObservation::with('catalogItem:id,name,number')
+        $applied = SaleObservation::with('catalogItem:id,name,number,primary_image_path')
             ->where('raw->source', 'ebay_sweep')
             ->latest('observed_at')
             ->limit(25)
@@ -49,6 +49,7 @@ class EbaySweepController extends Controller
             'misses' => collect($misses->items())->map(fn (EbaySweepMiss $m) => [
                 'id' => $m->id,
                 'title' => $m->title,
+                'image' => $m->image_url,
                 'url' => "https://www.ebay.com/itm/{$m->source_listing_id}",
                 'reason' => $m->reason,
                 'number' => $m->parsed_number,
@@ -57,6 +58,7 @@ class EbaySweepController extends Controller
                     ? "#{$m->bestCatalogItem->number} {$m->bestCatalogItem->name}"
                     : null,
                 'best_id' => $m->best_catalog_item_id,
+                'best_image' => $m->bestCatalogItem?->primary_image_path,
                 'score' => $m->best_score,
                 'created_at' => $m->created_at?->toIso8601String(),
             ]),
@@ -72,9 +74,11 @@ class EbaySweepController extends Controller
                 'id' => $o->id,
                 'card' => $o->catalogItem ? "#{$o->catalogItem->number} {$o->catalogItem->name}" : '—',
                 'card_id' => $o->catalog_item_id,
+                'card_image' => $o->catalogItem?->primary_image_path,
                 'grade' => $o->grade_label,
                 'price' => $o->price,
                 'title' => $o->raw['title'] ?? null,
+                'image' => $o->raw['image'] ?? null,
                 'url' => $o->raw['url'] ?? ($o->source_listing_id ? "https://www.ebay.com/itm/{$o->source_listing_id}" : null),
                 'search' => $o->raw['sweep'] ?? null,
                 'observed_at' => $o->observed_at?->toIso8601String(),
@@ -187,6 +191,7 @@ class EbaySweepController extends Controller
             $ebaySweepMiss->sold_at ? CarbonImmutable::parse($ebaySweepMiss->sold_at) : null,
             $listingId,
             "https://www.ebay.com/itm/{$listingId}",
+            imageUrl: $ebaySweepMiss->image_url,
         );
         $comp = $classifier->pricedState($candidate, GradingCompany::pluck('id', 'slug')->all());
 
@@ -203,7 +208,7 @@ class EbaySweepController extends Controller
                 'seller' => $comp->seller,
                 'is_outlier' => false,
                 'is_synthetic' => false,
-                'raw' => ['title' => $comp->title, 'url' => $comp->url, 'source' => 'ebay_sweep', 'sweep' => 'manual'],
+                'raw' => ['title' => $comp->title, 'url' => $comp->url, 'image' => $comp->imageUrl, 'source' => 'ebay_sweep', 'sweep' => 'manual'],
             ],
         );
 

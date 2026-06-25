@@ -88,6 +88,13 @@ final class EbayHtmlParser
             $seller = $sellerMatch[1];
         }
 
-        return new SoldCandidate($title, $priceCents, $soldAt, $itemId, "https://www.ebay.com/itm/{$itemId}", $seller);
+        // Gallery thumbnail — anchor on eBay's image CDN host so it survives
+        // class-name churn. Upsize the s-l140 thumb to a clearer s-l500.
+        $imageUrl = null;
+        if (preg_match('#<img[^>]+src=["\']?(https://i\.ebayimg\.com/[^\s"\'>]+)#i', $block, $imgMatch)) {
+            $imageUrl = preg_replace('#/s-l\d+\.#', '/s-l500.', $imgMatch[1]);
+        }
+
+        return new SoldCandidate($title, $priceCents, $soldAt, $itemId, "https://www.ebay.com/itm/{$itemId}", $seller, $imageUrl);
     }
 }

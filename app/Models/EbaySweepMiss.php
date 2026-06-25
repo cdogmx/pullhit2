@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'search_label',
     'source_listing_id',
     'title',
+    'image_url',
     'price',
     'sold_at',
     'parsed_number',
