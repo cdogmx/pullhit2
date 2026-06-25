@@ -191,6 +191,21 @@ export default function AdminEbaySweep({
         }
     };
 
+    const rejectMiss = (m: Miss) => {
+        if (!confirm('Reject this listing and stop future sweeps re-logging it?')) {
+            return;
+        }
+
+        router.post(
+            `/admin/ebay-sweep/misses/${m.id}/reject`,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success('Rejected and suppressed.'),
+            },
+        );
+    };
+
     return (
         <>
             <Head title="Admin · eBay sweep" />
@@ -415,6 +430,14 @@ export default function AdminEbaySweep({
                                                 >
                                                     Assign…
                                                 </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="text-red-600 hover:text-red-600"
+                                                    onClick={() => rejectMiss(m)}
+                                                >
+                                                    Reject
+                                                </Button>
                                             </div>
                                         </td>
                                     </tr>
@@ -568,6 +591,19 @@ export default function AdminEbaySweep({
                                 real comp and future sweeps of this listing follow.
                             </p>
                             <CatalogSearchSelect onSelect={pickForMiss} />
+                            <div className="border-t border-border pt-2">
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-red-600 hover:text-red-600"
+                                    onClick={() => {
+                                        rejectMiss(assignMiss);
+                                        setAssignMiss(null);
+                                    }}
+                                >
+                                    Reject listing — not a card we track
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </DialogContent>

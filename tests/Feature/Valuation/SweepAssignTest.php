@@ -30,6 +30,40 @@ test('an admin can assign an unmatched sweep listing to a card', function () {
             ->where('catalog_item_id', $card->id)->exists())->toBeTrue();
 });
 
+test('an admin can reject an unmatched listing, suppressing it', function () {
+    $admin = User::factory()->create(['is_admin' => true, 'username' => 'adm', 'email_verified_at' => now()]);
+
+    $miss = EbaySweepMiss::create([
+        'search_label' => 'lorcana-psa10',
+        'source_listing_id' => '551122',
+        'title' => 'Random junk lot not a single card',
+        'price' => 999,
+        'reason' => 'unmatched',
+    ]);
+
+    $this->actingAs($admin)
+        ->post("/admin/ebay-sweep/misses/{$miss->id}/reject")
+        ->assertRedirect();
+
+    // The miss is gone and the listing is pinned as rejected for future sweeps.
+    expect(EbaySweepMiss::find($miss->id))->toBeNull()
+        ->and(EbaySweepOverride::where('source_listing_id', '551122')
+            ->where('action', EbaySweepOverride::REJECT)->exists())->toBeTrue();
+});
+
+test('a non-admin cannot reject a sweep listing', function () {
+    $user = User::factory()->create(['username' => 'plain', 'email_verified_at' => now()]);
+    $miss = EbaySweepMiss::create([
+        'search_label' => 's', 'source_listing_id' => '2', 'title' => 't', 'price' => 100, 'reason' => 'unmatched',
+    ]);
+
+    $this->actingAs($user)
+        ->post("/admin/ebay-sweep/misses/{$miss->id}/reject")
+        ->assertForbidden();
+
+    expect(EbaySweepMiss::find($miss->id))->not->toBeNull();
+});
+
 test('a non-admin cannot assign a sweep listing', function () {
     $user = User::factory()->create(['email_verified_at' => now()]);
     $card = CatalogItem::factory()->create();

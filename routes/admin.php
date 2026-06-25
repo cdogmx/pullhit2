@@ -91,6 +91,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('ebay-sweep/applied/{saleObservation}/reject', [EbaySweepController::class, 'reject'])->name('ebay-sweep.reject');
     Route::post('ebay-sweep/applied/{saleObservation}/reassign', [EbaySweepController::class, 'reassign'])->name('ebay-sweep.reassign');
     Route::post('ebay-sweep/misses/{ebaySweepMiss}/assign', [EbaySweepController::class, 'assign'])->name('ebay-sweep.assign');
+    Route::post('ebay-sweep/misses/{ebaySweepMiss}/reject', [EbaySweepController::class, 'rejectMiss'])->name('ebay-sweep.reject-miss');
 
     // Cards
     Route::get('cards', [CardController::class, 'index'])->name('cards.index');

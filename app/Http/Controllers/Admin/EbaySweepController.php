@@ -168,6 +168,24 @@ class EbaySweepController extends Controller
     }
 
     /**
+     * Reject an unmatched listing: drop the miss and remember the listing so
+     * future sweeps never re-log or apply it (junk, lots, non-catalog cards).
+     */
+    public function rejectMiss(EbaySweepMiss $ebaySweepMiss): RedirectResponse
+    {
+        if ($ebaySweepMiss->source_listing_id) {
+            EbaySweepOverride::updateOrCreate(
+                ['source_listing_id' => $ebaySweepMiss->source_listing_id],
+                ['action' => EbaySweepOverride::REJECT, 'catalog_item_id' => null, 'title' => $ebaySweepMiss->title, 'created_by' => auth()->id()],
+            );
+        }
+
+        $ebaySweepMiss->delete();
+
+        return back()->with('success', 'Listing rejected and suppressed.');
+    }
+
+    /**
      * Manually assign an unmatched / low-confidence listing to a card: ingest it
      * as a real sale on the chosen card, remember the listing → card so future
      * sweeps follow, and clear the miss.
