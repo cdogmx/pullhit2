@@ -111,6 +111,11 @@ class EbayTitleResolver
         if (preg_match('#\b(\d{1,4})\s*/\s*(\d{1,4})\b#', $title, $m)) {
             return $m[1].'/'.$m[2];
         }
+        // Lorcana / general "#218", "#24a" — an explicit card-number marker.
+        // Anchored on '#' so it never grabs a year (2024) or set index ("EN 9").
+        if (preg_match('/#\s*(\d{1,4}[a-z]?)\b/i', $title, $m)) {
+            return strtoupper($m[1]);
+        }
         // One Piece style: OP01-077, ST01-016, EB01-001.
         if (preg_match('#\b([A-Z]{1,3}\d{2}-\d{2,3})\b#i', $title, $m)) {
             return strtoupper($m[1]);
