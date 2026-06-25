@@ -12,6 +12,7 @@ use App\Support\Ebay\OxylabsClient;
 use App\Support\Ebay\SoldCandidate;
 use App\Support\Ebay\SoldComp;
 use App\Support\Ebay\SoldCompClassifier;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
 
 /**
@@ -184,5 +185,97 @@ class SweepEbaySold
             ->whereNull('grading_company_id')
             ->orderByRaw("CASE WHEN state_key IN ('NM', 'SEALED') THEN 0 ELSE 1 END")
             ->value('median') ?? 0);
+    }
+
+    /**
+     * Re-evaluate one already-logged miss against the CURRENT resolver +
+     * classifier (e.g. after improving number parsing) — no network, the title,
+     * price and date come from the stored row. When it now matches, ingest the
+     * sale, recompute the card and clear the miss; otherwise refresh the miss's
+     * reason / best-guess in place so the admin sees the improved verdict.
+     *
+     * @param  array<string, int>  $companyIds  grading company slug => id
+     * @return string applied | reclassified | rematched | unchanged | skipped
+     */
+    public function reprocessMiss(EbaySweepMiss $miss, ?string $language, float $minScore, array $companyIds, bool $apply = true): string
+    {
+        if ($miss->source_listing_id === null || (int) $miss->price <= 0) {
+            return 'skipped';
+        }
+
+        $candidate = $this->missCandidate($miss);
+
+        // A sticky admin decision still wins.
+        $override = EbaySweepOverride::where('source_listing_id', $miss->source_listing_id)->first();
+        if ($override?->action === EbaySweepOverride::REJECT) {
+            return 'skipped';
+        }
+        $forced = $override && $override->catalog_item_id ? CatalogItem::find($override->catalog_item_id) : null;
+        if ($forced) {
+            if ($apply) {
+                $this->store($forced, $this->classifier->pricedState($candidate, $companyIds), $miss->search_label);
+                ($this->recompute)($forced);
+                $miss->delete();
+            }
+
+            return 'applied';
+        }
+
+        $resolution = $this->resolver->resolve($miss->title, $language, $minScore);
+        $item = $resolution['item'];
+
+        if ($item) {
+            $comp = $this->classifier->classify($candidate, $item, $this->anchorCents($item), $companyIds);
+            if ($comp) {
+                if ($apply) {
+                    $this->store($item, $comp, $miss->search_label);
+                    ($this->recompute)($item);
+                    $miss->delete();
+                }
+
+                return 'applied';
+            }
+
+            // Resolves to a card now, but the classifier still rejects it.
+            if ($apply) {
+                $this->refreshMiss($miss, 'classify_rejected', $resolution['number'], $item->id, $resolution['score']);
+            }
+
+            return 'reclassified';
+        }
+
+        // Still unmatched, but the reason / best-guess may have improved.
+        $changed = $miss->reason !== $resolution['reason']
+            || $miss->parsed_number !== $resolution['number']
+            || $miss->best_catalog_item_id !== $resolution['best_id'];
+
+        if ($apply && $changed) {
+            $this->refreshMiss($miss, $resolution['reason'], $resolution['number'], $resolution['best_id'], $resolution['score']);
+        }
+
+        return $changed ? 'rematched' : 'unchanged';
+    }
+
+    private function missCandidate(EbaySweepMiss $miss): SoldCandidate
+    {
+        return new SoldCandidate(
+            $miss->title,
+            (int) $miss->price,
+            $miss->sold_at ? CarbonImmutable::parse($miss->sold_at) : null,
+            $miss->source_listing_id,
+            "https://www.ebay.com/itm/{$miss->source_listing_id}",
+            null,
+            $miss->image_url,
+        );
+    }
+
+    private function refreshMiss(EbaySweepMiss $miss, string $reason, ?string $number, ?int $bestId, float $score): void
+    {
+        $miss->update([
+            'reason' => $reason,
+            'parsed_number' => $number,
+            'best_catalog_item_id' => $bestId,
+            'best_score' => $score,
+        ]);
     }
 }
