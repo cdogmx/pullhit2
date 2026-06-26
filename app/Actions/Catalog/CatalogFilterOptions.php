@@ -28,6 +28,18 @@ class CatalogFilterOptions
      */
     public function __invoke(array $filters = []): array
     {
+        // The single-card attributes present in the current vertical/line/set
+        // scope, read once so rarity/variant/edition narrow to what actually
+        // exists (e.g. a game with only `normal` printings shows no variant
+        // filter; a set with no editions shows no edition filter).
+        $attributes = $this->applyScope(
+            CatalogItem::query()->where('item_type', ItemType::Single->value),
+            $filters,
+        )->get(['attributes']);
+
+        $present = fn (string $key) => $attributes
+            ->pluck("attributes.{$key}")->filter()->unique()->sort()->values()->all();
+
         return [
             'verticals' => Vertical::orderBy('name')->get(['slug', 'name']),
             'product_lines' => ProductLine::query()
@@ -39,58 +51,54 @@ class CatalogFilterOptions
                 ->orderByDesc('released_at')
                 ->get(['slug', 'name', 'code']),
             'item_types' => array_map(fn (ItemType $t) => $t->value, ItemType::cases()),
-            'languages' => CatalogItem::query()
-                ->whereNotNull('language')
-                ->distinct()
-                ->orderBy('language')
-                ->pluck('language'),
-            'rarities' => $this->raritiesPresent($filters),
-            'variants' => $this->variantOptions(),
-            'editions' => $this->editionsPresent($filters),
+            'languages' => $this->applyScope(
+                CatalogItem::query()->whereNotNull('language'), $filters,
+            )->distinct()->orderBy('language')->pluck('language')->all(),
+            'rarities' => $present('rarity'),
+            'variants' => $this->meaningfulVariants($present('variant')),
+            'editions' => $present('edition'),
         ];
     }
 
     /**
-     * Distinct editions present in the (optionally set-scoped) catalog, so the
-     * filter only offers Unlimited/Shadowless/1st Edition where they exist.
+     * Narrow a catalog query to the current vertical / product line / set
+     * selection — the scope every value facet's options are drawn from.
      *
      * @param  array<string, mixed>  $filters
-     * @return array<int, string>
      */
-    protected function editionsPresent(array $filters): array
+    protected function applyScope(Builder $query, array $filters): Builder
     {
-        return CatalogItem::query()
-            ->where('item_type', ItemType::Single->value)
-            ->when($filters['set'] ?? null, fn (Builder $q, $slug) => $q->whereHas('set', fn (Builder $s) => $s->where('slug', $slug)))
-            ->whereNotNull('attributes->edition')
-            ->get(['attributes'])
-            ->pluck('attributes.edition')
-            ->filter()
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
+        return $query
+            ->when($filters['vertical'] ?? null, fn (Builder $q, $slug) => $q->whereHas('vertical', fn (Builder $v) => $v->where('slug', $slug)))
+            ->when($filters['product_line'] ?? null, fn (Builder $q, $slug) => $q->whereHas('productLine', fn (Builder $p) => $p->where('slug', $slug)))
+            ->when($filters['set'] ?? null, fn (Builder $q, $slug) => $q->whereHas('set', fn (Builder $s) => $s->where('slug', $slug)));
     }
 
     /**
-     * Distinct rarities present in the (optionally set-scoped) catalog. Read via
-     * the cast attribute to avoid driver-specific JSON-unquoting.
+     * Present variants ordered by the registry's canonical order. A scope whose
+     * only printing is `normal` has nothing to filter on, so the facet is dropped.
      *
-     * @param  array<string, mixed>  $filters
+     * @param  array<int, string>  $present
      * @return array<int, string>
      */
-    protected function raritiesPresent(array $filters): array
+    protected function meaningfulVariants(array $present): array
     {
-        return CatalogItem::query()
-            ->where('item_type', ItemType::Single->value)
-            ->when($filters['set'] ?? null, fn (Builder $q, $slug) => $q->whereHas('set', fn (Builder $s) => $s->where('slug', $slug)))
-            ->get(['attributes'])
-            ->pluck('attributes.rarity')
-            ->filter()
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
+        if ($present === [] || $present === ['normal']) {
+            return [];
+        }
+
+        $order = $this->variantOptions();
+        usort($present, fn ($a, $b) => $this->orderIndex($a, $order) <=> $this->orderIndex($b, $order));
+
+        return $present;
+    }
+
+    /** @param  array<int, string>  $order */
+    private function orderIndex(string $value, array $order): int
+    {
+        $i = array_search($value, $order, true);
+
+        return $i === false ? PHP_INT_MAX : $i;
     }
 
     /**
