@@ -10,6 +10,15 @@ beforeEach(function () {
     Storage::fake('s3');
 
     Http::fake([
+        // The client reads the set filter first to discover retail sets.
+        'api.netdeck.gg/api/cards/cyberpunk/filters' => Http::response([
+            'filters' => [
+                ['key' => 'set', 'label' => 'Set', 'options' => [
+                    ['code' => 'welcometonightcitybeta', 'name' => 'Welcome to Night City — Beta'],
+                    ['code' => 'welcometonightcityretail', 'name' => 'Welcome to Night City — Retail'],
+                ]],
+            ],
+        ], 200),
         'api.netdeck.gg/api/cards/cyberpunk*' => Http::response([
             'items' => [[
                 'id' => '81a8dec7-9541-4020-93e1-7d798a57dcbc',
