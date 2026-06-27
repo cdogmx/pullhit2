@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\InvalidStateException;
@@ -41,14 +42,40 @@ class SocialiteController extends Controller
             $oauth = Socialite::driver($provider)
                 ->redirectUrl(route('oauth.callback', $provider))
                 ->user();
-        } catch (InvalidStateException) {
+        } catch (InvalidStateException $e) {
+            // Lost OAuth state — usually a dropped session cookie across the
+            // round-trip (expired, blocked third-party cookies, or a www/apex
+            // host mismatch between redirect and callback).
+            Log::warning('OAuth state mismatch', [
+                'provider' => $provider,
+                'message' => $e->getMessage(),
+            ]);
+
             return redirect()->route('login')
-                ->withErrors(['email' => 'Social login failed — please try again.']);
+                ->withErrors(['email' => 'Your '.ucfirst($provider).' sign-in expired or was interrupted — please try again.']);
+        } catch (\Throwable $e) {
+            // Token exchange / Graph API failure (e.g. redirect_uri mismatch, a
+            // reused code, or a provider outage). Without this catch it would be
+            // an opaque 500 — log the cause so the real failure is visible.
+            Log::error('OAuth callback failed', [
+                'provider' => $provider,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
+            return redirect()->route('login')->withErrors([
+                'email' => 'We couldn’t complete your '.ucfirst($provider).' sign-in. Please try again, or register with an email and password.',
+            ]);
         }
 
         $email = $oauth->getEmail();
 
         if (! $email) {
+            Log::warning('OAuth provider returned no email', [
+                'provider' => $provider,
+                'provider_id' => $oauth->getId(),
+            ]);
+
             return redirect()->route('login')->withErrors([
                 'email' => 'Your '.ucfirst($provider).' account didn’t share an email, so we can’t sign you in. Please register with an email and password instead.',
             ]);
