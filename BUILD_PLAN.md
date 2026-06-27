@@ -6,7 +6,7 @@
 
 ## Status snapshot — updated 2026-06-27
 
-**Phases 0–4 are built and live** (CardFoo.com / pullhit.com). **Phase 5 (marketplace) is the next major build.** Substantial scope was added on top of the original brief — see **§14** (2026-06 base sprint), **§14.1** (community/giveaways, multi-game image backfill, broad eBay sweeps, homepage), and **§14.2** (the late-June sprint: **sealed product catalog + valuation**, a **4th game (Cyberpunk)**, **social graph/profiles**, AI-assisted sweep matching, shareable collection folders).
+**Phases 0–4 are built and live** (CardFoo.com / pullhit.com). **Phase 5 (Marketplace) is deferred to the *final* phase — it gates on sorting out payments (merchant-of-record / Stripe Connect / payout compliance) and isn't worth the build time until that's settled.** Near-term effort goes to deepening what's live (pricing coverage, mobile/PWA, monetization). Substantial scope was added on top of the original brief — see **§14** (2026-06 base sprint), **§14.1** (community/giveaways, multi-game image backfill, broad eBay sweeps, homepage), and **§14.2** (the late-June sprint: **sealed product catalog + valuation**, a **4th game (Cyberpunk)**, **social graph/profiles**, AI-assisted sweep matching, shareable collection folders).
 
 | Phase | Status |
 |---|---|
@@ -15,9 +15,9 @@
 | 2 — Mining / ingestion | ✅ Done — **PHP-native, not Python** (no `scrapers/`; see §6 note) |
 | 3 — Valuation | ✅ Done (engine, sale_observations, market_values, confidence; eBay sold via Oxylabs; synthetic seeding) |
 | 4 — Collections + Scanning | ✅ Done (collection + acquisition lots + portfolio; scan with language **and** edition/variant detection) |
-| 5 — Marketplace | ⬜ **Not started — next major phase** |
 | 6 — Mobile/PWA + API hardening | 🟡 Partial (`/api/v1` + AppShell exist; PWA install/offline + bottom-tab not built) |
 | 7 — Second vertical (Sports) | ⬜ Not started (core stayed vertical-agnostic — architecture ready) |
+| 5 — Marketplace | ⬜ **Deferred to FINAL phase — blocked on payments** (merchant-of-record / Stripe Connect / payout compliance). Not worth building until that's resolved. |
 
 **Catalog today (2026-06-27):** **4 games — Pokémon (180 sets, ~37.7k), One Piece (112 sets, ~11.9k, EN + JA), Disney Lorcana (14 sets, ~2.7k), Cyberpunk TCG (4 sets, 88)** = **310 sets / ~52.4k `catalog_items`** — of which **~49.9k singles + ~2.6k sealed products** (booster boxes/ETBs/packs/tins, imported with images + market prices, §14.2). Back to Base Set 1999; editions/variants modeled and PriceCharting-reconciled. **~98% of items have stored images** (S3). Valuation: ~69.7k `market_values`, **~28.7k real sold observations** (eBay sweeps + on-view + AI-recovered).
 
@@ -343,9 +343,9 @@ Flow: capture image(s) → identify → return ranked `catalog_item` candidates 
 | ✅ **2 — Mining** *(PHP, not Python)* | Catalog + image ingestion. **Built PHP-native** — `PokemonTcgClient`/`TcgcsvClient`/PriceCharting importers + `CardImageStore` to S3, via artisan (`catalog:import-set`, `catalog:import-missing-en`, `catalog:pricecharting-import`). No `scrapers/`; see §6 note. | ✅ Pokémon catalog (singles + sealed) + images populated; importers idempotent. |
 | ✅ **3 — Valuation** | `sale_observations` ingestion; engine (MAD outliers, venue priors, velocity EWMA, confidence); `market_values` + recompute jobs; price display component with confidence. | A Pokémon single shows median/IQR/n/confidence/trend; thin-market items show low confidence, not inflated values. |
 | ✅ **4 — Collections + Scanning** | Collection CRUD, acquisition lots, portfolio analytics; `POST /api/v1/scan` + Pokémon `IdentifierStrategy` with language **and edition/variant** detection; scan-confirm UI. | ✅ Done — plus public collections, **wishlists** (target-price alerts), and edition-aware scan ranking (§14). |
-| ⬜ **5 — Marketplace** *(next)* | Listings from collection, search/browse, cart, orders, payments (gateway interface), seller payouts. | ⬜ Not started — no `listings/orders/payments` tables yet. The intended differentiator (first-party sold data → wash-trade detection). |
 | 🟡 **6 — Mobile/PWA polish + API hardening** | PWA install, offline scan queue, rate limits, API versioning discipline, docs. | 🟡 Partial — `/api/v1` + responsive AppShell exist; **PWA install/offline + mobile bottom-tab nav not built.** |
 | ⬜ **7 — Second vertical (Sports)** | New seed + attribute schema + source adapter + identifier strategy **only**. | ⬜ Not started. Core stayed vertical-agnostic (edition/variant were added as *facets*, not core columns) — the architecture is still ready for this test. |
+| ⬜ **5 — Marketplace** *(deferred to FINAL — payments-blocked)* | Listings from collection, search/browse, cart, orders, payments (gateway interface), seller payouts. | ⬜ **On hold until payments are figured out** (merchant-of-record vs Stripe Connect, KYC/payout compliance). The intended differentiator (first-party sold data → wash-trade detection) still stands, but the build isn't worth starting before the money rails are decided. No `listings/orders/payments` tables yet. |
 
 ---
 
@@ -409,11 +409,15 @@ Layered on §14/§14.1, same guardrails (§13). Roughly by impact:
 - **Ops/auth** — Postmark transactional email (welcome / verify-on-signup / password reset), payment receipts, cancel-subscription confirm modal, Dodo live-mode fix. **Root-caused a silent outage:** the Laravel Cloud **scheduler was off**, so eBay sweeps and daily snapshots weren't running — now enabled.
 
 ### Updated next focus
-1. **Phase 5 — Marketplace** *(the strategic differentiator).* First-party listings/orders/payments → first-party **sold data** → the wash-trade-detection wedge, now well-seeded by the transparency/community/sweep work. Still no `listings/orders/payments` tables.
-2. **Proactive sealed comp coverage.** Sealed only gets real eBay comps on page-view (the sweep is collector-number-based, so it skips all sealed). Build a **name-based sealed sweep** so the ~2,600 sealed SKUs get real values without a visit — now safe to do given the sealed-aware classifier.
-3. **Phase 6 — PWA + mobile bottom-tab nav** (the brief's mobile-first goal is only partly met).
-4. **Early Adopter product** — $250 one-time, Guru benefits + badge + 500 monthly giveaway entries (Dodo product id staged in env; build deferred).
-5. **Long-tail cleanup** — 80 sealed-unmatched sets (manual TCGplayer-group override map), sweep `no_number` misses, and the reconciliation backlog (graded re-seed, JP editions).
+
+> **Marketplace (Phase 5) is intentionally LAST** — it gates on payments (merchant-of-record / Stripe Connect / payout compliance) and isn't worth building until that's resolved. Near-term work deepens what's already live.
+
+1. ✅ **Proactive sealed comp coverage** *(done).* `valuation:sweep-sealed` warms real eBay comps for valuable, stale sealed SKUs by name (the broad sweep is number-based, so it skipped sealed), cost-capped + scheduled hourly; Cases/Displays excluded (thin + ambiguous).
+2. **Phase 6 — PWA + mobile bottom-tab nav** (the brief's mobile-first goal is only partly met). Highest-value near-term build.
+3. **Early Adopter product** — $250 one-time, Guru benefits + badge + 500 monthly giveaway entries (Dodo product id staged in env). Quick monetization win.
+4. **TCGCSV sealed price errors** — the ultra-high tail (mispriced "Booster Box Cases", e.g. $40k–$60k) seeds bogus values; add a sanity bound / review pass on import.
+5. **Long-tail cleanup** — 80 sealed-unmatched sets (manual TCGplayer-group override map), sweep `no_number` misses, reconciliation backlog (graded re-seed, JP editions).
+6. **Phase 5 — Marketplace** *(final, payments-blocked).* First-party listings/orders/payments → first-party **sold data** → the wash-trade-detection wedge. Resume once the money rails are decided.
 
 ---
 
