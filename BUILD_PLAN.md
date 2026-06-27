@@ -4,9 +4,9 @@
 
 ---
 
-## Status snapshot — updated 2026-06-23
+## Status snapshot — updated 2026-06-27
 
-**Phases 0–4 are built and live** (CardFoo.com / pullhit.com). **Phase 5 (marketplace) is the next major build.** Substantial scope was added on top of the original brief — see **§14** (and **§14.1** for the 2026-06 sprint: community/giveaways, multi-game image backfill, broad eBay sweeps, homepage remodel).
+**Phases 0–4 are built and live** (CardFoo.com / pullhit.com). **Phase 5 (marketplace) is the next major build.** Substantial scope was added on top of the original brief — see **§14** (2026-06 base sprint), **§14.1** (community/giveaways, multi-game image backfill, broad eBay sweeps, homepage), and **§14.2** (the late-June sprint: **sealed product catalog + valuation**, a **4th game (Cyberpunk)**, **social graph/profiles**, AI-assisted sweep matching, shareable collection folders).
 
 | Phase | Status |
 |---|---|
@@ -19,7 +19,7 @@
 | 6 — Mobile/PWA + API hardening | 🟡 Partial (`/api/v1` + AppShell exist; PWA install/offline + bottom-tab not built) |
 | 7 — Second vertical (Sports) | ⬜ Not started (core stayed vertical-agnostic — architecture ready) |
 
-**Catalog today (2026-06-23):** **3 games — Pokémon (179 sets, ~35.9k cards, EN + JA), One Piece (112 sets, ~11.3k, EN + JA), Disney Lorcana (14 sets, ~2.6k)** = **305 sets / ~49.8k `catalog_items`**, back to Base Set 1999, editions/variants modeled and PriceCharting-reconciled. **~98% of cards now have stored images** (S3) after the multi-source backfill (§14.1). Valuation: ~65k `market_values`, ~22k real sold observations.
+**Catalog today (2026-06-27):** **4 games — Pokémon (180 sets, ~37.7k), One Piece (112 sets, ~11.9k, EN + JA), Disney Lorcana (14 sets, ~2.7k), Cyberpunk TCG (4 sets, 88)** = **310 sets / ~52.4k `catalog_items`** — of which **~49.9k singles + ~2.6k sealed products** (booster boxes/ETBs/packs/tins, imported with images + market prices, §14.2). Back to Base Set 1999; editions/variants modeled and PriceCharting-reconciled. **~98% of items have stored images** (S3). Valuation: ~69.7k `market_values`, **~28.7k real sold observations** (eBay sweeps + on-view + AI-recovered).
 
 ---
 
@@ -395,12 +395,25 @@ Layered on §14, same guardrails (§13). Roughly by impact:
 - **Admin "Get values"** — synchronous on-card eBay refresh button, **always available** (even when a card has no values yet); honours the daily cap; returns the comp count.
 - **Homepage remodel** — cached `HomeController` feeds the landing page under the hero: brand shortcuts, **trending cards**, **biggest movers** (real 30-day swings), **recently-updated prices** (the sweep pulse), **popular sets** (by card views), and a **points/giveaways explainer**.
 
-### Suggested next focus
-1. **Phase 5 — Marketplace** (the strategic differentiator: first-party sold data unlocks the wash-trade-detection wedge — now partly seeded by the community/transparency work).
-2. **Giveaway draw mechanics** — entries are tracked monthly; the weighted winner draw + giveaway model is still deferred.
+## 14.2 Sprint — late 2026-06 (sealed product, 4th game, social, sweep accuracy)
+
+Layered on §14/§14.1, same guardrails (§13). Roughly by impact:
+
+- **Sealed product catalog + valuation** *(biggest addition).* Bulk-imported ~2,600 sealed products (booster boxes, ETBs, packs, tins, blisters, build-&-battle, cases) with images + TCGplayer market prices from **TCGCSV**: per-set `catalog:import-sealed {setId} {groupId}` and catalog-wide `catalog:import-sealed-all` (auto-matches every set to its TCGplayer group by name — conservative, skips ambiguous base-era/promo names; 226/306 sets matched). A **sealed-aware eBay comp classifier** prevents variant cross-contamination: a comp must agree with the product's **Case / Pokémon-Center / Plus** status and sealed type, rejecting the Case (6–10×) and PC-exclusive listings that were inflating regular SKUs. `Code Card -` products excluded; sealed comps live in the `SEALED` state bucket.
+- **Cyberpunk TCG — 4th game.** Added via the **Netdeck.gg API** (powers cyberpunktcg.com — the site itself is JS-paginated with no public API). `catalog:import-cyberpunk` pulls all retail sets (88 cards / 4 sets) with images; `power`/`ram`/`faction` added to the tcg vertical schema. Proves the multi-game seam again.
+- **Social graph + profiles.** Public user **profile pages** with avatars, a **follow graph** (followers/following) + **following feed**, and the community **giveaway draw** (weighted winner — the §14.1 deferred piece). **Social login** (Facebook live, Google ready) via Socialite + one-time username picker.
+- **AI-assisted sweep matching + accuracy.** `valuation:ai-match-misses` batches unplaceable sweep misses through one Anthropic call (cheap title-text, no image) → structured identity → `CandidateMatcher` → auto-apply confident / best-guess the rest (recovered ~360 sales). `EbayTitleResolver` now parses Lorcana/promo `#NNN`; classifier fixes (graded comps bypass the raw band; Pokémon HP-stat ≠ Heavily Played; Beckett/`PSA-10`/`GEM MINT 10`). Multi-card "set" listings rejected via same-set sibling-name detection; `valuation:prune-bad-comps` cleaned ~520 inflated comps. Sweep admin (`/admin/ebay-sweep`) gained assign/reassign **with photos + best-guess**, a reject button, and non-match reasons.
+- **Collections polish.** Shareable **folders** with independent public/private links (`/collection/{user}/{set}/folder/{slug}`), date-added (newest/oldest) sort, and tier-gated add-to-collection / add-to-wishlist pickers.
+- **Browse filters** now show only options present in the current vertical/line/set scope (a lone `normal` variant is hidden).
+- **Admin** per-user **detail page** — sessions/IP + device, scan history with detections, profile/collection/wishlist links, billing — linked from the roster.
+- **Ops/auth** — Postmark transactional email (welcome / verify-on-signup / password reset), payment receipts, cancel-subscription confirm modal, Dodo live-mode fix. **Root-caused a silent outage:** the Laravel Cloud **scheduler was off**, so eBay sweeps and daily snapshots weren't running — now enabled.
+
+### Updated next focus
+1. **Phase 5 — Marketplace** *(the strategic differentiator).* First-party listings/orders/payments → first-party **sold data** → the wash-trade-detection wedge, now well-seeded by the transparency/community/sweep work. Still no `listings/orders/payments` tables.
+2. **Proactive sealed comp coverage.** Sealed only gets real eBay comps on page-view (the sweep is collector-number-based, so it skips all sealed). Build a **name-based sealed sweep** so the ~2,600 sealed SKUs get real values without a visit — now safe to do given the sealed-aware classifier.
 3. **Phase 6 — PWA + mobile bottom-tab nav** (the brief's mobile-first goal is only partly met).
-4. **Pricing coverage** — extend broad sweeps beyond graded PSA-10 (raw sweeps, more games), and tune `EbayTitleResolver` against the logged sweep misses (`no_number` is the largest bucket).
-5. **Reconciliation backlog**: graded re-seed, eBay-refresh backfill for new printings, the review queue, Japanese editions.
+4. **Early Adopter product** — $250 one-time, Guru benefits + badge + 500 monthly giveaway entries (Dodo product id staged in env; build deferred).
+5. **Long-tail cleanup** — 80 sealed-unmatched sets (manual TCGplayer-group override map), sweep `no_number` misses, and the reconciliation backlog (graded re-seed, JP editions).
 
 ---
 
