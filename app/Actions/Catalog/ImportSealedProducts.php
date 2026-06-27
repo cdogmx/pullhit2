@@ -119,6 +119,11 @@ class ImportSealedProducts
     {
         $n = mb_strtolower($name);
 
+        // Digital PTCGO/PTCG-Live code cards are not sealed product.
+        if (str_contains($n, 'code card')) {
+            return null;
+        }
+
         return match (true) {
             str_contains($n, 'booster box case') => 'booster_box_case',
             str_contains($n, 'booster box') => 'booster_box',

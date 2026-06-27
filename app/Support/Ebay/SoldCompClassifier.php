@@ -2,6 +2,7 @@
 
 namespace App\Support\Ebay;
 
+use App\Enums\ItemType;
 use App\Models\CatalogItem;
 
 /**
@@ -21,10 +22,19 @@ class SoldCompClassifier
      */
     public function classify(SoldCandidate $candidate, CatalogItem $item, int $anchorCents, array $companyIds): ?SoldComp
     {
-        // 1-3) Structural gates: blocklist, multi-quantity, multi-card bundles,
-        //      name presence, printing match. Shared with the comp-pruning pass.
+        // 1-3) Structural gates: blocklist, multi-quantity, multi-card/sealed
+        //      bundles, name/variant match, printing. Shared with the prune pass.
         if ($this->structurallyInvalid($candidate, $item)) {
             return null;
+        }
+
+        // Sealed products have no graded/raw axis — a passing listing is the
+        // sealed comp (condition SEALED, matching the synthetic seed's bucket),
+        // subject only to the price band.
+        if ($item->item_type === ItemType::Sealed) {
+            return $this->bandOk($candidate->priceCents, $anchorCents)
+                ? new SoldComp($candidate->priceCents, $candidate->soldAt, 'SEALED', null, null, null, $candidate->itemId ?? '', $candidate->title, $candidate->url, $candidate->seller, $candidate->imageUrl)
+                : null;
         }
 
         // 4) Resolve the priced state first (graded vs raw) so the price band can
@@ -34,14 +44,23 @@ class SoldCompClassifier
 
         // 5) Price sanity vs the raw NM anchor — raw comps only (skip when there's
         //    no anchor). Graded premiums are expected, so graded comps bypass it.
-        if ($comp->gradingCompanyId === null) {
-            [$min, $max] = (array) config('valuation.ebay.price_band', [0.1, 5.0]);
-            if ($anchorCents > 0 && ($candidate->priceCents < $anchorCents * $min || $candidate->priceCents > $anchorCents * $max)) {
-                return null;
-            }
+        if ($comp->gradingCompanyId === null && ! $this->bandOk($candidate->priceCents, $anchorCents)) {
+            return null;
         }
 
         return $comp;
+    }
+
+    /** Price within [min, max] × anchor — true when there's no anchor to judge. */
+    private function bandOk(int $priceCents, int $anchorCents): bool
+    {
+        if ($anchorCents <= 0) {
+            return true;
+        }
+
+        [$min, $max] = (array) config('valuation.ebay.price_band', [0.1, 5.0]);
+
+        return $priceCents >= $anchorCents * $min && $priceCents <= $anchorCents * $max;
     }
 
     /**
@@ -54,6 +73,11 @@ class SoldCompClassifier
     public function structurallyInvalid(SoldCandidate $candidate, CatalogItem $item): bool
     {
         $lower = mb_strtolower($candidate->title);
+
+        // Sealed products use their own variant-aware gates.
+        if ($item->item_type === ItemType::Sealed) {
+            return $this->sealedInvalid($lower, $item);
+        }
 
         // Blocklist — mystery boxes, proxies, codes, repacks, etc.
         foreach ((array) config('valuation.ebay.blocklist', []) as $bad) {
@@ -83,6 +107,89 @@ class SoldCompClassifier
 
         // Printing match — keep an edition's comps from mixing with another's.
         return ! $this->printingMatches($item, $lower);
+    }
+
+    /**
+     * Reject gates for a SEALED product. The big sealed errors come from variant
+     * cross-contamination — a Case (6–10×) read as a single box, a Pokémon Center
+     * exclusive read as the regular SKU, an ETB "Plus" read as the base ETB — so a
+     * listing must agree with THIS product's case / Pokémon-Center / Plus status
+     * and its sealed type, and must not be a multi-product bundle or lot.
+     */
+    private function sealedInvalid(string $lower, CatalogItem $item): bool
+    {
+        foreach ((array) config('valuation.ebay.blocklist', []) as $bad) {
+            if (str_contains($lower, $bad)) {
+                return true;
+            }
+        }
+
+        // Multi-product bundles / multi-quantity lots ("2x", "10 box", "lot",
+        // "ETB + booster box"). A leading quantity before a product word is the
+        // tell; a bare "Booster Box" / "Set of 5" product name is not caught.
+        if (preg_match('/\b(lot|lots)\b/', $lower)
+            || preg_match('/\b([2-9]|\d{2,})\s*x\b|\bx\s*([2-9]|\d{2,})\b/', $lower)
+            || preg_match('/\b([2-9]|\d{2,})\s*(boxes|box|etbs?|tins?|bundles?|packs?|cases?|decks?)\b/', $lower)
+            || str_contains($lower, ' + ')) {
+            return true;
+        }
+
+        // The listing must describe this exact sealed variant.
+        if (! $this->sealedVariantMatches($item, $lower)) {
+            return true;
+        }
+
+        // The set name's first token must appear (e.g. "crown", "151").
+        $primary = mb_strtolower((string) preg_replace('/[^a-z0-9]/i', '', (string) strtok($item->name, ' ')));
+
+        return $primary !== '' && ! str_contains((string) preg_replace('/[^a-z0-9]/', '', $lower), $primary);
+    }
+
+    /**
+     * Whether a sealed listing's variant agrees with the product: Case ⇔ Case,
+     * Pokémon Center ⇔ PC, Plus ⇔ Plus, and the sealed type's keyword is present
+     * (so an ETB listing never matches a Booster Box product, etc.).
+     */
+    private function sealedVariantMatches(CatalogItem $item, string $lower): bool
+    {
+        $name = mb_strtolower($item->name);
+
+        $itemCase = str_contains($name, 'case');
+        $listCase = (bool) preg_match('/\bcase\b/', $lower);
+        if ($itemCase !== $listCase) {
+            return false;
+        }
+
+        $itemPc = str_contains($name, 'pokemon center') || str_contains($name, 'pokémon center');
+        $listPc = (bool) preg_match('/pok[eé]mon\s+center|\bpc\b/', $lower);
+        if ($itemPc !== $listPc) {
+            return false;
+        }
+
+        $itemPlus = (bool) preg_match('/\bplus\b/', $name);
+        $listPlus = (bool) preg_match('/\bplus\b/', $lower);
+        if ($itemPlus !== $listPlus) {
+            return false;
+        }
+
+        return $this->sealedTypePresent($item->attributes['sealed_type'] ?? null, $lower);
+    }
+
+    /** Whether the listing names the product's sealed type (ETB abbreviations allowed). */
+    private function sealedTypePresent(?string $type, string $lower): bool
+    {
+        return match ($type) {
+            'elite_trainer_box' => str_contains($lower, 'elite trainer box') || (bool) preg_match('/\betb\b/', $lower),
+            'booster_box', 'booster_box_case' => str_contains($lower, 'booster box'),
+            'booster_pack' => str_contains($lower, 'booster pack') || (bool) preg_match('/\bpack\b/', $lower),
+            'sleeved_booster_pack' => str_contains($lower, 'sleeved'),
+            'booster_bundle', 'bundle' => str_contains($lower, 'bundle'),
+            'build_and_battle' => str_contains($lower, 'build') && str_contains($lower, 'battle'),
+            'tin' => (bool) preg_match('/\btin\b/', $lower),
+            'collection' => str_contains($lower, 'collection'),
+            'blister', 'checklane' => str_contains($lower, 'blister') || str_contains($lower, 'checklane'),
+            default => true, // unknown/other type — don't over-restrict
+        };
     }
 
     /**
