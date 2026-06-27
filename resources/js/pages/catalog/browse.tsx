@@ -82,6 +82,7 @@ const SORTS = [
     { value: 'number', label: 'Number' },
     { value: 'name', label: 'Name' },
     { value: 'set', label: 'Set' },
+    { value: 'release', label: 'Release date' },
     { value: 'newest', label: 'Newest' },
     { value: 'price', label: 'Price' },
     { value: 'change', label: '% Change' },
@@ -92,6 +93,7 @@ const DESC_BY_DEFAULT: Record<string, 'asc' | 'desc'> = {
     price: 'desc',
     change: 'desc',
     newest: 'desc',
+    release: 'desc',
 };
 
 const ALL = '__all__';

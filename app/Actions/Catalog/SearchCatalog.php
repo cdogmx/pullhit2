@@ -226,6 +226,18 @@ class SearchCatalog
             return;
         }
 
+        // Sort by the set's actual release date (distinct from "newest", which
+        // sorts by when the row was added to the catalog). Cards in undated sets
+        // sort last when descending (the usual "newest releases first" view).
+        if ($sort === 'release') {
+            $query->orderBy(
+                Set::select('released_at')->whereColumn('sets.id', 'catalog_items.set_id'),
+                $direction,
+            )->orderBy('number');
+
+            return;
+        }
+
         // Sort by the card's headline value (price) or its 30-day % change. Both
         // read the ungraded NM/SEALED market value; cards without one sort last
         // when descending (the usual "highest first" / "biggest gainers" view).

@@ -35,7 +35,7 @@ class SearchCatalogRequest extends FormRequest
             'rarity' => ['nullable', 'string', 'max:64'],
             'variant' => ['nullable', 'string', 'max:64'],
             'edition' => ['nullable', 'string', 'max:32'],
-            'sort' => ['nullable', Rule::in(['number', 'name', 'newest', 'set', 'price', 'change'])],
+            'sort' => ['nullable', Rule::in(['number', 'name', 'newest', 'release', 'set', 'price', 'change'])],
             'direction' => ['nullable', Rule::in(['asc', 'desc'])],
             'group' => ['nullable', 'boolean'],
             // Force the flat card grid (skip the set-tile drill-down).
