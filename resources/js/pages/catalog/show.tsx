@@ -63,6 +63,8 @@ type Props = {
     refreshedAt: string | null;
     /** Weekly-median sold-price history (the card's raw state) + estimated flag. */
     priceHistory: PriceHistory;
+    /** The most recent real sold comp (raw state), or null. */
+    lastSale: { price: number; sold_at: string; venue: string } | null;
     /** The viewer's owned copies of this card, or null. */
     ownership: OwnedState[] | null;
     /** Whether the viewer has this card on their wishlist. */
@@ -108,6 +110,7 @@ export default function Show({
     refreshing,
     refreshedAt: initialRefreshedAt,
     priceHistory,
+    lastSale,
     ownership,
     sealedTypes,
     languages,
@@ -487,11 +490,24 @@ export default function Show({
                                     <PriceTag value={headline} variant="full" />
                                 </div>
 
-                                <p className="mt-2 text-xs text-muted-foreground">
-                                    {refreshedAt
-                                        ? `Sold data updated ${relativeTime(refreshedAt)}`
-                                        : 'Estimated — no live sold data yet'}
-                                </p>
+                                {lastSale ? (
+                                    <p className="mt-2 text-xs text-muted-foreground">
+                                        Last sold{' '}
+                                        <span className="font-semibold text-foreground">
+                                            {formatMoney(lastSale.price)}
+                                        </span>{' '}
+                                        · {relativeTime(lastSale.sold_at)} on{' '}
+                                        {lastSale.venue}
+                                    </p>
+                                ) : (
+                                    <p className="mt-2 text-xs text-muted-foreground">
+                                        {headline.is_estimated
+                                            ? 'Estimated — no live sold data yet'
+                                            : refreshedAt
+                                              ? `Sold data updated ${relativeTime(refreshedAt)}`
+                                              : 'No recent sold data'}
+                                    </p>
+                                )}
 
                                 <PriceHistoryChart history={priceHistory} />
 
@@ -514,7 +530,9 @@ export default function Show({
                                         }
                                     >
                                         <BarChart3 className="size-4" />
-                                        View breakdown
+                                        {headline.is_estimated || !headline.n_sales
+                                            ? 'View breakdown'
+                                            : `See ${headline.n_sales} sold comps`}
                                     </Button>
                                 </div>
 

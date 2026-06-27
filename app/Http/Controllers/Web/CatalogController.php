@@ -259,6 +259,9 @@ class CatalogController extends Controller
             'refreshing' => $refreshing,
             'refreshedAt' => $catalogItem->ebay_refreshed_at?->toIso8601String(),
             'priceHistory' => $history($catalogItem),
+            // The single most recent REAL sold comp (raw state) — the headline
+            // trust signal ("last sold $X, Yd ago"), null when none.
+            'lastSale' => $this->lastSale($catalogItem),
             'ownership' => $this->ownership($request, $model),
             'wishlisted' => (bool) $request->user()?->wishlistItems()
                 ->where('catalog_item_id', $catalogItem->id)->exists(),
@@ -271,6 +274,28 @@ class CatalogController extends Controller
             // "More in this set" — other base cards from the same set.
             'moreInSet' => $this->moreInSet($catalogItem),
         ]);
+    }
+
+    /**
+     * The newest REAL (non-synthetic, non-outlier) raw sold comp — the "last
+     * sold $X, Yd ago" headline signal. Null when a card has no real sales.
+     *
+     * @return array{price: int, sold_at: string, venue: string}|null
+     */
+    protected function lastSale(CatalogItem $item): ?array
+    {
+        $o = $item->saleObservations()
+            ->whereNull('grading_company_id')
+            ->where('is_synthetic', false)
+            ->where('is_outlier', false)
+            ->orderByDesc('observed_at')
+            ->first(['price', 'observed_at', 'venue']);
+
+        return $o ? [
+            'price' => (int) $o->price,
+            'sold_at' => $o->observed_at->toIso8601String(),
+            'venue' => $o->venue->value,
+        ] : null;
     }
 
     /**
