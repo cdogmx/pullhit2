@@ -30,5 +30,10 @@ Schedule::command('valuation:snapshot')->dailyAt('06:30')->withoutOverlapping();
 // daily Oxylabs cap. Needs Laravel Cloud's scheduler enabled to run.
 Schedule::command('valuation:sweep-ebay')->everyTenMinutes()->withoutOverlapping();
 
+// Proactive sealed-product comps. The broad sweep is collector-number-based and
+// skips sealed, so warm the valuable, stale sealed SKUs by name in small hourly
+// batches under the shared daily Oxylabs cap.
+Schedule::command('valuation:sweep-sealed')->hourly()->withoutOverlapping();
+
 // Weekly refresh of set social-share (OG) collage images (top cards + prices).
 Schedule::command('catalog:set-share-images')->weeklyOn(1, '04:00')->withoutOverlapping();
