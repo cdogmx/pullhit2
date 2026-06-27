@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Home, LibraryBig, ScanLine, Search, Store } from 'lucide-react';
+import { Heart, Home, LibraryBig, ScanLine, Search } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { home, login } from '@/routes';
@@ -7,8 +7,8 @@ import { home, login } from '@/routes';
 /**
  * Persistent mobile bottom tab bar (hidden ≥ lg). Renders across both the
  * public chrome and the authenticated app so mobile users always have the five
- * primary destinations. Auth-only tabs (Scan/Collection) send guests to login;
- * Marketplace is a '#' placeholder until Phase 5.
+ * primary destinations. Auth-only tabs (Scan/Collection/Wishlist) send guests
+ * to login.
  */
 type Tab = {
     title: string;
@@ -38,7 +38,12 @@ export function MobileTabBar() {
             icon: LibraryBig,
             match: '/collection',
         },
-        { title: 'Marketplace', href: '#', icon: Store },
+        {
+            title: 'Wishlist',
+            href: auth.user ? '/wishlist' : login().url,
+            icon: Heart,
+            match: '/wishlist',
+        },
     ];
 
     return (

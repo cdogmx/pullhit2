@@ -23,7 +23,6 @@ const marketingNav = [
     { title: 'Browse', href: '/browse' },
     { title: 'Giveaways', href: '/rankings' },
     { title: 'Features', href: '/#features' },
-    { title: 'How it works', href: '/#how-it-works' },
 ];
 
 // Catalog dropdowns by vertical/product line. Languages link into the SEO
@@ -48,6 +47,10 @@ const catalogMenus = [
     {
         title: 'Disney Lorcana',
         items: [{ label: 'All Disney Lorcana', href: '/browse/lorcana' }],
+    },
+    {
+        title: 'Cyberpunk',
+        items: [{ label: 'All Cyberpunk', href: '/browse/cyberpunk' }],
     },
 ];
 

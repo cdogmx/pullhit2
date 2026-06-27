@@ -421,6 +421,33 @@ Layered on §14/§14.1, same guardrails (§13). Roughly by impact:
 
 ---
 
+## 15. Pre-launch growth priorities — competitive analysis (2026-06-27)
+
+Audited our nav/IA and researched **Collectr, TCGplayer, PriceCharting**. The strategic read for a **pre-user app: discovery + trust beat feature count.** Two patterns the incumbents prove:
+
+- **PriceCharting's moat is SEO + price-history** — every card/set is an indexable page anchored by a price *and a long history chart*; ~70% of their ~18M monthly visits are organic. That's how a 0-user site acquires.
+- **Everyone's pricing is a black box** — TCGplayer "Market Price", Collectr "market value", PriceCharting "proprietary algorithm": no sample size, no comps, no confidence, listing-vs-sold blurred. Our `{median, low, high, n, confidence, as_of}` + **visible comps + manipulation flags** is a wedge none can easily retrofit (TCGplayer is structurally conflicted — it's the seller). This is the §7 differentiator; it's built but **buried** — surface it loudly.
+
+We've **over-invested for 0 users** in social/community (feed, followers, rankings, giveaways, contribute) — those pay off only with a crowd. Pause adding more there.
+
+### Nav cleanup — ✅ done (2026-06-27)
+Removed dead links/placeholders (mobile bottom-nav "Marketplace" → `#`, footer `#` links, the dead `/#how-it-works` anchor), added **Cyberpunk** to the catalog nav, footer now points only at real destinations.
+
+### Growth roadmap (ranked for a no-user app)
+
+**Tier 1 — acquire + convert:**
+1. **Price-history charts on public card/set pages** — PriceCharting's crown jewel; we show only a 90-day sparkline. Both a feature *and* the SEO content that ranks. **Highest leverage.** (Data exists: `portfolio_snapshots` + observations.)
+2. **Loud price transparency on public pages** — surface "N sold · last sale · confidence · range", an expandable **"see the comps"** list (date/price/venue), and **sold-vs-asking** separation. Cheap (display only); the conversion wedge.
+3. **Surface graded + sealed pricing** — TCGplayer punts graded entirely to eBay; everyone's PSA-centric and sealed-thin. Grade-by-grade rows, 9-vs-10 spread, grading-ROI; sealed price pages + a **"browse sealed"** entry point. We already model both.
+
+**Tier 2 — retain:**
+4. **Price alerts** — broaden the existing wishlist target-price alerts to "any card/sealed below $X / on a % drop". Collectr's #1 missing feature.
+5. **Set-completion tracking** — collectors love it; nobody does it well.
+
+**Skip / defer:** Marketplace (Phase 5, payments-blocked), more social/community, set-release calendar, CSV/API export.
+
+---
+
 ### First task for Cursor *(historical — Phase 0, completed)*
 
 Start **Phase 0** only: scaffold the Laravel React starter kit, build the `AppShell` persistent layout shared across a sample marketing page and a sample authenticated dashboard page (identical header/footer, mobile bottom nav), wire Sanctum for both session (web) and token (api) auth, configure the S3 disk and queue/scheduler for Laravel Cloud, and add a trivial `/api/v1/ping`. Stop and report before touching the schema.

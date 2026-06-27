@@ -10,8 +10,8 @@ import { home } from '@/routes';
 
 /**
  * Shared marketing/public chrome footer. Mirrors SiteHeader so public pages
- * carry identical chrome. Links are honest placeholders ('#') until their
- * sections ship in later phases.
+ * carry identical chrome. Every link points at a real destination — no dead
+ * placeholders (Marketplace returns once Phase 5 ships).
  */
 const footerNav: {
     heading: string;
@@ -20,18 +20,16 @@ const footerNav: {
     {
         heading: 'Product',
         links: [
-            { title: 'Catalog', href: '/browse' },
-            { title: 'Valuation', href: '#' },
-            { title: 'Marketplace', href: '#' },
+            { title: 'Browse catalog', href: '/browse' },
+            { title: 'Card scanner', href: '/scan' },
+            { title: 'Wishlist', href: '/wishlist' },
         ],
     },
     {
-        heading: 'Company',
+        heading: 'Community',
         links: [
             { title: 'Giveaways & rankings', href: '/rankings' },
-            { title: 'About', href: '#' },
-            { title: 'Brand', href: '/brand' },
-            { title: 'Contact', href: '#' },
+            { title: 'About CardFoo', href: '/brand' },
         ],
     },
     {
