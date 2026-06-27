@@ -21,7 +21,7 @@ function shortDate(iso: string): string {
 
 // Recharts injects `active`/`payload` into the content element at runtime; its
 // own generic types vary across versions, so we type locally.
-type TooltipDatum = { payload: { t: string; value: number } };
+type TooltipDatum = { payload: { t: string; value: number; n?: number } };
 
 function ChartTooltip({
     active,
@@ -39,7 +39,10 @@ function ChartTooltip({
     return (
         <div className="rounded-md border border-border bg-popover px-2.5 py-1.5 text-xs shadow-md">
             <p className="font-medium">{formatMoney(point.value)}</p>
-            <p className="text-muted-foreground">{shortDate(point.t)}</p>
+            <p className="text-muted-foreground">
+                {shortDate(point.t)}
+                {point.n ? ` · ${point.n} sold` : ''}
+            </p>
         </div>
     );
 }
@@ -61,7 +64,7 @@ export function ValueLineChart({
         return null;
     }
 
-    const data = points.map((p) => ({ t: p.t, value: p.price }));
+    const data = points.map((p) => ({ t: p.t, value: p.price, n: p.n }));
     const up = points[points.length - 1].price >= points[0].price;
     const color = up ? '#10b981' : '#ef4444';
 

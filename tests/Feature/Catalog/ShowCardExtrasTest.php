@@ -12,8 +12,12 @@ beforeEach(fn () => Queue::fake());
 
 test('the card page exposes price history and null ownership for guests', function () {
     $item = CatalogItem::factory()->create();
-    SaleObservation::factory()->for($item)->count(3)->create([
-        'grading_company_id' => null, 'is_outlier' => false, 'observed_at' => now()->subDays(5),
+    // Real sales across two weeks → a two-point weekly-median series.
+    SaleObservation::factory()->for($item)->count(2)->create([
+        'grading_company_id' => null, 'is_outlier' => false, 'is_synthetic' => false, 'observed_at' => now()->subDays(21),
+    ]);
+    SaleObservation::factory()->for($item)->count(2)->create([
+        'grading_company_id' => null, 'is_outlier' => false, 'is_synthetic' => false, 'observed_at' => now()->subDays(3),
     ]);
 
     $this->get("/catalog/{$item->id}")
@@ -21,7 +25,8 @@ test('the card page exposes price history and null ownership for guests', functi
         ->assertInertia(fn (Assert $page) => $page
             ->component('catalog/show')
             ->where('ownership', null)
-            ->has('priceHistory', 3));
+            ->has('priceHistory.points', 2)
+            ->where('priceHistory.estimated', false));
 });
 
 test('an owner sees their holding in the ownership prop', function () {

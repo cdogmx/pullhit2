@@ -14,11 +14,10 @@ import { EditCardImageDialog } from '@/components/admin/edit-card-image-dialog';
 import { EbayListings } from '@/components/catalog/ebay-listings';
 import { EbayShopButton } from '@/components/catalog/ebay-shop-button';
 import { PriceBreakdownDrawer } from '@/components/catalog/price-breakdown-drawer';
+import { PriceHistoryChart } from '@/components/catalog/price-history-chart';
 import { PriceTag } from '@/components/catalog/price-tag';
 import { ShareButtons } from '@/components/catalog/share-buttons';
-import { Sparkline } from '@/components/catalog/sparkline';
 import { SuggestEditDialog } from '@/components/catalog/suggest-edit-dialog';
-import { ValueLineChart } from '@/components/charts/value-line-chart';
 import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
 import { HScroller } from '@/components/shared/h-scroller';
 import { Badge } from '@/components/ui/badge';
@@ -50,7 +49,7 @@ import type {
     CatalogItem,
     GradingCompanyOption,
     OwnedState,
-    PricePoint,
+    PriceHistory,
 } from '@/types';
 
 type Props = {
@@ -62,10 +61,8 @@ type Props = {
     refreshing: boolean;
     /** When the eBay sold data was last pulled (null = never). */
     refreshedAt: string | null;
-    /** Recent price-trend points for the sparkline. */
-    priceHistory: PricePoint[];
-    /** Value-over-time snapshot series (the card's headline state). */
-    valueHistory: PricePoint[];
+    /** Weekly-median sold-price history (the card's raw state) + estimated flag. */
+    priceHistory: PriceHistory;
     /** The viewer's owned copies of this card, or null. */
     ownership: OwnedState[] | null;
     /** Whether the viewer has this card on their wishlist. */
@@ -111,7 +108,6 @@ export default function Show({
     refreshing,
     refreshedAt: initialRefreshedAt,
     priceHistory,
-    valueHistory,
     ownership,
     sealedTypes,
     languages,
@@ -497,26 +493,7 @@ export default function Show({
                                         : 'Estimated — no live sold data yet'}
                                 </p>
 
-                                {priceHistory.length > 1 && (
-                                    <div className="mt-4 rounded-lg border border-border/60 bg-muted/30 p-3">
-                                        <Sparkline points={priceHistory} />
-                                        <p className="mt-1 text-[11px] text-muted-foreground">
-                                            90-day trend
-                                        </p>
-                                    </div>
-                                )}
-
-                                {valueHistory.length > 1 && (
-                                    <div className="mt-4 rounded-lg border border-border/60 bg-card p-3">
-                                        <p className={cn(SECTION_LABEL, 'mb-2')}>
-                                            Value over time
-                                        </p>
-                                        <ValueLineChart
-                                            points={valueHistory}
-                                            height={180}
-                                        />
-                                    </div>
-                                )}
+                                <PriceHistoryChart history={priceHistory} />
 
                                 {/* Primary actions — prominent, side by side */}
                                 <div className="mt-4 flex flex-col gap-2 sm:flex-row">

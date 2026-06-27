@@ -15,7 +15,10 @@ export type CardListings = {
     configured: boolean;
 };
 
-export type PricePoint = { t: string; price: number };
+export type PricePoint = { t: string; price: number; n?: number };
+
+/** The card-page price-history series: weekly-median sold points + an estimated flag. */
+export type PriceHistory = { points: PricePoint[]; estimated: boolean };
 
 export type OwnedState = {
     state_label: string;
