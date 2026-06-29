@@ -44,7 +44,7 @@ class DealsController extends Controller
             ->where('last_in_stock', true)
             ->whereNotNull('last_price')
             ->whereHas('product', fn ($p) => $p->where('is_active', true))
-            ->with('product.catalogItem')
+            ->with(['product.catalogItem.productLine', 'product.catalogItem.set'])
             ->get();
 
         $deals = [];
@@ -75,6 +75,7 @@ class DealsController extends Controller
     private function presentProduct(TrackedProduct $product, Collection $links, bool $overMsrp = false): array
     {
         $target = $product->target_price;
+        $item = $product->catalogItem;
 
         $offers = $links
             ->sortBy('last_price')
@@ -92,6 +93,11 @@ class DealsController extends Controller
             'name' => $product->headline() ?? 'Product',
             'image' => $product->preferredImage(),
             'catalog_name' => $product->catalogItem?->name,
+            // Brand/series are derived from the attached catalog item (if any),
+            // and power the Deals page filters.
+            'brand' => $item?->productLine?->name,
+            'brand_slug' => $item?->productLine?->slug,
+            'series' => $item?->set?->series,
             'currency' => $product->currency,
             'target_price' => $target / 100,
             'over_msrp' => $overMsrp,

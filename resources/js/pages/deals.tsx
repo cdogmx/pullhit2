@@ -1,7 +1,15 @@
 import { Head } from '@inertiajs/react';
 import { ExternalLink, PackageOpen, Tag, TrendingUp } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 type Offer = {
@@ -15,6 +23,9 @@ type Deal = {
     name: string;
     image: string | null;
     catalog_name: string | null;
+    brand: string | null;
+    brand_slug: string | null;
+    series: string | null;
     currency: string;
     target_price: number;
     over_msrp: boolean;
@@ -150,7 +161,46 @@ function DealCard({ deal }: { deal: Deal }) {
     );
 }
 
+const ALL = '__all__';
+
 export default function Deals({ deals, aboveMsrp, recent, seo }: Props) {
+    const [brand, setBrand] = useState<string>(ALL);
+    const [series, setSeries] = useState<string>(ALL);
+
+    const all = useMemo(() => [...deals, ...aboveMsrp], [deals, aboveMsrp]);
+
+    const brands = useMemo(() => {
+        const map = new Map<string, string>();
+
+        for (const d of all) {
+            if (d.brand_slug && d.brand) {
+                map.set(d.brand_slug, d.brand);
+            }
+        }
+
+        return [...map].map(([slug, label]) => ({ slug, label }));
+    }, [all]);
+
+    const seriesOptions = useMemo(() => {
+        const set = new Set<string>();
+
+        for (const d of all) {
+            if (d.series && (brand === ALL || d.brand_slug === brand)) {
+                set.add(d.series);
+            }
+        }
+
+        return [...set].sort();
+    }, [all, brand]);
+
+    const matches = (d: Deal) =>
+        (brand === ALL || d.brand_slug === brand) &&
+        (series === ALL || d.series === series);
+
+    const filtering = brand !== ALL || series !== ALL;
+    const filteredDeals = filtering ? deals.filter(matches) : deals;
+    const filteredAbove = filtering ? aboveMsrp.filter(matches) : aboveMsrp;
+
     return (
         <>
             <Head title={seo.title} />
@@ -162,31 +212,74 @@ export default function Deals({ deals, aboveMsrp, recent, seo }: Props) {
                         {seo.heading}
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Products we’re watching that are in stock at or below our
-                        target price. Prices and availability change fast — tap
-                        through to the retailer to confirm.
+                        Products we’re watching that are in stock at or below
+                        our target price. Prices and availability change fast —
+                        tap through to the retailer to confirm.
                     </p>
                 </div>
 
-                {deals.length === 0 ? (
+                {brands.length > 0 && (
+                    <div className="mb-6 flex flex-wrap items-center gap-2">
+                        <Select
+                            value={brand}
+                            onValueChange={(v) => {
+                                setBrand(v);
+                                setSeries(ALL);
+                            }}
+                        >
+                            <SelectTrigger size="sm" className="w-44">
+                                <SelectValue placeholder="All brands" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={ALL}>All brands</SelectItem>
+                                {brands.map((b) => (
+                                    <SelectItem key={b.slug} value={b.slug}>
+                                        {b.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        <Select
+                            value={series}
+                            onValueChange={setSeries}
+                            disabled={seriesOptions.length === 0}
+                        >
+                            <SelectTrigger size="sm" className="w-44">
+                                <SelectValue placeholder="All series" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={ALL}>All series</SelectItem>
+                                {seriesOptions.map((s) => (
+                                    <SelectItem key={s} value={s}>
+                                        {s}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+
+                {filteredDeals.length === 0 ? (
                     <Card>
                         <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
                             <PackageOpen className="size-8 text-muted-foreground" />
                             <p className="text-sm text-muted-foreground">
-                                Nothing in stock at target right now. Check back
-                                soon — we’re watching around the clock.
+                                {filtering
+                                    ? 'No deals match this filter right now.'
+                                    : 'Nothing in stock at target right now. Check back soon — we’re watching around the clock.'}
                             </p>
                         </CardContent>
                     </Card>
                 ) : (
                     <div className="grid gap-4 sm:grid-cols-2">
-                        {deals.map((deal, i) => (
+                        {filteredDeals.map((deal, i) => (
                             <DealCard key={i} deal={deal} />
                         ))}
                     </div>
                 )}
 
-                {aboveMsrp.length > 0 && (
+                {filteredAbove.length > 0 && (
                     <div className="mt-10">
                         <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
                             <TrendingUp className="size-5 text-amber-500" />
@@ -197,7 +290,7 @@ export default function Deals({ deals, aboveMsrp, recent, seo }: Props) {
                             closest-to-MSRP first.
                         </p>
                         <div className="grid gap-4 sm:grid-cols-2">
-                            {aboveMsrp.map((deal, i) => (
+                            {filteredAbove.map((deal, i) => (
                                 <DealCard key={i} deal={deal} />
                             ))}
                         </div>
