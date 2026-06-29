@@ -94,13 +94,18 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('ebay-sweep/misses/{ebaySweepMiss}/assign', [EbaySweepController::class, 'assign'])->name('ebay-sweep.assign');
     Route::post('ebay-sweep/misses/{ebaySweepMiss}/reject', [EbaySweepController::class, 'rejectMiss'])->name('ebay-sweep.reject-miss');
 
-    // Stock alerts: watch Amazon ASINs and tweet when in stock at/below target.
+    // Stock alerts: products (optionally tied to a catalog item) with a target
+    // price + many retailer links; tweets per retailer when in stock at/below.
     Route::get('stock-alerts', [StockAlertController::class, 'index'])->name('stock-alerts.index');
+    Route::get('stock-alerts/catalog-search', [StockAlertController::class, 'catalogSearch'])->name('stock-alerts.catalog-search');
     Route::post('stock-alerts', [StockAlertController::class, 'store'])->name('stock-alerts.store');
-    Route::patch('stock-alerts/{stockAlert}', [StockAlertController::class, 'update'])->name('stock-alerts.update');
-    Route::post('stock-alerts/{stockAlert}/toggle', [StockAlertController::class, 'toggle'])->name('stock-alerts.toggle');
-    Route::post('stock-alerts/{stockAlert}/check', [StockAlertController::class, 'check'])->name('stock-alerts.check');
-    Route::delete('stock-alerts/{stockAlert}', [StockAlertController::class, 'destroy'])->name('stock-alerts.destroy');
+    Route::patch('stock-alerts/{trackedProduct}', [StockAlertController::class, 'update'])->name('stock-alerts.update');
+    Route::post('stock-alerts/{trackedProduct}/toggle', [StockAlertController::class, 'toggle'])->name('stock-alerts.toggle');
+    Route::delete('stock-alerts/{trackedProduct}', [StockAlertController::class, 'destroy'])->name('stock-alerts.destroy');
+    Route::post('stock-alerts/{trackedProduct}/links', [StockAlertController::class, 'storeLink'])->name('stock-alerts.links.store');
+    Route::post('stock-alerts/links/{retailerLink}/toggle', [StockAlertController::class, 'toggleLink'])->name('stock-alerts.links.toggle');
+    Route::post('stock-alerts/links/{retailerLink}/check', [StockAlertController::class, 'checkLink'])->name('stock-alerts.links.check');
+    Route::delete('stock-alerts/links/{retailerLink}', [StockAlertController::class, 'destroyLink'])->name('stock-alerts.links.destroy');
 
     // Cards
     Route::get('cards', [CardController::class, 'index'])->name('cards.index');

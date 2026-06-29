@@ -3,35 +3,36 @@
 namespace App\Console\Commands;
 
 use App\Actions\Alerts\CheckStockAlerts;
-use App\Models\StockAlert;
-use App\Support\Amazon\AmazonProductClient;
+use App\Enums\Retailer;
+use App\Models\RetailerLink;
+use App\Models\TrackedProduct;
+use App\Support\Retail\RetailScraper;
 use App\Support\Social\XClient;
 use Illuminate\Console\Command;
 use Throwable;
 
 /**
- * Poll Amazon stock alerts and tweet the ones in stock at/below target.
+ * Poll stock alerts and tweet retailers in stock at/below target.
  *
- * Default run (scheduled): checks every due alert, tweeting on the rising edge.
- * Ad-hoc (--asin + --max): one-off check of a single ASIN with no DB row — used
- * to sanity-check a product/price. Tweets only with --tweet.
+ * Default (scheduled): checks every due retailer link, tweeting on the rising
+ * edge. Ad-hoc (--url + --retailer + --max): one-off check of a single link
+ * with no DB row. Tweets only with --tweet.
  */
 class CheckStockAlertsCommand extends Command
 {
     protected $signature = 'stock:check-alerts
-        {--asin= : ad-hoc: check this single ASIN instead of the saved alerts}
-        {--max= : ad-hoc target price in dollars (required with --asin)}
-        {--domain=com : ad-hoc Amazon domain}
-        {--geo= : ad-hoc Oxylabs geo_location (an Amazon delivery ZIP, optional)}
+        {--url= : ad-hoc: check this single product URL}
+        {--retailer= : ad-hoc retailer (amazon|walmart|target|bestbuy|costco|sams_club|pokemon_center)}
+        {--max= : ad-hoc target price in dollars (required with --url)}
         {--tweet : ad-hoc: actually post the tweet if it qualifies}
-        {--force : ignore each alert\'s throttle window and check all active}
+        {--force : ignore each link\'s throttle window and check all active}
         {--dry : check + persist but never post tweets}';
 
-    protected $description = 'Check Amazon stock alerts and tweet in-stock-at-target hits';
+    protected $description = 'Check stock alerts and tweet retailers in stock at/below target';
 
     public function handle(CheckStockAlerts $action): int
     {
-        if ($this->option('asin')) {
+        if ($this->option('url')) {
             return $this->adHoc();
         }
 
@@ -42,26 +43,34 @@ class CheckStockAlertsCommand extends Command
         return self::SUCCESS;
     }
 
-    /** One-off check of a single ASIN, no persistence. */
+    /** One-off check of a single retailer URL, no persistence. */
     private function adHoc(): int
     {
+        $retailer = Retailer::tryFrom((string) $this->option('retailer'));
         $max = $this->option('max');
 
-        if ($max === null || ! is_numeric($max)) {
-            $this->error('--max=<dollars> is required with --asin.');
+        if (! $retailer) {
+            $this->error('--retailer must be one of: '.implode(', ', array_map(fn (Retailer $r) => $r->value, Retailer::cases())));
 
             return self::FAILURE;
         }
 
-        $asin = (string) $this->option('asin');
+        if ($max === null || ! is_numeric($max)) {
+            $this->error('--max=<dollars> is required with --url.');
+
+            return self::FAILURE;
+        }
+
+        $url = (string) $this->option('url');
         $targetCents = (int) round((float) $max * 100);
 
+        $product = new TrackedProduct(['target_price' => $targetCents, 'currency' => 'USD']);
+        $link = new RetailerLink(['retailer' => $retailer->value, 'url' => $url]);
+        $link->external_id = $retailer->externalIdFromUrl($url);
+        $link->setRelation('product', $product);
+
         try {
-            $snapshot = app(AmazonProductClient::class)->fetch(
-                $asin,
-                (string) $this->option('domain'),
-                $this->option('geo') ?: null,
-            );
+            $snapshot = app(RetailScraper::class)->fetch($link);
         } catch (Throwable $e) {
             $this->error("Fetch failed: {$e->getMessage()}");
 
@@ -71,27 +80,19 @@ class CheckStockAlertsCommand extends Command
         $price = $snapshot['price'];
         $qualifies = $snapshot['in_stock'] && $price !== null && $price <= $targetCents;
 
-        $this->line("title:    ".($snapshot['title'] ?? '—'));
-        $this->line("price:    ".($price === null ? '—' : '$'.number_format($price / 100, 2)));
-        $this->line("stock:    ".($snapshot['stock'] ?? '—'));
-        $this->line("in stock: ".($snapshot['in_stock'] ? 'yes' : 'no'));
-        $this->line("target:   $".number_format($targetCents / 100, 2));
+        $this->line('retailer: '.$retailer->label());
+        $this->line('title:    '.($snapshot['title'] ?? '—'));
+        $this->line('price:    '.($price === null ? '—' : '$'.number_format($price / 100, 2)));
+        $this->line('stock:    '.($snapshot['stock'] ?? '—'));
+        $this->line('in stock: '.($snapshot['in_stock'] ? 'yes' : 'no'));
+        $this->line('target:   $'.number_format($targetCents / 100, 2));
         $this->line($qualifies ? '<info>QUALIFIES ✓</info>' : '<comment>does not qualify</comment>');
 
         if (! $qualifies) {
             return self::SUCCESS;
         }
 
-        // Build the tweet text via a transient alert so the ad-hoc preview
-        // matches exactly what the scheduled run would post.
-        $alert = new StockAlert([
-            'asin' => $asin,
-            'domain' => (string) $this->option('domain'),
-            'target_price' => $targetCents,
-            'currency' => $snapshot['currency'] ?? 'USD',
-        ]);
-
-        $text = app(CheckStockAlerts::class)->composeTweet($alert, $snapshot);
+        $text = app(CheckStockAlerts::class)->composeTweet($link, $snapshot);
         $this->newLine();
         $this->line('<info>Tweet preview:</info>');
         $this->line($text);

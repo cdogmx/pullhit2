@@ -2,152 +2,138 @@
 
 namespace App\Actions\Alerts;
 
-use App\Models\StockAlert;
-use App\Support\Amazon\AmazonProductClient;
+use App\Models\RetailerLink;
+use App\Support\Retail\RetailScraper;
 use App\Support\Social\XClient;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Poll due stock alerts and tweet the ones that just became in stock at/below
- * their target price. "Just became" = rising edge: we only tweet when the prior
- * evaluation did NOT qualify, so a product that stays in stock isn't re-tweeted
- * every tick. A cooldown guards against flapping (in/out/in) spam.
+ * Poll due retailer links and tweet the ones that just became in stock at/below
+ * their product's target price. One tweet per retailer, on the rising edge
+ * (the prior check didn't qualify), with a cooldown to avoid flapping spam.
  */
 class CheckStockAlerts
 {
-    /** Don't tweet the same alert more than once within this window. */
+    /** Don't tweet the same link more than once within this window. */
     private const TWEET_COOLDOWN_MINUTES = 360;
 
     public function __construct(
-        private readonly AmazonProductClient $amazon,
+        private readonly RetailScraper $scraper,
         private readonly XClient $x,
     ) {}
 
     /**
-     * Evaluate every due alert.
-     *
      * @return array{checked: int, qualified: int, tweeted: int, errors: int}
      */
     public function __invoke(bool $force = false, bool $dryRun = false): array
     {
-        $alerts = StockAlert::query()
+        $links = RetailerLink::query()
+            ->with(['product.catalogItem'])
             ->when(! $force, fn ($q) => $q->due())
-            ->when($force, fn ($q) => $q->where('is_active', true))
+            ->when($force, fn ($q) => $q->where('is_active', true)->whereHas('product', fn ($p) => $p->where('is_active', true)))
             ->get();
 
         $summary = ['checked' => 0, 'qualified' => 0, 'tweeted' => 0, 'errors' => 0];
 
-        foreach ($alerts as $alert) {
-            $result = $this->evaluate($alert, $dryRun);
+        foreach ($links as $link) {
+            $r = $this->evaluate($link, $dryRun);
             $summary['checked']++;
-            $summary['qualified'] += $result['qualified'] ? 1 : 0;
-            $summary['tweeted'] += $result['tweeted'] ? 1 : 0;
-            $summary['errors'] += $result['error'] ? 1 : 0;
+            $summary['qualified'] += $r['qualified'] ? 1 : 0;
+            $summary['tweeted'] += $r['tweeted'] ? 1 : 0;
+            $summary['errors'] += $r['error'] ? 1 : 0;
         }
 
         return $summary;
     }
 
     /**
-     * Check one alert, persist its state, and tweet on a fresh qualifying edge.
-     *
      * @return array{qualified: bool, tweeted: bool, error: bool, snapshot: ?array<string, mixed>}
      */
-    public function evaluate(StockAlert $alert, bool $dryRun = false): array
+    public function evaluate(RetailerLink $link, bool $dryRun = false): array
     {
         try {
-            $snapshot = $this->amazon->fetch($alert->asin, $alert->domain, $alert->geo_location);
+            $snapshot = $this->scraper->fetch($link);
         } catch (Throwable $e) {
-            $alert->forceFill([
+            $link->forceFill([
                 'last_checked_at' => Carbon::now(),
                 'last_error' => mb_substr($e->getMessage(), 0, 250),
             ])->save();
 
-            Log::warning('Stock alert check failed', ['asin' => $alert->asin, 'message' => $e->getMessage()]);
+            Log::warning('Stock alert check failed', [
+                'retailer' => $link->retailer->value,
+                'url' => $link->url,
+                'message' => $e->getMessage(),
+            ]);
 
             return ['qualified' => false, 'tweeted' => false, 'error' => true, 'snapshot' => null];
         }
 
+        $target = $link->product->target_price;
         $price = $snapshot['price'];
-        $qualifies = $snapshot['in_stock']
-            && $price !== null
-            && $price <= $alert->target_price;
-
-        $wasQualified = $alert->last_qualified;
+        $qualifies = $snapshot['in_stock'] && $price !== null && $price <= $target;
 
         $tweeted = false;
         $tweetId = null;
 
-        if ($qualifies && ! $wasQualified && ! $dryRun && $this->withinCooldown($alert) === false) {
+        if ($qualifies && ! $link->last_qualified && ! $dryRun && ! $this->withinCooldown($link)) {
             try {
                 $tweetId = $this->x->tweetWithImage(
-                    $this->composeTweet($alert, $snapshot),
-                    $snapshot['image'] ?? null,
+                    $this->composeTweet($link, $snapshot),
+                    $link->product->preferredImage() ?: ($snapshot['image'] ?? null),
                 );
                 $tweeted = true;
             } catch (Throwable $e) {
                 $snapshot['tweet_error'] = $e->getMessage();
-                Log::error('Stock alert tweet failed', ['asin' => $alert->asin, 'message' => $e->getMessage()]);
+                Log::error('Stock alert tweet failed', [
+                    'retailer' => $link->retailer->value,
+                    'message' => $e->getMessage(),
+                ]);
             }
         }
 
-        $alert->forceFill([
+        $link->forceFill([
             'last_checked_at' => Carbon::now(),
             'last_price' => $price,
             'last_in_stock' => $snapshot['in_stock'],
             'last_status' => $snapshot['stock'] ? mb_substr($snapshot['stock'], 0, 250) : null,
             'last_title' => $snapshot['title'] ? mb_substr($snapshot['title'], 0, 250) : null,
+            'last_image' => $snapshot['image'] ?? null,
             'last_qualified' => $qualifies,
             'last_error' => $snapshot['tweet_error'] ?? null,
         ]);
 
         if ($tweeted) {
-            $alert->last_tweeted_at = Carbon::now();
-            $alert->last_tweet_id = $tweetId;
+            $link->last_tweeted_at = Carbon::now();
+            $link->last_tweet_id = $tweetId;
         }
 
-        $alert->save();
+        $link->save();
 
         return ['qualified' => $qualifies, 'tweeted' => $tweeted, 'error' => false, 'snapshot' => $snapshot];
     }
 
-    private function withinCooldown(StockAlert $alert): bool
+    private function withinCooldown(RetailerLink $link): bool
     {
-        return $alert->last_tweeted_at !== null
-            && $alert->last_tweeted_at->copy()->addMinutes(self::TWEET_COOLDOWN_MINUTES)->isFuture();
+        return $link->last_tweeted_at !== null
+            && $link->last_tweeted_at->copy()->addMinutes(self::TWEET_COOLDOWN_MINUTES)->isFuture();
     }
 
     /**
      * @param  array<string, mixed>  $snapshot
      */
-    public function composeTweet(StockAlert $alert, array $snapshot): string
+    public function composeTweet(RetailerLink $link, array $snapshot): string
     {
-        // Prefer the admin's label as the headline (concise + on-brand); fall
-        // back to the raw Amazon title, which is often long and keyword-stuffed.
-        $title = $alert->label ?: ($snapshot['title'] ?? 'This item');
-        $price = $this->money($snapshot['price'], $alert->currency);
-        $url = $alert->productUrl();
-        $store = $this->store($alert->domain);
+        $headline = $link->product->headline() ?: ($snapshot['title'] ?? 'This item');
+        $price = $this->money($snapshot['price'], $link->product->currency);
+        $store = $link->retailer->label();
+        $url = $link->url;
 
-        // Keep the title short so the whole thing comfortably fits 280 chars
-        // (an Amazon link counts as 23 via t.co).
-        $title = mb_strlen($title) > 120 ? mb_substr($title, 0, 117).'…' : $title;
+        // Keep the headline short so the whole thing fits 280 chars (a link is 23 via t.co).
+        $headline = mb_strlen($headline) > 120 ? mb_substr($headline, 0, 117).'…' : $headline;
 
-        return "🚨 {$title} in stock at {$store} for {$price}\n{$url}";
-    }
-
-    /** Human store name for the Amazon marketplace (by domain). */
-    private function store(string $domain): string
-    {
-        return match ($domain) {
-            'co.uk' => 'Amazon UK',
-            'ca' => 'Amazon Canada',
-            'de' => 'Amazon Germany',
-            'co.jp' => 'Amazon Japan',
-            default => 'Amazon',
-        };
+        return "🚨 {$headline} in stock at {$store} for {$price}\n{$url}";
     }
 
     private function money(?int $cents, string $currency): string
@@ -156,7 +142,12 @@ class CheckStockAlerts
             return '—';
         }
 
-        $symbol = $currency === 'USD' ? '$' : ($currency === 'GBP' ? '£' : ($currency === 'EUR' ? '€' : ''));
+        $symbol = match ($currency) {
+            'USD', 'CAD' => '$',
+            'GBP' => '£',
+            'EUR' => '€',
+            default => '',
+        };
 
         return $symbol.number_format($cents / 100, 2).($symbol === '' ? ' '.$currency : '');
     }

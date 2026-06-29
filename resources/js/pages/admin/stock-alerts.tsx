@@ -1,12 +1,16 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import {
     Bell,
+    Check,
     ExternalLink,
     Pause,
     Play,
+    Plus,
     RefreshCw,
     Trash2,
+    X,
 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,17 +26,15 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
-type Alert = {
+type RetailerOption = { value: string; label: string };
+
+type Link = {
     id: number;
-    label: string | null;
-    asin: string;
-    domain: string;
-    geo_location: string | null;
-    target_price: number;
-    currency: string;
-    check_interval_minutes: number;
-    is_active: boolean;
+    retailer: string;
+    retailer_label: string;
     url: string;
+    external_id: string | null;
+    is_active: boolean;
     last_checked_at: string | null;
     last_price: number | null;
     last_in_stock: boolean;
@@ -43,7 +45,31 @@ type Alert = {
     last_tweeted_at: string | null;
 };
 
-type Props = { alerts: Alert[]; xConfigured: boolean };
+type Product = {
+    id: number;
+    name: string | null;
+    catalog_item_id: number | null;
+    catalog_name: string | null;
+    image_url: string | null;
+    target_price: number;
+    currency: string;
+    check_interval_minutes: number;
+    is_active: boolean;
+    links: Link[];
+};
+
+type Props = {
+    products: Product[];
+    retailers: RetailerOption[];
+    xConfigured: boolean;
+};
+
+type CatalogHit = {
+    id: number;
+    name: string;
+    set: string | null;
+    image_url: string | null;
+};
 
 const CURRENCIES = ['USD', 'GBP', 'EUR', 'CAD', 'JPY'];
 
@@ -84,31 +110,174 @@ const ago = (iso: string | null): string => {
     return `${Math.round(secs / 86400)}d ago`;
 };
 
-export default function AdminStockAlerts({ alerts, xConfigured }: Props) {
+/** Typeahead that searches the catalog and reports the chosen item up. */
+function CatalogPicker({
+    value,
+    onSelect,
+    onClear,
+}: {
+    value: string | null;
+    onSelect: (item: CatalogHit) => void;
+    onClear: () => void;
+}) {
+    const [q, setQ] = useState('');
+    const [hits, setHits] = useState<CatalogHit[]>([]);
+    const [open, setOpen] = useState(false);
+    const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        if (timer.current) {
+            clearTimeout(timer.current);
+        }
+
+        const query = q.trim();
+
+        timer.current = setTimeout(async () => {
+            if (value || query.length < 2) {
+                setHits([]);
+
+                return;
+            }
+
+            const res = await fetch(
+                `/admin/stock-alerts/catalog-search?q=${encodeURIComponent(query)}`,
+                { headers: { Accept: 'application/json' } },
+            );
+            setHits(res.ok ? await res.json() : []);
+            setOpen(true);
+        }, 250);
+
+        return () => {
+            if (timer.current) {
+                clearTimeout(timer.current);
+            }
+        };
+    }, [q, value]);
+
+    if (value) {
+        return (
+            <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                <span className="truncate">Attached: {value}</span>
+                <button
+                    type="button"
+                    onClick={onClear}
+                    className="text-muted-foreground hover:text-foreground"
+                    aria-label="Detach catalog item"
+                >
+                    <X className="size-4" />
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="relative">
+            <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search the catalog to attach…"
+                onFocus={() => hits.length && setOpen(true)}
+            />
+            {open && hits.length > 0 && (
+                <div className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-md border border-border bg-popover shadow-md">
+                    {hits.map((h) => (
+                        <button
+                            key={h.id}
+                            type="button"
+                            onClick={() => {
+                                onSelect(h);
+                                setQ('');
+                                setOpen(false);
+                            }}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
+                        >
+                            {h.image_url && (
+                                <img
+                                    src={h.image_url}
+                                    alt=""
+                                    className="size-8 shrink-0 rounded object-contain"
+                                />
+                            )}
+                            <span className="min-w-0">
+                                <span className="block truncate">{h.name}</span>
+                                {h.set && (
+                                    <span className="block truncate text-xs text-muted-foreground">
+                                        {h.set}
+                                    </span>
+                                )}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+/** The "add a retailer link" mini-form on each product card. */
+function AddLink({
+    productId,
+    retailers,
+}: {
+    productId: number;
+    retailers: RetailerOption[];
+}) {
     const form = useForm({
-        label: '',
-        asin: '',
-        target_price: '',
-        currency: 'USD',
-        domain: 'com',
-        geo_location: '',
-        check_interval_minutes: 15,
+        retailer: retailers[0]?.value ?? 'amazon',
+        url: '',
     });
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        form.post('/admin/stock-alerts', {
+        form.post(`/admin/stock-alerts/${productId}/links`, {
             preserveScroll: true,
             onSuccess: () => {
-                toast.success('Alert added.');
-                form.reset('label', 'asin', 'target_price');
+                toast.success('Link added.');
+                form.reset('url');
             },
         });
     };
 
-    const checkNow = (a: Alert) => {
+    return (
+        <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
+            <Select
+                value={form.data.retailer}
+                onValueChange={(v) => form.setData('retailer', v)}
+            >
+                <SelectTrigger size="sm" className="w-36">
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    {retailers.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>
+                            {r.label}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+            <Input
+                value={form.data.url}
+                onChange={(e) => form.setData('url', e.target.value)}
+                placeholder="Paste the product URL"
+                className="h-8 min-w-[14rem] flex-1"
+            />
+            <Button
+                type="submit"
+                size="sm"
+                variant="outline"
+                disabled={form.processing}
+            >
+                <Plus className="size-4" />
+                Add link
+            </Button>
+        </form>
+    );
+}
+
+function LinkRow({ link }: { link: Link }) {
+    const check = () =>
         router.post(
-            `/admin/stock-alerts/${a.id}/check`,
+            `/admin/stock-alerts/links/${link.id}/check`,
             {},
             {
                 preserveScroll: true,
@@ -116,24 +285,234 @@ export default function AdminStockAlerts({ alerts, xConfigured }: Props) {
                 onError: () => toast.error('Check failed.'),
             },
         );
-    };
 
-    const toggle = (a: Alert) => {
+    const toggle = () =>
         router.post(
-            `/admin/stock-alerts/${a.id}/toggle`,
+            `/admin/stock-alerts/links/${link.id}/toggle`,
             {},
             { preserveScroll: true },
         );
-    };
 
-    const remove = (a: Alert) => {
-        if (!confirm(`Delete alert for ${a.asin}?`)) {
+    const remove = () => {
+        if (!confirm(`Remove the ${link.retailer_label} link?`)) {
             return;
         }
 
-        router.delete(`/admin/stock-alerts/${a.id}`, {
+        router.delete(`/admin/stock-alerts/links/${link.id}`, {
+            preserveScroll: true,
+            onSuccess: () => toast.success('Removed.'),
+        });
+    };
+
+    return (
+        <div
+            className={cn(
+                'flex flex-col gap-1 rounded-md border border-border p-2 sm:flex-row sm:items-center sm:justify-between',
+                !link.is_active && 'opacity-60',
+            )}
+        >
+            <div className="min-w-0 space-y-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium">
+                        {link.retailer_label}
+                    </span>
+                    {link.last_qualified ? (
+                        <Badge className="bg-emerald-600 text-xs hover:bg-emerald-600">
+                            ≤ target
+                        </Badge>
+                    ) : link.last_in_stock ? (
+                        <Badge variant="secondary" className="text-xs">
+                            in stock
+                        </Badge>
+                    ) : (
+                        <Badge variant="outline" className="text-xs">
+                            out
+                        </Badge>
+                    )}
+                    {link.last_price !== null && (
+                        <span className="text-xs text-muted-foreground">
+                            {money(link.last_price, 'USD')}
+                        </span>
+                    )}
+                    <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                        link
+                        <ExternalLink className="size-3" />
+                    </a>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                    checked {ago(link.last_checked_at)}
+                    {link.last_tweeted_at
+                        ? ` · tweeted ${ago(link.last_tweeted_at)}`
+                        : ''}
+                    {link.last_status ? ` · ${link.last_status}` : ''}
+                </p>
+                {link.last_error && (
+                    <p className="text-xs text-red-600">{link.last_error}</p>
+                )}
+            </div>
+            <div className="flex shrink-0 gap-1">
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={check}
+                    title="Check now (dry)"
+                >
+                    <RefreshCw className="size-4" />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={toggle}>
+                    {link.is_active ? (
+                        <Pause className="size-4" />
+                    ) : (
+                        <Play className="size-4" />
+                    )}
+                </Button>
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-red-600 hover:text-red-600"
+                    onClick={remove}
+                >
+                    <Trash2 className="size-4" />
+                </Button>
+            </div>
+        </div>
+    );
+}
+
+function ProductCard({
+    product,
+    retailers,
+}: {
+    product: Product;
+    retailers: RetailerOption[];
+}) {
+    const toggle = () =>
+        router.post(
+            `/admin/stock-alerts/${product.id}/toggle`,
+            {},
+            { preserveScroll: true },
+        );
+
+    const remove = () => {
+        if (!confirm('Delete this product and all its retailer links?')) {
+            return;
+        }
+
+        router.delete(`/admin/stock-alerts/${product.id}`, {
             preserveScroll: true,
             onSuccess: () => toast.success('Deleted.'),
+        });
+    };
+
+    return (
+        <Card className={cn(!product.is_active && 'opacity-60')}>
+            <CardContent className="space-y-3 pt-6">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 gap-3">
+                        {product.image_url && (
+                            <img
+                                src={product.image_url}
+                                alt=""
+                                className="size-14 shrink-0 rounded-md border border-border bg-muted object-contain"
+                            />
+                        )}
+                        <div className="min-w-0">
+                            <p className="font-medium">
+                                {product.name ||
+                                    product.catalog_name ||
+                                    `Product #${product.id}`}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                target{' '}
+                                {money(product.target_price, product.currency)}{' '}
+                                · every {product.check_interval_minutes}m
+                                {product.catalog_name
+                                    ? ` · 📇 ${product.catalog_name}`
+                                    : ''}
+                                {!product.is_active ? ' · paused' : ''}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                        <Button size="sm" variant="ghost" onClick={toggle}>
+                            {product.is_active ? (
+                                <Pause className="size-4" />
+                            ) : (
+                                <Play className="size-4" />
+                            )}
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-600 hover:text-red-600"
+                            onClick={remove}
+                        >
+                            <Trash2 className="size-4" />
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    {product.links.length === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                            No retailer links yet — add one below.
+                        </p>
+                    )}
+                    {product.links.map((l) => (
+                        <LinkRow key={l.id} link={l} />
+                    ))}
+                </div>
+
+                <AddLink productId={product.id} retailers={retailers} />
+            </CardContent>
+        </Card>
+    );
+}
+
+export default function AdminStockAlerts({
+    products,
+    retailers,
+    xConfigured,
+}: Props) {
+    const form = useForm<{
+        name: string;
+        catalog_item_id: number | null;
+        image_url: string;
+        target_price: string;
+        currency: string;
+        check_interval_minutes: number;
+        retailer: string;
+        url: string;
+    }>({
+        name: '',
+        catalog_item_id: null,
+        image_url: '',
+        target_price: '',
+        currency: 'USD',
+        check_interval_minutes: 15,
+        retailer: retailers[0]?.value ?? 'amazon',
+        url: '',
+    });
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        form.post('/admin/stock-alerts', {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Product added.');
+                form.reset(
+                    'name',
+                    'catalog_item_id',
+                    'image_url',
+                    'target_price',
+                    'url',
+                );
+            },
         });
     };
 
@@ -148,57 +527,68 @@ export default function AdminStockAlerts({ alerts, xConfigured }: Props) {
                                 X posting isn’t fully configured.
                             </p>
                             <p className="mt-1 text-muted-foreground">
-                                Set <code>X_ACCESS_TOKEN</code> and{' '}
-                                <code>X_ACCESS_TOKEN_SECRET</code> (OAuth 1.0a,
-                                Read+Write) to post. Until then, alerts still
-                                track stock but won’t tweet.
+                                Set the OAuth 1.0a access token + secret to
+                                post. Until then, alerts track stock but won’t
+                                tweet.
                             </p>
                         </CardContent>
                     </Card>
                 )}
 
-                {/* Create */}
+                {/* Create product */}
                 <Card>
                     <CardContent className="pt-6">
                         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
                             <Bell className="size-4 text-primary" />
-                            Watch an Amazon product
+                            Track a product
                         </h2>
                         <form onSubmit={submit} className="space-y-3">
                             <div className="grid gap-1.5">
                                 <Label className="text-xs">
-                                    Label (optional)
+                                    Name (or attach a catalog item below)
                                 </Label>
                                 <Input
-                                    value={form.data.label}
+                                    value={form.data.name}
                                     onChange={(e) =>
-                                        form.setData('label', e.target.value)
+                                        form.setData('name', e.target.value)
                                     }
-                                    placeholder="Surging Sparks ETB"
+                                    placeholder="Surging Sparks Elite Trainer Box"
+                                />
+                                {form.errors.name && (
+                                    <p className="text-xs text-red-600">
+                                        {form.errors.name}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="grid gap-1.5">
+                                <Label className="text-xs">
+                                    Attach catalog item (optional)
+                                </Label>
+                                <CatalogPicker
+                                    value={
+                                        form.data.catalog_item_id
+                                            ? form.data.name || 'catalog item'
+                                            : null
+                                    }
+                                    onSelect={(item) => {
+                                        form.setData((d) => ({
+                                            ...d,
+                                            catalog_item_id: item.id,
+                                            name: d.name || item.name,
+                                            image_url:
+                                                d.image_url ||
+                                                item.image_url ||
+                                                '',
+                                        }));
+                                    }}
+                                    onClear={() =>
+                                        form.setData('catalog_item_id', null)
+                                    }
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                <div className="grid gap-1.5">
-                                    <Label className="text-xs">ASIN</Label>
-                                    <Input
-                                        value={form.data.asin}
-                                        onChange={(e) =>
-                                            form.setData(
-                                                'asin',
-                                                e.target.value
-                                                    .toUpperCase()
-                                                    .trim(),
-                                            )
-                                        }
-                                        placeholder="B0GWKHNR4K"
-                                        maxLength={10}
-                                    />
-                                    {form.errors.asin && (
-                                        <p className="text-xs text-red-600">
-                                            {form.errors.asin}
-                                        </p>
-                                    )}
-                                </div>
+
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                 <div className="grid gap-1.5">
                                     <Label className="text-xs">
                                         Target price
@@ -214,7 +604,7 @@ export default function AdminStockAlerts({ alerts, xConfigured }: Props) {
                                                 e.target.value,
                                             )
                                         }
-                                        placeholder="5.99"
+                                        placeholder="49.99"
                                     />
                                     {form.errors.target_price && (
                                         <p className="text-xs text-red-600">
@@ -258,162 +648,73 @@ export default function AdminStockAlerts({ alerts, xConfigured }: Props) {
                                             )
                                         }
                                     />
-                                    {form.errors.check_interval_minutes && (
-                                        <p className="text-xs text-red-600">
-                                            {form.errors.check_interval_minutes}
-                                        </p>
-                                    )}
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="grid gap-1.5">
-                                    <Label className="text-xs">
-                                        Amazon domain
-                                    </Label>
-                                    <Input
-                                        value={form.data.domain}
-                                        onChange={(e) =>
-                                            form.setData(
-                                                'domain',
-                                                e.target.value.trim(),
-                                            )
+
+                            <div className="grid gap-1.5">
+                                <Label className="text-xs">
+                                    First retailer link (optional)
+                                </Label>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Select
+                                        value={form.data.retailer}
+                                        onValueChange={(v) =>
+                                            form.setData('retailer', v)
                                         }
-                                        placeholder="com"
+                                    >
+                                        <SelectTrigger className="w-40">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {retailers.map((r) => (
+                                                <SelectItem
+                                                    key={r.value}
+                                                    value={r.value}
+                                                >
+                                                    {r.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Input
+                                        value={form.data.url}
+                                        onChange={(e) =>
+                                            form.setData('url', e.target.value)
+                                        }
+                                        placeholder="Paste the product URL"
+                                        className="min-w-[14rem] flex-1"
                                     />
                                 </div>
-                                <div className="grid gap-1.5">
-                                    <Label className="text-xs">
-                                        Delivery ZIP (optional)
-                                    </Label>
-                                    <Input
-                                        value={form.data.geo_location}
-                                        onChange={(e) =>
-                                            form.setData(
-                                                'geo_location',
-                                                e.target.value,
-                                            )
-                                        }
-                                        placeholder="e.g. 90210"
-                                    />
-                                </div>
+                                {form.errors.url && (
+                                    <p className="text-xs text-red-600">
+                                        {form.errors.url}
+                                    </p>
+                                )}
                             </div>
+
                             <Button type="submit" disabled={form.processing}>
-                                Add alert
+                                <Check className="size-4" />
+                                Add product
                             </Button>
                         </form>
                     </CardContent>
                 </Card>
 
-                {/* List */}
+                {/* Products */}
                 <div className="space-y-3">
-                    {alerts.length === 0 && (
+                    {products.length === 0 && (
                         <Card>
                             <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                                No alerts yet.
+                                No tracked products yet.
                             </CardContent>
                         </Card>
                     )}
-                    {alerts.map((a) => (
-                        <Card
-                            key={a.id}
-                            className={cn(!a.is_active && 'opacity-60')}
-                        >
-                            <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-start sm:justify-between">
-                                <div className="min-w-0 space-y-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <span className="font-medium">
-                                            {a.label || a.last_title || a.asin}
-                                        </span>
-                                        {a.last_qualified ? (
-                                            <Badge className="bg-emerald-600 text-xs hover:bg-emerald-600">
-                                                In stock ≤ target
-                                            </Badge>
-                                        ) : a.last_in_stock ? (
-                                            <Badge
-                                                variant="secondary"
-                                                className="text-xs"
-                                            >
-                                                In stock (above target)
-                                            </Badge>
-                                        ) : (
-                                            <Badge
-                                                variant="outline"
-                                                className="text-xs"
-                                            >
-                                                Out of stock
-                                            </Badge>
-                                        )}
-                                        {!a.is_active && (
-                                            <Badge
-                                                variant="outline"
-                                                className="text-xs"
-                                            >
-                                                Paused
-                                            </Badge>
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        <a
-                                            href={a.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1 hover:text-foreground"
-                                        >
-                                            {a.asin}
-                                            <ExternalLink className="size-3" />
-                                        </a>{' '}
-                                        · target{' '}
-                                        {money(a.target_price, a.currency)} ·
-                                        last {money(a.last_price, a.currency)} ·
-                                        every {a.check_interval_minutes}m
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Checked {ago(a.last_checked_at)}
-                                        {a.last_status
-                                            ? ` · “${a.last_status}”`
-                                            : ''}
-                                        {a.last_tweeted_at
-                                            ? ` · tweeted ${ago(a.last_tweeted_at)}`
-                                            : ''}
-                                    </p>
-                                    {a.last_error && (
-                                        <p className="text-xs text-red-600">
-                                            {a.last_error}
-                                        </p>
-                                    )}
-                                </div>
-                                <div className="flex shrink-0 flex-wrap gap-2">
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => checkNow(a)}
-                                        title="Check now (dry — won’t tweet)"
-                                    >
-                                        <RefreshCw className="size-4" />
-                                        Check
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => toggle(a)}
-                                    >
-                                        {a.is_active ? (
-                                            <Pause className="size-4" />
-                                        ) : (
-                                            <Play className="size-4" />
-                                        )}
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="text-red-600 hover:text-red-600"
-                                        onClick={() => remove(a)}
-                                    >
-                                        <Trash2 className="size-4" />
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
+                    {products.map((p) => (
+                        <ProductCard
+                            key={p.id}
+                            product={p}
+                            retailers={retailers}
+                        />
                     ))}
                 </div>
             </div>
