@@ -183,7 +183,11 @@ class SearchCatalog
             ->when($filters['product_line'] ?? null, fn (Builder $q, $slug) => $q->whereHas('productLine', fn (Builder $p) => $p->where('slug', $slug)))
             ->when($filters['series'] ?? null, fn (Builder $q, $series) => $q->whereHas('set', fn (Builder $s) => $s->where('series', $series)))
             ->when($filters['set'] ?? null, fn (Builder $q, $slug) => $q->whereHas('set', fn (Builder $s) => $s->where('slug', $slug)))
-            ->when($filters['item_type'] ?? null, fn (Builder $q, $type) => $q->where('item_type', $type))
+            // 'all' (or null) means no item-type constraint; any real type filters.
+            ->when(
+                ($filters['item_type'] ?? null) && $filters['item_type'] !== 'all',
+                fn (Builder $q) => $q->where('item_type', $filters['item_type']),
+            )
             ->when($filters['language'] ?? null, fn (Builder $q, $lang) => $q->where('language', $lang))
             ->when($filters['rarity'] ?? null, fn (Builder $q, $rarity) => $q->where('attributes->rarity', $rarity))
             ->when($filters['variant'] ?? null, fn (Builder $q, $variant) => $q->where('attributes->variant', $variant))
@@ -262,9 +266,9 @@ class SearchCatalog
      * ungraded NM (or SEALED) row, same one the lists display. Used to order by
      * price (median) or 30-day % change (trend_30d).
      *
-     * @return \Illuminate\Database\Eloquent\Builder<MarketValue>
+     * @return Builder<MarketValue>
      */
-    protected function headlineValueSub(string $column): \Illuminate\Database\Eloquent\Builder
+    protected function headlineValueSub(string $column): Builder
     {
         return MarketValue::query()
             ->select($column)

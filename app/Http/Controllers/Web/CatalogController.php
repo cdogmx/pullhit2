@@ -8,6 +8,7 @@ use App\Actions\Catalog\SearchCatalog;
 use App\Actions\Catalog\ShowCatalogItem;
 use App\Actions\Valuation\MaybeRefreshEbay;
 use App\Actions\Valuation\PriceHistory;
+use App\Enums\ItemType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Catalog\SearchCatalogRequest;
 use App\Http\Resources\CatalogItemResource;
@@ -86,6 +87,12 @@ class CatalogController extends Controller
      */
     private function renderBrowse(array $filters, SearchCatalog $search, CatalogFilterOptions $options, ?array $seo = null): Response
     {
+        // Browse/search leads with individual cards. A missing item_type defaults
+        // to singles; the UI's "All types" option sends 'all' to opt back in.
+        if (($filters['item_type'] ?? null) === null) {
+            $filters['item_type'] = ItemType::Single->value;
+        }
+
         $tiles = app(BrowseTiles::class);
 
         // Resolve the drill-down level. A tier collapses when it adds no choice:

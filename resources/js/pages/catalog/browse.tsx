@@ -156,14 +156,23 @@ function buildQuery(filters: CatalogFilters): Record<string, string | number> {
 
 // Refinement chips shown in cards view. The brand→series→set→subset path is the
 // breadcrumb's job, so those navigational keys are intentionally excluded here.
+// item_type is excluded too — it has its own always-visible "Type" select that
+// defaults to Singles, so a permanent "Single" chip would just be noise.
 const ACTIVE_KEYS: (keyof CatalogFilters)[] = [
     'q',
-    'item_type',
     'language',
     'rarity',
     'variant',
     'edition',
 ];
+
+/** Friendlier labels for the catalog's item types. */
+const ITEM_TYPE_LABELS: Record<string, string> = {
+    single: 'Singles',
+    sealed: 'Sealed',
+    lot: 'Lots',
+    other: 'Other',
+};
 
 export default function Browse({
     items,
@@ -796,13 +805,19 @@ function FilterControls({
         key: keyof CatalogFilters;
         label: string;
         opts: { value: string; label: string }[];
+        // Override the "clear" option's value/label (item_type opts back into
+        // every type with an explicit 'all' rather than the null sentinel).
+        allValue?: string;
+        allLabel?: string;
     }[] = [
         {
             key: 'item_type',
             label: 'Type',
+            allValue: 'all',
+            allLabel: 'All types',
             opts: options.item_types.map((v) => ({
                 value: v,
-                label: humanize(v),
+                label: ITEM_TYPE_LABELS[v] ?? humanize(v),
             })),
         },
         {
@@ -848,37 +863,43 @@ function FilterControls({
         <div className="space-y-4">
             {selects
                 .filter((s) => s.opts.length > 0)
-                .map((s) => (
-                    <div key={s.key} className="space-y-1.5">
-                        <label className="text-xs font-medium text-muted-foreground">
-                            {s.label}
-                        </label>
-                        <Select
-                            value={(filters[s.key] as string) || ALL}
-                            onValueChange={(value) =>
-                                onChange({
-                                    [s.key]: value === ALL ? null : value,
-                                })
-                            }
-                        >
-                            <SelectTrigger className="w-full">
-                                <SelectValue
-                                    placeholder={`All ${s.label.toLowerCase()}`}
-                                />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value={ALL}>
-                                    All {s.label.toLowerCase()}
-                                </SelectItem>
-                                {s.opts.map((o) => (
-                                    <SelectItem key={o.value} value={o.value}>
-                                        {o.label}
+                .map((s) => {
+                    const allVal = s.allValue ?? ALL;
+                    const allLabel = s.allLabel ?? `All ${s.label.toLowerCase()}`;
+
+                    return (
+                        <div key={s.key} className="space-y-1.5">
+                            <label className="text-xs font-medium text-muted-foreground">
+                                {s.label}
+                            </label>
+                            <Select
+                                value={(filters[s.key] as string) || allVal}
+                                onValueChange={(value) =>
+                                    onChange({
+                                        [s.key]: value === ALL ? null : value,
+                                    })
+                                }
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder={allLabel} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value={allVal}>
+                                        {allLabel}
                                     </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                ))}
+                                    {s.opts.map((o) => (
+                                        <SelectItem
+                                            key={o.value}
+                                            value={o.value}
+                                        >
+                                            {o.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    );
+                })}
         </div>
     );
 }

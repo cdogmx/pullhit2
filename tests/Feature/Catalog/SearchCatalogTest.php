@@ -40,22 +40,36 @@ beforeEach(function () {
     );
 });
 
-test('the browse page renders cards once a set is chosen', function () {
-    // Smart browse drops to the card list when a set is selected.
+test('the browse page renders cards once a set is chosen, defaulting to singles', function () {
+    // Smart browse drops to the card list when a set is selected, and leads with
+    // individual cards — the 3 singles, not the sealed box (4th item).
     $this->get('/browse?set=chaos-rising-en')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('catalog/browse')
             ->where('mode', 'cards')
-            ->has('items', 4)
-            ->where('pagination.total', 4)
+            ->has('items', 3)
+            ->where('pagination.total', 3)
+            ->where('filters.item_type', 'single')
             ->has('options.rarities')
             ->where('filters.sort', 'number'));
 });
 
+test('the browse page can opt into all types or just sealed', function () {
+    $this->get('/browse?set=chaos-rising-en&item_type=all')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('items', 4));
+
+    $this->get('/browse?set=chaos-rising-en&item_type=sealed')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('items', 1)
+            ->where('filters.item_type', 'sealed'));
+});
+
 test('the browse page exposes pagination for infinite scroll', function () {
-    // 4 seeded items, 2 per page -> 2 pages.
-    $this->get('/browse?set=chaos-rising-en&per_page=2')
+    // 4 seeded items (all types), 2 per page -> 2 pages.
+    $this->get('/browse?set=chaos-rising-en&item_type=all&per_page=2')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->has('items', 2)
@@ -63,7 +77,7 @@ test('the browse page exposes pagination for infinite scroll', function () {
             ->where('pagination.last_page', 2)
             ->where('pagination.has_more', true));
 
-    $this->get('/browse?set=chaos-rising-en&per_page=2&page=2')
+    $this->get('/browse?set=chaos-rising-en&item_type=all&per_page=2&page=2')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->has('items', 2)

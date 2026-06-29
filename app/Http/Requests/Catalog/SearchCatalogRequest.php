@@ -30,7 +30,9 @@ class SearchCatalogRequest extends FormRequest
             'series' => ['nullable', 'string', 'max:64'],
             'set' => ['nullable', 'string', 'max:64'],
             'subset' => ['nullable', 'string', 'max:32'],
-            'item_type' => ['nullable', Rule::in(array_map(fn (ItemType $t) => $t->value, ItemType::cases()))],
+            // 'all' is an explicit "every type" sentinel (the web browse defaults
+            // to singles, so users need a way to opt back into all types).
+            'item_type' => ['nullable', Rule::in([...array_map(fn (ItemType $t) => $t->value, ItemType::cases()), 'all'])],
             'language' => ['nullable', 'string', 'max:16'],
             'rarity' => ['nullable', 'string', 'max:64'],
             'variant' => ['nullable', 'string', 'max:64'],
