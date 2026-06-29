@@ -44,7 +44,7 @@ test('scan confirm requires authentication', function () {
 });
 
 test('scan search returns matching catalog items', function () {
-    $user = User::factory()->create(['email_verified_at' => now()]);
+    $user = User::factory()->create(['email_verified_at' => now(), 'username' => 'scanner1']);
     $item = CatalogItem::factory()->create(['name' => 'Charizard', 'number' => '4/102']);
 
     $this->actingAs($user)->getJson('/scan/search?q=Charizard')
@@ -53,7 +53,7 @@ test('scan search returns matching catalog items', function () {
 });
 
 test('scan search matches by set name', function () {
-    $user = User::factory()->create(['email_verified_at' => now()]);
+    $user = User::factory()->create(['email_verified_at' => now(), 'username' => 'scanner2']);
 
     $vertical = Vertical::factory()->create(['slug' => 'tcg']);
     $line = ProductLine::factory()->for($vertical)->create(['slug' => 'pokemon']);
@@ -67,7 +67,7 @@ test('scan search matches by set name', function () {
 });
 
 test('scan search ignores too-short queries', function () {
-    $user = User::factory()->create(['email_verified_at' => now()]);
+    $user = User::factory()->create(['email_verified_at' => now(), 'username' => 'scanner3']);
 
     $this->actingAs($user)->getJson('/scan/search?q=a')
         ->assertOk()

@@ -1,12 +1,14 @@
 import { Head, Link } from '@inertiajs/react';
 import { Camera, History, ImagePlus, Loader2, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ScanConfirmCard } from '@/components/scan/scan-confirm-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type {
+    CatalogItem,
     GradingCompanyOption,
     ScanDetected,
     ScanResult,
@@ -122,8 +124,44 @@ export default function ScanIndex({
     );
     // The photo the user just scanned (data URL), shown alongside each match.
     const [photo, setPhoto] = useState<string | null>(null);
+    // The catalog item currently selected for each detected card (by index), so
+    // we can total the scan's value and render the scanned-cards scroller.
+    const [chosenCards, setChosenCards] = useState<(CatalogItem | null)[]>([]);
     const fileRef = useRef<HTMLInputElement>(null);
     const libraryRef = useRef<HTMLInputElement>(null);
+
+    const handleChosen = useCallback(
+        (index: number, card: CatalogItem | null) =>
+            setChosenCards((prev) => {
+                if (prev[index] === card) {
+                    return prev;
+                }
+
+                const next = prev.slice();
+                next[index] = card;
+
+                return next;
+            }),
+        [],
+    );
+
+    // The scan's total value (sum of each chosen card's headline median) and how
+    // many of the detected cards have a price.
+    const { total, pricedCount } = useMemo(() => {
+        let total = 0;
+        let pricedCount = 0;
+
+        for (const card of chosenCards) {
+            const median = card?.market_value?.median;
+
+            if (median != null) {
+                total += median;
+                pricedCount += 1;
+            }
+        }
+
+        return { total, pricedCount };
+    }, [chosenCards]);
 
     const steps = STEP_COPY[mode];
 
@@ -145,13 +183,20 @@ export default function ScanIndex({
         setDetected(null);
         setFromStorage(false);
         setPhoto(null);
+        setChosenCards([]);
         storeScan(null);
     };
+
+    const scrollToCard = (i: number) =>
+        document
+            .getElementById(`scan-card-${i}`)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
     const onFile = async (file: File) => {
         setStep(0);
         setBusy(true);
         setDetected(null);
+        setChosenCards([]);
         setFromStorage(false);
 
         try {
@@ -351,13 +396,96 @@ export default function ScanIndex({
                                 clear to start a new scan.
                             </p>
                         )}
+
+                        {/* Scanned-value summary + a horizontal strip of every
+                            detected card; tap a tile to jump to its row. */}
+                        {total > 0 && (
+                            <Card>
+                                <CardContent className="space-y-3 py-4">
+                                    <div className="flex items-baseline justify-between gap-3">
+                                        <span className="text-sm text-muted-foreground">
+                                            Scanned value
+                                        </span>
+                                        <span className="text-xl font-bold tracking-tight tabular-nums">
+                                            {formatMoney(total)}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {pricedCount} of {detected.length}{' '}
+                                        {detected.length === 1 ? 'card' : 'cards'}{' '}
+                                        priced · headline near-mint value
+                                    </p>
+
+                                    {detected.length > 1 && (
+                                        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                                            {detected.map((d, i) => {
+                                                const card = chosenCards[i] ?? null;
+                                                const img =
+                                                    card?.image_url ??
+                                                    d.thumbnail ??
+                                                    photo;
+                                                const median =
+                                                    card?.market_value?.median;
+
+                                                return (
+                                                    <button
+                                                        key={i}
+                                                        type="button"
+                                                        onClick={() =>
+                                                            scrollToCard(i)
+                                                        }
+                                                        className="flex w-24 shrink-0 flex-col items-center gap-1 rounded-md border border-border bg-card p-1.5 text-center transition-colors hover:border-primary"
+                                                        title={
+                                                            card?.display_name ??
+                                                            card?.name ??
+                                                            d.identified.name ??
+                                                            'Unknown card'
+                                                        }
+                                                    >
+                                                        {img ? (
+                                                            <img
+                                                                src={img}
+                                                                alt=""
+                                                                className="h-20 w-auto rounded"
+                                                            />
+                                                        ) : (
+                                                            <div className="flex h-20 w-14 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground">
+                                                                ?
+                                                            </div>
+                                                        )}
+                                                        <span className="w-full truncate text-[10px] font-medium">
+                                                            {card?.display_name ??
+                                                                card?.name ??
+                                                                d.identified
+                                                                    .name ??
+                                                                'Unknown'}
+                                                        </span>
+                                                        <span className="text-[10px] tabular-nums text-muted-foreground">
+                                                            {median != null
+                                                                ? formatMoney(
+                                                                      median,
+                                                                  )
+                                                                : '—'}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+
                         {detected.map((d, i) => (
-                            <ScanConfirmCard
-                                key={i}
-                                detected={d}
-                                scanPhoto={photo}
-                                gradingCompanies={gradingCompanies}
-                            />
+                            <div key={i} id={`scan-card-${i}`} className="scroll-mt-4">
+                                <ScanConfirmCard
+                                    detected={d}
+                                    index={i}
+                                    onChosenChange={handleChosen}
+                                    scanPhoto={photo}
+                                    gradingCompanies={gradingCompanies}
+                                />
+                            </div>
                         ))}
                     </div>
                 )}

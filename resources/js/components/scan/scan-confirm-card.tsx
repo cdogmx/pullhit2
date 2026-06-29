@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import { Check, Search, ThumbsDown, ThumbsUp, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { CardPickTile } from '@/components/scan/card-pick-tile';
 import { CatalogSearchSelect } from '@/components/scan/catalog-search-select';
@@ -15,7 +15,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { languageLabel } from '@/lib/format';
+import { formatMoney, languageLabel } from '@/lib/format';
 import type { CatalogItem, GradingCompanyOption, ScanDetected } from '@/types';
 
 const CONDITIONS = [
@@ -36,11 +36,18 @@ export function ScanConfirmCard({
     detected,
     gradingCompanies,
     scanPhoto = null,
+    index = 0,
+    onChosenChange,
 }: {
     detected: ScanDetected;
     gradingCompanies: GradingCompanyOption[];
     /** The whole scanned photo — shown when there's no per-card crop (single mode). */
     scanPhoto?: string | null;
+    /** This card's position in the scan, reported back with the chosen match. */
+    index?: number;
+    /** Notifies the parent which catalog item is currently selected (for the
+     *  scanned-value total + scroller), or null when nothing matches. */
+    onChosenChange?: (index: number, card: CatalogItem | null) => void;
 }) {
     const id = detected.identified;
     // The per-card crop (bulk) or the whole scanned photo (single) to show.
@@ -67,6 +74,17 @@ export function ScanConfirmCard({
         : candidateIdx >= 0
           ? detected.candidates[candidateIdx]
           : null;
+
+    // Report the currently-selected card up so the page can total the scan's
+    // value and render the scanned-cards scroller. Fires on mount and whenever
+    // the selection changes (candidate pick, manual search, or clear).
+    const chosenCard = chosen?.card ?? null;
+
+    useEffect(() => {
+        onChosenChange?.(index, chosenCard);
+    }, [index, chosenCard, onChosenChange]);
+
+    const value = chosenCard?.market_value ?? null;
 
     /**
      * Teach the recognition cache that this scanned image is the chosen catalog
@@ -218,6 +236,22 @@ export function ScanConfirmCard({
                         </Badge>
                     )}
                 </div>
+
+                {/* The chosen match's headline value, so the user sees what the
+                    card is worth before adding it. */}
+                {chosenCard && (
+                    <div className="flex items-baseline gap-1.5 text-sm">
+                        <span className="font-semibold tabular-nums">
+                            {value ? formatMoney(value.median, value.currency) : 'No price yet'}
+                        </span>
+                        {value && (
+                            <span className="text-xs text-muted-foreground">
+                                {value.label}
+                                {value.is_estimated ? ' · est.' : ''}
+                            </span>
+                        )}
+                    </div>
+                )}
 
                 {/* Detection-quality feedback — teaches the cache + flags AI misses. */}
                 {detected.candidates.length > 0 && (
