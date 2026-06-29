@@ -4,7 +4,7 @@ use App\Actions\Valuation\PriceHistory;
 use App\Models\CatalogItem;
 use App\Models\SaleObservation;
 
-function obs(CatalogItem $item, int $price, string $daysAgo, bool $synthetic = false): void
+function phObs(CatalogItem $item, int $price, string $daysAgo, bool $synthetic = false): void
 {
     SaleObservation::create([
         'catalog_item_id' => $item->id,
@@ -22,9 +22,9 @@ function obs(CatalogItem $item, int $price, string $daysAgo, bool $synthetic = f
 test('it returns weekly-median sold points from real observations', function () {
     $item = CatalogItem::factory()->create();
     // Week A: two sales same day (median 1100); a later week: one sale (1500).
-    obs($item, 1000, '-21 days');
-    obs($item, 1200, '-21 days');
-    obs($item, 1500, '-2 days');
+    phObs($item, 1000, '-21 days');
+    phObs($item, 1200, '-21 days');
+    phObs($item, 1500, '-2 days');
 
     $r = app(PriceHistory::class)($item);
 
@@ -37,9 +37,9 @@ test('it returns weekly-median sold points from real observations', function () 
 
 test('it falls back to the synthetic estimate when real comps are too few', function () {
     $item = CatalogItem::factory()->create();
-    obs($item, 900, '-10 days');                 // 1 real
-    obs($item, 1000, '-12 days', synthetic: true);
-    obs($item, 1100, '-6 days', synthetic: true);
+    phObs($item, 900, '-10 days');                 // 1 real
+    phObs($item, 1000, '-12 days', synthetic: true);
+    phObs($item, 1100, '-6 days', synthetic: true);
 
     $r = app(PriceHistory::class)($item);
 
@@ -49,7 +49,7 @@ test('it falls back to the synthetic estimate when real comps are too few', func
 
 test('a card with under two observations has no series', function () {
     $item = CatalogItem::factory()->create();
-    obs($item, 1000, '-3 days');
+    phObs($item, 1000, '-3 days');
 
     expect(app(PriceHistory::class)($item)['points'])->toBe([]);
 });

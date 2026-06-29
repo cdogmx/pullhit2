@@ -1,6 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
     Download,
+    Globe,
+    Lock,
     Pencil,
     Search,
     StickyNote,
@@ -131,9 +133,30 @@ export default function CollectionIndex({
     gradingCompanies,
 }: Props) {
     const c = summary.currency;
+    const active = collections.find((x) => x.slug === activeCollection);
     const otherCollections = collections.filter(
         (x) => x.slug !== activeCollection,
     );
+
+    const toggleActivePublic = () => {
+        if (!active) {
+            return;
+        }
+
+        router.patch(
+            `/collections/${active.id}`,
+            { is_public: !active.is_public },
+            {
+                preserveScroll: true,
+                onSuccess: () =>
+                    toast.success(
+                        active.is_public
+                            ? 'Collection is now private.'
+                            : 'Collection is now public.',
+                    ),
+            },
+        );
+    };
 
     const [editing, setEditing] = useState<Holding | null>(null);
     const [q, setQ] = useState('');
@@ -229,23 +252,38 @@ export default function CollectionIndex({
                         <h1 className="text-2xl font-bold tracking-tight">
                             Your collection
                         </h1>
-                        {publicUrl ? (
-                            <a
-                                href={publicUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                            >
-                                Public · {publicUrl.replace(/^https?:\/\//, '')}
-                            </a>
-                        ) : (
-                            <Link
-                                href="/settings/profile"
-                                className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                            >
-                                Private · make it public
-                            </Link>
-                        )}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {active?.is_public && publicUrl ? (
+                                <>
+                                    <a
+                                        href={publicUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 underline-offset-4 hover:text-foreground hover:underline"
+                                    >
+                                        <Globe className="size-3" />
+                                        Public · {publicUrl.replace(/^https?:\/\//, '')}
+                                    </a>
+                                    <span aria-hidden>·</span>
+                                    <button
+                                        type="button"
+                                        onClick={toggleActivePublic}
+                                        className="underline-offset-4 hover:text-foreground hover:underline"
+                                    >
+                                        Make private
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={toggleActivePublic}
+                                    className="inline-flex items-center gap-1 underline-offset-4 hover:text-foreground hover:underline"
+                                >
+                                    <Lock className="size-3" />
+                                    Private · make it public
+                                </button>
+                            )}
+                        </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <Button asChild variant="outline" size="sm">

@@ -45,6 +45,30 @@ test('renaming and sharing a collection works', function () {
         ->and($col->is_public)->toBeTrue();
 });
 
+test('toggling the default collection public syncs the user-level flag', function () {
+    $default = $this->user->defaultCollection();
+    expect($this->user->fresh()->is_collection_public)->toBeFalse();
+
+    $this->actingAs($this->user)
+        ->patch("/collections/{$default->id}", ['is_public' => true])
+        ->assertRedirect();
+
+    expect($default->fresh()->is_public)->toBeTrue()
+        ->and($this->user->fresh()->is_collection_public)->toBeTrue();
+});
+
+test('toggling a non-default collection public leaves the user-level flag alone', function () {
+    $this->user->defaultCollection();
+    $col = Collection::factory()->for($this->user)->create(['is_public' => false]);
+
+    $this->actingAs($this->user)
+        ->patch("/collections/{$col->id}", ['is_public' => true])
+        ->assertRedirect();
+
+    expect($col->fresh()->is_public)->toBeTrue()
+        ->and($this->user->fresh()->is_collection_public)->toBeFalse();
+});
+
 test('deleting a collection moves its cards to the default', function () {
     $default = $this->user->defaultCollection();
     $col = Collection::factory()->for($this->user)->create();

@@ -55,6 +55,13 @@ class CollectionsController extends Controller
 
         if (array_key_exists('is_public', $data)) {
             $collection->is_public = $data['is_public'];
+
+            // The default collection's visibility is mirrored by the user-level
+            // flag (it drives the settings page + the /collection/{username}
+            // public page), so keep the two in sync no matter which UI flips it.
+            if ($collection->is_default) {
+                $request->user()->forceFill(['is_collection_public' => $data['is_public']])->save();
+            }
         }
 
         $collection->save();
