@@ -4,21 +4,26 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\RetailerLink;
+use App\Models\TrackedProduct;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Public "deals" feed: products currently in stock at/below their target price
- * across the retailers we watch, plus a short history of recent alerts. Read-only
- * view over App\Models\RetailerLink state (no scraping happens here).
+ * Public "deals" feed. Products in stock at/below their target (MSRP) are deals;
+ * products in stock only above target are shown in a separate "above MSRP" area
+ * so visitors can still see availability. Plus a short history of recent alerts.
+ * Read-only over App\Models\RetailerLink state (no scraping happens here).
  */
 class DealsController extends Controller
 {
     public function __invoke(): Response
     {
+        ['deals' => $deals, 'aboveMsrp' => $aboveMsrp] = $this->inStock();
+
         return Inertia::render('deals', [
-            'deals' => $this->liveDeals(),
+            'deals' => $deals,
+            'aboveMsrp' => $aboveMsrp,
             'recent' => $this->recentAlerts(),
             'seo' => [
                 'title' => 'In-stock deals — CardFoo',
@@ -27,42 +32,72 @@ class DealsController extends Controller
         ]);
     }
 
-    /** Products with at least one retailer currently in stock at/below target. */
-    private function liveDeals(): array
+    /**
+     * Split in-stock products into at/below-target deals and above-MSRP listings.
+     *
+     * @return array{deals: array<int, mixed>, aboveMsrp: array<int, mixed>}
+     */
+    private function inStock(): array
     {
         $links = RetailerLink::query()
             ->where('is_active', true)
-            ->where('last_qualified', true)
+            ->where('last_in_stock', true)
+            ->whereNotNull('last_price')
             ->whereHas('product', fn ($p) => $p->where('is_active', true))
             ->with('product.catalogItem')
             ->get();
 
-        return $links
-            ->groupBy('tracked_product_id')
-            ->map(function (Collection $group) {
-                $product = $group->first()->product;
+        $deals = [];
+        $aboveMsrp = [];
 
-                return [
-                    'name' => $product->headline() ?? 'Product',
-                    'image' => $product->preferredImage(),
-                    'catalog_name' => $product->catalogItem?->name,
-                    'currency' => $product->currency,
-                    'target_price' => $product->target_price / 100,
-                    'last_seen' => $group->max('last_checked_at')?->toIso8601String(),
-                    'offers' => $group
-                        ->sortBy('last_price')
-                        ->map(fn (RetailerLink $l) => [
-                            'retailer' => $l->retailer->label(),
-                            'price' => $l->last_price === null ? null : $l->last_price / 100,
-                            'url' => $l->url,
-                        ])
-                        ->values()
-                        ->all(),
-                ];
-            })
-            ->sortByDesc('last_seen')
+        foreach ($links->groupBy('tracked_product_id') as $group) {
+            $product = $group->first()->product;
+            $atOrBelow = $group->filter(fn (RetailerLink $l) => $l->last_price <= $product->target_price);
+
+            if ($atOrBelow->isNotEmpty()) {
+                $deals[] = $this->presentProduct($product, $atOrBelow);
+            } else {
+                $aboveMsrp[] = $this->presentProduct($product, $group, overMsrp: true);
+            }
+        }
+
+        usort($deals, fn ($a, $b) => ($b['last_seen'] ?? '') <=> ($a['last_seen'] ?? ''));
+        // Closest to MSRP first — most likely to come down to target.
+        usort($aboveMsrp, fn ($a, $b) => $a['offers'][0]['over_pct'] <=> $b['offers'][0]['over_pct']);
+
+        return ['deals' => $deals, 'aboveMsrp' => $aboveMsrp];
+    }
+
+    /**
+     * @param  Collection<int, RetailerLink>  $links
+     * @return array<string, mixed>
+     */
+    private function presentProduct(TrackedProduct $product, Collection $links, bool $overMsrp = false): array
+    {
+        $target = $product->target_price;
+
+        $offers = $links
+            ->sortBy('last_price')
+            ->map(fn (RetailerLink $l) => [
+                'retailer' => $l->retailer->label(),
+                'price' => $l->last_price / 100,
+                'url' => $l->url,
+                // How far over target (MSRP), for the above-MSRP view.
+                'over_pct' => $target > 0 ? (int) round((($l->last_price - $target) / $target) * 100) : 0,
+            ])
             ->values()
             ->all();
+
+        return [
+            'name' => $product->headline() ?? 'Product',
+            'image' => $product->preferredImage(),
+            'catalog_name' => $product->catalogItem?->name,
+            'currency' => $product->currency,
+            'target_price' => $target / 100,
+            'over_msrp' => $overMsrp,
+            'last_seen' => $links->max('last_checked_at')?->toIso8601String(),
+            'offers' => $offers,
+        ];
     }
 
     /** Recent alerts that fired (tweeted) in the last 30 days. */

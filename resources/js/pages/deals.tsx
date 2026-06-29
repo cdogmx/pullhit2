@@ -1,12 +1,14 @@
 import { Head } from '@inertiajs/react';
-import { ExternalLink, PackageOpen, Tag } from 'lucide-react';
+import { ExternalLink, PackageOpen, Tag, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 type Offer = {
     retailer: string;
     price: number | null;
     url: string;
+    over_pct: number;
 };
 
 type Deal = {
@@ -15,6 +17,7 @@ type Deal = {
     catalog_name: string | null;
     currency: string;
     target_price: number;
+    over_msrp: boolean;
     last_seen: string | null;
     offers: Offer[];
 };
@@ -31,6 +34,7 @@ type RecentAlert = {
 
 type Props = {
     deals: Deal[];
+    aboveMsrp: Deal[];
     recent: RecentAlert[];
     seo: { title: string; heading: string };
 };
@@ -72,7 +76,81 @@ const ago = (iso: string | null): string => {
     return `${Math.round(secs / 86400)}d ago`;
 };
 
-export default function Deals({ deals, recent, seo }: Props) {
+function DealCard({ deal }: { deal: Deal }) {
+    return (
+        <Card
+            className={cn(
+                'overflow-hidden',
+                deal.over_msrp && 'border-amber-500/40',
+            )}
+        >
+            <CardContent className="flex gap-4 pt-6">
+                <div className="size-20 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+                    {deal.image ? (
+                        <img
+                            src={deal.image}
+                            alt={deal.name}
+                            loading="lazy"
+                            className="size-full object-contain"
+                        />
+                    ) : (
+                        <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
+                            No image
+                        </div>
+                    )}
+                </div>
+                <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium" title={deal.name}>
+                        {deal.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        {deal.over_msrp ? 'MSRP' : 'target'}{' '}
+                        {money(deal.target_price, deal.currency)}
+                        {deal.last_seen ? ` · seen ${ago(deal.last_seen)}` : ''}
+                    </p>
+                    <div className="mt-2 flex flex-col gap-1.5">
+                        {deal.offers.map((offer, j) => (
+                            <a
+                                key={j}
+                                href={offer.url}
+                                target="_blank"
+                                rel="noopener noreferrer nofollow"
+                                className="flex items-center justify-between gap-2 rounded-md border border-border px-2.5 py-1.5 text-sm transition-colors hover:border-ring hover:bg-accent/40"
+                            >
+                                <span className="inline-flex items-center gap-1.5 font-medium">
+                                    {offer.retailer}
+                                    <ExternalLink className="size-3 text-muted-foreground" />
+                                </span>
+                                <span className="inline-flex items-center gap-2">
+                                    {deal.over_msrp && offer.over_pct > 0 && (
+                                        <Badge
+                                            variant="outline"
+                                            className="border-amber-500/50 text-[10px] text-amber-600 dark:text-amber-400"
+                                        >
+                                            +{offer.over_pct}%
+                                        </Badge>
+                                    )}
+                                    <span
+                                        className={cn(
+                                            'font-semibold',
+                                            deal.over_msrp
+                                                ? 'text-amber-600 dark:text-amber-400'
+                                                : 'text-emerald-600 dark:text-emerald-400',
+                                        )}
+                                    >
+                                        {money(offer.price, deal.currency)}
+                                    </span>
+                                </span>
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+export default function Deals({ deals, aboveMsrp, recent, seo }: Props) {
     return (
         <>
             <Head title={seo.title} />
@@ -84,9 +162,9 @@ export default function Deals({ deals, recent, seo }: Props) {
                         {seo.heading}
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Products we’re watching that are in stock at or below
-                        our target price. Prices and availability change fast —
-                        tap through to the retailer to confirm.
+                        Products we’re watching that are in stock at or below our
+                        target price. Prices and availability change fast — tap
+                        through to the retailer to confirm.
                     </p>
                 </div>
 
@@ -103,65 +181,26 @@ export default function Deals({ deals, recent, seo }: Props) {
                 ) : (
                     <div className="grid gap-4 sm:grid-cols-2">
                         {deals.map((deal, i) => (
-                            <Card key={i} className="overflow-hidden">
-                                <CardContent className="flex gap-4 pt-6">
-                                    <div className="size-20 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
-                                        {deal.image ? (
-                                            <img
-                                                src={deal.image}
-                                                alt={deal.name}
-                                                loading="lazy"
-                                                className="size-full object-contain"
-                                            />
-                                        ) : (
-                                            <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
-                                                No image
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p
-                                            className="truncate font-medium"
-                                            title={deal.name}
-                                        >
-                                            {deal.name}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            target{' '}
-                                            {money(
-                                                deal.target_price,
-                                                deal.currency,
-                                            )}
-                                            {deal.last_seen
-                                                ? ` · seen ${ago(deal.last_seen)}`
-                                                : ''}
-                                        </p>
-                                        <div className="mt-2 flex flex-col gap-1.5">
-                                            {deal.offers.map((offer, j) => (
-                                                <a
-                                                    key={j}
-                                                    href={offer.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer nofollow"
-                                                    className="flex items-center justify-between gap-2 rounded-md border border-border px-2.5 py-1.5 text-sm transition-colors hover:border-ring hover:bg-accent/40"
-                                                >
-                                                    <span className="inline-flex items-center gap-1.5 font-medium">
-                                                        {offer.retailer}
-                                                        <ExternalLink className="size-3 text-muted-foreground" />
-                                                    </span>
-                                                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                                        {money(
-                                                            offer.price,
-                                                            deal.currency,
-                                                        )}
-                                                    </span>
-                                                </a>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <DealCard key={i} deal={deal} />
                         ))}
+                    </div>
+                )}
+
+                {aboveMsrp.length > 0 && (
+                    <div className="mt-10">
+                        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
+                            <TrendingUp className="size-5 text-amber-500" />
+                            In stock — above MSRP
+                        </h2>
+                        <p className="mb-3 text-sm text-muted-foreground">
+                            Available now, but priced over our target. Listed
+                            closest-to-MSRP first.
+                        </p>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            {aboveMsrp.map((deal, i) => (
+                                <DealCard key={i} deal={deal} />
+                            ))}
+                        </div>
                     </div>
                 )}
 
