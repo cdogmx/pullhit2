@@ -3,6 +3,7 @@
 use App\Actions\Valuation\MaybeRefreshEbay;
 use App\Jobs\RefreshEbaySoldComps;
 use App\Models\CatalogItem;
+use App\Models\Set;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Queue;
 
@@ -70,9 +71,15 @@ test('it does nothing when eBay refresh is disabled', function () {
 });
 
 test('viewing a card increments popularity and queues a refresh when due', function () {
-    $item = CatalogItem::factory()->create(['ebay_refreshed_at' => null, 'popularity' => 0]);
+    // A consistent set/product-line so /catalog/{id} can 301 to the canonical
+    // page (which is where the view side effects run); follow that redirect.
+    $set = Set::factory()->create();
+    $item = CatalogItem::factory()->create([
+        'set_id' => $set->id, 'product_line_id' => $set->product_line_id,
+        'ebay_refreshed_at' => null, 'popularity' => 0,
+    ]);
 
-    $this->get("/catalog/{$item->id}")->assertOk();
+    $this->followingRedirects()->get("/catalog/{$item->id}")->assertOk();
 
     expect($item->fresh()->popularity)->toBe(1);
     Queue::assertPushed(RefreshEbaySoldComps::class);
@@ -80,7 +87,9 @@ test('viewing a card increments popularity and queues a refresh when due', funct
 
 test('viewing a card that was refreshed long ago re-reads the date and works', function () {
     // Reproduces the live error: a DB-fetched item with a stored (string) date.
+    $set = Set::factory()->create();
     $item = CatalogItem::factory()->create([
+        'set_id' => $set->id, 'product_line_id' => $set->product_line_id,
         'ebay_refreshed_at' => now()->subDays(30),
         'popularity' => 0,
     ]);
@@ -89,6 +98,6 @@ test('viewing a card that was refreshed long ago re-reads the date and works', f
     $fresh = CatalogItem::find($item->id);
     expect($fresh->ebay_refreshed_at)->toBeInstanceOf(CarbonInterface::class);
 
-    $this->get("/catalog/{$item->id}")->assertOk();
+    $this->followingRedirects()->get("/catalog/{$item->id}")->assertOk();
     Queue::assertPushed(RefreshEbaySoldComps::class); // >12h stale
 });

@@ -27,7 +27,8 @@ beforeEach(function () {
 test('the detail page renders for guests with the item and its printings', function () {
     $item = CatalogItem::where('number', '001/086')->where('attributes->variant', 'normal')->first();
 
-    $this->get("/catalog/{$item->id}")
+    // /catalog/{id} 301s to the canonical /{brand}/{set}/{card} URL; follow it.
+    $this->followingRedirects()->get("/catalog/{$item->id}")
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('catalog/show')
@@ -54,7 +55,7 @@ test('the detail page lists same-rarity cards in the set, excluding this card', 
 
     $weedle = CatalogItem::where('name', 'Weedle')->where('attributes->variant', 'normal')->first();
 
-    $this->get("/catalog/{$weedle->id}")
+    $this->followingRedirects()->get("/catalog/{$weedle->id}")
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('catalog/show')

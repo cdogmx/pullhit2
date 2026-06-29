@@ -26,6 +26,10 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
+            // A username by default so the RequireUsername middleware doesn't gate
+            // factory users to /choose-username. Tests for the username-less flow
+            // override this with ['username' => null] (or create via OAuth).
+            'username' => 'user'.fake()->unique()->numerify('#######'),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),

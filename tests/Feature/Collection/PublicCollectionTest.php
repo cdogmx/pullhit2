@@ -63,7 +63,7 @@ test('the export route still wins over a username handle', function () {
 });
 
 test('a user can set a username and make their collection public', function () {
-    $user = User::factory()->create(['email_verified_at' => now()]);
+    $user = User::factory()->create(['email_verified_at' => now(), 'username' => null]);
 
     $this->actingAs($user)
         ->patch('/settings/collection', ['username' => 'ash-ketchum', 'is_collection_public' => true, 'is_wishlist_public' => false])
@@ -75,7 +75,7 @@ test('a user can set a username and make their collection public', function () {
 });
 
 test('going public requires a username', function () {
-    $user = User::factory()->create(['email_verified_at' => now()]);
+    $user = User::factory()->create(['email_verified_at' => now(), 'username' => null]);
 
     $this->actingAs($user)
         ->patch('/settings/collection', ['username' => '', 'is_collection_public' => true, 'is_wishlist_public' => false])
@@ -104,7 +104,7 @@ test('an existing username cannot be changed', function () {
 
 test('usernames must be unique and not reserved', function () {
     User::factory()->create()->forceFill(['username' => 'taken'])->save();
-    $user = User::factory()->create(['email_verified_at' => now()]);
+    $user = User::factory()->create(['email_verified_at' => now(), 'username' => null]);
 
     $this->actingAs($user)
         ->patch('/settings/collection', ['username' => 'taken', 'is_collection_public' => false, 'is_wishlist_public' => false])

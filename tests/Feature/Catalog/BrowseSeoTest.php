@@ -48,8 +48,17 @@ test('an unknown product line 404s', function () {
     $this->get('/browse/nope')->assertNotFound();
 });
 
-test('the sitemap lists set landing URLs', function () {
+test('the sitemap index references the pages sitemap', function () {
     $this->get('/sitemap.xml')
+        ->assertOk()
+        ->assertHeader('content-type', 'application/xml')
+        ->assertSee('/sitemap-pages.xml');
+});
+
+test('the pages sitemap lists set landing URLs', function () {
+    // Brand & set landings live in the pages sub-sitemap (the index only points
+    // at the sub-sitemaps).
+    $this->get('/sitemap-pages.xml')
         ->assertOk()
         ->assertHeader('content-type', 'application/xml')
         ->assertSee('/browse/pokemon/surging-sparks')
