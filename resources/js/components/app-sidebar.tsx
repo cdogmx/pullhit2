@@ -21,6 +21,7 @@ import {
     ScanLine,
     Search,
     Shield,
+    Tag,
     Sparkles,
     Trophy,
     Users,
@@ -86,6 +87,11 @@ const mainNavItems: NavItem[] = [
         title: 'Browse',
         href: '/browse',
         icon: Search,
+    },
+    {
+        title: 'Deals',
+        href: '/deals',
+        icon: Tag,
     },
     {
         title: 'One Piece',

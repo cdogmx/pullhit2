@@ -11,6 +11,7 @@ use App\Http\Controllers\Web\FeedController;
 use App\Http\Controllers\Web\FollowController;
 use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\NotificationController;
+use App\Http\Controllers\Web\DealsController;
 use App\Http\Controllers\Web\RankingsController;
 use App\Http\Controllers\Web\ScanController;
 use App\Http\Controllers\Web\SearchController;
@@ -64,6 +65,9 @@ Route::get('robots.txt', function () {
 
 // Public community rankings (leaderboard + monthly giveaway entries).
 Route::get('rankings', RankingsController::class)->name('rankings');
+
+// Public in-stock deals feed (products at/below target across retailers).
+Route::get('deals', DealsController::class)->name('deals');
 
 // Public user profile (community face of an account) + follow graph.
 Route::get('u/{username}', [UserProfileController::class, 'show'])->name('profile.show');

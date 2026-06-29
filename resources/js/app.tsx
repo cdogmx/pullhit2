@@ -18,6 +18,7 @@ createInertiaApp({
             case name === 'terms':
             case name === 'privacy':
             case name === 'rankings':
+            case name === 'deals':
             case name === 'profile/show':
             case name === 'profile/follows':
             case name === 'collection/public':

@@ -77,7 +77,8 @@ enum Retailer: string
             self::Amazon => ['#/(?:dp|gp/product|gp/aw/d)/([A-Z0-9]{10})#i'],
             self::Walmart => ['#/ip/(?:[^/?]+/)?(\d{6,})#'],
             self::Target => ['#/A-(\d{4,})#'],
-            self::BestBuy => ['#/(\d{6,})\.p#', '#skuId=(\d{6,})#'],
+            // New format: /product/<slug>/<ID>; legacy: /site/<slug>/<sku>.p
+            self::BestBuy => ['#/product/[^/?]+/([A-Za-z0-9]{6,})#', '#/(\d{6,})\.p#', '#skuId=(\d{6,})#'],
             self::Costco => ['#\.product\.(\d{6,})\.html#'],
             default => [],
         };
