@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { ScanConfirmCard } from '@/components/scan/scan-confirm-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type {
@@ -127,6 +128,9 @@ export default function ScanIndex({
     // The catalog item currently selected for each detected card (by index), so
     // we can total the scan's value and render the scanned-cards scroller.
     const [chosenCards, setChosenCards] = useState<(CatalogItem | null)[]>([]);
+    // A quick "percent of value" calculator (buylist/trade offers) applied to
+    // the scan total — blank means 100%.
+    const [pct, setPct] = useState('');
     const fileRef = useRef<HTMLInputElement>(null);
     const libraryRef = useRef<HTMLInputElement>(null);
 
@@ -162,6 +166,11 @@ export default function ScanIndex({
 
         return { total, pricedCount };
     }, [chosenCards]);
+
+    // Blank → 100%; a bad entry also falls back to 100% so the figure is never NaN.
+    const parsedPct = Number(pct);
+    const pctNum =
+        pct.trim() === '' || !Number.isFinite(parsedPct) ? 100 : parsedPct;
 
     const steps = STEP_COPY[mode];
 
@@ -415,6 +424,40 @@ export default function ScanIndex({
                                         {detected.length === 1 ? 'card' : 'cards'}{' '}
                                         priced · headline near-mint value
                                     </p>
+
+                                    {/* Quick % of value — for buylist / trade
+                                        offers (e.g. "I'll pay 70%"). */}
+                                    <div className="flex items-center gap-2 border-t border-border/60 pt-3">
+                                        <label
+                                            htmlFor="scan-pct"
+                                            className="text-sm text-muted-foreground"
+                                        >
+                                            % of value
+                                        </label>
+                                        <div className="relative">
+                                            <Input
+                                                id="scan-pct"
+                                                type="number"
+                                                min={0}
+                                                max={1000}
+                                                inputMode="decimal"
+                                                value={pct}
+                                                onChange={(e) =>
+                                                    setPct(e.target.value)
+                                                }
+                                                placeholder="100"
+                                                className="h-8 w-20 pr-6 tabular-nums"
+                                            />
+                                            <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-sm text-muted-foreground">
+                                                %
+                                            </span>
+                                        </div>
+                                        <span className="ml-auto text-lg font-bold tracking-tight tabular-nums">
+                                            {formatMoney(
+                                                Math.round((total * pctNum) / 100),
+                                            )}
+                                        </span>
+                                    </div>
 
                                     {detected.length > 1 && (
                                         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
