@@ -85,6 +85,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Collection + portfolio (always free for logged-in users).
     Route::get('collection', [CollectionController::class, 'index'])->name('collection.index');
     Route::get('collection/targets', [CollectionController::class, 'targets'])->name('collection.targets');
+    Route::get('collection/owned/{catalogItem}', [CollectionController::class, 'owned'])->name('collection.owned');
     Route::get('collection/export', [CollectionController::class, 'export'])->name('collection.export');
     Route::get('collection/import', [CollectionController::class, 'importForm'])->name('collection.import');
     Route::post('collection/import/preview', [CollectionController::class, 'importPreview'])->name('collection.import.preview');
@@ -126,6 +127,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('scan/confirm', [ScanController::class, 'confirm'])->name('scan.confirm');
     Route::post('scan/feedback', [ScanController::class, 'feedback'])->name('scan.feedback');
     Route::get('scan/history', [ScanController::class, 'history'])->name('scan.history');
+    Route::delete('scan/history/{scanLog}', [ScanController::class, 'destroyScan'])->name('scan.history.destroy');
     Route::get('scan/search', [ScanController::class, 'search'])->name('scan.search');
 
     // Suggest an edit to a catalog item (queued for admin review).

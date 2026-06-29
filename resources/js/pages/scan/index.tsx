@@ -16,7 +16,12 @@ import type {
     ScanUsage,
 } from '@/types';
 
-type Props = { usage: ScanUsage; gradingCompanies: GradingCompanyOption[] };
+type Props = {
+    usage: ScanUsage;
+    gradingCompanies: GradingCompanyOption[];
+    /** The user's existing collection folders, for the add-to-folder picker. */
+    folders: string[];
+};
 
 const MAX_PX = 1568;
 
@@ -111,6 +116,7 @@ function downscale(file: File): Promise<string> {
 export default function ScanIndex({
     usage: initialUsage,
     gradingCompanies,
+    folders,
 }: Props) {
     const [mode, setMode] = useState<'single' | 'bulk'>('single');
     const [busy, setBusy] = useState(false);
@@ -527,6 +533,7 @@ export default function ScanIndex({
                                     onChosenChange={handleChosen}
                                     scanPhoto={photo}
                                     gradingCompanies={gradingCompanies}
+                                    folders={folders}
                                 />
                             </div>
                         ))}

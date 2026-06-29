@@ -1,5 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
-import { ScanLine } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { ScanLine, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -109,6 +110,17 @@ export default function ScanHistory({ scans, pagination }: Props) {
 }
 
 function ScanCard({ scan }: { scan: Scan }) {
+    const remove = () => {
+        if (!window.confirm('Remove this scan from your history?')) {
+            return;
+        }
+
+        router.delete(`/scan/history/${scan.id}`, {
+            preserveScroll: true,
+            onSuccess: () => toast.success('Scan removed.'),
+        });
+    };
+
     return (
         <Card>
             <CardContent className="flex flex-col gap-4 pt-6 sm:flex-row">
@@ -138,6 +150,15 @@ function ScanCard({ scan }: { scan: Scan }) {
                             </span>
                         </p>
                     )}
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={remove}
+                        className="mt-1.5 h-7 px-2 text-xs text-muted-foreground hover:text-red-600"
+                    >
+                        <Trash2 className="size-3.5" /> Remove
+                    </Button>
                 </div>
 
                 <div className="min-w-0 flex-1 space-y-2">

@@ -81,6 +81,36 @@ test('scan search requires authentication', function () {
     $this->get('/scan/search?q=charizard')->assertRedirect('/login');
 });
 
+test('the scan page exposes the user\'s collection folders', function () {
+    $user = User::factory()->create(['email_verified_at' => now()]);
+    $item = CatalogItem::factory()->create();
+    app(\App\Actions\Collection\AddToCollection::class)($user, $item, [
+        'condition' => 'NM', 'quantity' => 1, 'unit_cost' => 0, 'folder' => 'Slabs',
+    ]);
+
+    $this->actingAs($user)->get('/scan')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('folders', ['Slabs']));
+});
+
+test('a user can remove their own scan from history', function () {
+    $user = User::factory()->create(['email_verified_at' => now()]);
+    $log = ScanLog::factory()->for($user)->create(['image_path' => 'https://example.test/s.jpg']);
+
+    $this->actingAs($user)->delete("/scan/history/{$log->id}")->assertRedirect();
+    $this->assertDatabaseMissing('scan_logs', ['id' => $log->id]);
+});
+
+test('a user cannot remove another user\'s scan', function () {
+    $log = ScanLog::factory()->create(['image_path' => 'https://example.test/s.jpg']);
+
+    $this->actingAs(User::factory()->create(['email_verified_at' => now()]))
+        ->delete("/scan/history/{$log->id}")
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('scan_logs', ['id' => $log->id]);
+});
+
 test('scan history totals each scan by the matched cards current value', function () {
     $user = User::factory()->create(['email_verified_at' => now(), 'username' => 'historian']);
 

@@ -274,6 +274,19 @@ class CollectionController extends Controller
         ]);
     }
 
+    /**
+     * How many copies of a card the signed-in user already owns, summed across
+     * all their collections — lets the scanner flag "already in your collection".
+     */
+    public function owned(Request $request, CatalogItem $catalogItem): JsonResponse
+    {
+        return response()->json([
+            'quantity' => (int) $request->user()->collectionItems()
+                ->where('catalog_item_id', $catalogItem->id)
+                ->sum('quantity'),
+        ]);
+    }
+
     public function update(Request $request, CollectionItem $collectionItem, UpdateCollectionItem $update): RedirectResponse
     {
         $this->authorize('update', $collectionItem);

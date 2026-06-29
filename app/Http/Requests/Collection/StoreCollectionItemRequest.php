@@ -38,6 +38,7 @@ class StoreCollectionItemRequest extends FormRequest
             'source' => ['nullable', 'string', 'max:255'],
             'is_for_sale' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'folder' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

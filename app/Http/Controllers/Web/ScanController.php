@@ -16,6 +16,7 @@ use App\Models\ScanLog;
 use App\Support\Membership\ScanQuota;
 use App\Support\Scanning\FingerprintCache;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
@@ -34,6 +35,10 @@ class ScanController extends Controller
             'usage' => ScanQuota::for($request->user())->snapshot(),
             'gradingCompanies' => GradingCompany::orderBy('name')
                 ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
+            // The user's existing folder names, for the add-to-collection picker.
+            'folders' => $request->user()->collectionItems()
+                ->whereNotNull('folder')->where('folder', '!=', '')
+                ->distinct()->orderBy('folder')->pluck('folder')->all(),
         ]);
     }
 
@@ -121,6 +126,16 @@ class ScanController extends Controller
                 'total' => $paginator->total(),
             ],
         ]);
+    }
+
+    /** Remove a scan from the user's history (owner only). */
+    public function destroyScan(Request $request, ScanLog $scanLog): RedirectResponse
+    {
+        abort_unless($scanLog->user_id === $request->user()->id, 403);
+
+        $scanLog->delete();
+
+        return back()->with('success', 'Scan removed.');
     }
 
     /**

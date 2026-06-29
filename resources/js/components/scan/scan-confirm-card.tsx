@@ -38,6 +38,7 @@ export function ScanConfirmCard({
     scanPhoto = null,
     index = 0,
     onChosenChange,
+    folders = [],
 }: {
     detected: ScanDetected;
     gradingCompanies: GradingCompanyOption[];
@@ -48,6 +49,8 @@ export function ScanConfirmCard({
     /** Notifies the parent which catalog item is currently selected (for the
      *  scanned-value total + scroller), or null when nothing matches. */
     onChosenChange?: (index: number, card: CatalogItem | null) => void;
+    /** The user's existing collection folders, for the add-to-folder picker. */
+    folders?: string[];
 }) {
     const id = detected.identified;
     // The per-card crop (bulk) or the whole scanned photo (single) to show.
@@ -61,8 +64,12 @@ export function ScanConfirmCard({
     const [grade, setGrade] = useState(id.grade != null ? String(id.grade) : '');
     const [quantity, setQuantity] = useState(1);
     const [cost, setCost] = useState('');
+    const [folder, setFolder] = useState('');
     const [busy, setBusy] = useState(false);
     const [added, setAdded] = useState(false);
+    // How many of the chosen card the user already owns (keyed by card id so a
+    // stale fetch for a previously-selected card never shows against another).
+    const [owned, setOwned] = useState<{ id: number; qty: number } | null>(null);
     // A card the user picked via catalog search when the scan got it wrong.
     const [manualCard, setManualCard] = useState<CatalogItem | null>(null);
     const [searchOpen, setSearchOpen] = useState(false);
@@ -84,7 +91,32 @@ export function ScanConfirmCard({
         onChosenChange?.(index, chosenCard);
     }, [index, chosenCard, onChosenChange]);
 
+    // Detect how many of this card the user already owns, so a re-scan flags a
+    // duplicate. Re-fetches whenever the chosen card changes.
+    useEffect(() => {
+        if (!chosenCard) {
+            return;
+        }
+
+        const id = chosenCard.id;
+        let active = true;
+        fetch(`/collection/owned/${id}`, { headers: { Accept: 'application/json' } })
+            .then((r) => r.json())
+            .then((d: { quantity?: number }) => {
+                if (active && typeof d.quantity === 'number') {
+                    setOwned({ id, qty: d.quantity });
+                }
+            })
+            .catch(() => {});
+
+        return () => {
+            active = false;
+        };
+    }, [chosenCard]);
+
     const value = chosenCard?.market_value ?? null;
+    const ownedQty =
+        owned && chosenCard && owned.id === chosenCard.id ? owned.qty : null;
 
     /**
      * Teach the recognition cache that this scanned image is the chosen catalog
@@ -156,10 +188,13 @@ export function ScanConfirmCard({
         }
 
         setBusy(true);
+        const trimmedFolder = folder.trim();
+        const cardId = chosen.card.id;
         const payload = {
-            catalog_item_id: chosen.card.id,
+            catalog_item_id: cardId,
             quantity,
             unit_cost: cost ? Math.round(parseFloat(cost) * 100) : 0,
+            ...(trimmedFolder ? { folder: trimmedFolder } : {}),
             ...(mode === 'graded'
                 ? { grading_company_id: companyId || null, grade: grade ? Number(grade) : null }
                 : { condition }),
@@ -170,6 +205,11 @@ export function ScanConfirmCard({
             onSuccess: () => {
                 setAdded(true);
                 learnFingerprint();
+                // Reflect the new copies in the "already owned" count immediately.
+                setOwned((o) => ({
+                    id: cardId,
+                    qty: (o?.id === cardId ? o.qty : 0) + quantity,
+                }));
                 toast.success(`${chosen.card.display_name ?? chosen.card.name} added to your collection.`);
             },
             onFinish: () => setBusy(false),
@@ -240,7 +280,7 @@ export function ScanConfirmCard({
                 {/* The chosen match's headline value, so the user sees what the
                     card is worth before adding it. */}
                 {chosenCard && (
-                    <div className="flex items-baseline gap-1.5 text-sm">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
                         <span className="font-semibold tabular-nums">
                             {value ? formatMoney(value.median, value.currency) : 'No price yet'}
                         </span>
@@ -249,6 +289,16 @@ export function ScanConfirmCard({
                                 {value.label}
                                 {value.is_estimated ? ' · est.' : ''}
                             </span>
+                        )}
+                        {ownedQty != null && ownedQty > 0 && (
+                            <Badge
+                                variant="secondary"
+                                className="gap-1 text-[10px]"
+                                title="You already have this card in a collection"
+                            >
+                                <Check className="size-3" />
+                                In your collection · ×{ownedQty}
+                            </Badge>
                         )}
                     </div>
                 )}
@@ -446,6 +496,25 @@ export function ScanConfirmCard({
                                             onChange={(e) => setCost(e.target.value)}
                                             placeholder="0.00"
                                         />
+                                    </div>
+                                    <div className="grid gap-1">
+                                        <Label className="text-xs">Folder</Label>
+                                        <Input
+                                            list={`folders-${index}`}
+                                            value={folder}
+                                            onChange={(e) =>
+                                                setFolder(e.target.value)
+                                            }
+                                            placeholder="Optional"
+                                            maxLength={255}
+                                        />
+                                        {folders.length > 0 && (
+                                            <datalist id={`folders-${index}`}>
+                                                {folders.map((f) => (
+                                                    <option key={f} value={f} />
+                                                ))}
+                                            </datalist>
+                                        )}
                                     </div>
                                 </div>
 
