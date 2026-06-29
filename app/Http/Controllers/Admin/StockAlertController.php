@@ -192,6 +192,7 @@ class StockAlertController extends Controller
             'catalog_item_id' => $p->catalog_item_id,
             'catalog_name' => $p->catalogItem?->name,
             'image_url' => $p->preferredImage(),
+            'own_image_url' => $p->image_url,
             'target_price' => $p->target_price / 100,
             'currency' => $p->currency,
             'check_interval_minutes' => $p->check_interval_minutes,

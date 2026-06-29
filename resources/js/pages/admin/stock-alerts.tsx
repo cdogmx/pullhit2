@@ -4,6 +4,7 @@ import {
     Check,
     ExternalLink,
     Pause,
+    Pencil,
     Play,
     Plus,
     RefreshCw,
@@ -12,9 +13,18 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { ImageUploadField } from '@/components/admin/image-upload-field';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -51,6 +61,7 @@ type Product = {
     catalog_item_id: number | null;
     catalog_name: string | null;
     image_url: string | null;
+    own_image_url: string | null;
     target_price: number;
     currency: string;
     check_interval_minutes: number;
@@ -384,6 +395,133 @@ function LinkRow({ link }: { link: Link }) {
     );
 }
 
+/** Edit a product's details + image in a dialog. */
+function EditProduct({ product }: { product: Product }) {
+    const [open, setOpen] = useState(false);
+    const form = useForm({
+        name: product.name ?? '',
+        catalog_item_id: product.catalog_item_id,
+        image_url: product.own_image_url ?? '',
+        target_price: String(product.target_price),
+        currency: product.currency,
+        check_interval_minutes: product.check_interval_minutes,
+    });
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        form.patch(`/admin/stock-alerts/${product.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Saved.');
+                setOpen(false);
+            },
+        });
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button size="sm" variant="ghost" aria-label="Edit product">
+                    <Pencil className="size-4" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Edit product</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={submit} className="space-y-3">
+                    <div className="grid gap-1.5">
+                        <Label className="text-xs">Name</Label>
+                        <Input
+                            value={form.data.name}
+                            onChange={(e) =>
+                                form.setData('name', e.target.value)
+                            }
+                            placeholder="Surging Sparks Elite Trainer Box"
+                        />
+                        {form.errors.name && (
+                            <p className="text-xs text-red-600">
+                                {form.errors.name}
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="grid gap-1.5">
+                        <Label className="text-xs">Image</Label>
+                        <ImageUploadField
+                            value={form.data.image_url}
+                            onChange={(url) => form.setData('image_url', url)}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="grid gap-1.5">
+                            <Label className="text-xs">Target price</Label>
+                            <Input
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                value={form.data.target_price}
+                                onChange={(e) =>
+                                    form.setData('target_price', e.target.value)
+                                }
+                            />
+                        </div>
+                        <div className="grid gap-1.5">
+                            <Label className="text-xs">Currency</Label>
+                            <Select
+                                value={form.data.currency}
+                                onValueChange={(v) =>
+                                    form.setData('currency', v)
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {CURRENCIES.map((c) => (
+                                        <SelectItem key={c} value={c}>
+                                            {c}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid gap-1.5">
+                            <Label className="text-xs">Every (min)</Label>
+                            <Input
+                                type="number"
+                                min="5"
+                                max="1440"
+                                value={form.data.check_interval_minutes}
+                                onChange={(e) =>
+                                    form.setData(
+                                        'check_interval_minutes',
+                                        Number(e.target.value),
+                                    )
+                                }
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={form.processing}>
+                            Save
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 function ProductCard({
     product,
     retailers,
@@ -439,6 +577,7 @@ function ProductCard({
                         </div>
                     </div>
                     <div className="flex shrink-0 gap-1">
+                        <EditProduct product={product} />
                         <Button size="sm" variant="ghost" onClick={toggle}>
                             {product.is_active ? (
                                 <Pause className="size-4" />
@@ -584,6 +723,18 @@ export default function AdminStockAlerts({
                                     }}
                                     onClear={() =>
                                         form.setData('catalog_item_id', null)
+                                    }
+                                />
+                            </div>
+
+                            <div className="grid gap-1.5">
+                                <Label className="text-xs">
+                                    Image (optional)
+                                </Label>
+                                <ImageUploadField
+                                    value={form.data.image_url}
+                                    onChange={(url) =>
+                                        form.setData('image_url', url)
                                     }
                                 />
                             </div>
