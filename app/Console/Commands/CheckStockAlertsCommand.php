@@ -98,7 +98,7 @@ class CheckStockAlertsCommand extends Command
 
         if ($this->option('tweet')) {
             try {
-                $id = app(XClient::class)->tweet($text);
+                $id = app(XClient::class)->tweetWithImage($text, $snapshot['image'] ?? null);
                 $this->info("Posted tweet {$id}");
             } catch (Throwable $e) {
                 $this->error("Tweet failed: {$e->getMessage()}");

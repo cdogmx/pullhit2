@@ -82,7 +82,10 @@ class CheckStockAlerts
 
         if ($qualifies && ! $wasQualified && ! $dryRun && $this->withinCooldown($alert) === false) {
             try {
-                $tweetId = $this->x->tweet($this->composeTweet($alert, $snapshot));
+                $tweetId = $this->x->tweetWithImage(
+                    $this->composeTweet($alert, $snapshot),
+                    $snapshot['image'] ?? null,
+                );
                 $tweeted = true;
             } catch (Throwable $e) {
                 $snapshot['tweet_error'] = $e->getMessage();
@@ -121,16 +124,30 @@ class CheckStockAlerts
      */
     public function composeTweet(StockAlert $alert, array $snapshot): string
     {
-        $title = $snapshot['title'] ?? $alert->label ?? 'This item';
+        // Prefer the admin's label as the headline (concise + on-brand); fall
+        // back to the raw Amazon title, which is often long and keyword-stuffed.
+        $title = $alert->label ?: ($snapshot['title'] ?? 'This item');
         $price = $this->money($snapshot['price'], $alert->currency);
-        $target = $this->money($alert->target_price, $alert->currency);
         $url = $alert->productUrl();
+        $store = $this->store($alert->domain);
 
         // Keep the title short so the whole thing comfortably fits 280 chars
         // (an Amazon link counts as 23 via t.co).
         $title = mb_strlen($title) > 120 ? mb_substr($title, 0, 117).'…' : $title;
 
-        return "🚨 In stock! {$title} — {$price} (target {$target})\n{$url}";
+        return "🚨 {$title} in stock at {$store} for {$price}\n{$url}";
+    }
+
+    /** Human store name for the Amazon marketplace (by domain). */
+    private function store(string $domain): string
+    {
+        return match ($domain) {
+            'co.uk' => 'Amazon UK',
+            'ca' => 'Amazon Canada',
+            'de' => 'Amazon Germany',
+            'co.jp' => 'Amazon Japan',
+            default => 'Amazon',
+        };
     }
 
     private function money(?int $cents, string $currency): string

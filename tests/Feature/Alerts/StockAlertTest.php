@@ -127,7 +127,7 @@ it('records an error without tweeting when the fetch fails', function () {
         ->and($a->last_checked_at)->not->toBeNull();
 });
 
-it('composes a tweet with title, price, target and url', function () {
+it('composes a tweet: "<title> in stock at Amazon for <price>" + url', function () {
     $a = alert(['target_price' => 599, 'domain' => 'com']);
     $text = app(CheckStockAlerts::class)->composeTweet($a, [
         'title' => 'Surging Sparks ETB',
@@ -137,8 +137,37 @@ it('composes a tweet with title, price, target and url', function () {
         'in_stock' => true,
     ]);
 
-    expect($text)->toContain('Surging Sparks ETB')
-        ->toContain('$5.49')
-        ->toContain('$5.99')
+    expect($text)->toContain('Surging Sparks ETB in stock at Amazon for $5.49')
         ->toContain('amazon.com/dp/B0GWKHNR4K');
+});
+
+it('prefers the alert label over the long Amazon title as the headline', function () {
+    $a = alert(['label' => 'Wilds Unknown booster', 'target_price' => 599]);
+    $text = app(CheckStockAlerts::class)->composeTweet($a, [
+        'title' => 'Ravensburger Disney Lorcana TCG: Wilds Unknown Single Booster Pack - 12 Cards - Packaging May Vary',
+        'price' => 599,
+        'currency' => 'USD',
+    ]);
+
+    expect($text)->toContain('Wilds Unknown booster in stock at Amazon for $5.99')
+        ->not->toContain('Ravensburger');
+});
+
+it('uploads the product image and attaches it to the tweet', function () {
+    Http::fake([
+        'realtime.oxylabs.io/*' => Http::response(['results' => [['content' => [
+            'title' => 'Cheap Box', 'price' => 5.0, 'currency' => 'USD',
+            'stock' => 'In Stock', 'images' => ['https://img.example/box.jpg'],
+        ]]]], 200),
+        'img.example/*' => Http::response('FAKE-JPEG-BYTES', 200),
+        'upload.twitter.com/*' => Http::response(['media_id_string' => '42'], 200),
+        'api.twitter.com/*' => Http::response(['data' => ['id' => '999']], 200),
+    ]);
+
+    $result = app(CheckStockAlerts::class)->evaluate(alert());
+
+    expect($result['tweeted'])->toBeTrue();
+    // The tweet body must reference the uploaded media id.
+    Http::assertSent(fn ($req) => str_contains($req->url(), 'api.twitter.com/2/tweets')
+        && in_array('42', data_get($req->data(), 'media.media_ids', []), true));
 });

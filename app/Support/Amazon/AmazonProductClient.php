@@ -15,9 +15,9 @@ use RuntimeException;
 class AmazonProductClient
 {
     /**
-     * @return array{title: ?string, price: ?int, currency: ?string, stock: ?string, in_stock: bool, raw: array<string, mixed>}
+     * @return array{title: ?string, price: ?int, currency: ?string, stock: ?string, image: ?string, in_stock: bool, raw: array<string, mixed>}
      */
-    public function fetch(string $asin, string $domain = 'com', ?string $geo = 'United States'): array
+    public function fetch(string $asin, string $domain = 'com', ?string $geo = null): array
     {
         $config = config('services.oxylabs');
 
@@ -56,7 +56,7 @@ class AmazonProductClient
 
     /**
      * @param  array<string, mixed>  $content
-     * @return array{title: ?string, price: ?int, currency: ?string, stock: ?string, in_stock: bool, raw: array<string, mixed>}
+     * @return array{title: ?string, price: ?int, currency: ?string, stock: ?string, image: ?string, in_stock: bool, raw: array<string, mixed>}
      */
     public function normalize(array $content): array
     {
@@ -66,13 +66,30 @@ class AmazonProductClient
         $price = $this->firstFloat($content, ['price', 'price_buybox', 'price_initial']);
 
         return [
-            'title' => $this->firstString($content, ['title']),
+            'title' => $this->firstString($content, ['title', 'product_name']),
             'price' => $price === null ? null : (int) round($price * 100),
             'currency' => $this->firstString($content, ['currency']),
             'stock' => $stock,
+            'image' => $this->firstImage($content),
             'in_stock' => $this->isInStock($stock, $price),
             'raw' => $content,
         ];
+    }
+
+    /** First product image URL (the main hero shot). @param array<string, mixed> $content */
+    private function firstImage(array $content): ?string
+    {
+        $images = $content['images'] ?? null;
+
+        if (is_array($images)) {
+            foreach ($images as $img) {
+                if (is_string($img) && str_starts_with($img, 'http')) {
+                    return $img;
+                }
+            }
+        }
+
+        return $this->firstString($content, ['main_image', 'image']);
     }
 
     /**

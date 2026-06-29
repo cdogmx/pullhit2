@@ -3,6 +3,7 @@
 namespace App\Support\Social;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -15,6 +16,8 @@ class XClient
 {
     private const ENDPOINT = 'https://api.twitter.com/2/tweets';
 
+    private const MEDIA_ENDPOINT = 'https://upload.twitter.com/1.1/media/upload.json';
+
     public function configured(): bool
     {
         $c = config('services.x');
@@ -26,11 +29,13 @@ class XClient
     }
 
     /**
-     * Post a tweet, returning its id.
+     * Post a tweet (optionally with already-uploaded media), returning its id.
+     *
+     * @param  array<int, string>  $mediaIds
      *
      * @throws RuntimeException when credentials are missing or the API rejects it
      */
-    public function tweet(string $text): string
+    public function tweet(string $text, array $mediaIds = []): string
     {
         if (! $this->configured()) {
             throw new RuntimeException(
@@ -38,18 +43,72 @@ class XClient
             );
         }
 
-        $header = $this->authorizationHeader('POST', self::ENDPOINT);
+        $body = ['text' => $text];
 
-        $response = Http::withHeaders(['Authorization' => $header])
+        if ($mediaIds !== []) {
+            $body['media'] = ['media_ids' => array_values($mediaIds)];
+        }
+
+        $response = Http::withHeaders(['Authorization' => $this->authorizationHeader('POST', self::ENDPOINT)])
             ->asJson()
             ->timeout(30)
-            ->post(self::ENDPOINT, ['text' => $text]);
+            ->post(self::ENDPOINT, $body);
 
         if (! $response->successful()) {
             throw new RuntimeException("X API rejected the tweet: HTTP {$response->status()} {$response->body()}");
         }
 
         return (string) ($response->json('data.id') ?? '');
+    }
+
+    /**
+     * Post a tweet with a product image. The image is best-effort: if the
+     * download or media upload fails, we still post the text so the alert
+     * isn't lost. Returns the tweet id.
+     */
+    public function tweetWithImage(string $text, ?string $imageUrl): string
+    {
+        $mediaIds = [];
+
+        if ($imageUrl) {
+            try {
+                $id = $this->uploadMedia($imageUrl);
+                if ($id) {
+                    $mediaIds[] = $id;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('X media upload failed; posting without image', [
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $this->tweet($text, $mediaIds);
+    }
+
+    /**
+     * Download an image and upload it to X, returning its media_id (string form).
+     * Uses the v1.1 simple upload (multipart, so the body isn't part of the
+     * OAuth signature). Returns null if the image couldn't be fetched.
+     */
+    public function uploadMedia(string $imageUrl): ?string
+    {
+        $image = Http::timeout(30)->get($imageUrl);
+
+        if (! $image->successful() || $image->body() === '') {
+            return null;
+        }
+
+        $response = Http::withHeaders(['Authorization' => $this->authorizationHeader('POST', self::MEDIA_ENDPOINT)])
+            ->attach('media', $image->body(), 'product.jpg')
+            ->timeout(60)
+            ->post(self::MEDIA_ENDPOINT);
+
+        if (! $response->successful()) {
+            throw new RuntimeException("X media upload failed: HTTP {$response->status()} {$response->body()}");
+        }
+
+        return ((string) ($response->json('media_id_string') ?? '')) ?: null;
     }
 
     /**
