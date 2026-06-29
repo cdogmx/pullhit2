@@ -10,12 +10,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Scanning\ScanConfirmRequest;
 use App\Http\Requests\Scanning\ScanRequest;
 use App\Http\Resources\CatalogItemResource;
+use App\Models\CatalogItem;
 use App\Models\GradingCompany;
 use App\Models\ScanLog;
 use App\Support\Membership\ScanQuota;
 use App\Support\Scanning\FingerprintCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -97,8 +99,22 @@ class ScanController extends Controller
             ->latest()
             ->paginate(20);
 
+        // The snapshot stored only the matched card's id, so look up each card's
+        // CURRENT headline value — the history reflects today's prices, not the
+        // value at scan time. One batched query for the whole page.
+        $matchIds = collect($paginator->items())
+            ->flatMap(fn (ScanLog $log) => collect($log->results ?? [])->pluck('match.id'))
+            ->filter()
+            ->unique()
+            ->all();
+
+        $values = CatalogItem::with('defaultMarketValue')
+            ->whereIn('id', $matchIds)
+            ->get()
+            ->mapWithKeys(fn (CatalogItem $item) => [$item->id => $item->defaultMarketValue?->median]);
+
         return Inertia::render('scan/history', [
-            'scans' => collect($paginator->items())->map(fn ($log) => $this->scanRow($log)),
+            'scans' => collect($paginator->items())->map(fn (ScanLog $log) => $this->scanRow($log, $values)),
             'pagination' => [
                 'page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
@@ -107,9 +123,19 @@ class ScanController extends Controller
         ]);
     }
 
-    /** @return array<string, mixed> */
-    private function scanRow(ScanLog $log): array
+    /**
+     * @param  Collection<int, int|null>  $values  matched id → current median (cents)
+     * @return array<string, mixed>
+     */
+    private function scanRow(ScanLog $log, Collection $values): array
     {
+        $results = collect($log->results ?? [])->map(function (array $r) use ($values) {
+            $id = $r['match']['id'] ?? null;
+            $r['value'] = $id ? $values->get($id) : null;
+
+            return $r;
+        });
+
         return [
             'id' => $log->id,
             'mode' => $log->mode,
@@ -117,7 +143,9 @@ class ScanController extends Controller
             'card_count' => (int) $log->cards,
             'ai_reads' => (int) $log->ai_reads,
             'cache_hits' => (int) $log->cache_hits,
-            'results' => $log->results ?? [],
+            'results' => $results->all(),
+            'total_value' => (int) $results->sum(fn (array $r) => $r['value'] ?? 0),
+            'priced_count' => $results->filter(fn (array $r) => ($r['value'] ?? null) !== null)->count(),
             'created_at' => $log->created_at?->toIso8601String(),
         ];
     }

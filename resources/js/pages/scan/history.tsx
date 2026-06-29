@@ -3,13 +3,15 @@ import { ScanLine } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { cardHref, relativeTime } from '@/lib/format';
+import { cardHref, formatMoney, relativeTime } from '@/lib/format';
 import type { AdminPagination } from '@/types';
 
 type ScanResult = {
     name: string | null;
     number: string | null;
     source: 'cache' | 'vision';
+    /** The matched card's CURRENT headline value (cents), or null when unpriced. */
+    value: number | null;
     match: {
         id: number | null;
         name: string | null;
@@ -28,6 +30,9 @@ type Scan = {
     ai_reads: number;
     cache_hits: number;
     results: ScanResult[];
+    /** Sum of every matched card's current value (cents) + how many are priced. */
+    total_value: number;
+    priced_count: number;
     created_at: string | null;
 };
 
@@ -122,6 +127,17 @@ function ScanCard({ scan }: { scan: Scan }) {
                         {scan.card_count === 1 ? '' : 's'} ·{' '}
                         {relativeTime(scan.created_at)}
                     </p>
+                    {scan.total_value > 0 && (
+                        <p className="mt-1 text-sm">
+                            <span className="font-semibold tabular-nums">
+                                {formatMoney(scan.total_value)}
+                            </span>{' '}
+                            <span className="text-xs text-muted-foreground">
+                                value · {scan.priced_count}/{scan.card_count}{' '}
+                                priced
+                            </span>
+                        </p>
+                    )}
                 </div>
 
                 <div className="min-w-0 flex-1 space-y-2">
@@ -157,12 +173,19 @@ function ResultRow({ result }: { result: ScanResult }) {
                     {m?.set ? ` · ${m.set}` : ''}
                 </p>
             </div>
-            <Badge
-                variant={result.source === 'cache' ? 'secondary' : 'outline'}
-                className="ml-auto shrink-0 text-[10px]"
-            >
-                {result.source === 'cache' ? 'Cache' : 'AI'}
-            </Badge>
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+                {m && (
+                    <span className="text-sm font-medium tabular-nums">
+                        {result.value != null ? formatMoney(result.value) : '—'}
+                    </span>
+                )}
+                <Badge
+                    variant={result.source === 'cache' ? 'secondary' : 'outline'}
+                    className="text-[10px]"
+                >
+                    {result.source === 'cache' ? 'Cache' : 'AI'}
+                </Badge>
+            </div>
         </div>
     );
 

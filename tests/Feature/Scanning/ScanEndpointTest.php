@@ -1,13 +1,16 @@
 <?php
 
 use App\Models\CatalogItem;
+use App\Models\MarketValue;
 use App\Models\ProductLine;
 use App\Models\ScanFingerprint;
+use App\Models\ScanLog;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Vertical;
 use App\Support\Membership\ScanQuota;
 use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('the scan endpoint requires authentication', function () {
     $this->post('/scan', ['image' => tinyJpeg(), 'media_type' => 'image/jpeg', 'mode' => 'single'])
@@ -76,6 +79,54 @@ test('scan search ignores too-short queries', function () {
 
 test('scan search requires authentication', function () {
     $this->get('/scan/search?q=charizard')->assertRedirect('/login');
+});
+
+test('scan history totals each scan by the matched cards current value', function () {
+    $user = User::factory()->create(['email_verified_at' => now(), 'username' => 'historian']);
+
+    $a = CatalogItem::factory()->create(['name' => 'Pikachu', 'number' => '58']);
+    $b = CatalogItem::factory()->create(['name' => 'Raichu', 'number' => '59']);
+    MarketValue::factory()->for($a)->create(['state_key' => 'NM', 'grading_company_id' => null, 'median' => 1500]);
+    MarketValue::factory()->for($b)->create(['state_key' => 'NM', 'grading_company_id' => null, 'median' => 800]);
+
+    ScanLog::factory()->for($user)->create([
+        'mode' => 'bulk',
+        'image_path' => 'https://example.test/scan.jpg',
+        'cards' => 2,
+        'results' => [
+            ['name' => 'Pikachu', 'number' => '58', 'source' => 'vision', 'match' => ['id' => $a->id, 'name' => 'Pikachu', 'number' => '58', 'set' => null, 'image_url' => null, 'url' => null]],
+            ['name' => 'Raichu', 'number' => '59', 'source' => 'cache', 'match' => ['id' => $b->id, 'name' => 'Raichu', 'number' => '59', 'set' => null, 'image_url' => null, 'url' => null]],
+        ],
+    ]);
+
+    $this->actingAs($user)->get('/scan/history')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('scan/history')
+            ->where('scans.0.total_value', 2300)
+            ->where('scans.0.priced_count', 2)
+            ->where('scans.0.results.0.value', 1500)
+            ->where('scans.0.results.1.value', 800));
+});
+
+test('scan history shows null value for an unpriced matched card', function () {
+    $user = User::factory()->create(['email_verified_at' => now(), 'username' => 'historian2']);
+    $item = CatalogItem::factory()->create(['name' => 'Mew', 'number' => '151']); // no market value
+
+    ScanLog::factory()->for($user)->create([
+        'image_path' => 'https://example.test/scan.jpg',
+        'cards' => 1,
+        'results' => [
+            ['name' => 'Mew', 'number' => '151', 'source' => 'vision', 'match' => ['id' => $item->id, 'name' => 'Mew', 'number' => '151', 'set' => null, 'image_url' => null, 'url' => null]],
+        ],
+    ]);
+
+    $this->actingAs($user)->get('/scan/history')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('scans.0.total_value', 0)
+            ->where('scans.0.priced_count', 0)
+            ->where('scans.0.results.0.value', null));
 });
 
 test('a free user past the monthly cap is blocked with 429', function () {
