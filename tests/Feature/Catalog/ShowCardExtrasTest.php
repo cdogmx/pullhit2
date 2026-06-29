@@ -4,14 +4,26 @@ use App\Models\CatalogItem;
 use App\Models\CollectionItem;
 use App\Models\MarketValue;
 use App\Models\SaleObservation;
+use App\Models\Set;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 
+/** A catalog item whose product line matches its set, so the canonical URL resolves. */
+function routableCard(): CatalogItem
+{
+    $set = Set::factory()->create();
+
+    return CatalogItem::factory()->create([
+        'set_id' => $set->id,
+        'product_line_id' => $set->product_line_id,
+    ]);
+}
+
 beforeEach(fn () => Queue::fake());
 
 test('the card page exposes price history and null ownership for guests', function () {
-    $item = CatalogItem::factory()->create();
+    $item = routableCard();
     // Real sales across two weeks → a two-point weekly-median series.
     SaleObservation::factory()->for($item)->count(2)->create([
         'grading_company_id' => null, 'is_outlier' => false, 'is_synthetic' => false, 'observed_at' => now()->subDays(21),
@@ -20,7 +32,8 @@ test('the card page exposes price history and null ownership for guests', functi
         'grading_company_id' => null, 'is_outlier' => false, 'is_synthetic' => false, 'observed_at' => now()->subDays(3),
     ]);
 
-    $this->get("/catalog/{$item->id}")
+    // The bare /catalog/{id} route 301s to the canonical path; follow it.
+    $this->followingRedirects()->get("/catalog/{$item->id}")
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('catalog/show')
@@ -30,14 +43,14 @@ test('the card page exposes price history and null ownership for guests', functi
 });
 
 test('an owner sees their holding in the ownership prop', function () {
-    $user = User::factory()->create(['email_verified_at' => now()]);
-    $item = CatalogItem::factory()->create();
+    $user = User::factory()->create(['email_verified_at' => now(), 'username' => 'owner']);
+    $item = routableCard();
     MarketValue::factory()->for($item)->create(['state_key' => 'NM', 'median' => 1000]);
     CollectionItem::factory()->for($user)->for($item)->create([
         'condition' => 'NM', 'grading_company_id' => null, 'grade' => null, 'quantity' => 2,
     ]);
 
-    $this->actingAs($user)->get("/catalog/{$item->id}")
+    $this->actingAs($user)->followingRedirects()->get("/catalog/{$item->id}")
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->has('ownership', 1)

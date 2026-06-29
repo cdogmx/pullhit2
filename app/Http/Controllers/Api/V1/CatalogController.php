@@ -7,6 +7,7 @@ use App\Actions\Catalog\GetCardListings;
 use App\Actions\Catalog\GetPricedStateBreakdown;
 use App\Actions\Catalog\SearchCatalog;
 use App\Actions\Catalog\ShowCatalogItem;
+use App\Actions\Valuation\PriceHistory;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Catalog\SearchCatalogRequest;
 use App\Http\Resources\CatalogItemResource;
@@ -89,5 +90,16 @@ class CatalogController extends Controller
             'observations' => SaleObservationResource::collection($result['observations']),
             'sources' => $result['sources'],
         ]);
+    }
+
+    /**
+     * Weekly-median price-history series for one priced state — lets the card
+     * page's chart switch between conditions/grades without a page reload.
+     */
+    public function priceHistory(Request $request, CatalogItem $catalogItem, PriceHistory $history): JsonResponse
+    {
+        $stateKey = trim((string) $request->query('state_key', '')) ?: null;
+
+        return response()->json($history($catalogItem, 365, $stateKey));
     }
 }

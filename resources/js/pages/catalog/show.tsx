@@ -509,7 +509,15 @@ export default function Show({
                                     </p>
                                 )}
 
-                                <PriceHistoryChart history={priceHistory} />
+                                <PriceHistoryChart
+                                    history={priceHistory}
+                                    itemId={item.id}
+                                    states={values.map((v) => ({
+                                        state_key: v.state_key,
+                                        label: v.label,
+                                    }))}
+                                    defaultStateKey={headline.state_key}
+                                />
 
                                 {/* Primary actions — prominent, side by side */}
                                 <div className="mt-4 flex flex-col gap-2 sm:flex-row">

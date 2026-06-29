@@ -33,6 +33,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::get('catalog/{catalogItem}/values', [CatalogController::class, 'values'])->name('catalog.values');
     Route::get('catalog/{catalogItem}/listings', [CatalogController::class, 'listings'])->name('catalog.listings');
     Route::get('catalog/{catalogItem}/observations', [CatalogController::class, 'observations'])->name('catalog.observations');
+    Route::get('catalog/{catalogItem}/price-history', [CatalogController::class, 'priceHistory'])->name('catalog.price-history');
     Route::get('catalog/{catalogItem}', [CatalogController::class, 'show'])->name('catalog.show');
 
     // Token-protected probe — confirms Sanctum bearer auth.

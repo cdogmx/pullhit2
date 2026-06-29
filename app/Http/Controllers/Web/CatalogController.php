@@ -249,6 +249,13 @@ class CatalogController extends Controller
 
         $model = $show($catalogItem); // has marketValues + relations loaded
 
+        // The headline state the page leads with (NM/SEALED first, else the first
+        // priced state) — render its history so the chart's initial series matches
+        // its default selector option, even on graded-only cards.
+        $headlineState = $model->marketValues
+            ->first(fn ($v) => in_array($v->state_key, ['NM', 'SEALED'], true))
+            ?? $model->marketValues->first();
+
         return Inertia::render('catalog/show', [
             // Server-rendered share + SEO meta (read by the Blade root for OG /
             // Twitter / JSON-LD before any JS runs).
@@ -258,7 +265,7 @@ class CatalogController extends Controller
             'item' => new CatalogItemResource($model),
             'refreshing' => $refreshing,
             'refreshedAt' => $catalogItem->ebay_refreshed_at?->toIso8601String(),
-            'priceHistory' => $history($catalogItem),
+            'priceHistory' => $history($catalogItem, 365, $headlineState?->state_key),
             // The single most recent REAL sold comp (raw state) — the headline
             // trust signal ("last sold $X, Yd ago"), null when none.
             'lastSale' => $this->lastSale($catalogItem),
