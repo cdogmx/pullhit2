@@ -37,3 +37,8 @@ Schedule::command('valuation:sweep-sealed')->hourly()->withoutOverlapping();
 
 // Weekly refresh of set social-share (OG) collage images (top cards + prices).
 Schedule::command('catalog:set-share-images')->weeklyOn(1, '04:00')->withoutOverlapping();
+
+// Amazon stock alerts: tweet when a watched ASIN is in stock at/below target.
+// Ticks every 5 min; each alert self-throttles to its own check_interval_minutes,
+// so this stays under the shared daily Oxylabs cap. Needs the Cloud scheduler.
+Schedule::command('stock:check-alerts')->everyFiveMinutes()->withoutOverlapping();

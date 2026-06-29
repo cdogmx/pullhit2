@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ImageController;
 use App\Http\Controllers\Admin\ReconcileController;
 use App\Http\Controllers\Admin\ScanFeedbackController;
 use App\Http\Controllers\Admin\SetController;
+use App\Http\Controllers\Admin\StockAlertController;
 use App\Http\Controllers\Admin\SuggestionController;
 use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\UserController;
@@ -92,6 +93,14 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('ebay-sweep/applied/{saleObservation}/reassign', [EbaySweepController::class, 'reassign'])->name('ebay-sweep.reassign');
     Route::post('ebay-sweep/misses/{ebaySweepMiss}/assign', [EbaySweepController::class, 'assign'])->name('ebay-sweep.assign');
     Route::post('ebay-sweep/misses/{ebaySweepMiss}/reject', [EbaySweepController::class, 'rejectMiss'])->name('ebay-sweep.reject-miss');
+
+    // Stock alerts: watch Amazon ASINs and tweet when in stock at/below target.
+    Route::get('stock-alerts', [StockAlertController::class, 'index'])->name('stock-alerts.index');
+    Route::post('stock-alerts', [StockAlertController::class, 'store'])->name('stock-alerts.store');
+    Route::patch('stock-alerts/{stockAlert}', [StockAlertController::class, 'update'])->name('stock-alerts.update');
+    Route::post('stock-alerts/{stockAlert}/toggle', [StockAlertController::class, 'toggle'])->name('stock-alerts.toggle');
+    Route::post('stock-alerts/{stockAlert}/check', [StockAlertController::class, 'check'])->name('stock-alerts.check');
+    Route::delete('stock-alerts/{stockAlert}', [StockAlertController::class, 'destroy'])->name('stock-alerts.destroy');
 
     // Cards
     Route::get('cards', [CardController::class, 'index'])->name('cards.index');

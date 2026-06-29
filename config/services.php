@@ -38,11 +38,27 @@ return [
         ],
     ],
 
-    // Oxylabs Web Scraper API — used to pull eBay sold comps.
+    // Oxylabs Web Scraper API — used to pull eBay sold comps + Amazon stock alerts.
     'oxylabs' => [
         'username' => env('OXYLABS_USERNAME'),
         'password' => env('OXYLABS_PASSWORD'),
         'endpoint' => env('OXYLABS_ENDPOINT', 'https://realtime.oxylabs.io/v1/queries'),
+    ],
+
+    // X (Twitter) API — posts stock-alert tweets. Posting needs OAuth 1.0a
+    // user context (a bearer token is app-only and can't post), so the bot
+    // account's access token + secret are required alongside the app keys.
+    'x' => [
+        'consumer_key' => env('X_CONSUMER_KEY'),
+        'consumer_secret' => env('X_SECRET_KEY'),
+        'access_token' => env('X_ACCESS_TOKEN'),
+        'access_token_secret' => env('X_ACCESS_TOKEN_SECRET'),
+        'bearer_token' => env('X_BEARER_TOKEN'),
+    ],
+
+    // Optional Amazon Associates tag appended to stock-alert product links.
+    'amazon' => [
+        'associate_tag' => env('AMAZON_ASSOCIATE_TAG'),
     ],
 
     // PriceCharting Legendary — full price-guide CSV (catalog reconciliation).
