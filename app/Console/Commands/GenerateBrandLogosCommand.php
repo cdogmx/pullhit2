@@ -31,8 +31,11 @@ class GenerateBrandLogosCommand extends Command
 
     // Mark bounding box within the viewBox.
     private const MIN_X = 4;
+
     private const MIN_Y = 10;
+
     private const W_UNITS = 26.5; // 30.5 - 4
+
     private const H_UNITS = 11;   // 21 - 10
 
     /** @var array<string, string> */
