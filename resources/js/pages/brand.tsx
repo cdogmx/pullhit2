@@ -53,19 +53,19 @@ const downloads = [
 const logoPngs = [
     {
         label: 'Logo PNG — black',
-        href: '/brand/cardfoo-logo-black.png',
+        href: '/brand-assets/cardfoo-logo-black.png',
         file: 'cardfoo-logo-black.png',
         bg: '#ffffff',
     },
     {
         label: 'Logo PNG — white',
-        href: '/brand/cardfoo-logo-white.png',
+        href: '/brand-assets/cardfoo-logo-white.png',
         file: 'cardfoo-logo-white.png',
         bg: BELT_BLACK,
     },
     {
         label: 'Logo PNG — gold',
-        href: '/brand/cardfoo-logo-gold.png',
+        href: '/brand-assets/cardfoo-logo-gold.png',
         file: 'cardfoo-logo-gold.png',
         bg: BELT_BLACK,
     },

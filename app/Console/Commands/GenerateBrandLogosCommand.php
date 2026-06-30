@@ -70,7 +70,9 @@ class GenerateBrandLogosCommand extends Command
         $centerY = (int) round($pad + $contentH / 2);
 
         $manager = new ImageManager(new Driver);
-        $dir = public_path('brand');
+        // NOT public/brand — that path collides with the /brand Inertia route
+        // (nginx would serve the directory and 403 on the page request).
+        $dir = public_path('brand-assets');
         if (! is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
