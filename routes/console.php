@@ -28,12 +28,12 @@ Schedule::command('valuation:snapshot')->dailyAt('06:30')->withoutOverlapping();
 // Broad eBay sold-comp sweeps. Ticks often; each configured search self-throttles
 // to its own interval (config valuation.ebay.sweep), so this stays under the
 // daily Oxylabs cap. Needs Laravel Cloud's scheduler enabled to run.
-Schedule::command('valuation:sweep-ebay')->everyTenMinutes()->withoutOverlapping();
+Schedule::command('valuation:sweep-ebay')->everyTenMinutes()->withoutOverlapping(15);
 
 // Proactive sealed-product comps. The broad sweep is collector-number-based and
 // skips sealed, so warm the valuable, stale sealed SKUs by name in small hourly
 // batches under the shared daily Oxylabs cap.
-Schedule::command('valuation:sweep-sealed')->hourly()->withoutOverlapping();
+Schedule::command('valuation:sweep-sealed')->hourly()->withoutOverlapping(55);
 
 // Weekly refresh of set social-share (OG) collage images (top cards + prices).
 Schedule::command('catalog:set-share-images')->weeklyOn(1, '04:00')->withoutOverlapping();
@@ -41,4 +41,6 @@ Schedule::command('catalog:set-share-images')->weeklyOn(1, '04:00')->withoutOver
 // Amazon stock alerts: tweet when a watched ASIN is in stock at/below target.
 // Ticks every 5 min; each alert self-throttles to its own check_interval_minutes,
 // so this stays under the shared daily Oxylabs cap. Needs the Cloud scheduler.
-Schedule::command('stock:check-alerts')->everyFiveMinutes()->withoutOverlapping();
+// withoutOverlapping(10): if a run is killed mid-flight (e.g. a deploy), the
+// mutex auto-expires in 10 min instead of the 24h default, so checks resume.
+Schedule::command('stock:check-alerts')->everyFiveMinutes()->withoutOverlapping(10);
