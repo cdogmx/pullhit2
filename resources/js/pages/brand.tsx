@@ -49,6 +49,28 @@ const downloads = [
     },
 ];
 
+// Large transparent-background lockups (mark + wordmark) for each ink.
+const logoPngs = [
+    {
+        label: 'Logo PNG — black',
+        href: '/brand/cardfoo-logo-black.png',
+        file: 'cardfoo-logo-black.png',
+        bg: '#ffffff',
+    },
+    {
+        label: 'Logo PNG — white',
+        href: '/brand/cardfoo-logo-white.png',
+        file: 'cardfoo-logo-white.png',
+        bg: BELT_BLACK,
+    },
+    {
+        label: 'Logo PNG — gold',
+        href: '/brand/cardfoo-logo-gold.png',
+        file: 'cardfoo-logo-gold.png',
+        bg: BELT_BLACK,
+    },
+];
+
 export default function Brand() {
     return (
         <>
@@ -162,6 +184,42 @@ export default function Brand() {
                                 Horizontal lockup
                             </span>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Logo lockups (large transparent PNGs) */}
+            <section className="border-t border-border">
+                <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+                    <h2 className="text-sm font-semibold">Logo (PNG)</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Full lockup, transparent background, 4571×756. Pick the
+                        ink that contrasts with your background.
+                    </p>
+                    <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                        {logoPngs.map((item) => (
+                            <div
+                                key={item.href}
+                                className="flex flex-col gap-3 rounded-xl border border-border p-4"
+                            >
+                                <div
+                                    className="flex items-center justify-center rounded-lg p-6"
+                                    style={{ backgroundColor: item.bg }}
+                                >
+                                    <img
+                                        src={item.href}
+                                        alt={item.label}
+                                        className="h-10 w-auto"
+                                    />
+                                </div>
+                                <Button asChild variant="outline" size="sm">
+                                    <a href={item.href} download={item.file}>
+                                        <Download className="size-4" />
+                                        {item.label}
+                                    </a>
+                                </Button>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </section>
