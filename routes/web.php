@@ -13,6 +13,7 @@ use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\DealsController;
 use App\Http\Controllers\Web\RankingsController;
+use App\Http\Controllers\Web\RipOrKeepController;
 use App\Http\Controllers\Web\ScanController;
 use App\Http\Controllers\Web\SearchController;
 use App\Http\Controllers\Web\SitemapController;
@@ -68,6 +69,14 @@ Route::get('rankings', RankingsController::class)->name('rankings');
 
 // Public in-stock deals feed (products at/below target across retailers).
 Route::get('deals', DealsController::class)->name('deals');
+
+// "Rip or Keep?" — the AI Sensei reasons over a sealed product's real data.
+// Public (viral) but the AI turn is throttled to bound cost/abuse.
+Route::get('rip-or-keep', [RipOrKeepController::class, 'index'])->name('rip-or-keep');
+Route::get('rip-or-keep/search', [RipOrKeepController::class, 'search'])->name('rip-or-keep.search');
+Route::get('rip-or-keep/{catalogItem}/dossier', [RipOrKeepController::class, 'dossier'])->name('rip-or-keep.dossier');
+Route::post('rip-or-keep/{catalogItem}/chat', [RipOrKeepController::class, 'chat'])
+    ->middleware('throttle:20,1')->name('rip-or-keep.chat');
 
 // Public user profile (community face of an account) + follow graph.
 Route::get('u/{username}', [UserProfileController::class, 'show'])->name('profile.show');

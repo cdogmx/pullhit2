@@ -22,6 +22,7 @@ import { dashboard, home, login, register } from '@/routes';
 const marketingNav = [
     { title: 'Browse', href: '/browse' },
     { title: 'Deals', href: '/deals' },
+    { title: 'Rip or Keep?', href: '/rip-or-keep' },
     { title: 'Giveaways', href: '/rankings' },
     { title: 'Features', href: '/#features' },
 ];
