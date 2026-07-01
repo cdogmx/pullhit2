@@ -5,7 +5,9 @@ namespace App\Actions\RipOrKeep;
 use App\Actions\Valuation\PriceHistory;
 use App\Enums\ItemType;
 use App\Models\CatalogItem;
+use App\Models\SetPullOdd;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * Assembles the real CardFoo data behind a "rip or keep" decision for one sealed
@@ -29,7 +31,8 @@ class BuildSealedDossier
 
         $trend = $this->trend($this->history($item)['points']);
 
-        // The set's singles, richest first — the "what could I pull" upside.
+        // The set's priced singles (name + rarity + value) — the raw material for
+        // both the "what could I pull" chase list and the modeled rip EV.
         $singles = CatalogItem::query()
             ->where('set_id', $item->set_id)
             ->where('item_type', ItemType::Single->value)
@@ -37,13 +40,16 @@ class BuildSealedDossier
             ->get()
             ->map(fn (CatalogItem $c) => [
                 'name' => $c->display_name ?? $c->name,
+                'rarity' => $c->getAttribute('attributes')['rarity'] ?? null,
                 'value' => $c->defaultMarketValue?->median,
             ])
             ->filter(fn (array $r) => $r['value'] !== null)
-            ->sortByDesc('value')
             ->values();
 
-        $values = $singles->pluck('value')->all();
+        $values = $singles->pluck('value')->sortDesc()->values()->all();
+        $topChase = $singles->sortByDesc('value')->take(8)
+            ->map(fn (array $r) => ['name' => $r['name'], 'value' => $r['value']])
+            ->values()->all();
 
         return [
             'product' => [
@@ -68,13 +74,85 @@ class BuildSealedDossier
                 'in_print' => $item->msrp !== null || ! empty($item->retailer_links),
             ],
             'chase' => [
-                'top' => $singles->take(8)->all(),
+                'top' => $topChase,
                 'single_count' => $singles->count(),
                 'max_single' => $values[0] ?? null,
                 'median_single' => $this->median($values),
                 'count_over_50' => count(array_filter($values, fn ($v) => $v >= 5_000)),
             ],
+            // Modeled expected value of opening, when we have researched pack odds.
+            'rip_ev' => $this->ripEv($item, $singles, $attributes),
         ];
+    }
+
+    /**
+     * Expected value of ripping, modeled from researched per-rarity pack odds ×
+     * the mean value of that rarity's singles in the set. Null when the set has
+     * no stored odds. Honest about scope: prices the chase rarities, not bulk.
+     *
+     * @param  Collection<int, array{name: string, rarity: ?string, value: int}>  $singles
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>|null
+     */
+    private function ripEv(CatalogItem $item, Collection $singles, array $attributes): ?array
+    {
+        $odds = SetPullOdd::where('set_id', $item->set_id)->get();
+
+        if ($odds->isEmpty()) {
+            return null;
+        }
+
+        $meanByRarity = $singles->whereNotNull('rarity')
+            ->groupBy('rarity')
+            ->map(fn (Collection $g) => (int) round($g->avg('value')));
+
+        $perPack = 0.0;
+        $breakdown = [];
+
+        foreach ($odds as $o) {
+            $mean = $meanByRarity[$o->rarity] ?? null;
+
+            if ($mean === null) {
+                continue;
+            }
+
+            $perPack += $o->per_pack_prob * $mean;
+            $breakdown[] = [
+                'rarity' => $o->rarity,
+                'per_pack_prob' => $o->per_pack_prob,
+                'mean_value' => $mean,
+            ];
+        }
+
+        if ($breakdown === []) {
+            return null;
+        }
+
+        $packs = $this->packsPerBox($attributes);
+
+        return [
+            'ev_per_pack' => (int) round($perPack),
+            'packs' => $packs,
+            'ev_total' => $packs ? (int) round($perPack * $packs) : null,
+            'breakdown' => $breakdown,
+            'sources' => $odds->pluck('source')->filter()->unique()->values()->take(4)->all(),
+            'min_confidence' => $odds->min('confidence'),
+        ];
+    }
+
+    /** Packs the product yields — explicit count, else a per-type default. */
+    private function packsPerBox(array $attributes): ?int
+    {
+        if (! empty($attributes['pack_count'])) {
+            return (int) $attributes['pack_count'];
+        }
+
+        return match ($attributes['sealed_type'] ?? null) {
+            'booster_box' => 36,
+            'elite_trainer_box' => 9,
+            'booster_bundle' => 6,
+            default => null,
+        };
     }
 
     /** @return array{points: array<int, array{t: string, price: int, n: int}>, estimated: bool} */

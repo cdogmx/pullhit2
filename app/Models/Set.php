@@ -53,4 +53,10 @@ class Set extends Model
     {
         return $this->hasMany(CatalogItem::class);
     }
+
+    /** @return HasMany<SetPullOdd, $this> */
+    public function pullOdds(): HasMany
+    {
+        return $this->hasMany(SetPullOdd::class);
+    }
 }

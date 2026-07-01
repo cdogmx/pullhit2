@@ -41,6 +41,13 @@ type Dossier = {
         median_single: number | null;
         count_over_50: number;
     };
+    rip_ev: {
+        ev_per_pack: number;
+        packs: number | null;
+        ev_total: number | null;
+        sources: string[];
+        min_confidence: number | null;
+    } | null;
 };
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
@@ -411,6 +418,37 @@ function DossierCard({
                                 .map((c) => c.name)
                                 .join(', ')}
                         </p>
+                    )}
+
+                    {dossier.rip_ev && (
+                        <div className="mt-2 rounded-md bg-muted/60 px-2 py-1.5 text-xs">
+                            <span className="font-medium">
+                                Modeled rip EV{' '}
+                                <span className="tabular-nums">
+                                    {dossier.rip_ev.ev_total != null
+                                        ? `~${formatMoney(dossier.rip_ev.ev_total)}`
+                                        : `~${formatMoney(dossier.rip_ev.ev_per_pack)}/pack`}
+                                </span>
+                            </span>
+                            {dossier.rip_ev.ev_total != null &&
+                                dossier.sealed_value != null && (
+                                    <span
+                                        className={cn(
+                                            'ml-1',
+                                            dossier.rip_ev.ev_total >=
+                                                dossier.sealed_value
+                                                ? 'text-emerald-600 dark:text-emerald-400'
+                                                : 'text-muted-foreground',
+                                        )}
+                                    >
+                                        vs {formatMoney(dossier.sealed_value)}{' '}
+                                        sealed
+                                    </span>
+                                )}
+                            <span className="ml-1 text-muted-foreground">
+                                · avg, most packs miss
+                            </span>
+                        </div>
                     )}
                 </div>
             </CardContent>

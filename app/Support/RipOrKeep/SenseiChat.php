@@ -79,9 +79,12 @@ class SenseiChat
         - In-print vs out-of-print: still buyable at retail weakens KEEP (more supply coming);
           out-of-print strengthens it.
         - Set age: older, settled sets are less likely to be reprinted.
-        - Rip upside: the set's top chase singles are the dream pulls. Be HONEST — we do NOT
-          have exact pull rates, so ripping is a gamble; frame the chase as a thrill, not a
-          guaranteed payout. Never invent probabilities or a precise expected value.
+        - Rip upside: if a MODELED RIP EV is given, use it — it's the expected value of
+          opening, from researched pack odds. Compare it to the sealed price: if EV is well
+          below sealed, keeping is the value play; if EV rivals or beats sealed, ripping is
+          defensible. Still frame variance honestly (most packs miss; the EV is an average).
+          If NO rip EV is given, we lack pull rates — call ripping a gamble and never invent
+          probabilities.
         - The person: money-maximizer, thrill-seeker, or collector? Ask ONE short question to
           read them only if it's unclear; otherwise just rule.
 
@@ -125,8 +128,17 @@ class SenseiChat
         );
         $lines[] = 'Rip upside — top chase singles: '.($top ? implode('; ', $top) : 'no singles data for this set');
         $lines[] = 'Chase context: '.($chase['single_count'] ?? 0).' priced singles, '
-            .($chase['count_over_50'] ?? 0).' worth $50+, median single '.$money($chase['median_single'] ?? null)
-            .'. (No pull rates available — the chase is a gamble.)';
+            .($chase['count_over_50'] ?? 0).' worth $50+, median single '.$money($chase['median_single'] ?? null).'.';
+
+        $ev = $d['rip_ev'] ?? null;
+        if ($ev) {
+            $lines[] = 'MODELED RIP EV: ~'.$money($ev['ev_per_pack'] ?? null).'/pack'
+                .($ev['ev_total'] ? ', ~'.$money($ev['ev_total']).' for the whole product ('.$ev['packs'].' packs)' : '')
+                .' — from researched pack odds × mean value of each chase rarity. This is an'
+                .' average across many opens; any single pack usually misses.';
+        } else {
+            $lines[] = 'MODELED RIP EV: not available — no researched pull rates for this set, so ripping is a gamble.';
+        }
 
         return implode("\n", $lines);
     }
