@@ -33,7 +33,10 @@ class PullRateResearcher
                 'model' => $this->model(),
                 'max_tokens' => 2048,
                 'tools' => [
-                    ['type' => 'web_search_20250305', 'name' => 'web_search', 'max_uses' => 6],
+                    // Dynamic-filtering web search (Sonnet 4.6 / Opus 4.6+); filters
+                    // results before they hit context. No beta header, no separate
+                    // code_execution tool needed.
+                    ['type' => 'web_search_20260209', 'name' => 'web_search', 'max_uses' => 6],
                     $this->recordTool(),
                 ],
                 'messages' => [[
