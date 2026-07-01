@@ -29,7 +29,39 @@ class RankingsController extends Controller
             'me' => $this->me($request->user()),
             'giveaway' => $this->currentGiveaway($request->user()),
             'pastWinners' => $this->pastWinners(),
+            'earn' => $this->earnMethods(),
+            // The signed-in user's referral link handle (their public username).
+            'referralHandle' => $request->user()?->username,
         ]);
+    }
+
+    /**
+     * Every way to earn points, richest first — values come from config so the
+     * copy always matches the live points. `once` flags one-time milestones.
+     *
+     * @return array<int, array{label: string, points: int, how: string, once: bool}>
+     */
+    private function earnMethods(): array
+    {
+        $p = fn (string $key) => (int) config("community.points.{$key}", 0);
+
+        $methods = [
+            ['label' => 'Refer a friend', 'points' => $p('referral'), 'how' => 'They sign up with your link and verify their email', 'once' => false],
+            ['label' => 'Report a missing set', 'points' => $p('missing_set'), 'how' => 'A set you flag gets added to the catalog', 'once' => false],
+            ['label' => 'Report a missing card', 'points' => $p('missing_card'), 'how' => 'A card you flag gets added to the catalog', 'once' => false],
+            ['label' => 'Complete your profile', 'points' => $p('profile_complete'), 'how' => 'Set a username, avatar, and bio', 'once' => true],
+            ['label' => 'Suggest a card edit', 'points' => $p('edit_suggestion'), 'how' => 'A correction you submit is accepted', 'once' => false],
+            ['label' => '7-day check-in streak', 'points' => $p('streak_bonus'), 'how' => 'Check in 7 days in a row for a bonus', 'once' => false],
+            ['label' => 'Run your first scan', 'points' => $p('first_scan'), 'how' => 'Scan any card', 'once' => true],
+            ['label' => 'Add your first card', 'points' => $p('first_collection_card'), 'how' => 'Start your collection', 'once' => true],
+            ['label' => 'Make a collection public', 'points' => $p('first_public_collection'), 'how' => 'Share a collection at your public URL', 'once' => true],
+            ['label' => 'Rate a scan detection', 'points' => $p('scan_feedback'), 'how' => 'Confirm or correct a scan (helps train it)', 'once' => false],
+            ['label' => 'Daily check-in', 'points' => $p('daily_checkin'), 'how' => 'Just visit each day', 'once' => false],
+        ];
+
+        usort($methods, fn ($a, $b) => $b['points'] <=> $a['points']);
+
+        return $methods;
     }
 
     /** The open giveaway for this month, with prize + the viewer's entries. */

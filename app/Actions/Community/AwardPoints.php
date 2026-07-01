@@ -15,11 +15,17 @@ use Illuminate\Support\Facades\DB;
  */
 class AwardPoints
 {
+    /**
+     * @param  string|null  $key  idempotency key for repeatable-but-capped awards
+     *                            (e.g. a date for daily check-ins, a fingerprint
+     *                            for scan feedback). Null + no subject = once ever.
+     */
     public function __invoke(
         User $user,
         ContributionType $type,
         ?Model $subject = null,
         ?string $description = null,
+        ?string $key = null,
     ): ?Contribution {
         $points = $type->points();
 
@@ -27,12 +33,16 @@ class AwardPoints
             return null;
         }
 
-        return DB::transaction(function () use ($user, $type, $subject, $description, $points) {
+        return DB::transaction(function () use ($user, $type, $subject, $description, $points, $key) {
             $query = Contribution::where('user_id', $user->id)->where('type', $type->value);
 
             if ($subject) {
                 $query->where('subject_type', $subject->getMorphClass())
                     ->where('subject_id', $subject->getKey());
+            }
+
+            if ($key !== null) {
+                $query->where('dedupe_key', $key);
             }
 
             // Already awarded for this exact contribution — don't double-count.
@@ -45,6 +55,7 @@ class AwardPoints
                 'type' => $type,
                 'points' => $points,
                 'description' => $description,
+                'dedupe_key' => $key,
             ]);
 
             if ($subject) {

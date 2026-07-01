@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\Community\AwardPoints;
 use App\Concerns\ProfileValidationRules;
+use App\Enums\ContributionType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\User;
 use App\Support\Catalog\CardImageStore;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
@@ -69,6 +72,11 @@ class ProfileController extends Controller
         $user->defaultCollection()->update(['is_public' => $user->is_collection_public]);
         $user->defaultWishlist()->update(['is_public' => $user->is_wishlist_public]);
 
+        if ($user->is_collection_public) {
+            app(AwardPoints::class)($user, ContributionType::FirstPublicCollection, description: 'Made a collection public');
+        }
+        $this->maybeAwardProfileComplete($user);
+
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Sharing settings updated.')]);
 
         return to_route('profile.edit');
@@ -85,6 +93,7 @@ class ProfileController extends Controller
         abort_if($url === null, 422, 'Could not store that image.');
 
         $request->user()->forceFill(['avatar_path' => $url])->save();
+        $this->maybeAwardProfileComplete($request->user());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Avatar updated.')]);
 
@@ -115,10 +124,22 @@ class ProfileController extends Controller
         }
 
         $request->user()->save();
+        $this->maybeAwardProfileComplete($request->user());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
 
         return to_route('profile.edit');
+    }
+
+    /**
+     * Award the one-time "completed profile" points once a user has a username,
+     * an avatar, and a bio. Idempotent (once ever per user).
+     */
+    private function maybeAwardProfileComplete(User $user): void
+    {
+        if ($user->username && $user->avatar_path && filled($user->bio)) {
+            app(AwardPoints::class)($user, ContributionType::ProfileComplete, description: 'Completed profile');
+        }
     }
 
     /**

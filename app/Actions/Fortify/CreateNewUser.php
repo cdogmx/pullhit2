@@ -25,11 +25,24 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ])->validate();
 
-        return User::create([
+        $user = User::create([
             'name' => $input['name'],
             'username' => $input['username'],
             'email' => $input['email'],
             'password' => $input['password'],
         ]);
+
+        // Credit the referrer (by handle) captured from a ?ref= link. Points are
+        // awarded to them only once this user verifies their email — see
+        // App\Listeners\AwardReferralOnVerified.
+        if ($ref = session()->pull('referral')) {
+            $referrer = User::where('username', $ref)->first();
+
+            if ($referrer && $referrer->id !== $user->id) {
+                $user->forceFill(['referred_by_user_id' => $referrer->id])->save();
+            }
+        }
+
+        return $user;
     }
 }

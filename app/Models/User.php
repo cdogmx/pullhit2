@@ -74,6 +74,8 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'banned_at' => 'datetime',
             'contribution_points' => 'integer',
             'notification_preferences' => 'array',
+            'last_checkin_on' => 'date',
+            'checkin_streak' => 'integer',
         ];
     }
 

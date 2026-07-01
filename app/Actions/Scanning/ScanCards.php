@@ -2,6 +2,8 @@
 
 namespace App\Actions\Scanning;
 
+use App\Actions\Community\AwardPoints;
+use App\Enums\ContributionType;
 use App\Http\Resources\CatalogItemResource;
 use App\Models\ScanLog;
 use App\Models\User;
@@ -23,6 +25,7 @@ class ScanCards
         protected IdentifierStrategy $strategy,
         protected CandidateMatcher $matcher,
         protected ScanArchive $archive,
+        protected AwardPoints $award,
     ) {}
 
     /**
@@ -59,6 +62,9 @@ class ScanCards
                 'cache_hits' => $total - $aiReads,
                 'credits_spent' => $creditsSpent,
             ]);
+
+            // One-time "first scan" milestone (once ever per user).
+            ($this->award)($user, ContributionType::FirstScan, description: 'Ran your first scan');
         }
 
         return ['detected' => $detected, 'usage' => $quota->snapshot()];

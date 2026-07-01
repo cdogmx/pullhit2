@@ -2,6 +2,8 @@
 
 namespace App\Actions\Collection;
 
+use App\Actions\Community\AwardPoints;
+use App\Enums\ContributionType;
 use App\Models\CatalogItem;
 use App\Models\CollectionItem;
 use App\Models\User;
@@ -16,6 +18,7 @@ class AddToCollection
 {
     public function __construct(
         protected AddAcquisitionLot $addLot,
+        protected AwardPoints $award,
     ) {}
 
     /** @param  array<string, mixed>  $attrs */
@@ -51,6 +54,9 @@ class AddToCollection
                 'acquired_at' => $attrs['acquired_at'] ?? null,
                 'source' => $attrs['source'] ?? null,
             ]);
+
+            // One-time "first card added" milestone (once ever per user).
+            ($this->award)($user, ContributionType::FirstCollectionCard, description: 'Added your first card');
 
             return $collectionItem->refresh();
         });

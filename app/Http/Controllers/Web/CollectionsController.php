@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Actions\Community\AwardPoints;
+use App\Enums\ContributionType;
 use App\Http\Controllers\Controller;
 use App\Models\Collection;
 use App\Support\Membership\Entitlements;
@@ -61,6 +63,11 @@ class CollectionsController extends Controller
             // public page), so keep the two in sync no matter which UI flips it.
             if ($collection->is_default) {
                 $request->user()->forceFill(['is_collection_public' => $data['is_public']])->save();
+            }
+
+            // One-time milestone for going public (once ever per user).
+            if ($data['is_public']) {
+                app(AwardPoints::class)($request->user(), ContributionType::FirstPublicCollection, description: 'Made a collection public');
             }
         }
 

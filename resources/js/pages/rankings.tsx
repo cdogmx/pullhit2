@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
-import { Award, Gift, Trophy } from 'lucide-react';
+import { Award, Check, Copy, Gift, Sparkles, Trophy } from 'lucide-react';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -38,6 +39,13 @@ type PastWinner = {
     winner: string | null;
 };
 
+type EarnMethod = {
+    label: string;
+    points: number;
+    how: string;
+    once: boolean;
+};
+
 type Props = {
     allTime: AllTimeRow[];
     monthly: MonthlyRow[];
@@ -45,6 +53,8 @@ type Props = {
     me: Me;
     giveaway: Giveaway;
     pastWinners: PastWinner[];
+    earn: EarnMethod[];
+    referralHandle: string | null;
 };
 
 function medal(rank: number): string {
@@ -64,6 +74,8 @@ export default function Rankings({
     me,
     giveaway,
     pastWinners,
+    earn,
+    referralHandle,
 }: Props) {
     return (
         <>
@@ -74,9 +86,8 @@ export default function Rankings({
                         Community rankings
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Earn points by improving the catalog — report missing
-                        cards &amp; sets and suggest fixes. Points earned this
-                        month are your entries for{' '}
+                        Earn points by using CardFoo and improving the catalog.
+                        Every point you earn this month is an entry for{' '}
                         <span className="font-medium text-foreground">
                             {month}
                         </span>
@@ -178,6 +189,49 @@ export default function Rankings({
                     </Card>
                 )}
 
+                {/* Ways to earn points */}
+                <Card className="mb-6">
+                    <CardContent className="pt-6">
+                        <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+                            <Sparkles className="size-4 text-primary" />
+                            Ways to earn points
+                        </h2>
+                        <p className="mb-3 text-xs text-muted-foreground">
+                            Points are giveaway entries — the more you earn this
+                            month, the better your odds.
+                        </p>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                            {earn.map((m) => (
+                                <div
+                                    key={m.label}
+                                    className="flex items-start justify-between gap-3 rounded-lg border border-border/60 px-3 py-2"
+                                >
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-medium">
+                                            {m.label}
+                                            {m.once && (
+                                                <span className="ml-1.5 rounded bg-muted px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                                    once
+                                                </span>
+                                            )}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {m.how}
+                                        </p>
+                                    </div>
+                                    <span className="shrink-0 text-sm font-bold tabular-nums text-primary">
+                                        +{m.points}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {referralHandle && (
+                            <ReferralLink handle={referralHandle} />
+                        )}
+                    </CardContent>
+                </Card>
+
                 <div className="grid gap-6 lg:grid-cols-2">
                     {/* This month (giveaway entries) */}
                     <Board
@@ -251,6 +305,45 @@ export default function Rankings({
                 )}
             </div>
         </>
+    );
+}
+
+/** The signed-in user's shareable referral link with a copy button. */
+function ReferralLink({ handle }: { handle: string }) {
+    const [copied, setCopied] = useState(false);
+    const path = `/register?ref=${handle}`;
+
+    const copy = () => {
+        const url =
+            typeof window !== 'undefined'
+                ? `${window.location.origin}${path}`
+                : path;
+        navigator.clipboard.writeText(url).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    };
+
+    return (
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+            <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium">Your referral link</p>
+                <p className="truncate text-xs text-muted-foreground">
+                    cardfoo.com{path}
+                </p>
+            </div>
+            <Button size="sm" variant="secondary" className="h-8" onClick={copy}>
+                {copied ? (
+                    <>
+                        <Check className="size-3.5 text-emerald-600" /> Copied
+                    </>
+                ) : (
+                    <>
+                        <Copy className="size-3.5" /> Copy
+                    </>
+                )}
+            </Button>
+        </div>
     );
 }
 

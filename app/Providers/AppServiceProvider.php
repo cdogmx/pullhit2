@@ -2,11 +2,14 @@
 
 namespace App\Providers;
 
+use App\Listeners\AwardReferralOnVerified;
 use App\Support\Scanning\IdentifierStrategy;
 use App\Support\Scanning\PokemonIdentifierStrategy;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -27,6 +30,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // Credit a referrer once their invitee verifies their email.
+        Event::listen(Verified::class, AwardReferralOnVerified::class);
     }
 
     /**

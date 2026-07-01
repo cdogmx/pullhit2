@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 /**
  * One accepted contribution worth points — the points ledger. Append-only.
  */
-#[Fillable(['user_id', 'type', 'points', 'description'])]
+#[Fillable(['user_id', 'type', 'points', 'description', 'dedupe_key'])]
 class Contribution extends Model
 {
     protected function casts(): array

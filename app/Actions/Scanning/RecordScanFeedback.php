@@ -2,6 +2,8 @@
 
 namespace App\Actions\Scanning;
 
+use App\Actions\Community\AwardPoints;
+use App\Enums\ContributionType;
 use App\Models\ScanFeedback;
 use App\Models\User;
 use App\Support\Scanning\FingerprintCache;
@@ -12,11 +14,14 @@ use App\Support\Scanning\FingerprintCache;
  *  - a supplied correction → teach the cache the right association;
  *  - right CACHE hit → reinforce it.
  * Vision misses are just recorded — they're the data for tuning the AI/matching.
+ * Rating a detection earns a few points (once per fingerprint) — it improves the
+ * scanner, so it's worth rewarding.
  */
 class RecordScanFeedback
 {
     public function __construct(
         protected FingerprintCache $cache,
+        protected AwardPoints $award,
     ) {}
 
     /** @param  array<string, mixed>  $data */
@@ -50,6 +55,14 @@ class RecordScanFeedback
             } elseif ($wasCorrect && $source === 'cache' && $detectedId) {
                 $this->cache->record((string) $phash, (int) $detectedId, $user->id);
             }
+
+            // Reward the feedback — once per distinct fingerprint (no farming).
+            ($this->award)(
+                $user,
+                ContributionType::ScanFeedback,
+                description: 'Rated a scan detection',
+                key: 'phash:'.$phash,
+            );
         }
 
         return $feedback;
