@@ -83,13 +83,18 @@ class SearchPullRatesCommand extends Command
     /** @return Collection<int, Set> */
     private function targetSets()
     {
-        $query = Set::query()
-            ->whereHas('productLine', fn ($q) => $q->where('slug', 'pokemon'))
-            ->where('series', 'Scarlet & Violet');
+        $pokemon = fn ($q) => $q->where('slug', 'pokemon');
 
+        // An explicit --set is honored for ANY Pokémon set (its rarity structure
+        // is the same across recent eras); the batch default stays SV-scoped.
         if ($slug = $this->option('set')) {
-            return $query->where('slug', $slug)->get();
+            return Set::query()->whereHas('productLine', $pokemon)
+                ->where('slug', $slug)->get();
         }
+
+        $query = Set::query()
+            ->whereHas('productLine', $pokemon)
+            ->where('series', 'Scarlet & Violet');
 
         if (! $this->option('force')) {
             $query->whereDoesntHave('pullOdds');
