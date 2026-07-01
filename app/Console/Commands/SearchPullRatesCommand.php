@@ -61,20 +61,27 @@ class SearchPullRatesCommand extends Command
                 continue;
             }
 
+            $stored = 0;
+
             foreach ($rates as $r) {
-                SetPullOdd::updateOrCreate(
-                    ['set_id' => $set->id, 'rarity' => $r['rarity']],
-                    [
-                        'per_pack_prob' => $r['per_pack_prob'],
-                        'method' => 'ai_search',
-                        'source' => $r['source'],
-                        'note' => $r['note'],
-                        'confidence' => $r['confidence'],
-                    ],
-                );
+                try {
+                    SetPullOdd::updateOrCreate(
+                        ['set_id' => $set->id, 'rarity' => $r['rarity']],
+                        [
+                            'per_pack_prob' => $r['per_pack_prob'],
+                            'method' => 'ai_search',
+                            'source' => $r['source'],
+                            'note' => $r['note'],
+                            'confidence' => $r['confidence'],
+                        ],
+                    );
+                    $stored++;
+                } catch (Throwable $e) {
+                    $this->warn("  skipped {$r['rarity']}: {$e->getMessage()}");
+                }
             }
 
-            $this->info('  stored '.count($rates).' rate(s)'.($rates === [] ? ' — none found' : ''));
+            $this->info('  stored '.$stored.' rate(s)'.($rates === [] ? ' — none found' : ''));
         }
 
         return self::SUCCESS;

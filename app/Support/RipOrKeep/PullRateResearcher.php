@@ -70,8 +70,8 @@ class PullRateResearcher
             $out[$rarity] = [
                 'rarity' => $rarity,
                 'per_pack_prob' => round($prob, 6),
-                'note' => isset($r['note']) ? (string) $r['note'] : null,
-                'source' => isset($r['source']) ? (string) $r['source'] : null,
+                'note' => isset($r['note']) ? mb_substr((string) $r['note'], 0, 4000) : null,
+                'source' => isset($r['source']) ? mb_substr((string) $r['source'], 0, 1000) : null,
                 'confidence' => round((float) ($r['confidence'] ?? 0.5), 2),
             ];
         }
