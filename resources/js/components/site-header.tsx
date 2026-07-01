@@ -8,6 +8,10 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { UserMenuContent } from '@/components/user-menu-content';
@@ -19,42 +23,42 @@ import { dashboard, home, login, register } from '@/routes';
  * guests and an account menu (+ Dashboard link) for authenticated users. The
  * authenticated app keeps the sidebar layout; this header wraps public pages.
  */
-const marketingNav = [
-    { title: 'Browse', href: '/browse' },
-    { title: 'Deals', href: '/deals' },
-    { title: 'Rip or Keep?', href: '/rip-or-keep' },
-    { title: 'Giveaways', href: '/rankings' },
-    { title: 'Features', href: '/#features' },
-];
-
-// Catalog dropdowns by vertical/product line. Languages link into the SEO
-// product-line landing with a language filter (e.g. /browse/pokemon?language=ja).
-const catalogMenus = [
+// The catalog, consolidated under one "Browse" menu. A game with multiple
+// languages becomes a submenu (Japanese links into the SEO landing with a
+// language filter); single-language games are plain links.
+const catalogMenu: {
+    label: string;
+    href?: string;
+    links?: { label: string; href: string }[];
+}[] = [
     {
-        title: 'Pokémon',
-        items: [
+        label: 'Pokémon',
+        links: [
             { label: 'All Pokémon', href: '/browse/pokemon' },
-            { label: 'English', href: '/browse/pokemon?language=en' },
             { label: 'Japanese', href: '/browse/pokemon?language=ja' },
         ],
     },
     {
-        title: 'One Piece',
-        items: [
+        label: 'One Piece',
+        links: [
             { label: 'All One Piece', href: '/browse/one-piece' },
-            { label: 'English', href: '/browse/one-piece?language=en' },
             { label: 'Japanese', href: '/browse/one-piece?language=ja' },
         ],
     },
-    {
-        title: 'Disney Lorcana',
-        items: [{ label: 'All Disney Lorcana', href: '/browse/lorcana' }],
-    },
-    {
-        title: 'Cyberpunk',
-        items: [{ label: 'All Cyberpunk', href: '/browse/cyberpunk' }],
-    },
+    { label: 'Disney Lorcana', href: '/browse/lorcana' },
+    { label: 'Cyberpunk', href: '/browse/cyberpunk' },
 ];
+
+// Secondary links, tucked under a "More" menu to keep the bar uncluttered.
+const moreMenu = [
+    { label: 'Giveaways', href: '/rankings' },
+    { label: 'Features', href: '/#features' },
+];
+
+const NAV_TRIGGER =
+    'inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none';
+const NAV_LINK =
+    'rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground';
 
 export function SiteHeader() {
     const page = usePage();
@@ -83,43 +87,75 @@ export function SiteHeader() {
                         </span>
                     </Link>
                     <nav className="hidden items-center gap-1 md:flex">
-                        {catalogMenus.map((menu) => (
-                            <DropdownMenu key={menu.title}>
-                                <DropdownMenuTrigger asChild>
-                                    <button
-                                        type="button"
-                                        className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
-                                    >
-                                        {menu.title}
-                                        <ChevronDown className="size-4" />
-                                    </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                    align="start"
-                                    className="w-44"
-                                >
-                                    {menu.items.map((item) => (
+                        {/* Browse — the whole catalog under one menu. */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button type="button" className={NAV_TRIGGER}>
+                                    Browse
+                                    <ChevronDown className="size-4" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-48">
+                                <DropdownMenuItem asChild>
+                                    <Link href="/browse">All cards</Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {catalogMenu.map((game) =>
+                                    game.links ? (
+                                        <DropdownMenuSub key={game.label}>
+                                            <DropdownMenuSubTrigger>
+                                                {game.label}
+                                            </DropdownMenuSubTrigger>
+                                            <DropdownMenuSubContent>
+                                                {game.links.map((l) => (
+                                                    <DropdownMenuItem
+                                                        key={l.href}
+                                                        asChild
+                                                    >
+                                                        <Link href={l.href}>
+                                                            {l.label}
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                ))}
+                                            </DropdownMenuSubContent>
+                                        </DropdownMenuSub>
+                                    ) : (
                                         <DropdownMenuItem
-                                            key={item.href}
+                                            key={game.href}
                                             asChild
                                         >
-                                            <Link href={item.href}>
-                                                {item.label}
+                                            <Link href={game.href!}>
+                                                {game.label}
                                             </Link>
                                         </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        ))}
-                        {marketingNav.map((item) => (
-                            <a
-                                key={item.href}
-                                href={item.href}
-                                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                            >
-                                {item.title}
-                            </a>
-                        ))}
+                                    ),
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <a href="/deals" className={NAV_LINK}>
+                            Deals
+                        </a>
+                        <a href="/rip-or-keep" className={NAV_LINK}>
+                            Rip or Keep?
+                        </a>
+
+                        {/* More — secondary links, kept out of the main bar. */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button type="button" className={NAV_TRIGGER}>
+                                    More
+                                    <ChevronDown className="size-4" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-44">
+                                {moreMenu.map((item) => (
+                                    <DropdownMenuItem key={item.href} asChild>
+                                        <a href={item.href}>{item.label}</a>
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </nav>
                 </div>
 
