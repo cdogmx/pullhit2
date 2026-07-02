@@ -134,7 +134,8 @@ class CatalogController extends Controller
             'gradingCompanies' => GradingCompany::orderBy('name')
                 ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
             'seo' => $seo,
-            // Server-rendered SEO/share meta for the brand/set landing pages.
+            // Server-rendered SEO/share meta for the brand/set landing pages, with
+            // a search/landing fallback so every browse view has accurate meta.
             'meta' => $seo ? array_filter([
                 'title' => $seo['title'].' | '.config('app.name'),
                 'description' => $blurb
@@ -142,7 +143,7 @@ class CatalogController extends Controller
                 // Generated set collage as the OG/Twitter image, when available.
                 'image' => $seo['image'] ?? null,
                 'image_alt' => isset($seo['image']) ? "{$seo['heading']} top cards" : null,
-            ], fn ($v) => $v !== null) : null,
+            ], fn ($v) => $v !== null) : $this->browseFallbackMeta($filters),
             // Language selector shows while browsing a brand's series/sets.
             'tileLanguages' => in_array($mode, ['series', 'sets'], true) && ! empty($filters['product_line'])
                 ? $tiles->languagesFor($filters['product_line'])
@@ -320,6 +321,31 @@ class CatalogController extends Controller
      *
      * @return array<string, mixed>
      */
+    /**
+     * Meta for browse views without a brand/set SEO block — a search-results page
+     * (reflects the query) or the generic browse landing.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array{title: string, description: string}
+     */
+    private function browseFallbackMeta(array $filters): array
+    {
+        $app = config('app.name');
+        $q = trim((string) ($filters['q'] ?? ''));
+
+        if ($q !== '') {
+            return [
+                'title' => "“{$q}” — card search results | {$app}",
+                'description' => "Search results for “{$q}” across Pokémon, One Piece, Disney Lorcana and more — with confidence-scored market prices on {$app}.",
+            ];
+        }
+
+        return [
+            'title' => "Browse trading cards — prices, sets & values | {$app}",
+            'description' => "Browse Pokémon, One Piece, Disney Lorcana and Cyberpunk singles and sealed products with confidence-scored market prices on {$app}.",
+        ];
+    }
+
     protected function shareMeta(CatalogItem $item): array
     {
         $name = $item->display_name ?: $item->name;

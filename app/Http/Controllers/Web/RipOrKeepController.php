@@ -24,7 +24,12 @@ class RipOrKeepController extends Controller
 {
     public function index(): Response
     {
-        return Inertia::render('rip-or-keep/index');
+        return Inertia::render('rip-or-keep/index', [
+            'meta' => [
+                'title' => 'Rip or Keep? — ask the CardFoo Sensei',
+                'description' => 'Open the box or keep it sealed? Ask the CardFoo Sensei for a data-driven verdict from real sealed prices, trends, and modeled pull-rate expected value. Wax on.',
+            ],
+        ]);
     }
 
     /** Type-ahead over sealed products for the picker. */

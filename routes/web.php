@@ -7,11 +7,11 @@ use App\Http\Controllers\Web\CollectionController;
 use App\Http\Controllers\Web\CollectionsController;
 use App\Http\Controllers\Web\ContributeController;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\DealsController;
 use App\Http\Controllers\Web\FeedController;
 use App\Http\Controllers\Web\FollowController;
 use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\NotificationController;
-use App\Http\Controllers\Web\DealsController;
 use App\Http\Controllers\Web\RankingsController;
 use App\Http\Controllers\Web\RipOrKeepController;
 use App\Http\Controllers\Web\ScanController;
@@ -24,9 +24,18 @@ use App\Http\Controllers\Web\WishlistsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::inertia('brand', 'brand')->name('brand');
-Route::inertia('terms', 'terms')->name('terms');
-Route::inertia('privacy', 'privacy')->name('privacy');
+Route::inertia('brand', 'brand', ['meta' => [
+    'title' => 'Brand assets & press kit | CardFoo',
+    'description' => 'Download CardFoo logos, wordmarks, and brand guidelines — press-ready assets for the confidence-scored trading card price guide.',
+]])->name('brand');
+Route::inertia('terms', 'terms', ['meta' => [
+    'title' => 'Terms of Service | CardFoo',
+    'description' => 'The terms that govern your use of CardFoo, the trading card price guide and collection tracker.',
+]])->name('terms');
+Route::inertia('privacy', 'privacy', ['meta' => [
+    'title' => 'Privacy Policy | CardFoo',
+    'description' => 'How CardFoo collects, uses, and protects your data — the trading card price guide and collection tracker.',
+]])->name('privacy');
 
 // Social login (Laravel Socialite) — provider-agnostic; Facebook live, Google
 // ready. Registered before the catch-all card route so /auth/* wins.

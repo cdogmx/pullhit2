@@ -29,6 +29,10 @@ class DealsController extends Controller
                 'title' => 'In-stock deals — CardFoo',
                 'heading' => 'In stock now',
             ],
+            'meta' => [
+                'title' => 'TCG deals — sealed products in stock at or below MSRP | CardFoo',
+                'description' => 'Live Pokémon, One Piece & Lorcana sealed products in stock at or below MSRP across major retailers, tracked continuously on CardFoo.',
+            ],
         ]);
     }
 

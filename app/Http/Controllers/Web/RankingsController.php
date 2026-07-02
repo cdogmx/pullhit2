@@ -32,6 +32,10 @@ class RankingsController extends Controller
             'earn' => $this->earnMethods(),
             // The signed-in user's referral link handle (their public username).
             'referralHandle' => $request->user()?->username,
+            'meta' => [
+                'title' => 'Community rankings & monthly card giveaway | CardFoo',
+                'description' => 'Climb the CardFoo leaderboard by scanning, collecting, and improving the catalog. Every point you earn this month is an entry in the monthly card giveaway.',
+            ],
         ]);
     }
 
