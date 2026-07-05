@@ -12,7 +12,14 @@ use RuntimeException;
  */
 class OxylabsClient
 {
-    public function fetchHtml(string $url, string $geo = 'United States'): string
+    /**
+     * Fetch a URL's HTML via Oxylabs. `render` defaults to true (headless render,
+     * needed for JS-built pages like eBay). Pass false for sites that serve their
+     * full content server-side AND fingerprint headless browsers — PriceCharting
+     * strips its sold-listings tables when it detects a rendered/headless client,
+     * so we fetch those plain.
+     */
+    public function fetchHtml(string $url, string $geo = 'United States', bool $render = true): string
     {
         $config = config('services.oxylabs');
 
@@ -20,15 +27,20 @@ class OxylabsClient
             throw new RuntimeException('Oxylabs credentials are not configured.');
         }
 
+        $payload = [
+            'source' => 'universal',
+            'url' => $url,
+            'geo_location' => $geo,
+        ];
+
+        if ($render) {
+            $payload['render'] = 'html';
+        }
+
         $response = Http::withBasicAuth($config['username'], $config['password'])
             ->timeout(90)
             ->retry(2, 2000, throw: false)
-            ->post($config['endpoint'], [
-                'source' => 'universal',
-                'url' => $url,
-                'geo_location' => $geo,
-                'render' => 'html',
-            ]);
+            ->post($config['endpoint'], $payload);
 
         if (! $response->successful()) {
             throw new RuntimeException("Oxylabs request failed: HTTP {$response->status()}");
