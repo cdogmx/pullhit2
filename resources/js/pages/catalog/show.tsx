@@ -7,6 +7,8 @@ import {
     Maximize2,
     Pencil,
     RefreshCw,
+    TrendingDown,
+    TrendingUp,
 } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
@@ -133,6 +135,25 @@ export default function Show({
     const headline =
         values.find((v) => v.state_key === 'NM' || v.state_key === 'SEALED') ??
         values[0];
+
+    // Sealed appreciation: how the current sealed value compares to the original
+    // release MSRP (both in cents). Only meaningful for sealed product with an
+    // MSRP on file and a real headline value.
+    const sealedVsMsrp = (() => {
+        if (
+            item.item_type !== 'sealed' ||
+            !item.msrp ||
+            !headline ||
+            headline.median == null
+        ) {
+            return null;
+        }
+
+        return {
+            msrp: item.msrp,
+            pct: ((headline.median - item.msrp) / item.msrp) * 100,
+        };
+    })();
 
     const [breakdown, setBreakdown] = useState<{
         stateKey: string;
@@ -489,6 +510,29 @@ export default function Show({
                                 <div className="mt-3">
                                     <PriceTag value={headline} variant="full" />
                                 </div>
+
+                                {sealedVsMsrp && (
+                                    <p className="mt-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                                        <span
+                                            className={cn(
+                                                'inline-flex items-center gap-0.5 font-semibold',
+                                                sealedVsMsrp.pct >= 0
+                                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                                    : 'text-red-600 dark:text-red-400',
+                                            )}
+                                        >
+                                            {sealedVsMsrp.pct >= 0 ? (
+                                                <TrendingUp className="size-3.5" />
+                                            ) : (
+                                                <TrendingDown className="size-3.5" />
+                                            )}
+                                            {sealedVsMsrp.pct >= 0 ? '+' : ''}
+                                            {sealedVsMsrp.pct.toFixed(0)}%
+                                        </span>
+                                        since release ·{' '}
+                                        {formatMoney(sealedVsMsrp.msrp)} MSRP
+                                    </p>
+                                )}
 
                                 {lastSale ? (
                                     <p className="mt-2 text-xs text-muted-foreground">
