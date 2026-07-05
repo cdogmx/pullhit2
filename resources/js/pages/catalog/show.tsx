@@ -152,6 +152,10 @@ export default function Show({
         return {
             msrp: item.msrp,
             pct: ((headline.median - item.msrp) / item.msrp) * 100,
+            // Only a real citation URL becomes a link; 'admin'/'ai_search' don't.
+            source: item.msrp_source?.startsWith('http')
+                ? item.msrp_source
+                : null,
         };
     })();
 
@@ -531,6 +535,16 @@ export default function Show({
                                         </span>
                                         since release ·{' '}
                                         {formatMoney(sealedVsMsrp.msrp)} MSRP
+                                        {sealedVsMsrp.source && (
+                                            <a
+                                                href={sealedVsMsrp.source}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="underline underline-offset-2 hover:text-foreground"
+                                            >
+                                                source
+                                            </a>
+                                        )}
                                     </p>
                                 )}
 

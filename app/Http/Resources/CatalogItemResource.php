@@ -36,6 +36,7 @@ class CatalogItemResource extends JsonResource
             // Generic product metadata (sealed products): MSRP (cents), release
             // date, and "where to buy" retailer links (each with its own price).
             'msrp' => $this->msrp,
+            'msrp_source' => $this->msrp_source,
             'released_at' => $this->released_at?->toDateString(),
             'retailer_links' => $this->retailer_links,
             // All vertical-specific facets (illustrator, hp, type, sealed_type, …).

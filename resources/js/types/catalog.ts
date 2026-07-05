@@ -49,8 +49,9 @@ export type CatalogItem = {
     variant: string | null;
     image_url: string | null;
     base_key: string | null;
-    /** MSRP in cents; release date; "where to buy" links (each with its price). */
+    /** MSRP in cents; where the MSRP came from (cited URL or 'admin'); release date. */
     msrp?: number | null;
+    msrp_source?: string | null;
     released_at?: string | null;
     retailer_links?: RetailerLink[] | null;
     variants_count?: number;

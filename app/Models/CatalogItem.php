@@ -33,6 +33,7 @@ use Illuminate\Support\Str;
     'primary_image_path',
     'external_ids',
     'msrp',
+    'msrp_source',
     'released_at',
     'retailer_links',
 ])]
