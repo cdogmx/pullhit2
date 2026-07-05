@@ -40,6 +40,11 @@ class BackfillSealedMsrpCommand extends Command
         'build_and_battle',
     ];
 
+    /** msrp_source sentinels marking a researched-but-unfilled product (skip on re-run). */
+    private const TRIED_NOT_FOUND = 'not_found';
+
+    private const TRIED_LOW_CONFIDENCE = 'low_confidence';
+
     public function handle(SealedMsrpResearcher $researcher): int
     {
         $dryRun = (bool) $this->option('dry-run');
@@ -84,6 +89,11 @@ class BackfillSealedMsrpCommand extends Command
 
             if ($result === null) {
                 $notFound++;
+                // Record the attempt (msrp stays null) so a batch loop doesn't keep
+                // re-picking the same un-findable product. --force re-tries it.
+                if (! $dryRun) {
+                    $item->forceFill(['msrp_source' => self::TRIED_NOT_FOUND])->save();
+                }
                 $this->line("  · {$label}: no credible MSRP found — left null");
 
                 continue;
@@ -91,6 +101,9 @@ class BackfillSealedMsrpCommand extends Command
 
             if ($result['confidence'] < $minConfidence) {
                 $lowConf++;
+                if (! $dryRun) {
+                    $item->forceFill(['msrp_source' => self::TRIED_LOW_CONFIDENCE])->save();
+                }
                 $this->warn(sprintf('  ? %s: found $%.2f but confidence %.2f < %.2f — skipped', $label, $result['msrp_cents'] / 100, $result['confidence'], $minConfidence));
 
                 continue;
@@ -114,8 +127,10 @@ class BackfillSealedMsrpCommand extends Command
     }
 
     /**
-     * Sealed products missing an MSRP, matching the type/line filters, boxes first
-     * and newest sets first (the ones people track right now).
+     * Sealed products still needing an MSRP, matching the type/line filters, boxes
+     * first and newest sets first (the ones people track right now). "Still needing"
+     * = no MSRP yet AND not already researched (msrp_source unset); --force ignores
+     * both so every matching product is re-researched.
      *
      * @return Collection<int, CatalogItem>
      */
@@ -128,7 +143,9 @@ class BackfillSealedMsrpCommand extends Command
 
         return CatalogItem::query()
             ->where('item_type', ItemType::Sealed->value)
-            ->when(! $this->option('force'), fn (Builder $q) => $q->where(fn (Builder $w) => $w->whereNull('msrp')->orWhere('msrp', '<=', 0)))
+            ->when(! $this->option('force'), fn (Builder $q) => $q
+                ->where(fn (Builder $w) => $w->whereNull('msrp')->orWhere('msrp', '<=', 0))
+                ->whereNull('msrp_source'))
             ->where(function (Builder $q) use ($types) {
                 foreach ($types as $type) {
                     $q->orWhere('attributes->sealed_type', $type);

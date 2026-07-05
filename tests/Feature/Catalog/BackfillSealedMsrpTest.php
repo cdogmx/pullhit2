@@ -83,6 +83,27 @@ test('it leaves the MSRP null when nothing credible is found', function () {
     expect($box->refresh()->msrp)->toBeNull();
 });
 
+test('a not-found product is marked tried so a re-run does not re-research it', function () {
+    $box = CatalogItem::factory()->sealed()->create([
+        'product_line_id' => $this->pokemon->id,
+        'set_id' => $this->set->id,
+        'msrp' => null,
+    ]);
+
+    $this->app->instance(SealedMsrpResearcher::class, fakeMsrpResearcher(null));
+    $this->artisan('sealed:backfill-msrp', ['--limit' => 5])->assertOk();
+
+    $box->refresh();
+    expect($box->msrp)->toBeNull()
+        ->and($box->msrp_source)->toBe('not_found');
+
+    // A re-run must report zero targets — the tried product is excluded, so a
+    // batch loop makes progress instead of looping on the same un-findable item.
+    $this->artisan('sealed:backfill-msrp', ['--limit' => 5])
+        ->expectsOutputToContain('No sealed products to research')
+        ->assertOk();
+});
+
 test('it skips low-confidence results below the threshold', function () {
     $box = CatalogItem::factory()->sealed()->create([
         'product_line_id' => $this->pokemon->id,
