@@ -177,6 +177,9 @@ class SuggestSearch
     private function cardHit(CatalogItem $item): array
     {
         return [
+            // id lets non-navigational consumers (e.g. the compare typeahead)
+            // add a card by key; the header search just uses name/thumb/url.
+            'id' => $item->id,
             'name' => $item->display_name,
             'set' => $item->set?->name,
             'thumb' => $item->primary_image_path ?? ($item->external_ids['ptcgio_image'] ?? null),

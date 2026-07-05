@@ -295,10 +295,11 @@ function AddCard({
     const [open, setOpen] = useState(false);
     const boxRef = useRef<HTMLDivElement>(null);
 
-    // Debounced catalog search (same public endpoint the browse page uses).
-    // All state updates happen inside the deferred callbacks, never synchronously
-    // in the effect body. Stale results are simply hidden (dropdown is gated on
-    // query length) rather than cleared here.
+    // Debounced type-ahead via the lightweight /search/suggest endpoint (three
+    // small LIKE queries) — NOT /api/v1/catalog, which also recomputes the whole
+    // browse facet set (every card's attributes + grade/grader subqueries) per
+    // request. All state updates happen inside the deferred callbacks; stale
+    // results are hidden (dropdown gated on length), not cleared here.
     useEffect(() => {
         const term = q.trim();
 
@@ -309,25 +310,24 @@ function AddCard({
         const ctrl = new AbortController();
         const timer = setTimeout(() => {
             setLoading(true);
-            fetch(
-                `/api/v1/catalog?q=${encodeURIComponent(term)}&per_page=8`,
-                { headers: { Accept: 'application/json' }, signal: ctrl.signal },
-            )
+            fetch(`/search/suggest?q=${encodeURIComponent(term)}`, {
+                headers: { Accept: 'application/json' },
+                signal: ctrl.signal,
+            })
                 .then((r) => r.json())
                 .then((body) => {
-                    type Row = {
+                    type Card = {
                         id: number;
-                        display_name?: string;
                         name: string;
-                        image_url: string | null;
-                        set?: { name: string } | null;
+                        set: string | null;
+                        thumb: string | null;
                     };
                     setResults(
-                        (body.data ?? []).map((d: Row) => ({
-                            id: d.id,
-                            name: d.display_name ?? d.name,
-                            set: d.set?.name ?? null,
-                            image: d.image_url,
+                        (body.cards ?? []).map((c: Card) => ({
+                            id: c.id,
+                            name: c.name,
+                            set: c.set,
+                            image: c.thumb,
                         })),
                     );
                     setLoading(false);
