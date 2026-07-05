@@ -210,7 +210,10 @@ export default function Browse({
             return;
         }
 
-        const timer = setTimeout(() => update({ q: q || null }), 300);
+        const timer = setTimeout(
+            () => update({ q: q || null }, { replace: true }),
+            300,
+        );
 
         return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -274,12 +277,20 @@ export default function Browse({
         'tileLanguages',
     ];
 
-    function update(partial: Partial<CatalogFilters>) {
+    // Push a history entry by default so the browser Back button steps back
+    // through the drill-down (brand → series → set → subset) and each filter
+    // change — mirroring the breadcrumb. Search-as-you-type passes replace so
+    // keystrokes don't each become their own history entry (Back would then
+    // walk letter-by-letter); it just updates the current entry in place.
+    function update(
+        partial: Partial<CatalogFilters>,
+        { replace = false }: { replace?: boolean } = {},
+    ) {
         const next = buildQuery({ ...filters, ...partial });
         router.get('/browse', next, {
             preserveState: true,
             preserveScroll: true,
-            replace: true,
+            replace,
             reset: ['items'],
             only: LIST_PROPS,
         });
@@ -293,7 +304,6 @@ export default function Browse({
             {
                 preserveState: true,
                 preserveScroll: true,
-                replace: true,
                 reset: ['items'],
                 only: LIST_PROPS,
             },
