@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\UsernameController;
 use App\Http\Controllers\Web\CatalogController;
 use App\Http\Controllers\Web\CollectionController;
 use App\Http\Controllers\Web\CollectionsController;
+use App\Http\Controllers\Web\CompareController;
 use App\Http\Controllers\Web\ContributeController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\DealsController;
@@ -78,6 +79,9 @@ Route::get('rankings', RankingsController::class)->name('rankings');
 
 // Public in-stock deals feed (products at/below target across retailers).
 Route::get('deals', DealsController::class)->name('deals');
+
+// Compare up to 5 cards' value over time (selection in ?ids=, shareable).
+Route::get('compare', CompareController::class)->name('compare');
 
 // "Rip or Keep?" — the AI Sensei reasons over a sealed product's real data.
 // Public (viral) but the AI turn is throttled to bound cost/abuse.

@@ -136,6 +136,9 @@ export function SiteHeader() {
                         <a href="/deals" className={NAV_LINK}>
                             Deals
                         </a>
+                        <a href="/compare" className={NAV_LINK}>
+                            Compare
+                        </a>
                         <a href="/rip-or-keep" className={NAV_LINK}>
                             Rip or Keep?
                         </a>
