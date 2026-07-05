@@ -118,10 +118,22 @@ class SoldCompClassifier
      */
     private function sealedInvalid(string $lower, CatalogItem $item): bool
     {
+        $name = mb_strtolower($item->name);
+
+        // Blocklist — but never reject on a term the product legitimately IS. The
+        // single-card blocklist contains "bundle" (mystery-lot bundles); without
+        // this guard it would kill every real "Booster Bundle" sealed comp.
         foreach ((array) config('valuation.ebay.blocklist', []) as $bad) {
-            if (str_contains($lower, $bad)) {
+            if (! str_contains($name, $bad) && str_contains($lower, $bad)) {
                 return true;
             }
+        }
+
+        // Opened / empty / packs-removed boxes are collectible empties, not a
+        // sealed sale — reject by title (don't rely on them being price outliers).
+        // "unopened" is safe: the word boundary won't match inside it.
+        if (preg_match('/\b(empty|opened|no packs?|box only|packs? removed|no cards?|inserts only)\b/', $lower)) {
+            return true;
         }
 
         // Multi-product bundles / multi-quantity lots ("2x", "10 box", "lot",

@@ -137,6 +137,41 @@ test('a Pokemon HP stat is not read as Heavily Played condition', function () {
     expect($played->condition)->toBe('HP');
 });
 
+test('a sealed booster bundle accepts a genuine bundle listing (blocklist bundle guard)', function () {
+    // Regression: "bundle" is on the single-card blocklist; a Booster Bundle
+    // product must not have every real comp rejected by it.
+    $bundle = CatalogItem::factory()->sealed()->create([
+        'name' => '151 Booster Bundle',
+        'attributes' => ['language' => 'en', 'sealed_type' => 'booster_bundle'],
+    ]);
+
+    $comp = $this->classifier->classify(
+        candidate('Pokemon Scarlet & Violet 151 Booster Bundle Factory Sealed', 3000),
+        $bundle,
+        2694,
+        $this->companies,
+    );
+
+    expect($comp)->not->toBeNull()->and($comp->condition)->toBe('SEALED');
+});
+
+test('a sealed ETB rejects empty / opened / no-packs boxes', function () {
+    $etb = CatalogItem::factory()->sealed()->create([
+        'name' => '151 Elite Trainer Box',
+        'attributes' => ['language' => 'en', 'sealed_type' => 'elite_trainer_box'],
+    ]);
+    $anchor = 56_000;
+
+    // Collectible empties, not sealed sales — even priced within the band.
+    expect($this->classifier->classify(candidate('Pokemon 151 Elite Trainer Box ETB EMPTY W Inserts NO PACKS', 12_000), $etb, $anchor, $this->companies))->toBeNull();
+    expect($this->classifier->classify(candidate('Pokemon 151 Elite Trainer Box ETB Box Only No Cards', 9_000), $etb, $anchor, $this->companies))->toBeNull();
+
+    // A genuine sealed ETB still passes…
+    expect($this->classifier->classify(candidate('Pokemon Scarlet & Violet 151 Elite Trainer Box Factory Sealed', 56_000), $etb, $anchor, $this->companies))->not->toBeNull();
+    // …and "Unopened" must NOT trip the 'opened' rule.
+    expect($this->classifier->classify(candidate('Pokemon 151 Elite Trainer Box Factory Sealed Unopened', 57_000), $etb, $anchor, $this->companies))->not->toBeNull();
+});
+
 test('it parses Beckett, hyphenated, and word-separated grade forms', function () {
     $bgs = GradingCompany::factory()->create(['slug' => 'bgs', 'name' => 'Beckett (BGS)']);
     $companies = ['psa' => $this->psa->id, 'bgs' => $bgs->id];
