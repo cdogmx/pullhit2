@@ -14,6 +14,7 @@ import { PriceTag } from '@/components/catalog/price-tag';
 import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -809,7 +810,19 @@ function FilterControls({
         // every type with an explicit 'all' rather than the null sentinel).
         allValue?: string;
         allLabel?: string;
+        // Other filter keys to reset when this one changes (a set belongs to a
+        // brand, so switching brand must drop a now-invalid set/series).
+        clears?: (keyof CatalogFilters)[];
     }[] = [
+        {
+            key: 'product_line',
+            label: 'Brand',
+            opts: options.product_lines.map((p) => ({
+                value: p.slug,
+                label: p.name,
+            })),
+            clears: ['series', 'set', 'subset'],
+        },
         {
             key: 'item_type',
             label: 'Type',
@@ -864,39 +877,34 @@ function FilterControls({
             {selects
                 .filter((s) => s.opts.length > 0)
                 .map((s) => {
-                    const allVal = s.allValue ?? ALL;
+                    // The "clear" entry: item_type opts back into every type with
+                    // an explicit 'all'; every other filter clears to null via ''.
+                    const clearVal = s.allValue ?? '';
                     const allLabel = s.allLabel ?? `All ${s.label.toLowerCase()}`;
+                    const clears = Object.fromEntries(
+                        (s.clears ?? []).map((k) => [k, null]),
+                    );
 
                     return (
                         <div key={s.key} className="space-y-1.5">
                             <label className="text-xs font-medium text-muted-foreground">
                                 {s.label}
                             </label>
-                            <Select
-                                value={(filters[s.key] as string) || allVal}
-                                onValueChange={(value) =>
+                            <Combobox
+                                options={[
+                                    { value: clearVal, label: allLabel },
+                                    ...s.opts,
+                                ]}
+                                value={(filters[s.key] as string) || clearVal}
+                                onChange={(value) =>
                                     onChange({
-                                        [s.key]: value === ALL ? null : value,
+                                        [s.key]: value === '' ? null : value,
+                                        ...clears,
                                     })
                                 }
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder={allLabel} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value={allVal}>
-                                        {allLabel}
-                                    </SelectItem>
-                                    {s.opts.map((o) => (
-                                        <SelectItem
-                                            key={o.value}
-                                            value={o.value}
-                                        >
-                                            {o.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                placeholder={allLabel}
+                                searchPlaceholder={`Search ${s.label.toLowerCase()}…`}
+                            />
                         </div>
                     );
                 })}

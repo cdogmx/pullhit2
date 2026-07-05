@@ -11,7 +11,7 @@ import {
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
-import { Combobox } from '@/components/admin/combobox';
+import { Combobox } from '@/components/ui/combobox';
 import { DataTable } from '@/components/admin/data-table';
 import type { DataTableColumn } from '@/components/admin/data-table';
 import { EditSetDialog } from '@/components/admin/edit-set-dialog';

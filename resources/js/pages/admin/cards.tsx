@@ -2,7 +2,7 @@ import { Head, router } from '@inertiajs/react';
 import { Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Combobox } from '@/components/admin/combobox';
+import { Combobox } from '@/components/ui/combobox';
 import { CreateCardDialog } from '@/components/admin/create-card-dialog';
 import { SortHeader } from '@/components/admin/data-table';
 import type { SortDir } from '@/components/admin/data-table';

@@ -1,7 +1,7 @@
 import { useForm } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { Combobox } from '@/components/admin/combobox';
+import { Combobox } from '@/components/ui/combobox';
 import { ImageUploadField } from '@/components/admin/image-upload-field';
 import { Button } from '@/components/ui/button';
 import {
