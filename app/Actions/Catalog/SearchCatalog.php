@@ -28,7 +28,15 @@ class SearchCatalog
      */
     public function __invoke(array $filters): LengthAwarePaginator
     {
+        $grading = $this->gradingFilter($filters);
+
         $query = CatalogItem::query()->with(['vertical', 'productLine', 'set', 'defaultMarketValue']);
+
+        // Browsing a graded state: load + display that state's value instead of
+        // the raw headline (the resource prefers gradedMarketValue when present).
+        if ($grading) {
+            $query->with(['gradedMarketValue' => fn ($q) => $this->constrainGrading($q, $grading)]);
+        }
 
         $this->applySearch($query, $filters['q'] ?? null);
         $this->applyFilters($query, $filters);
@@ -42,12 +50,50 @@ class SearchCatalog
         if (! empty($filters['q']) && $sort === 'number' && empty($filters['group'])) {
             $this->applyRelevance($query, (string) $filters['q']);
         } else {
-            $this->applySort($query, $sort, $filters['direction'] ?? 'asc');
+            $this->applySort($query, $sort, $filters['direction'] ?? 'asc', $grading);
         }
 
         $perPage = (int) ($filters['per_page'] ?? 24);
 
         return $query->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * The active graded-state filter (grader slug + optional grade), or null.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array{slug: string, grade: ?float}|null
+     */
+    private function gradingFilter(array $filters): ?array
+    {
+        $slug = $filters['grading_company'] ?? null;
+
+        if (! $slug) {
+            return null;
+        }
+
+        return [
+            'slug' => (string) $slug,
+            'grade' => isset($filters['grade']) && $filters['grade'] !== null ? (float) $filters['grade'] : null,
+        ];
+    }
+
+    /**
+     * Narrow a MarketValue query — or a relation resolving to MarketValue (the
+     * gradedMarketValue eager-load, a whereHas closure) — to the requested grader
+     * (+ grade). Accepts both since Builder and Relation forward the same methods.
+     *
+     * @template TQuery of Builder<MarketValue>|\Illuminate\Database\Eloquent\Relations\Relation<MarketValue, *, *>
+     *
+     * @param  TQuery  $q
+     * @param  array{slug: string, grade: ?float}  $grading
+     * @return TQuery
+     */
+    private function constrainGrading($q, array $grading)
+    {
+        return $q
+            ->whereHas('gradingCompany', fn (Builder $c) => $c->where('slug', $grading['slug']))
+            ->when($grading['grade'] !== null, fn ($m) => $m->where('grade', $grading['grade']));
     }
 
     /**
@@ -193,6 +239,12 @@ class SearchCatalog
             ->when($filters['variant'] ?? null, fn (Builder $q, $variant) => $q->where('attributes->variant', $variant))
             ->when($filters['edition'] ?? null, fn (Builder $q, $edition) => $q->where('attributes->edition', $edition));
 
+        // Graded state: keep only cards that have a value for the chosen grader
+        // (and grade). The matching value is loaded + displayed in __invoke.
+        if ($grading = $this->gradingFilter($filters)) {
+            $query->whereHas('marketValues', fn (Builder $mv) => $this->constrainGrading($mv, $grading));
+        }
+
         // `subset` (only ever 'main' in URLs) is a UI sentinel that drops a parent
         // set to its own cards; a child gallery is browsed by its own set slug.
     }
@@ -216,8 +268,9 @@ class SearchCatalog
 
     /**
      * @param  Builder<CatalogItem>  $query
+     * @param  array{slug: string, grade: ?float}|null  $grading
      */
-    protected function applySort(Builder $query, string $sort, string $direction): void
+    protected function applySort(Builder $query, string $sort, string $direction, ?array $grading = null): void
     {
         $direction = $direction === 'desc' ? 'desc' : 'asc';
 
@@ -242,12 +295,13 @@ class SearchCatalog
             return;
         }
 
-        // Sort by the card's headline value (price) or its 30-day % change. Both
-        // read the ungraded NM/SEALED market value; cards without one sort last
-        // when descending (the usual "highest first" / "biggest gainers" view).
+        // Sort by the card's headline value (price) or its 30-day % change. Reads
+        // the ungraded NM/SEALED market value — or, when browsing a grade, the
+        // matching graded value. Cards without one sort last when descending (the
+        // usual "highest first" / "biggest gainers" view).
         if ($sort === 'price' || $sort === 'change') {
             $query
-                ->orderBy($this->headlineValueSub($sort === 'price' ? 'median' : 'trend_30d'), $direction)
+                ->orderBy($this->headlineValueSub($sort === 'price' ? 'median' : 'trend_30d', $grading), $direction)
                 ->orderBy('name');
 
             return;
@@ -263,19 +317,29 @@ class SearchCatalog
 
     /**
      * Subquery selecting one column from a card's headline market value — the
-     * ungraded NM (or SEALED) row, same one the lists display. Used to order by
-     * price (median) or 30-day % change (trend_30d).
+     * ungraded NM (or SEALED) row, same one the lists display. When browsing a
+     * grade, it instead reads the matching graded row (the same value shown).
+     * Used to order by price (median) or 30-day % change (trend_30d).
      *
+     * @param  array{slug: string, grade: ?float}|null  $grading
      * @return Builder<MarketValue>
      */
-    protected function headlineValueSub(string $column): Builder
+    protected function headlineValueSub(string $column, ?array $grading = null): Builder
     {
-        return MarketValue::query()
+        $sub = MarketValue::query()
             ->select($column)
             ->whereColumn('market_values.catalog_item_id', 'catalog_items.id')
+            ->limit(1);
+
+        if ($grading) {
+            return $this->constrainGrading($sub, $grading)
+                ->orderByDesc('grade')
+                ->orderByDesc('median');
+        }
+
+        return $sub
             ->whereNull('grading_company_id')
             ->orderByRaw("CASE WHEN state_key IN ('NM', 'SEALED') THEN 0 ELSE 1 END")
-            ->orderBy('id')
-            ->limit(1);
+            ->orderBy('id');
     }
 }

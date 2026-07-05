@@ -4,6 +4,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
+        {{-- Impact (affiliate) site ownership verification. --}}
+        <meta name="impact-site-verification" value="b7419141-3520-4c15-ae56-a5ab57ca6acd">
+
         {{-- Google tag (gtag.js) --}}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-Z5MK6HTM1D"></script>
         <script>

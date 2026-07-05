@@ -3,6 +3,7 @@
 use App\Actions\Catalog\CreateCatalogItem;
 use App\Enums\ItemType;
 use App\Models\CatalogItem;
+use App\Models\GradingCompany;
 use App\Models\MarketValue;
 use App\Models\ProductLine;
 use App\Models\Set;
@@ -224,6 +225,70 @@ test('sorting by % change orders by 30-day trend', function () {
         ->pluck('name')->values();
 
     expect($names->search('Riser'))->toBeLessThan($names->search('Faller'));
+});
+
+test('filtering by grader returns only graded cards and shows the graded value', function () {
+    $psa = GradingCompany::factory()->create(['slug' => 'psa', 'name' => 'PSA']);
+
+    $graded = CatalogItem::factory()->create(['name' => 'Graded Card']);
+    MarketValue::factory()->for($graded)->create([
+        'state_key' => 'NM', 'condition' => 'NM', 'grading_company_id' => null, 'grade' => null, 'median' => 1000,
+    ]);
+    MarketValue::factory()->for($graded)->create([
+        'state_key' => 'PSA-10', 'condition' => null, 'grading_company_id' => $psa->id, 'grade' => 10, 'median' => 50000,
+    ]);
+
+    // A raw-only card must be excluded by the grader filter.
+    $rawOnly = CatalogItem::factory()->create(['name' => 'Raw Only Card']);
+    MarketValue::factory()->for($rawOnly)->create([
+        'state_key' => 'NM', 'condition' => 'NM', 'grading_company_id' => null, 'grade' => null, 'median' => 2000,
+    ]);
+
+    $data = collect($this->getJson('/api/v1/catalog?grading_company=psa')->json('data'));
+
+    expect($data->pluck('name'))->toContain('Graded Card')->not->toContain('Raw Only Card');
+
+    // The displayed value is the graded one, not the raw NM value.
+    $card = $data->firstWhere('name', 'Graded Card');
+    expect($card['market_value']['median'])->toBe(50000)
+        ->and((float) $card['market_value']['grade'])->toBe(10.0);
+});
+
+test('filtering by grade narrows to the exact grade', function () {
+    $psa = GradingCompany::factory()->create(['slug' => 'psa', 'name' => 'PSA']);
+
+    $card = CatalogItem::factory()->create(['name' => 'Two Grades Card']);
+    MarketValue::factory()->for($card)->create([
+        'state_key' => 'PSA-10', 'condition' => null, 'grading_company_id' => $psa->id, 'grade' => 10, 'median' => 50000,
+    ]);
+    MarketValue::factory()->for($card)->create([
+        'state_key' => 'PSA-9', 'condition' => null, 'grading_company_id' => $psa->id, 'grade' => 9, 'median' => 20000,
+    ]);
+
+    $card9 = collect($this->getJson('/api/v1/catalog?grading_company=psa&grade=9')->json('data'))
+        ->firstWhere('name', 'Two Grades Card');
+
+    expect((float) $card9['market_value']['grade'])->toBe(9.0)
+        ->and($card9['market_value']['median'])->toBe(20000);
+});
+
+test('sorting by price uses the graded value when browsing a grade', function () {
+    $psa = GradingCompany::factory()->create(['slug' => 'psa', 'name' => 'PSA']);
+
+    // Raw order is the reverse of graded order — proves the sort reads the grade.
+    $a = CatalogItem::factory()->create(['name' => 'Grade Sort A']);
+    MarketValue::factory()->for($a)->create(['state_key' => 'NM', 'condition' => 'NM', 'grading_company_id' => null, 'grade' => null, 'median' => 9000]);
+    MarketValue::factory()->for($a)->create(['state_key' => 'PSA-10', 'condition' => null, 'grading_company_id' => $psa->id, 'grade' => 10, 'median' => 10000]);
+
+    $b = CatalogItem::factory()->create(['name' => 'Grade Sort B']);
+    MarketValue::factory()->for($b)->create(['state_key' => 'NM', 'condition' => 'NM', 'grading_company_id' => null, 'grade' => null, 'median' => 12000]);
+    MarketValue::factory()->for($b)->create(['state_key' => 'PSA-10', 'condition' => null, 'grading_company_id' => $psa->id, 'grade' => 10, 'median' => 80000]);
+
+    $names = collect($this->getJson('/api/v1/catalog?grading_company=psa&sort=price&direction=desc')->json('data'))
+        ->pluck('name')->values();
+
+    // By graded median B (80000) outranks A (10000), the opposite of raw order.
+    expect($names->search('Grade Sort B'))->toBeLessThan($names->search('Grade Sort A'));
 });
 
 test('per_page paginates results', function () {

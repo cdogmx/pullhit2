@@ -49,13 +49,9 @@ class CatalogItemResource extends JsonResource
                 'variants',
                 fn () => CatalogItemResource::collection($this->variants)->resolve($request),
             ),
-            // Headline ungraded value for lists (null when no comps).
-            'market_value' => $this->whenLoaded(
-                'defaultMarketValue',
-                fn () => $this->defaultMarketValue
-                    ? (new MarketValueResource($this->defaultMarketValue))->resolve($request)
-                    : null,
-            ),
+            // Headline value for lists (null when no comps). When browsing a graded
+            // state, the graded value is loaded + shown in place of the raw one.
+            'market_value' => $this->headlineMarketValue($request),
             // Every priced state (raw + graded) for the detail page.
             'market_values' => $this->whenLoaded(
                 'marketValues',
@@ -75,5 +71,26 @@ class CatalogItemResource extends JsonResource
                 'name' => $this->vertical->name,
             ]),
         ];
+    }
+
+    /**
+     * The value shown in lists: the graded state's value when browsing a grade
+     * (SearchCatalog loaded gradedMarketValue), otherwise the raw headline value.
+     * Absent from the payload when neither relation is loaded.
+     */
+    private function headlineMarketValue(Request $request): mixed
+    {
+        if ($this->relationLoaded('gradedMarketValue')) {
+            return $this->gradedMarketValue
+                ? (new MarketValueResource($this->gradedMarketValue))->resolve($request)
+                : null;
+        }
+
+        return $this->whenLoaded(
+            'defaultMarketValue',
+            fn () => $this->defaultMarketValue
+                ? (new MarketValueResource($this->defaultMarketValue))->resolve($request)
+                : null,
+        );
     }
 }

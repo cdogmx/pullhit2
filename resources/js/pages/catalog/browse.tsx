@@ -124,12 +124,18 @@ function buildQuery(filters: CatalogFilters): Record<string, string | number> {
         'rarity',
         'variant',
         'edition',
+        'grading_company',
     ] as const) {
         const value = filters[key];
 
         if (value) {
             out[key] = value;
         }
+    }
+
+    // Grade is numeric and only meaningful alongside a grader.
+    if (filters.grading_company && filters.grade != null) {
+        out.grade = filters.grade;
     }
 
     if (filters.sort && filters.sort !== 'number') {
@@ -165,6 +171,8 @@ const ACTIVE_KEYS: (keyof CatalogFilters)[] = [
     'rarity',
     'variant',
     'edition',
+    'grading_company',
+    'grade',
 ];
 
 /** Friendlier labels for the catalog's item types. */
@@ -870,6 +878,16 @@ function FilterControls({
                 label: languageLabel(v),
             })),
         },
+        {
+            key: 'grading_company',
+            label: 'Grader',
+            opts: options.grading_companies.map((g) => ({
+                value: g.slug,
+                label: g.name,
+            })),
+            // Switching grader invalidates a grade picked for the old grader.
+            clears: ['grade'],
+        },
     ];
 
     return (
@@ -908,6 +926,30 @@ function FilterControls({
                         </div>
                     );
                 })}
+
+            {/* Grade — only once a grader is chosen, scoped to grades it offers. */}
+            {filters.grading_company && options.grades.length > 0 && (
+                <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">
+                        Grade
+                    </label>
+                    <Combobox
+                        options={[
+                            { value: '', label: 'All grades' },
+                            ...options.grades.map((g) => ({
+                                value: String(g),
+                                label: String(g),
+                            })),
+                        ]}
+                        value={filters.grade != null ? String(filters.grade) : ''}
+                        onChange={(value) =>
+                            onChange({ grade: value === '' ? null : Number(value) })
+                        }
+                        placeholder="All grades"
+                        searchPlaceholder="Search grade…"
+                    />
+                </div>
+            )}
         </div>
     );
 }
@@ -921,9 +963,25 @@ function ActiveChips({
     onClear: (key: keyof CatalogFilters) => void;
     onReset: () => void;
 }) {
+    const chipLabel = (k: keyof CatalogFilters): string => {
+        if (k === 'q') {
+            return `Search: ${filters.q}`;
+        }
+
+        if (k === 'grading_company') {
+            return `Grader: ${String(filters.grading_company).toUpperCase()}`;
+        }
+
+        if (k === 'grade') {
+            return `Grade: ${filters.grade}`;
+        }
+
+        return `${humanize(k)}: ${filters[k]}`;
+    };
+
     const chips = ACTIVE_KEYS.filter((k) => filters[k]).map((k) => ({
         key: k,
-        label: `${k === 'q' ? 'Search' : humanize(k)}: ${filters[k]}`,
+        label: chipLabel(k),
     }));
 
     return (

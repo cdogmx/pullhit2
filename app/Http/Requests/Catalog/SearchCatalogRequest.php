@@ -37,6 +37,9 @@ class SearchCatalogRequest extends FormRequest
             'rarity' => ['nullable', 'string', 'max:64'],
             'variant' => ['nullable', 'string', 'max:64'],
             'edition' => ['nullable', 'string', 'max:32'],
+            // Graded state: filter to a grader (slug) and optionally a grade.
+            'grading_company' => ['nullable', 'string', 'max:64'],
+            'grade' => ['nullable', 'numeric', 'min:1', 'max:10'],
             'sort' => ['nullable', Rule::in(['number', 'name', 'newest', 'release', 'set', 'price', 'change'])],
             'direction' => ['nullable', Rule::in(['asc', 'desc'])],
             'group' => ['nullable', 'boolean'],
@@ -69,6 +72,8 @@ class SearchCatalogRequest extends FormRequest
             'rarity' => $v['rarity'] ?? null,
             'variant' => $v['variant'] ?? null,
             'edition' => $v['edition'] ?? null,
+            'grading_company' => $v['grading_company'] ?? null,
+            'grade' => isset($v['grade']) ? (float) $v['grade'] : null,
             'sort' => $v['sort'] ?? 'number',
             'direction' => $v['direction'] ?? 'asc',
             'group' => $this->boolean('group'),

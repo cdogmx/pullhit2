@@ -4,11 +4,14 @@ namespace App\Actions\Catalog;
 
 use App\Enums\ItemType;
 use App\Models\CatalogItem;
+use App\Models\GradingCompany;
+use App\Models\MarketValue;
 use App\Models\ProductLine;
 use App\Models\Set;
 use App\Models\Vertical;
 use App\Support\Verticals\VerticalRegistry;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 /**
  * Builds the facet option lists for the browse filters. Verticals/lines/sets come
@@ -57,7 +60,55 @@ class CatalogFilterOptions
             'rarities' => $present('rarity'),
             'variants' => $this->meaningfulVariants($present('variant')),
             'editions' => $present('edition'),
+            // Graders that have graded values in scope, and the grades available
+            // (narrowed to the selected grader when one is chosen).
+            'grading_companies' => $this->gradingCompanies($filters),
+            'grades' => $this->grades($filters),
         ];
+    }
+
+    /**
+     * Grading companies that have at least one graded value within the current
+     * scope — so the grader filter only offers graders that would return cards.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Collection<int, GradingCompany>
+     */
+    protected function gradingCompanies(array $filters)
+    {
+        $ids = MarketValue::query()
+            ->whereNotNull('grading_company_id')
+            ->whereHas('catalogItem', fn (Builder $c) => $this->applyScope($c, $filters))
+            ->distinct()
+            ->pluck('grading_company_id');
+
+        return GradingCompany::query()
+            ->whereIn('id', $ids)
+            ->orderBy('name')
+            ->get(['slug', 'name']);
+    }
+
+    /**
+     * Distinct grades present in scope, highest first (10 → 1). Narrowed to the
+     * selected grader so, e.g., BGS's half-grades don't appear under PSA.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<int, float>
+     */
+    protected function grades(array $filters): array
+    {
+        return MarketValue::query()
+            ->whereNotNull('grade')
+            ->when(
+                $filters['grading_company'] ?? null,
+                fn (Builder $q, $slug) => $q->whereHas('gradingCompany', fn (Builder $c) => $c->where('slug', $slug)),
+            )
+            ->whereHas('catalogItem', fn (Builder $c) => $this->applyScope($c, $filters))
+            ->distinct()
+            ->orderByDesc('grade')
+            ->pluck('grade')
+            ->map(fn ($g) => (float) $g)
+            ->all();
     }
 
     /**

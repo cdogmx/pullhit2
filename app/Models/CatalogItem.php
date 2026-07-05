@@ -181,6 +181,21 @@ class CatalogItem extends Model
     }
 
     /**
+     * A graded priced state — constrained per query when browsing by grade/grader
+     * (SearchCatalog narrows it to the requested company/grade). Base is any
+     * graded row, richest first.
+     *
+     * @return HasOne<MarketValue, $this>
+     */
+    public function gradedMarketValue(): HasOne
+    {
+        return $this->hasOne(MarketValue::class)
+            ->whereNotNull('grading_company_id')
+            ->orderByDesc('grade')
+            ->orderByDesc('median');
+    }
+
+    /**
      * Restrict a query to one representative row per base card (for "group by base"
      * reads). Pair with ->get() then load ->variants() as needed.
      *

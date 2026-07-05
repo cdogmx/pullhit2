@@ -96,6 +96,8 @@ export type CatalogFilterOptions = {
     rarities: string[];
     variants: string[];
     editions: string[];
+    grading_companies: { slug: string; name: string }[];
+    grades: number[];
 };
 
 export type CatalogFilters = {
@@ -110,6 +112,8 @@ export type CatalogFilters = {
     rarity: string | null;
     variant: string | null;
     edition: string | null;
+    grading_company: string | null;
+    grade: number | null;
     sort: string;
     direction: string;
     group: boolean;
