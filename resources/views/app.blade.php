@@ -63,19 +63,23 @@
             $ogType = $pageMeta['og_type'] ?? 'website';
             $twitterCard = $pageMeta['twitter_card'] ?? 'summary_large_image';
             $jsonLd = $pageMeta['jsonld'] ?? null;
+            // Shareable/canonical URL. Path-only by default (SEO canonical); a page
+            // may supply its own — browse/search pass the full URL so shared
+            // searches keep their query. Synced client-side on navigation.
+            $canonicalUrl = $pageMeta['url'] ?? url()->current();
         @endphp
 
         <meta name="description" content="{{ $description }}">
         <meta name="application-name" content="{{ $appName }}">
         <meta name="apple-mobile-web-app-title" content="{{ $appName }}">
         <meta name="theme-color" content="#111317">
-        <link rel="canonical" href="{{ url()->current() }}">
+        <link rel="canonical" href="{{ $canonicalUrl }}">
 
         <meta property="og:type" content="{{ $ogType }}">
         <meta property="og:site_name" content="{{ $appName }}">
         <meta property="og:title" content="{{ $ogTitle }}">
         <meta property="og:description" content="{{ $description }}">
-        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:url" content="{{ $canonicalUrl }}">
         <meta property="og:image" content="{{ $ogImage }}">
         @if($ogImageIsBanner)
         <meta property="og:image:width" content="1500">

@@ -55,9 +55,14 @@ initializeTheme();
 // rather than the address bar. Blade renders those once on the initial load, so
 // after a client-side Inertia navigation they still point at the first page —
 // making Share send the wrong URL. Re-sync them to the current page on every
-// navigation. Matches the server's url()->current() (path only, no query).
-router.on('navigate', () => {
-    const url = window.location.origin + window.location.pathname;
+// navigation. A page may pass its own share URL via meta.url (browse/search send
+// the full URL so shared searches keep their query); everything else is
+// path-only, matching the server's url()->current().
+router.on('navigate', (event) => {
+    const meta = (
+        event.detail?.page?.props as { meta?: { url?: string } } | undefined
+    )?.meta;
+    const url = meta?.url ?? window.location.origin + window.location.pathname;
 
     document
         .querySelector('link[rel="canonical"]')

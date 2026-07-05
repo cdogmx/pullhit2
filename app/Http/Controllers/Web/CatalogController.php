@@ -124,6 +124,23 @@ class CatalogController extends Controller
             default => null,
         };
 
+        // Server-rendered SEO/share meta for the brand/set landing pages, with a
+        // search/landing fallback so every browse view has accurate meta.
+        $meta = $seo ? array_filter([
+            'title' => $seo['title'].' | '.config('app.name'),
+            'description' => $blurb
+                ?: "Browse {$seo['heading']} cards with confidence-scored market prices, sets, and values on ".config('app.name').'.',
+            // Generated set collage as the OG/Twitter image, when available.
+            'image' => $seo['image'] ?? null,
+            'image_alt' => isset($seo['image']) ? "{$seo['heading']} top cards" : null,
+        ], fn ($v) => $v !== null) : $this->browseFallbackMeta($filters);
+
+        // Share the FULL URL (with the search + filters) so a shared browse link
+        // reproduces the exact view — unlike the path-only canonical elsewhere,
+        // people share their searches. Drives canonical + og:url (Blade) and the
+        // client-side share-URL sync on navigation.
+        $meta['url'] = request()->fullUrl();
+
         $common = [
             'mode' => $mode,
             'blurb' => $blurb,
@@ -134,16 +151,7 @@ class CatalogController extends Controller
             'gradingCompanies' => GradingCompany::orderBy('name')
                 ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
             'seo' => $seo,
-            // Server-rendered SEO/share meta for the brand/set landing pages, with
-            // a search/landing fallback so every browse view has accurate meta.
-            'meta' => $seo ? array_filter([
-                'title' => $seo['title'].' | '.config('app.name'),
-                'description' => $blurb
-                    ?: "Browse {$seo['heading']} cards with confidence-scored market prices, sets, and values on ".config('app.name').'.',
-                // Generated set collage as the OG/Twitter image, when available.
-                'image' => $seo['image'] ?? null,
-                'image_alt' => isset($seo['image']) ? "{$seo['heading']} top cards" : null,
-            ], fn ($v) => $v !== null) : $this->browseFallbackMeta($filters),
+            'meta' => $meta,
             // Language selector shows while browsing a brand's series/sets.
             'tileLanguages' => in_array($mode, ['series', 'sets'], true) && ! empty($filters['product_line'])
                 ? $tiles->languagesFor($filters['product_line'])
