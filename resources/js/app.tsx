@@ -51,6 +51,22 @@ createInertiaApp({
 // This will set light / dark mode on load...
 initializeTheme();
 
+// iOS Safari's Share sheet (and many apps) read <link rel="canonical"> / og:url
+// rather than the address bar. Blade renders those once on the initial load, so
+// after a client-side Inertia navigation they still point at the first page —
+// making Share send the wrong URL. Re-sync them to the current page on every
+// navigation. Matches the server's url()->current() (path only, no query).
+router.on('navigate', () => {
+    const url = window.location.origin + window.location.pathname;
+
+    document
+        .querySelector('link[rel="canonical"]')
+        ?.setAttribute('href', url);
+    document
+        .querySelector('meta[property="og:url"]')
+        ?.setAttribute('content', url);
+});
+
 // Google Analytics (gtag.js) is loaded in app.blade.php and fires a page_view
 // for the initial document load. Inertia navigations don't reload the page, so
 // send a GA4 page_view on each client-side visit too.
