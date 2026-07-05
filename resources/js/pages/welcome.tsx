@@ -75,6 +75,7 @@ type Props = {
     movers: CardTileData[];
     recent: CardTileData[];
     popularSets: SetTileData[];
+    popularSearches: string[];
     community: Community;
     giveaway: Giveaway | null;
 };
@@ -105,8 +106,6 @@ const features: { title: string; description: string; icon: LucideIcon }[] = [
         icon: Store,
     },
 ];
-
-const popularSearches = ['Charizard', 'Pikachu', 'PSA 10', 'Booster box'];
 
 function TrendBadge({ trend }: { trend: number }) {
     const up = trend > 0;
@@ -243,6 +242,7 @@ export default function Welcome({
     movers,
     recent,
     popularSets,
+    popularSearches,
     community,
     giveaway,
 }: Props) {
@@ -304,20 +304,22 @@ export default function Welcome({
                             className="mx-auto mt-8 w-full max-w-xl"
                         />
 
-                        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
-                            <span className="text-primary-foreground/70">
-                                Popular:
-                            </span>
-                            {popularSearches.map((term) => (
-                                <Link
-                                    key={term}
-                                    href={`/browse?q=${encodeURIComponent(term)}`}
-                                    className="rounded-full bg-black/10 px-3 py-1 font-medium transition-colors hover:bg-black/20"
-                                >
-                                    {term}
-                                </Link>
-                            ))}
-                        </div>
+                        {popularSearches.length > 0 && (
+                            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
+                                <span className="text-primary-foreground/70">
+                                    Popular:
+                                </span>
+                                {popularSearches.map((term) => (
+                                    <Link
+                                        key={term}
+                                        href={`/browse?q=${encodeURIComponent(term)}`}
+                                        className="rounded-full bg-black/10 px-3 py-1 font-medium transition-colors hover:bg-black/20"
+                                    >
+                                        {term}
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
 
                         <div className="mt-8">
                             {auth.user ? (

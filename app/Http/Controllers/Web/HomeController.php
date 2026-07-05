@@ -24,12 +24,13 @@ class HomeController extends Controller
 {
     public function index(): Response
     {
-        $sections = Cache::remember('home:sections:v2', Carbon::now()->addMinutes(10), fn () => [
+        $sections = Cache::remember('home:sections:v3', Carbon::now()->addMinutes(10), fn () => [
             'brands' => $this->brands(),
             'trending' => $this->trending(),
             'movers' => $this->movers(),
             'recent' => $this->recent(),
             'popularSets' => $this->popularSets(),
+            'popularSearches' => $this->popularSearches(),
         ]);
 
         return Inertia::render('welcome', [
@@ -143,6 +144,40 @@ class HomeController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * The "Popular:" search chips under the hero. The single most-viewed card in
+     * each of the busiest brands — real, in-catalog names that always return
+     * results and span the games we actually carry (not just Pokémon). Falls back
+     * to evergreen terms on a fresh catalog with no view data yet.
+     *
+     * @return array<int, string>
+     */
+    private function popularSearches(): array
+    {
+        $terms = ProductLine::query()
+            ->select('id')
+            ->addSelect(['views' => CatalogItem::selectRaw('coalesce(sum(popularity), 0)')->whereColumn('product_line_id', 'product_lines.id')])
+            ->orderByDesc('views')
+            ->limit(6)
+            ->get()
+            ->map(fn (ProductLine $line) => CatalogItem::query()
+                ->where('product_line_id', $line->id)
+                ->where('popularity', '>', 0)
+                ->whereNotNull('primary_image_path')
+                ->orderByDesc('popularity')
+                ->value('name'))
+            ->filter()
+            ->unique()
+            ->values();
+
+        // Only a brand-new catalog with no view data yet has nothing to show.
+        if ($terms->isEmpty()) {
+            return ['Charizard', 'Pikachu', 'Booster box', 'Umbreon'];
+        }
+
+        return $terms->take(6)->all();
     }
 
     /** Points/levels config + giveaway framing for the explainer section. */
