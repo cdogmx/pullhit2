@@ -28,12 +28,6 @@ export type OwnedState = {
     unrealized_gain: number | null;
 };
 
-export type RetailerLink = {
-    retailer: string;
-    url: string;
-    price_cents: number | null;
-};
-
 export type CatalogItem = {
     id: number;
     name: string;
@@ -53,7 +47,6 @@ export type CatalogItem = {
     msrp?: number | null;
     msrp_source?: string | null;
     released_at?: string | null;
-    retailer_links?: RetailerLink[] | null;
     variants_count?: number;
     attributes?: Record<string, string | number | null>;
     variants?: CatalogItem[];

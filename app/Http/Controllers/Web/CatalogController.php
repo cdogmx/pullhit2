@@ -296,7 +296,39 @@ class CatalogController extends Controller
             'languages' => TcgVertical::LANGUAGES,
             // "More in this set" — other base cards from the same set.
             'moreInSet' => $this->moreInSet($catalogItem),
+            // "Where to buy" — live retailer offers from the deals tracker (the
+            // single source; replaces the old per-item retailer_links JSON).
+            'whereToBuy' => $this->whereToBuy($catalogItem),
         ]);
+    }
+
+    /**
+     * Live "where to buy" offers for a card, sourced from the deals tracker
+     * (App\Models\TrackedProduct + RetailerLink) — the same data behind /deals.
+     * Active links only; in-stock first, then cheapest. Prices are integer cents.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function whereToBuy(CatalogItem $item): array
+    {
+        $links = $item->trackedProducts()
+            ->where('is_active', true)
+            ->with(['links' => fn ($q) => $q->where('is_active', true)])
+            ->get()
+            ->flatMap(fn ($product) => $product->links)
+            // In-stock first (0 < 1), then cheapest known price (unknown last).
+            ->sortBy(fn ($link) => [
+                $link->last_in_stock ? 0 : 1,
+                $link->last_price ?? PHP_INT_MAX,
+            ]);
+
+        return $links->map(fn ($link) => [
+            'retailer' => $link->retailer->label(),
+            'url' => $link->url,
+            'price_cents' => $link->last_price,
+            'in_stock' => (bool) $link->last_in_stock,
+            'checked_at' => $link->last_checked_at?->toIso8601String(),
+        ])->values()->all();
     }
 
     /**

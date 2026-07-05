@@ -33,12 +33,12 @@ class CatalogItemResource extends JsonResource
             'variant' => $attributes['variant'] ?? null,
             'image_url' => $this->primary_image_path ?? ($this->external_ids['ptcgio_image'] ?? null),
             'base_key' => $this->base_key,
-            // Generic product metadata (sealed products): MSRP (cents), release
-            // date, and "where to buy" retailer links (each with its own price).
+            // Generic product metadata (sealed products): MSRP (cents) + release
+            // date. "Where to buy" links come from the deals tracker (see the show
+            // controller's whereToBuy), not this resource.
             'msrp' => $this->msrp,
             'msrp_source' => $this->msrp_source,
             'released_at' => $this->released_at?->toDateString(),
-            'retailer_links' => $this->retailer_links,
             // All vertical-specific facets (illustrator, hp, type, sealed_type, …).
             'attributes' => $attributes,
             // Present only when grouping by base card (withCount('variants')).

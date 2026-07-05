@@ -76,6 +76,17 @@ type Props = {
     languages: string[];
     /** Other base cards in the same set, for the horizontal scroller. */
     moreInSet: CatalogItem[];
+    /** Live "where to buy" offers from the deals tracker (retailer, price, stock). */
+    whereToBuy: WhereToBuyOffer[];
+};
+
+type WhereToBuyOffer = {
+    retailer: string;
+    url: string;
+    /** Last observed price in cents, or null if never checked. */
+    price_cents: number | null;
+    in_stock: boolean;
+    checked_at: string | null;
 };
 
 /** Read Laravel's XSRF-TOKEN cookie for same-origin POSTs. */
@@ -117,6 +128,7 @@ export default function Show({
     sealedTypes,
     languages,
     moreInSet,
+    whereToBuy,
 }: Props) {
     const user = usePage().props.auth?.user;
     const isAdmin = Boolean(user?.is_admin);
@@ -670,9 +682,9 @@ export default function Show({
                             </div>
                         )}
 
-                        {/* Where to buy — retailer links (each with its price),
-                            MSRP, and release date (mainly sealed products). */}
-                        {(item.retailer_links?.length ||
+                        {/* Where to buy — live retailer offers from the deals
+                            tracker, plus MSRP + release date (sealed products). */}
+                        {(whereToBuy.length > 0 ||
                             item.msrp ||
                             item.released_at ||
                             (isAdmin && isSealed)) && (
@@ -707,24 +719,38 @@ export default function Show({
                                         ) : null}
                                     </div>
                                 )}
-                                {item.retailer_links?.length ? (
+                                {whereToBuy.length > 0 ? (
                                     <div className="mt-3 space-y-2">
-                                        {item.retailer_links.map((link, i) => (
+                                        {whereToBuy.map((offer, i) => (
                                             <a
                                                 key={i}
-                                                href={link.url}
+                                                href={offer.url}
                                                 target="_blank"
                                                 rel="noopener noreferrer sponsored"
                                                 className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:border-ring hover:bg-accent/40"
                                             >
-                                                <span className="font-medium">
-                                                    {link.retailer}
+                                                <span className="flex min-w-0 items-center gap-2">
+                                                    <span className="truncate font-medium">
+                                                        {offer.retailer}
+                                                    </span>
+                                                    <Badge
+                                                        variant={
+                                                            offer.in_stock
+                                                                ? 'default'
+                                                                : 'secondary'
+                                                        }
+                                                        className="shrink-0 text-[10px]"
+                                                    >
+                                                        {offer.in_stock
+                                                            ? 'In stock'
+                                                            : 'Out of stock'}
+                                                    </Badge>
                                                 </span>
                                                 <span className="flex items-center gap-2 text-muted-foreground">
-                                                    {link.price_cents != null && (
+                                                    {offer.price_cents != null && (
                                                         <span className="font-semibold text-foreground">
                                                             {formatMoney(
-                                                                link.price_cents,
+                                                                offer.price_cents,
                                                             )}
                                                         </span>
                                                     )}
@@ -732,11 +758,29 @@ export default function Show({
                                                 </span>
                                             </a>
                                         ))}
+                                        <p className="text-[11px] text-muted-foreground">
+                                            Live prices tracked across retailers —
+                                            see all on the{' '}
+                                            <Link
+                                                href="/deals"
+                                                className="underline underline-offset-2 hover:text-foreground"
+                                            >
+                                                deals tracker
+                                            </Link>
+                                            .
+                                        </p>
                                     </div>
-                                ) : isAdmin && isSealed ? (
+                                ) : isAdmin ? (
                                     <p className="mt-3 text-sm text-muted-foreground">
-                                        No retailer links yet — click Edit to add
-                                        MSRP, release date, and store links.
+                                        No retailer offers tracked yet — add store
+                                        links for this card in the{' '}
+                                        <Link
+                                            href="/admin/stock-alerts"
+                                            className="underline underline-offset-2 hover:text-foreground"
+                                        >
+                                            deals tracker
+                                        </Link>
+                                        .
                                     </p>
                                 ) : null}
                             </div>

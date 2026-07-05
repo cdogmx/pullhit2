@@ -21,8 +21,7 @@ class AddSealedProduct
 
     /**
      * @param  array<string, mixed>  $data  validated: name, sealed_type, language, pack_count?,
-     *                                       price_cents?, image_url?, msrp_cents?, released_at?,
-     *                                       retailer_links? ([{retailer, url, price_cents?}])
+     *                                      price_cents?, image_url?, msrp_cents?, released_at?
      */
     public function __invoke(Set $set, array $data): CatalogItem
     {
@@ -47,11 +46,11 @@ class AddSealedProduct
         );
 
         // Product metadata (kept off the identity hash). Re-importing won't touch
-        // these; the admin form owns them.
+        // these; the admin form owns them. "Where to buy" links live in the deals
+        // tracker (App\Models\TrackedProduct), not here.
         $item->forceFill([
             'msrp' => $data['msrp_cents'] ?? null,
             'released_at' => $data['released_at'] ?? null,
-            'retailer_links' => ! empty($data['retailer_links']) ? array_values($data['retailer_links']) : null,
         ])->save();
 
         if (! empty($data['price_cents'])) {

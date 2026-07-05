@@ -64,7 +64,6 @@ class UpdateSealedProduct
             'base_key' => $baseKey,
             'msrp' => $data['msrp_cents'] ?? null,
             'released_at' => $data['released_at'] ?? null,
-            'retailer_links' => ! empty($data['retailer_links']) ? array_values($data['retailer_links']) : null,
             // Keep the existing image when the field is left blank.
             'primary_image_path' => ! empty($data['image_url']) ? $data['image_url'] : $item->primary_image_path,
         ])->save();

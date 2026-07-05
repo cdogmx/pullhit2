@@ -70,8 +70,10 @@ class BuildSealedDossier
                 'age_years' => $item->set?->released_at
                     ? round($item->set->released_at->diffInDays(Carbon::now()) / 365, 1)
                     : null,
-                // MSRP or live retailer links present → still buyable at retail.
-                'in_print' => $item->msrp !== null || ! empty($item->retailer_links),
+                // Known MSRP or an active tracked retailer link → still buyable at
+                // retail (the deals tracker is the single source of buy links).
+                'in_print' => $item->msrp !== null
+                    || $item->trackedProducts()->whereHas('links', fn ($q) => $q->where('is_active', true))->exists(),
             ],
             'chase' => [
                 'top' => $topChase,

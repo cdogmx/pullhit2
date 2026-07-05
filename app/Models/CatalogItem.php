@@ -35,7 +35,6 @@ use Illuminate\Support\Str;
     'msrp',
     'msrp_source',
     'released_at',
-    'retailer_links',
 ])]
 class CatalogItem extends Model
 {
@@ -50,7 +49,6 @@ class CatalogItem extends Model
             'external_ids' => 'array',
             'msrp' => 'integer',
             'released_at' => 'date',
-            'retailer_links' => 'array',
             'popularity' => 'integer',
             'last_viewed_at' => 'datetime',
             'ebay_refreshed_at' => 'datetime',
@@ -147,6 +145,17 @@ class CatalogItem extends Model
     public function saleObservations(): HasMany
     {
         return $this->hasMany(SaleObservation::class);
+    }
+
+    /**
+     * Deals-tracker products watching this card for in-stock-at-target offers —
+     * the single source of "where to buy" links (retailer, live price, stock).
+     *
+     * @return HasMany<TrackedProduct, $this>
+     */
+    public function trackedProducts(): HasMany
+    {
+        return $this->hasMany(TrackedProduct::class);
     }
 
     /**

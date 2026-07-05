@@ -151,27 +151,10 @@ class SetController extends Controller
             'image_url' => ['nullable', 'url', 'max:1000'],
             'msrp' => ['nullable', 'numeric', 'min:0'],
             'released_at' => ['nullable', 'date'],
-            'retailer_links' => ['nullable', 'array', 'max:25'],
-            'retailer_links.*.retailer' => ['nullable', 'string', 'max:100'],
-            'retailer_links.*.url' => ['nullable', 'url', 'max:1000'],
-            'retailer_links.*.price' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $data['price_cents'] = isset($data['price']) ? (int) round((float) $data['price'] * 100) : null;
         $data['msrp_cents'] = isset($data['msrp']) ? (int) round((float) $data['msrp'] * 100) : null;
-
-        // Keep only complete links; convert each retailer's price to cents.
-        $data['retailer_links'] = collect($data['retailer_links'] ?? [])
-            ->filter(fn ($l) => ! empty($l['retailer']) && ! empty($l['url']))
-            ->map(fn ($l) => [
-                'retailer' => $l['retailer'],
-                'url' => $l['url'],
-                'price_cents' => isset($l['price']) && $l['price'] !== '' && $l['price'] !== null
-                    ? (int) round((float) $l['price'] * 100)
-                    : null,
-            ])
-            ->values()
-            ->all();
 
         return $data;
     }
