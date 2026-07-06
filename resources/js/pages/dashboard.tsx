@@ -41,6 +41,8 @@ type Mover = {
     id: number;
     name: string | null;
     number: string | null;
+    /** Canonical card path; null → not linkable. */
+    url: string | null;
     state: string;
     gain: number | null;
     pct: number | null;
@@ -49,6 +51,8 @@ type Mover = {
 type Allocation = {
     label: string;
     brand: string | null;
+    brand_slug: string | null;
+    set_slug: string | null;
     value: number;
     pct: number;
 };
@@ -299,17 +303,35 @@ export default function Dashboard({
                                             {allocation.map((a) => (
                                                 <div key={a.label}>
                                                     <div className="flex items-baseline justify-between text-sm">
-                                                        <span className="min-w-0 truncate pr-2 font-medium">
-                                                            {a.brand && (
-                                                                <span className="font-normal text-muted-foreground">
-                                                                    {a.brand}{' '}
-                                                                    <span aria-hidden>
-                                                                        →
-                                                                    </span>{' '}
-                                                                </span>
-                                                            )}
-                                                            {a.label}
-                                                        </span>
+                                                        {a.brand_slug &&
+                                                        a.set_slug ? (
+                                                            <Link
+                                                                href={`/browse/${a.brand_slug}/${a.set_slug}`}
+                                                                className="min-w-0 truncate pr-2 font-medium hover:underline"
+                                                            >
+                                                                {a.brand && (
+                                                                    <span className="font-normal text-muted-foreground">
+                                                                        {a.brand}{' '}
+                                                                        <span aria-hidden>
+                                                                            →
+                                                                        </span>{' '}
+                                                                    </span>
+                                                                )}
+                                                                {a.label}
+                                                            </Link>
+                                                        ) : (
+                                                            <span className="min-w-0 truncate pr-2 font-medium">
+                                                                {a.brand && (
+                                                                    <span className="font-normal text-muted-foreground">
+                                                                        {a.brand}{' '}
+                                                                        <span aria-hidden>
+                                                                            →
+                                                                        </span>{' '}
+                                                                    </span>
+                                                                )}
+                                                                {a.label}
+                                                            </span>
+                                                        )}
                                                         <span className="shrink-0 text-xs text-muted-foreground">
                                                             {formatMoney(
                                                                 a.value,
@@ -527,7 +549,16 @@ function MoverList({
                             className="flex items-center justify-between gap-2 py-1.5 text-sm"
                         >
                             <span className="min-w-0 truncate">
-                                {m.name}
+                                {m.url ? (
+                                    <Link
+                                        href={m.url}
+                                        className="hover:text-foreground hover:underline"
+                                    >
+                                        {m.name}
+                                    </Link>
+                                ) : (
+                                    m.name
+                                )}
                                 {m.number && (
                                     <span className="ml-1 text-xs text-muted-foreground">
                                         {m.number}

@@ -48,6 +48,11 @@ test('BuildPortfolio totals value, cost basis, and unrealized P&L', function () 
         ->and($s['card_count'])->toBe(3)
         ->and($s['item_count'])->toBe(2)
         ->and($portfolio['gainers'])->toHaveCount(2);
+
+    // Movers + allocation carry the fields the dashboard links with.
+    expect($portfolio['gainers'][0])->toHaveKey('url')
+        ->and($portfolio['gainers'][0]['url'])->toBeString()
+        ->and($portfolio['allocation'][0])->toHaveKeys(['brand_slug', 'set_slug']);
 });
 
 test('a held state with no market value yields a null value, not a crash', function () {

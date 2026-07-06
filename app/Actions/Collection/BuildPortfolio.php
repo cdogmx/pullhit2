@@ -69,9 +69,15 @@ class BuildPortfolio
             ->map(function (Collection $group, string $label) use ($totalValue) {
                 $value = (int) $group->sum('value');
 
+                $first = $group->first()['ci']->catalogItem;
+
                 return [
                     'label' => $label,
-                    'brand' => $group->first()['ci']->catalogItem?->productLine?->name,
+                    'brand' => $first?->productLine?->name,
+                    // Slugs let the UI link the row to the set's browse page
+                    // (null for the catch-all "Other" bucket → not a link).
+                    'brand_slug' => $first?->productLine?->slug,
+                    'set_slug' => $first?->set?->slug,
                     'value' => $value,
                     'pct' => $totalValue > 0 ? round($value / $totalValue * 100, 1) : 0.0,
                 ];
@@ -84,6 +90,9 @@ class BuildPortfolio
             'id' => $r['ci']->id,
             'name' => $r['ci']->catalogItem?->name,
             'number' => $r['ci']->catalogItem?->number,
+            // Canonical card path so the UI links the mover (id is the collection
+            // item's, not the catalog item's — never use it as a card link).
+            'url' => $r['ci']->catalogItem?->path(),
             'state' => $r['ci']->stateLabel(),
             'gain' => $r['gain'],
             'pct' => $r['pct'],
