@@ -52,12 +52,13 @@ class RefreshPricechartingData implements ShouldQueue
                 return;
             }
 
-            // Shared Oxylabs daily budget (same key the eBay job spends against).
-            $key = 'ebay:daily:'.Carbon::now()->toDateString();
+            // PriceCharting's own Oxylabs daily budget (separate from eBay's, so a
+            // bulk sweep can't starve the interactive eBay on-view refresh).
+            $key = 'pricecharting:daily:'.Carbon::now()->toDateString();
             Cache::add($key, 0, Carbon::now()->endOfDay());
 
-            if ((int) Cache::get($key, 0) >= (int) config('valuation.ebay.daily_cap')) {
-                Log::info('Oxylabs daily cap reached; skipping PriceCharting fetch.', ['item' => $item->id]);
+            if ((int) Cache::get($key, 0) >= (int) config('valuation.pricecharting.daily_cap')) {
+                Log::info('PriceCharting daily cap reached; skipping fetch.', ['item' => $item->id]);
 
                 return;
             }

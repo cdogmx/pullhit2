@@ -9,6 +9,8 @@ use App\Support\Pricecharting\PricechartingSoldSource;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
@@ -49,6 +51,7 @@ class SweepPricechartingCommand extends Command
         $matched = 0;
         $ingested = 0;
         $unmatched = 0;
+        $capped = false;
 
         foreach ($items as $item) {
             $url = $source->resolveUrl($item);
@@ -68,7 +71,15 @@ class SweepPricechartingCommand extends Command
                 continue;
             }
 
+            // Each ingest is one Oxylabs fetch — respect PriceCharting's own
+            // daily budget so a sweep can't starve the eBay on-view refresh.
+            if (! $this->underCap()) {
+                $capped = true;
+                break;
+            }
+
             try {
+                $this->spendCap();
                 $n = $ingest($item);
                 $ingested += $n; // the ingest stamps pc_synced_at + stores history
                 $this->info(sprintf('  ✓ %s: %d comp(s) blended', $item->name, $n));
@@ -78,9 +89,28 @@ class SweepPricechartingCommand extends Command
         }
 
         $this->newLine();
-        $this->info("done — matched {$matched}, unmatched {$unmatched}, comps ingested {$ingested}".($dryRun ? ' (dry run)' : ''));
+        $this->info("done — matched {$matched}, unmatched {$unmatched}, comps ingested {$ingested}"
+            .($capped ? ' (stopped: daily cap reached)' : '').($dryRun ? ' (dry run)' : ''));
 
         return self::SUCCESS;
+    }
+
+    private function dailyKey(): string
+    {
+        return 'pricecharting:daily:'.Carbon::now()->toDateString();
+    }
+
+    private function underCap(): bool
+    {
+        Cache::add($this->dailyKey(), 0, Carbon::now()->endOfDay());
+
+        return (int) Cache::get($this->dailyKey(), 0) < (int) config('valuation.pricecharting.daily_cap');
+    }
+
+    private function spendCap(): void
+    {
+        Cache::add($this->dailyKey(), 0, Carbon::now()->endOfDay());
+        Cache::increment($this->dailyKey());
     }
 
     /**
