@@ -1,9 +1,9 @@
 import { useForm } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { Combobox } from '@/components/ui/combobox';
 import { ImageUploadField } from '@/components/admin/image-upload-field';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import {
     Dialog,
     DialogContent,
@@ -26,6 +26,16 @@ import type { AdminCardCreateOptions, AdminSetOption } from '@/types';
 
 const humanize = (s: string) =>
     s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+/** Common retailer/prerelease stamps — suggestions only; any value can be typed. */
+const STAMP_SUGGESTIONS = [
+    'GameStop',
+    'EB Games',
+    'Prerelease',
+    'Staff',
+    'Pokémon Center',
+    'Walmart',
+];
 
 /** "Surging Sparks — Pokémon · Scarlet & Violet · EN · SSP" — disambiguates sets that share a name. */
 function setLabel(s: AdminSetOption): string {
@@ -57,6 +67,7 @@ export function CreateCardDialog({
         language: 'en',
         variant: 'normal',
         rarity: '',
+        stamp: '',
         illustrator: '',
         hp: '' as number | string,
         type: '',
@@ -208,15 +219,35 @@ export function CreateCardDialog({
                             </Field>
                         </div>
 
-                        <Field label="Type">
-                            <Input
-                                value={form.data.type}
-                                onChange={(e) =>
-                                    form.setData('type', e.target.value)
-                                }
-                                placeholder="Fire"
-                            />
-                        </Field>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Field label="Type">
+                                <Input
+                                    value={form.data.type}
+                                    onChange={(e) =>
+                                        form.setData('type', e.target.value)
+                                    }
+                                    placeholder="Fire"
+                                />
+                            </Field>
+                            <Field
+                                label="Stamp (optional)"
+                                error={form.errors.stamp}
+                            >
+                                <Input
+                                    list="stamp-suggestions"
+                                    value={form.data.stamp}
+                                    onChange={(e) =>
+                                        form.setData('stamp', e.target.value)
+                                    }
+                                    placeholder="GameStop, EB Games…"
+                                />
+                                <datalist id="stamp-suggestions">
+                                    {STAMP_SUGGESTIONS.map((s) => (
+                                        <option key={s} value={s} />
+                                    ))}
+                                </datalist>
+                            </Field>
+                        </div>
 
                         <Field
                             label="Image (optional)"

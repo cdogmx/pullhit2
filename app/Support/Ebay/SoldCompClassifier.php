@@ -4,18 +4,23 @@ namespace App\Support\Ebay;
 
 use App\Enums\ItemType;
 use App\Models\CatalogItem;
+use App\Support\Catalog\StampMatcher;
 
 /**
  * Decides whether an eBay sold candidate is a genuine single-card sale of THIS
  * card, and resolves its priced state from the title (the §3 IdentifierStrategy
  * idea, applied to eBay text). Moderate strictness: keyword blocklist + name
  * match + single-quantity + price-sanity vs an anchor; titles also classify
- * graded (PSA/BGS/CGC/…) vs raw condition.
+ * graded (PSA/BGS/CGC/…) vs raw condition, and retailer/prerelease stamp promos.
  */
 class SoldCompClassifier
 {
     /** @var array<int, array<int, string>> set_id => other card name cores (request cache) */
     private array $setNameCache = [];
+
+    public function __construct(
+        private StampMatcher $stamps = new StampMatcher,
+    ) {}
 
     /**
      * @param  array<string, int>  $companyIds  grading company slug => id
@@ -361,22 +366,10 @@ class SoldCompClassifier
             return false;
         }
 
-        // Retailer / prerelease STAMP promos (GameStop, EB Games, "stamped") are a
-        // distinct printing that trades on its own — a base card must not absorb
-        // their sales (they can be 30×+ the plain card), and vice-versa. The item
-        // is "stamped" if its own name/attributes carry the marker.
-        $listingStamped = (bool) preg_match(self::STAMP_MARKERS, $lower);
-        $itemStamped = (bool) preg_match(
-            self::STAMP_MARKERS,
-            mb_strtolower($item->name.' '.($variant ?? '').' '.($attributes['edition'] ?? '').' '.($attributes['stamp'] ?? '')),
-        );
-        if ($listingStamped !== $itemStamped) {
-            return false;
-        }
-
-        return true;
+        // Retailer / prerelease STAMP promos (GameStop, EB Games, prerelease, …)
+        // are distinct printings that trade on their own. Route by the specific
+        // stamp: a base card rejects any stamped listing, a stamped card requires
+        // its own stamp, and one stamp never absorbs another's sales.
+        return $this->stamps->matches($this->stamps->itemStamp($item), $lower);
     }
-
-    /** Retailer / prerelease stamp markers that denote a distinct promo printing. */
-    private const STAMP_MARKERS = '/\b(gamestop|game\s?stop|eb\s?games|ebgames|stamped|staff\s+stamp|pre[-\s]?release\s+stamp)\b/';
 }

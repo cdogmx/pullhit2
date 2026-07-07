@@ -31,6 +31,8 @@ class StoreCardRequest extends FormRequest
             'language' => ['required', Rule::in(TcgVertical::LANGUAGES)],
             'variant' => ['required', Rule::in(['normal', 'holo', 'reverse_holo'])],
             'rarity' => ['nullable', 'string', 'max:100'],
+            // Retailer / prerelease stamp promo — free text (suggested in the UI).
+            'stamp' => ['nullable', 'string', 'max:64'],
             'illustrator' => ['nullable', 'string', 'max:255'],
             'hp' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'type' => ['nullable', 'string', 'max:100'],

@@ -3,6 +3,7 @@
 namespace App\Support\Verticals\Definitions;
 
 use App\Enums\ItemType;
+use App\Support\Catalog\StampMatcher;
 use App\Support\Verticals\AttributeDefinition as Attr;
 use App\Support\Verticals\AttributeType as Type;
 use App\Support\Verticals\VerticalDefinition;
@@ -44,6 +45,10 @@ final class TcgVertical
                     Attr::make('edition', 'Edition', Type::Enum, searchable: true, indexed: true, options: ['unlimited', 'shadowless', 'first_edition'], variantDefining: true),
                     // Error/promo printing tag (black_dot_error, trainer_deck_a, …).
                     Attr::make('finish', 'Finish', Type::String, searchable: true, variantDefining: true),
+                    // Retailer / prerelease stamp promo (gamestop, eb_games, staff, …)
+                    // — a distinct printing with its own value. Free text; the admin
+                    // UI suggests common stamps. See App\Support\Catalog\StampMatcher.
+                    Attr::make('stamp', 'Stamp', Type::String, searchable: true, indexed: true, options: StampMatcher::SUGGESTIONS, variantDefining: true),
                     Attr::make('illustrator', 'Illustrator', Type::String, searchable: true),
                     // Pokémon stat. Lorcana reuses `type` (Character/Action/Item/
                     // Location) and `illustrator` (artist) above.

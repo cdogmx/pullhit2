@@ -4,6 +4,7 @@ namespace App\Actions\Catalog;
 
 use App\Models\CatalogItem;
 use App\Support\Catalog\IdentityHash;
+use App\Support\Catalog\StampMatcher;
 use App\Support\Verticals\VerticalRegistry;
 use Illuminate\Validation\ValidationException;
 
@@ -34,6 +35,7 @@ class UpdateCatalogItem
         $attributes = array_merge($item->attributes ?? [], array_filter([
             'rarity' => $data['rarity'] ?? null,
             'variant' => $data['variant'] ?? null,
+            'stamp' => ! empty($data['stamp']) ? (new StampMatcher)->canonical($data['stamp']) : null,
             'illustrator' => $data['illustrator'] ?? null,
             'hp' => isset($data['hp']) && $data['hp'] !== '' ? (int) $data['hp'] : null,
             'type' => $data['type'] ?? null,

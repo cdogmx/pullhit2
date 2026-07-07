@@ -13,6 +13,7 @@ use App\Http\Requests\Admin\UpdateCardRequest;
 use App\Models\CatalogItem;
 use App\Models\CollectionItem;
 use App\Models\Set;
+use App\Support\Catalog\StampMatcher;
 use App\Support\Verticals\Definitions\TcgVertical;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -102,6 +103,9 @@ class CardController extends Controller
             'language' => $data['language'],
             'variant' => $data['variant'],
             'rarity' => $data['rarity'] ?? null,
+            // Normalise the typed stamp to a storage key ("EB Games" → "eb_games")
+            // so casing/spacing can't split one printing into two catalog items.
+            'stamp' => ! empty($data['stamp']) ? (new StampMatcher)->canonical($data['stamp']) : null,
             'illustrator' => $data['illustrator'] ?? null,
             'hp' => isset($data['hp']) && $data['hp'] !== '' ? (int) $data['hp'] : null,
             'type' => $data['type'] ?? null,

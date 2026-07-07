@@ -24,6 +24,7 @@ class UpdateCardRequest extends FormRequest
             'name' => ['sometimes', 'string', 'max:255'],
             'number' => ['sometimes', 'nullable', 'string', 'max:50'],
             'rarity' => ['sometimes', 'string', 'max:100'],
+            'stamp' => ['sometimes', 'nullable', 'string', 'max:64'],
             'variant' => ['sometimes', Rule::in(['normal', 'holo', 'reverse_holo', '1st_edition', 'unlimited'])],
             'illustrator' => ['sometimes', 'nullable', 'string', 'max:255'],
             'hp' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:1000'],

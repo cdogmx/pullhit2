@@ -3,6 +3,7 @@
 namespace App\Support\Ebay;
 
 use App\Models\CatalogItem;
+use App\Support\Catalog\StampMatcher;
 
 /**
  * The edition/variant/error terms that pin an eBay search to one specific
@@ -32,6 +33,12 @@ final class CardSearchTerms
 
         if (! empty($attributes['finish'])) {
             $out[] = self::finishTerm((string) $attributes['finish']);
+        }
+
+        // Pin a stamped promo's search to its stamp (GameStop / EB Games / …) so we
+        // fetch that printing's sales, not the base card's.
+        if (! empty($attributes['stamp'])) {
+            $out[] = (new StampMatcher)->label((string) $attributes['stamp']);
         }
 
         return $out;

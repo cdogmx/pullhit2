@@ -38,6 +38,11 @@ final class CardDisplayName
             $bits[] = self::finishLabel((string) $finish);
         }
 
+        // Retailer / prerelease stamp promo (GameStop, EB Games, …).
+        if (! empty($attributes['stamp'])) {
+            $bits[] = (new StampMatcher)->label((string) $attributes['stamp']);
+        }
+
         return $bits === [] ? $name : $name.' ('.implode(', ', $bits).')';
     }
 
