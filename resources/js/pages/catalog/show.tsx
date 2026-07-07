@@ -11,6 +11,7 @@ import {
     TrendingUp,
 } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
 import { EditCardImageDialog } from '@/components/admin/edit-card-image-dialog';
 import { EbayListings } from '@/components/catalog/ebay-listings';
@@ -127,7 +128,7 @@ export default function Show({
     refreshedAt: initialRefreshedAt,
     priceHistory,
     priceHistoryLong,
-    lastSale,
+    lastSale: initialLastSale,
     ownership,
     sealedTypes,
     languages,
@@ -143,11 +144,14 @@ export default function Show({
     const ownedGain =
         ownership?.reduce((s, o) => s + (o.unrealized_gain ?? 0), 0) ?? 0;
 
-    // Values + last-updated are stateful so a completed eBay refresh can be
-    // swapped in live (no page reload).
+    // Values, last-sale, and last-updated are stateful so a completed eBay refresh
+    // can be swapped in live (no page reload); a chartVersion bump re-fetches the
+    // price-history chart's series too.
     const [values, setValues] = useState(item.market_values ?? []);
     const [refreshedAt, setRefreshedAt] = useState(initialRefreshedAt);
+    const [lastSale, setLastSale] = useState(initialLastSale);
     const [updating, setUpdating] = useState(refreshing);
+    const [chartVersion, setChartVersion] = useState(0);
     const headline =
         values.find((v) => v.state_key === 'NM' || v.state_key === 'SEALED') ??
         values[0];
@@ -228,7 +232,11 @@ export default function Show({
                 if (body.refreshed_at && body.refreshed_at !== baseline) {
                     setValues(body.market_values ?? []);
                     setRefreshedAt(body.refreshed_at);
+                    setLastSale(body.last_sale ?? null);
                     setUpdating(false);
+                    // Re-fetch the price-history chart's series with the new data.
+                    setChartVersion((v) => v + 1);
+                    toast.success('Prices updated');
 
                     return;
                 }
@@ -592,6 +600,7 @@ export default function Show({
                                     }))}
                                     defaultStateKey={headline.state_key}
                                     longTerm={priceHistoryLong}
+                                    refreshKey={chartVersion}
                                 />
 
                                 {/* Primary actions — prominent, side by side */}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ValueLineChart } from '@/components/charts/value-line-chart';
 import {
     Select,
@@ -34,6 +34,7 @@ export function PriceHistoryChart({
     states = [],
     defaultStateKey,
     longTerm = [],
+    refreshKey = 0,
 }: {
     /** Server-rendered series for the default state. */
     history: PriceHistory;
@@ -44,6 +45,8 @@ export function PriceHistoryChart({
     defaultStateKey?: string;
     /** Long-term monthly series (PriceCharting) — powers the "Max" window. */
     longTerm?: PricePoint[];
+    /** Bump to force a re-fetch of the shown series (e.g. after a live refresh). */
+    refreshKey?: number;
 }) {
     const hasLongTerm = longTerm.length >= 2;
     // Lead with the multi-year view when we have little/no sold history of our own.
@@ -90,6 +93,40 @@ export function PriceHistoryChart({
             active = false;
         };
     }, [stateKey, itemId, cache]);
+
+    // A live refresh (refreshKey bump) invalidates the cached series: refetch the
+    // shown state and drop the others (they refetch when reselected), so the chart
+    // reflects the new sold data without a page reload. Skips the first render.
+    const refreshedOnce = useRef(false);
+    useEffect(() => {
+        if (!refreshedOnce.current) {
+            refreshedOnce.current = true;
+
+            return;
+        }
+
+        if (!stateKey) {
+            return;
+        }
+
+        let active = true;
+        fetch(
+            `/api/v1/catalog/${itemId}/price-history?state_key=${encodeURIComponent(stateKey)}`,
+            { headers: { Accept: 'application/json' } },
+        )
+            .then((r) => r.json())
+            .then((data: PriceHistory) => {
+                if (active) {
+                    setCache({ [stateKey]: data });
+                }
+            })
+            .catch(() => {});
+
+        return () => {
+            active = false;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [refreshKey]);
 
     const current = cache[stateKey] ?? history;
 
