@@ -7,6 +7,7 @@ use App\Actions\Catalog\CatalogFilterOptions;
 use App\Actions\Catalog\SearchCatalog;
 use App\Actions\Catalog\ShowCatalogItem;
 use App\Actions\Valuation\MaybeRefreshEbay;
+use App\Actions\Valuation\MaybeRefreshPricecharting;
 use App\Actions\Valuation\PriceHistory;
 use App\Enums\ItemType;
 use App\Http\Controllers\Controller;
@@ -263,6 +264,10 @@ class CatalogController extends Controller
         // the page shows an "updating" indicator and polls for the new values.
         $refreshing = $maybeRefresh($catalogItem);
 
+        // Lazily pull PriceCharting data (completed sales + long-term monthly
+        // history) once per sealed card — fire-and-forget; appears on next load.
+        app(MaybeRefreshPricecharting::class)($catalogItem);
+
         $model = $show($catalogItem); // has marketValues + relations loaded
 
         // The headline state the page leads with (NM/SEALED first, else the first
@@ -282,6 +287,9 @@ class CatalogController extends Controller
             'refreshing' => $refreshing,
             'refreshedAt' => $catalogItem->ebay_refreshed_at?->toIso8601String(),
             'priceHistory' => $history($catalogItem, 365, $headlineState?->state_key),
+            // Long-term monthly series from PriceCharting (older than our sold
+            // data) — a separate multi-year line on the chart. Empty until synced.
+            'priceHistoryLong' => $model->pc_price_history ?? [],
             // The single most recent REAL sold comp (raw state) — the headline
             // trust signal ("last sold $X, Yd ago"), null when none.
             'lastSale' => $this->lastSale($catalogItem),

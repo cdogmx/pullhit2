@@ -31,9 +31,17 @@ class IngestPricechartingComps
     {
         $anchor = $this->anchorCents($item);
         $companyIds = GradingCompany::pluck('id', 'slug')->all();
+        $data = $this->source->fetchData($item);
+
+        // Long-term monthly series (older than eBay's sold view) + a sync marker,
+        // stored whether or not any comps pass — it drives the on-view TTL too.
+        $item->forceFill([
+            'pc_price_history' => $data->history !== [] ? $data->history : null,
+            'pc_synced_at' => Carbon::now(),
+        ])->save();
 
         $accepted = [];
-        foreach ($this->source->fetch($item) as $sale) {
+        foreach ($data->comps as $sale) {
             $comp = $this->classifier->classify($this->toCandidate($sale), $item, $anchor, $companyIds);
 
             if ($comp !== null) {

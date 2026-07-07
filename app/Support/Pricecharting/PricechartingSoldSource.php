@@ -17,22 +17,28 @@ class PricechartingSoldSource
     public function __construct(
         protected OxylabsClient $client,
         protected CompletedSalesParser $parser,
+        protected ChartDataParser $chartParser,
     ) {}
 
     /**
-     * @return array<int, CompletedSale>
+     * One fetch of the product page → both the completed sales and the long-term
+     * monthly price series (the "used" series is the sealed price for sealed
+     * product). Empty when the item can't be matched to a PriceCharting product.
      */
-    public function fetch(CatalogItem $item): array
+    public function fetchData(CatalogItem $item): PricechartingData
     {
         $url = $this->resolveUrl($item);
 
         if ($url === null) {
-            return [];
+            return new PricechartingData([], []);
         }
 
         $html = $this->client->fetchHtml($url, config('valuation.ebay.geo', 'United States'), render: false);
 
-        return $this->parser->parse($html, 'used');
+        return new PricechartingData(
+            comps: $this->parser->parse($html, 'used'),
+            history: $this->chartParser->parse($html, 'used'),
+        );
     }
 
     /** The PriceCharting product-page URL for this item, or null if unmatched. */

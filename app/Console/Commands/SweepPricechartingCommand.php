@@ -9,7 +9,6 @@ use App\Support\Pricecharting\PricechartingSoldSource;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Carbon;
 use Throwable;
 
 /**
@@ -71,8 +70,7 @@ class SweepPricechartingCommand extends Command
 
             try {
                 $n = $ingest($item);
-                $ingested += $n;
-                $item->forceFill(['external_ids' => array_merge($item->getAttribute('external_ids') ?? [], ['pc_synced_at' => Carbon::now()->toIso8601String()])])->save();
+                $ingested += $n; // the ingest stamps pc_synced_at + stores history
                 $this->info(sprintf('  ✓ %s: %d comp(s) blended', $item->name, $n));
             } catch (Throwable $e) {
                 $this->error("  {$item->name}: {$e->getMessage()}");
@@ -98,7 +96,7 @@ class SweepPricechartingCommand extends Command
 
         return CatalogItem::query()
             ->where('item_type', ItemType::Sealed->value)
-            ->when(! $this->option('force'), fn (Builder $q) => $q->whereNull('external_ids->pc_synced_at'))
+            ->when(! $this->option('force'), fn (Builder $q) => $q->whereNull('pc_synced_at'))
             ->where(function (Builder $q) use ($types) {
                 foreach ($types as $type) {
                     $q->orWhere('attributes->sealed_type', $type);

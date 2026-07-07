@@ -53,6 +53,14 @@ return [
         )),
     ],
 
+    // PriceCharting completed-sales + long-term history via Oxylabs. Fetched
+    // once per card on view (shares the eBay daily Oxylabs cap), then only again
+    // after the refresh window — its monthly series changes slowly.
+    'pricecharting' => [
+        'enabled' => env('PRICECHARTING_REFRESH_ENABLED', true),
+        'view_refresh_days' => (int) env('PRICECHARTING_VIEW_REFRESH_DAYS', 30),
+    ],
+
     // Real eBay sold-comp ingestion via Oxylabs. Lazy + cost-capped.
     'ebay' => [
         'enabled' => env('EBAY_REFRESH_ENABLED', true),

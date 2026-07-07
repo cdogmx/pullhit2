@@ -8,12 +8,14 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import type { PriceHistory } from '@/types';
+import type { PriceHistory, PricePoint } from '@/types';
 
 const WINDOWS = [
     { key: '3m', label: '3M', days: 90 },
     { key: '1y', label: '1Y', days: 400 },
 ] as const;
+
+type WindowKey = (typeof WINDOWS)[number]['key'] | 'max';
 
 /** A selectable priced state (condition or graded slab). */
 export type ChartState = { state_key: string; label: string };
@@ -31,6 +33,7 @@ export function PriceHistoryChart({
     itemId,
     states = [],
     defaultStateKey,
+    longTerm = [],
 }: {
     /** Server-rendered series for the default state. */
     history: PriceHistory;
@@ -39,8 +42,14 @@ export function PriceHistoryChart({
     states?: ChartState[];
     /** The state_key the server-rendered `history` belongs to. */
     defaultStateKey?: string;
+    /** Long-term monthly series (PriceCharting) — powers the "Max" window. */
+    longTerm?: PricePoint[];
 }) {
-    const [win, setWin] = useState<(typeof WINDOWS)[number]['key']>('1y');
+    const hasLongTerm = longTerm.length >= 2;
+    // Lead with the multi-year view when we have little/no sold history of our own.
+    const [win, setWin] = useState<WindowKey>(
+        hasLongTerm && history.points.length < 2 ? 'max' : '1y',
+    );
     const initialKey = defaultStateKey ?? states[0]?.state_key ?? '';
     const [stateKey, setStateKey] = useState(initialKey);
     // Per-state series cache, seeded with the server-rendered default. A state
@@ -85,6 +94,11 @@ export function PriceHistoryChart({
     const current = cache[stateKey] ?? history;
 
     const shown = useMemo(() => {
+        // "Max" plots the long-term monthly (PriceCharting) series as-is.
+        if (win === 'max') {
+            return longTerm;
+        }
+
         const pts = current.points;
 
         if (pts.length < 2) {
@@ -100,14 +114,15 @@ export function PriceHistoryChart({
 
         // Don't collapse to an empty chart if the window has <2 points.
         return filtered.length >= 2 ? filtered : pts;
-    }, [current.points, win]);
+    }, [current.points, win, longTerm]);
 
-    // Nothing to show at all (no default series and no states to explore).
-    if (history.points.length < 2 && states.length <= 1) {
+    // Nothing to show at all (no sold series, no states, no long-term line).
+    if (history.points.length < 2 && states.length <= 1 && !hasLongTerm) {
         return null;
     }
 
-    const hasSeries = current.points.length >= 2;
+    const isMax = win === 'max';
+    const hasSeries = isMax ? hasLongTerm : current.points.length >= 2;
 
     return (
         <div className="mt-4 rounded-lg border border-border/60 bg-card p-3">
@@ -135,7 +150,12 @@ export function PriceHistoryChart({
                         </Select>
                     )}
                     <div className="inline-flex items-center gap-0.5 rounded-md border border-border p-0.5">
-                        {WINDOWS.map((w) => (
+                        {[
+                            ...WINDOWS.map((w) => ({ key: w.key, label: w.label })),
+                            ...(hasLongTerm
+                                ? [{ key: 'max' as const, label: 'Max' }]
+                                : []),
+                        ].map((w) => (
                             <button
                                 key={w.key}
                                 type="button"
@@ -158,9 +178,11 @@ export function PriceHistoryChart({
                 <>
                     <ValueLineChart points={shown} height={180} />
                     <p className="mt-1 text-[11px] text-muted-foreground">
-                        {current.estimated
-                            ? 'Estimated trend — limited real sold data'
-                            : 'Weekly median of sold prices'}
+                        {isMax
+                            ? 'Monthly price, via PriceCharting'
+                            : current.estimated
+                              ? 'Estimated trend — limited real sold data'
+                              : 'Weekly median of sold prices'}
                     </p>
                 </>
             ) : (

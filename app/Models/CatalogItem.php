@@ -52,6 +52,8 @@ class CatalogItem extends Model
             'popularity' => 'integer',
             'last_viewed_at' => 'datetime',
             'ebay_refreshed_at' => 'datetime',
+            'pc_synced_at' => 'datetime',
+            'pc_price_history' => 'array',
         ];
     }
 

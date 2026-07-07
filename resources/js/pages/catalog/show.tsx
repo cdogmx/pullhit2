@@ -52,6 +52,7 @@ import type {
     GradingCompanyOption,
     OwnedState,
     PriceHistory,
+    PricePoint,
 } from '@/types';
 
 type Props = {
@@ -65,6 +66,8 @@ type Props = {
     refreshedAt: string | null;
     /** Weekly-median sold-price history (the card's raw state) + estimated flag. */
     priceHistory: PriceHistory;
+    /** Long-term monthly series (PriceCharting) for the chart's "Max" window. */
+    priceHistoryLong: PricePoint[];
     /** The most recent real sold comp (raw state), or null. */
     lastSale: { price: number; sold_at: string; venue: string } | null;
     /** The viewer's owned copies of this card, or null. */
@@ -123,6 +126,7 @@ export default function Show({
     refreshing,
     refreshedAt: initialRefreshedAt,
     priceHistory,
+    priceHistoryLong,
     lastSale,
     ownership,
     sealedTypes,
@@ -587,6 +591,7 @@ export default function Show({
                                         label: v.label,
                                     }))}
                                     defaultStateKey={headline.state_key}
+                                    longTerm={priceHistoryLong}
                                 />
 
                                 {/* Primary actions — prominent, side by side */}
