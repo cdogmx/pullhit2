@@ -6,6 +6,7 @@ use App\Actions\Catalog\CatalogFilterOptions;
 use App\Actions\Catalog\CreateCatalogItem;
 use App\Actions\Catalog\UpdateCatalogItem;
 use App\Actions\Valuation\IngestEbaySoldComps;
+use App\Actions\Valuation\IngestPricechartingComps;
 use App\Enums\ItemType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreCardRequest;
@@ -150,7 +151,7 @@ class CardController extends Controller
      * inline so the result is immediate (no queue worker needed); still honours
      * the shared daily Oxylabs cap. Returns the number of comps ingested.
      */
-    public function refresh(CatalogItem $catalogItem, IngestEbaySoldComps $ingest): JsonResponse
+    public function refresh(CatalogItem $catalogItem, IngestEbaySoldComps $ingest, IngestPricechartingComps $pcIngest): JsonResponse
     {
         if (! config('valuation.ebay.enabled')) {
             return response()->json(['ok' => false, 'message' => 'eBay refresh is disabled.'], 422);
@@ -164,8 +165,41 @@ class CardController extends Controller
         }
 
         Cache::increment($key);
+        $ingested = $ingest($catalogItem);
 
-        return response()->json(['ok' => true, 'ingested' => $ingest($catalogItem)]);
+        // Sealed products also refresh PriceCharting — it's the source of the
+        // completed-sales blend AND the long-term monthly history line. Force it
+        // (bypass the on-view TTL) under PriceCharting's own daily cap.
+        $this->refreshPricecharting($catalogItem, $pcIngest);
+
+        return response()->json([
+            'ok' => true,
+            'ingested' => $ingested,
+            // Fresh long-term series so the card page updates its history line live.
+            'price_history_long' => $catalogItem->pc_price_history ?? [],
+        ]);
+    }
+
+    private function refreshPricecharting(CatalogItem $catalogItem, IngestPricechartingComps $pcIngest): void
+    {
+        if ($catalogItem->item_type !== ItemType::Sealed || ! config('valuation.pricecharting.enabled', true)) {
+            return;
+        }
+
+        $key = 'pricecharting:daily:'.Carbon::now()->toDateString();
+        Cache::add($key, 0, Carbon::now()->endOfDay());
+
+        if ((int) Cache::get($key, 0) >= (int) config('valuation.pricecharting.daily_cap')) {
+            return;
+        }
+
+        Cache::increment($key);
+
+        try {
+            $pcIngest($catalogItem);
+        } catch (\Throwable $e) {
+            report($e); // keep existing data; eBay refresh still succeeded
+        }
     }
 
     public function destroy(CatalogItem $catalogItem): RedirectResponse

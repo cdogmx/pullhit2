@@ -65,6 +65,9 @@ class CatalogController extends Controller
             // The "last sold" signal can change after a refresh — return it so the
             // page updates it in the same poll (no reload).
             'last_sale' => $this->lastSale($catalogItem),
+            // Long-term monthly history (PriceCharting) — so a card that syncs it
+            // after load (or on refresh) shows the "Max" line without a reload.
+            'price_history_long' => $catalogItem->pc_price_history ?? [],
         ]);
     }
 

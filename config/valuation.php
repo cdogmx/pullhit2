@@ -58,7 +58,6 @@ return [
     // after the refresh window — its monthly series changes slowly.
     'pricecharting' => [
         'enabled' => env('PRICECHARTING_REFRESH_ENABLED', true),
-        'view_refresh_days' => (int) env('PRICECHARTING_VIEW_REFRESH_DAYS', 30),
         // Its OWN Oxylabs daily budget (separate counter from eBay) so a bulk
         // PriceCharting sweep can't starve the interactive eBay on-view refresh.
         // eBay 1000 + PriceCharting 1000 = 2000/day ≈ 60k/month, under the ~98k

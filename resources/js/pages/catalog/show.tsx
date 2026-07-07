@@ -127,7 +127,7 @@ export default function Show({
     refreshing,
     refreshedAt: initialRefreshedAt,
     priceHistory,
-    priceHistoryLong,
+    priceHistoryLong: initialPriceHistoryLong,
     lastSale: initialLastSale,
     ownership,
     sealedTypes,
@@ -150,6 +150,7 @@ export default function Show({
     const [values, setValues] = useState(item.market_values ?? []);
     const [refreshedAt, setRefreshedAt] = useState(initialRefreshedAt);
     const [lastSale, setLastSale] = useState(initialLastSale);
+    const [longTerm, setLongTerm] = useState(initialPriceHistoryLong);
     const [updating, setUpdating] = useState(refreshing);
     const [chartVersion, setChartVersion] = useState(0);
     const headline =
@@ -233,6 +234,11 @@ export default function Show({
                     setValues(body.market_values ?? []);
                     setRefreshedAt(body.refreshed_at);
                     setLastSale(body.last_sale ?? null);
+
+                    if (Array.isArray(body.price_history_long)) {
+                        setLongTerm(body.price_history_long);
+                    }
+
                     setUpdating(false);
                     // Re-fetch the price-history chart's series with the new data.
                     setChartVersion((v) => v + 1);
@@ -278,6 +284,11 @@ export default function Show({
 
             if (!res.ok || body.ok === false) {
                 setUpdating(false); // disabled or daily cap reached
+            } else if (Array.isArray(body.price_history_long)) {
+                // Sealed refresh also re-pulled PriceCharting — show the fresh
+                // long-term line immediately (the value poll swaps in the rest).
+                setLongTerm(body.price_history_long);
+                setChartVersion((v) => v + 1);
             }
         } catch {
             setUpdating(false);
@@ -599,7 +610,7 @@ export default function Show({
                                         label: v.label,
                                     }))}
                                     defaultStateKey={headline.state_key}
-                                    longTerm={priceHistoryLong}
+                                    longTerm={longTerm}
                                     refreshKey={chartVersion}
                                 />
 

@@ -43,12 +43,11 @@ class RefreshPricechartingData implements ShouldQueue
         }
 
         try {
-            // Re-read under the lock; skip if another view just synced it.
+            // Re-read under the lock; skip if it's already been synced (once-ever
+            // on the lazy path — another view may have just done it). --force /
+            // the admin refresh bypass this to re-pull deliberately.
             $item->refresh();
-            $days = (int) config('valuation.pricecharting.view_refresh_days', 30);
-            if (! $this->force
-                && $item->pc_synced_at !== null
-                && $item->pc_synced_at->gt(Carbon::now()->subDays($days))) {
+            if (! $this->force && $item->pc_synced_at !== null) {
                 return;
             }
 

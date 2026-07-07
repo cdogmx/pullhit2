@@ -5,13 +5,13 @@ namespace App\Actions\Valuation;
 use App\Enums\ItemType;
 use App\Jobs\RefreshPricechartingData;
 use App\Models\CatalogItem;
-use Illuminate\Support\Carbon;
 
 /**
  * On a sealed-product view, lazily pull its PriceCharting data (completed sales +
- * long-term monthly history) once — then not again until the refresh window
- * elapses. Only sealed products resolve to a PriceCharting page, so singles are
- * skipped. Fire-and-forget (queued); the page renders whatever is cached.
+ * long-term monthly history) EXACTLY ONCE — if it's already been synced, it's
+ * never re-pulled automatically (an admin "Refresh" forces a fresh pull, and a
+ * batch sweep can re-warm en masse). Only sealed products resolve to a
+ * PriceCharting page, so singles are skipped. Fire-and-forget (queued).
  */
 class MaybeRefreshPricecharting
 {
@@ -26,11 +26,9 @@ class MaybeRefreshPricecharting
         RefreshPricechartingData::dispatch($item->id);
     }
 
+    /** Due only if it has never been synced — already-pulled items are left alone. */
     public function isDue(CatalogItem $item): bool
     {
-        $days = (int) config('valuation.pricecharting.view_refresh_days', 30);
-
-        return $item->pc_synced_at === null
-            || $item->pc_synced_at->lt(Carbon::now()->subDays($days));
+        return $item->pc_synced_at === null;
     }
 }

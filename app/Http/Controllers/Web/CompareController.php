@@ -43,6 +43,9 @@ class CompareController extends Controller
                     ?? ($item->getAttribute('external_ids')['ptcgio_image'] ?? null),
                 'latest' => $item->defaultMarketValue?->median,
                 'series' => $history($item, self::HISTORY_DAYS),
+                // Long-term monthly series (PriceCharting) for the "Max" window —
+                // read-only; the card page owns pulling it (once per item).
+                'series_long' => $item->pc_price_history ?? [],
             ])
             ->values();
 

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { PriceHistory } from '@/types';
+import type { PriceHistory, PricePoint } from '@/types';
 
 type CompareItem = {
     id: number;
@@ -20,6 +20,8 @@ type CompareItem = {
     image: string | null;
     latest: number | null;
     series: PriceHistory;
+    /** Long-term monthly series (PriceCharting) for the "Max" window. */
+    series_long: PricePoint[];
 };
 
 type Props = {
@@ -35,6 +37,8 @@ const WINDOWS = [
     { key: '1y', label: '1Y', days: 400 },
 ] as const;
 
+type WindowKey = (typeof WINDOWS)[number]['key'] | 'max';
+
 type SearchResult = {
     id: number;
     name: string;
@@ -43,11 +47,13 @@ type SearchResult = {
 };
 
 export default function Compare({ items, maxItems }: Props) {
-    const [win, setWin] = useState<(typeof WINDOWS)[number]['key']>('1y');
+    const [win, setWin] = useState<WindowKey>('1y');
     const [mode, setMode] = useState<CompareMode>('value');
 
     const ids = items.map((i) => i.id);
     const full = items.length >= maxItems;
+    // A "Max" (multi-year, PriceCharting) view is offered when any card has one.
+    const hasLongTerm = items.some((i) => i.series_long.length >= 2);
 
     // Selection lives in the URL (?ids=). Adding/removing re-renders with the
     // server-computed series, so a comparison is always shareable + reproducible.
@@ -71,6 +77,21 @@ export default function Compare({ items, maxItems }: Props) {
     // Window each series back from the most-recent point across ALL cards, so the
     // lines share an x-range. Colours are assigned by the card's slot.
     const { series, latest } = useMemo(() => {
+        // "Max" plots each card's long-term monthly (PriceCharting) series as-is.
+        if (win === 'max') {
+            const series: CompareSeries[] = items.map((item, i) => ({
+                id: item.id,
+                name: item.name,
+                color: COLORS[i % COLORS.length],
+                points: item.series_long,
+            }));
+            const maxT = items
+                .flatMap((i) => i.series_long.map((p) => p.t))
+                .reduce((m, t) => Math.max(m, new Date(t).getTime()), 0);
+
+            return { series, latest: maxT };
+        }
+
         const allT = items.flatMap((i) => i.series.points.map((p) => p.t));
         const maxT = allT.reduce(
             (m, t) => Math.max(m, new Date(t).getTime()),
@@ -235,7 +256,20 @@ export default function Compare({ items, maxItems }: Props) {
                                 </div>
                                 {/* Window */}
                                 <div className="inline-flex items-center gap-0.5 rounded-md border border-border p-0.5">
-                                    {WINDOWS.map((w) => (
+                                    {[
+                                        ...WINDOWS.map((w) => ({
+                                            key: w.key as WindowKey,
+                                            label: w.label,
+                                        })),
+                                        ...(hasLongTerm
+                                            ? [
+                                                  {
+                                                      key: 'max' as WindowKey,
+                                                      label: 'Max',
+                                                  },
+                                              ]
+                                            : []),
+                                    ].map((w) => (
                                         <button
                                             key={w.key}
                                             type="button"
@@ -262,7 +296,9 @@ export default function Compare({ items, maxItems }: Props) {
                                 height={360}
                             />
                             <p className="mt-2 text-[11px] text-muted-foreground">
-                                Weekly median of sold prices.{' '}
+                                {win === 'max'
+                                    ? 'Monthly price history, via PriceCharting. '
+                                    : 'Weekly median of sold prices. '}
                                 {mode === 'index'
                                     ? 'Each card is rebased to its own starting value so different price levels are comparable.'
                                     : 'Absolute market value in USD.'}
