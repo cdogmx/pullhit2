@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
  */
 class LinkExpansionCommand extends Command
 {
-    protected $signature = 'catalog:link-expansion {sets* : Two-or-more set slugs (or ids) that are the same expansion} {--key= : Explicit expansion_key (defaults to a slug of the first set name)}';
+    protected $signature = 'catalog:link-expansion {sets* : Set slugs (or ids) that are the same expansion} {--key= : Explicit expansion_key (defaults to a slug of the first set name)} {--unset : Clear the expansion_key on the given sets instead of linking}';
 
     protected $description = 'Give sets a shared expansion_key so a card links to its other-language printings';
 
@@ -24,8 +24,8 @@ class LinkExpansionCommand extends Command
     {
         $refs = collect($this->argument('sets'));
 
-        if ($refs->count() < 2) {
-            $this->error('Pass at least two set slugs/ids to link.');
+        if (! $this->option('unset') && $refs->count() < 2) {
+            $this->error('Pass at least two set slugs/ids to link (or --unset with one or more to clear).');
 
             return self::FAILURE;
         }
@@ -44,6 +44,17 @@ class LinkExpansionCommand extends Command
 
         if ($sets->contains(null)) {
             return self::FAILURE;
+        }
+
+        if ($this->option('unset')) {
+            foreach ($sets as $set) {
+                $set->update(['expansion_key' => null]);
+                $this->line("  {$set->slug} [{$set->language}] — {$set->name}  →  (cleared)");
+            }
+
+            $this->info("Cleared expansion_key on {$sets->count()} set(s).");
+
+            return self::SUCCESS;
         }
 
         $key = $this->option('key') ?: Str::slug($sets->first()->name);
