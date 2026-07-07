@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { formatMoney } from '@/lib/format';
+import { captureNativePhoto, isNativeApp } from '@/lib/native-camera';
 import { cn } from '@/lib/utils';
 import type {
     CatalogItem,
@@ -207,16 +208,16 @@ export default function ScanIndex({
             .getElementById(`scan-card-${i}`)
             ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    const onFile = async (file: File) => {
+    // Send a base64 JPEG (from the web downscale or the native camera) to /scan.
+    const submitImage = async (image: string) => {
         setStep(0);
         setBusy(true);
         setDetected(null);
         setChosenCards([]);
         setFromStorage(false);
+        setPhoto(`data:image/jpeg;base64,${image}`);
 
         try {
-            const image = await downscale(file);
-            setPhoto(`data:image/jpeg;base64,${image}`);
             const res = await fetch('/scan', {
                 method: 'POST',
                 headers: {
@@ -266,6 +267,23 @@ export default function ScanIndex({
         }
     };
 
+    const onFile = async (file: File) => {
+        try {
+            await submitImage(await downscale(file));
+        } catch {
+            toast.error('Could not process that image.');
+        }
+    };
+
+    // Native shell: use the device camera directly (better than a web <input>).
+    const captureNative = async () => {
+        const image = await captureNativePhoto();
+
+        if (image) {
+            await submitImage(image);
+        }
+    };
+
     return (
         <>
             <Head title="Scan" />
@@ -311,7 +329,11 @@ export default function ScanIndex({
                     <CardContent className="pt-6">
                         <button
                             type="button"
-                            onClick={() => fileRef.current?.click()}
+                            onClick={() =>
+                                isNativeApp()
+                                    ? captureNative()
+                                    : fileRef.current?.click()
+                            }
                             disabled={busy}
                             className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border py-12 text-muted-foreground transition-colors hover:bg-accent/40 disabled:opacity-60"
                         >
