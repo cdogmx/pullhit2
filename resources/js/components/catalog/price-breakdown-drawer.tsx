@@ -100,12 +100,12 @@ export function PriceBreakdownDrawer({
                         <>
                             <PriceTag value={value} variant="full" />
 
-                            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                                <Stat label="IQR (p25–p75)">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                <Stat label="Middle 50% of sales">
                                     {formatMoney(value.p25, value.currency)}–
                                     {formatMoney(value.p75, value.currency)}
                                 </Stat>
-                                <Stat label="Range">
+                                <Stat label="Full sold range">
                                     {formatMoney(value.low, value.currency)}–
                                     {formatMoney(value.high, value.currency)}
                                 </Stat>
@@ -114,6 +114,12 @@ export function PriceBreakdownDrawer({
                                 </Stat>
                                 <Stat label="Comps used">{value.n_sales}</Stat>
                             </dl>
+
+                            <p className="-mt-2 text-xs text-muted-foreground">
+                                These are the actual sold prices, not a confidence
+                                figure — a tighter range means more agreement, hence
+                                higher confidence.
+                            </p>
 
                             {/* Sources */}
                             {Object.keys(sources).length > 0 && (

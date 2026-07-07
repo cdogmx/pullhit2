@@ -87,15 +87,20 @@ export function PriceTag({
                 <span className="text-2xl font-bold tracking-tight">
                     {formatMoney(value.median, currency)}
                 </span>
-                <span className="text-sm text-muted-foreground">
-                    {formatMoney(value.low, currency)}–
-                    {formatMoney(value.high, currency)}
-                </span>
                 {trend && (
                     <span className="text-sm font-medium text-muted-foreground">
                         {trend}
                     </span>
                 )}
+                {/* The spread of actual sold prices — labelled so it isn't read as
+                    a confidence figure (confidence is the badge below). */}
+                <span
+                    className="text-xs text-muted-foreground"
+                    title="Lowest to highest recent sold price. A wider spread means less certainty in the value."
+                >
+                    sold {formatMoney(value.low, currency)}–
+                    {formatMoney(value.high, currency)}
+                </span>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <Badge
