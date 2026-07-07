@@ -92,25 +92,39 @@ export default function Compare({ items, maxItems }: Props) {
             return { series, latest: maxT };
         }
 
-        const allT = items.flatMap((i) => i.series.points.map((p) => p.t));
-        const maxT = allT.reduce(
-            (m, t) => Math.max(m, new Date(t).getTime()),
-            0,
-        );
+        // Blend each card's long-term monthly history (older) with its weekly
+        // sold points (recent) so 3M/1Y actually span the window — same as the
+        // card page. Weekly sold data alone only goes back a few weeks.
+        const combined = (item: CompareItem): PricePoint[] => {
+            const weekly = item.series.points;
+            const earliest = weekly[0]?.t;
+
+            if (item.series_long.length >= 2 && earliest) {
+                return [
+                    ...item.series_long.filter((p) => p.t < earliest),
+                    ...weekly,
+                ];
+            }
+
+            return weekly.length >= 2 ? weekly : item.series_long;
+        };
+
+        const maxT = items
+            .flatMap((i) => combined(i).map((p) => p.t))
+            .reduce((m, t) => Math.max(m, new Date(t).getTime()), 0);
         const days = WINDOWS.find((w) => w.key === win)?.days ?? 400;
         const cutoff = maxT - days * 86_400_000;
 
         const series: CompareSeries[] = items.map((item, i) => {
-            const pts = item.series.points.filter(
-                (p) => new Date(p.t).getTime() >= cutoff,
-            );
+            const all = combined(item);
+            const pts = all.filter((p) => new Date(p.t).getTime() >= cutoff);
 
             return {
                 id: item.id,
                 name: item.name,
                 color: COLORS[i % COLORS.length],
                 // Keep the full series if the window would leave <2 points.
-                points: pts.length >= 2 ? pts : item.series.points,
+                points: pts.length >= 2 ? pts : all,
             };
         });
 
@@ -297,8 +311,10 @@ export default function Compare({ items, maxItems }: Props) {
                             />
                             <p className="mt-2 text-[11px] text-muted-foreground">
                                 {win === 'max'
-                                    ? 'Monthly price history, via PriceCharting. '
-                                    : 'Weekly median of sold prices. '}
+                                    ? 'Monthly price history. '
+                                    : hasLongTerm
+                                      ? 'Weekly + monthly price history. '
+                                      : 'Weekly median of sold prices. '}
                                 {mode === 'index'
                                     ? 'Each card is rebased to its own starting value so different price levels are comparable.'
                                     : 'Absolute market value in USD.'}

@@ -136,7 +136,21 @@ export function PriceHistoryChart({
             return longTerm;
         }
 
-        const pts = current.points;
+        // Our own weekly sold points only go back a few weeks (eBay's sold view
+        // is recent). Prepend the long-term monthly history (the months BEFORE
+        // our earliest weekly point) so a windowed view actually spans it — older
+        // stretch monthly, recent stretch our granular weekly comps.
+        const weekly = current.points;
+        const earliest = weekly[0]?.t;
+        const pts =
+            hasLongTerm && earliest
+                ? [
+                      ...longTerm.filter((p) => p.t < earliest),
+                      ...weekly,
+                  ]
+                : hasLongTerm && weekly.length < 2
+                  ? longTerm
+                  : weekly;
 
         if (pts.length < 2) {
             return pts;
@@ -151,7 +165,7 @@ export function PriceHistoryChart({
 
         // Don't collapse to an empty chart if the window has <2 points.
         return filtered.length >= 2 ? filtered : pts;
-    }, [current.points, win, longTerm]);
+    }, [current.points, win, longTerm, hasLongTerm]);
 
     // Nothing to show at all (no sold series, no states, no long-term line).
     if (history.points.length < 2 && states.length <= 1 && !hasLongTerm) {
@@ -159,7 +173,7 @@ export function PriceHistoryChart({
     }
 
     const isMax = win === 'max';
-    const hasSeries = isMax ? hasLongTerm : current.points.length >= 2;
+    const hasSeries = shown.length >= 2;
 
     return (
         <div className="mt-4 rounded-lg border border-border/60 bg-card p-3">
@@ -216,10 +230,12 @@ export function PriceHistoryChart({
                     <ValueLineChart points={shown} height={180} />
                     <p className="mt-1 text-[11px] text-muted-foreground">
                         {isMax
-                            ? 'Monthly price, via PriceCharting'
-                            : current.estimated
-                              ? 'Estimated trend — limited real sold data'
-                              : 'Weekly median of sold prices'}
+                            ? 'Monthly price history'
+                            : hasLongTerm
+                              ? 'Weekly + monthly price history'
+                              : current.estimated
+                                ? 'Estimated trend — limited real sold data'
+                                : 'Weekly median of sold prices'}
                     </p>
                 </>
             ) : (
