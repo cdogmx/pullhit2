@@ -361,6 +361,22 @@ class SoldCompClassifier
             return false;
         }
 
+        // Retailer / prerelease STAMP promos (GameStop, EB Games, "stamped") are a
+        // distinct printing that trades on its own — a base card must not absorb
+        // their sales (they can be 30×+ the plain card), and vice-versa. The item
+        // is "stamped" if its own name/attributes carry the marker.
+        $listingStamped = (bool) preg_match(self::STAMP_MARKERS, $lower);
+        $itemStamped = (bool) preg_match(
+            self::STAMP_MARKERS,
+            mb_strtolower($item->name.' '.($variant ?? '').' '.($attributes['edition'] ?? '').' '.($attributes['stamp'] ?? '')),
+        );
+        if ($listingStamped !== $itemStamped) {
+            return false;
+        }
+
         return true;
     }
+
+    /** Retailer / prerelease stamp markers that denote a distinct promo printing. */
+    private const STAMP_MARKERS = '/\b(gamestop|game\s?stop|eb\s?games|ebgames|stamped|staff\s+stamp|pre[-\s]?release\s+stamp)\b/';
 }

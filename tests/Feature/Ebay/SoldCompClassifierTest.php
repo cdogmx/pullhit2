@@ -137,6 +137,21 @@ test('a Pokemon HP stat is not read as Heavily Played condition', function () {
     expect($played->condition)->toBe('HP');
 });
 
+test('a base card rejects retailer-stamped promos, and a stamped card requires them', function () {
+    // Base (unstamped) card must not absorb GameStop/EB Games/stamped sales —
+    // they are a distinct printing (often many times the plain card's price).
+    expect($this->classifier->classify(candidate('Pikachu ex 276/217 GameStop Stamped Promo Ascended Heroes', 40000), $this->item, $this->anchor, $this->companies))->toBeNull();
+    expect($this->classifier->classify(candidate('Pikachu ex 276/217 EB Games Promo Ascended Heroes', 40000), $this->item, $this->anchor, $this->companies))->toBeNull();
+    // A plain listing is still accepted.
+    expect($this->classifier->classify(candidate('Pikachu ex 276/217 SIR Ascended Heroes', 129000), $this->item, $this->anchor, $this->companies))->not->toBeNull();
+
+    // A catalog item that IS the GameStop promo (stamp attribute) requires it.
+    $promo = CatalogItem::factory()->create(['name' => 'Ho-Oh', 'number' => '10',
+        'attributes' => ['language' => 'en', 'variant' => 'holo', 'stamp' => 'gamestop']]);
+    expect($this->classifier->classify(candidate('Ho-Oh 010/086 GameStop Stamped Promo Chaos Rising', 6000), $promo, 5000, $this->companies))->not->toBeNull();
+    expect($this->classifier->classify(candidate('Ho-Oh 010/086 Holo Chaos Rising', 150), $promo, 5000, $this->companies))->toBeNull();
+});
+
 test('a sealed booster bundle accepts a genuine bundle listing (blocklist bundle guard)', function () {
     // Regression: "bundle" is on the single-card blocklist; a Booster Bundle
     // product must not have every real comp rejected by it.
