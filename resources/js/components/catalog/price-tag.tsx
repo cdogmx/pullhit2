@@ -31,9 +31,20 @@ export function PriceTag({
         // Low-confidence values recede ("~" + muted) so a thin-market price is
         // never mistaken for a trusted one when scanning a list.
         const low = value.confidence_label === 'Low';
+        // Graded values carry their slab label ("PSA 10") — show it so a list
+        // filtered to a grade reads e.g. "PSA 10 $500", not a bare number.
+        const graded = value.grade != null;
 
         return (
             <div className={cn('flex items-center gap-1.5', className)}>
+                {graded && (
+                    <Badge
+                        variant="secondary"
+                        className="shrink-0 px-1.5 py-0 text-[10px] font-semibold"
+                    >
+                        {value.label}
+                    </Badge>
+                )}
                 <span
                     className={cn(
                         'text-sm font-semibold',
