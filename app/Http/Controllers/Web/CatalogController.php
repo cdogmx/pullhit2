@@ -18,8 +18,8 @@ use App\Models\CollectionItem;
 use App\Models\GradingCompany;
 use App\Models\ProductLine;
 use App\Models\Set;
+use App\Support\Catalog\CrossLanguageMatcher;
 use App\Support\Verticals\Definitions\TcgVertical;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -353,34 +353,7 @@ class CatalogController extends Controller
      */
     protected function otherLanguages(CatalogItem $item): array
     {
-        if (! $item->name || ! $item->number) {
-            return [];
-        }
-
-        return CatalogItem::query()
-            ->where('product_line_id', $item->product_line_id)
-            ->where('item_type', $item->item_type->value)
-            ->where('name', $item->name)
-            ->where('number', $item->number)
-            ->where('language', '!=', $item->language)
-            ->whereKeyNot($item->id)
-            ->when(
-                $item->getAttribute('attributes')['variant'] ?? null,
-                fn (Builder $q, $variant) => $q->where('attributes->variant', $variant),
-            )
-            ->with(['productLine:id,slug', 'set:id,slug,name'])
-            ->orderBy('language')
-            ->limit(6)
-            ->get()
-            ->map(fn (CatalogItem $c) => [
-                'language' => $c->language,
-                'name' => $c->display_name,
-                'set' => $c->set?->name,
-                'url' => $c->path(),
-            ])
-            ->filter(fn (array $x) => $x['url'] !== null)
-            ->values()
-            ->all();
+        return app(CrossLanguageMatcher::class)->forItem($item);
     }
 
     /**

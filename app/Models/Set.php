@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'language',
     'series',
     'set_family',
+    'expansion_key',
     'released_at',
     'external_ids',
 ])]
