@@ -7,10 +7,15 @@ use App\Models\GradingCompany;
 use App\Models\MarketValue;
 use App\Models\ProductLine;
 use App\Models\Set;
+use App\Models\User;
 use App\Models\Vertical;
 use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Sanctum\Sanctum;
 
 beforeEach(function () {
+    // The JSON catalog search is token-only (not used by the web); authenticate.
+    Sanctum::actingAs(User::factory()->create());
+
     $this->vertical = Vertical::factory()->create(['slug' => 'tcg']);
     $this->pokemon = ProductLine::factory()->create(['vertical_id' => $this->vertical->id, 'slug' => 'pokemon']);
     $this->set = Set::factory()->create(['product_line_id' => $this->pokemon->id, 'slug' => 'chaos-rising-en', 'code' => 'CRI', 'language' => 'en']);

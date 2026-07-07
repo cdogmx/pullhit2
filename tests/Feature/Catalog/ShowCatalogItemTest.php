@@ -5,8 +5,10 @@ use App\Enums\ItemType;
 use App\Models\CatalogItem;
 use App\Models\ProductLine;
 use App\Models\Set;
+use App\Models\User;
 use App\Models\Vertical;
 use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Sanctum\Sanctum;
 
 beforeEach(function () {
     $this->vertical = Vertical::factory()->create(['slug' => 'tcg']);
@@ -64,6 +66,8 @@ test('the detail page lists same-rarity cards in the set, excluding this card', 
 });
 
 test('the api returns the item with its variants', function () {
+    // The JSON detail endpoint is token-only (the web uses the Inertia page).
+    Sanctum::actingAs(User::factory()->create());
     $item = CatalogItem::where('number', '001/086')->first();
 
     $this->getJson("/api/v1/catalog/{$item->id}")
@@ -74,5 +78,6 @@ test('the api returns the item with its variants', function () {
 });
 
 test('a missing item returns 404', function () {
+    Sanctum::actingAs(User::factory()->create());
     $this->getJson('/api/v1/catalog/999999')->assertNotFound();
 });

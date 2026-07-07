@@ -5,6 +5,11 @@ use App\Enums\Condition;
 use App\Enums\Venue;
 use App\Models\CatalogItem;
 use App\Models\SaleObservation;
+use App\Models\User;
+use Laravel\Sanctum\Sanctum;
+
+// The JSON catalog browse/detail endpoints are token-only (the web uses Inertia).
+beforeEach(fn () => Sanctum::actingAs(User::factory()->create()));
 
 function itemWithValue(): CatalogItem
 {
