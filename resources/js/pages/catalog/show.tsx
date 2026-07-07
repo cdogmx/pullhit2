@@ -80,6 +80,13 @@ type Props = {
     languages: string[];
     /** Other base cards in the same set, for the horizontal scroller. */
     moreInSet: CatalogItem[];
+    /** The same card in other languages (e.g. the Japanese printing). */
+    otherLanguages: {
+        language: string;
+        name: string;
+        set: string | null;
+        url: string;
+    }[];
     /** Live "where to buy" offers from the deals tracker (retailer, price, stock). */
     whereToBuy: WhereToBuyOffer[];
 };
@@ -133,6 +140,7 @@ export default function Show({
     sealedTypes,
     languages,
     moreInSet,
+    otherLanguages,
     whereToBuy,
 }: Props) {
     const user = usePage().props.auth?.user;
@@ -850,6 +858,34 @@ export default function Show({
                                                 </Badge>
                                             </span>
                                         </button>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+
+                        {/* Same card in other languages */}
+                        {otherLanguages.length > 0 && (
+                            <section>
+                                <h2 className={cn(SECTION_LABEL, 'mb-2')}>
+                                    Other languages
+                                </h2>
+                                <div className="flex flex-wrap gap-2">
+                                    {otherLanguages.map((o) => (
+                                        <Link
+                                            key={o.url}
+                                            href={o.url}
+                                            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm transition-colors hover:border-ring hover:bg-accent/40"
+                                        >
+                                            <Badge
+                                                variant="secondary"
+                                                className="text-[10px]"
+                                            >
+                                                {languageLabel(o.language)}
+                                            </Badge>
+                                            <span className="max-w-[12rem] truncate">
+                                                {o.name}
+                                            </span>
+                                        </Link>
                                     ))}
                                 </div>
                             </section>

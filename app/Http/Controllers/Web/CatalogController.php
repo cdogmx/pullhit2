@@ -19,6 +19,7 @@ use App\Models\GradingCompany;
 use App\Models\ProductLine;
 use App\Models\Set;
 use App\Support\Verticals\Definitions\TcgVertical;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -304,6 +305,8 @@ class CatalogController extends Controller
             'languages' => TcgVertical::LANGUAGES,
             // "More in this set" — other base cards from the same set.
             'moreInSet' => $this->moreInSet($catalogItem),
+            // The same card in other languages (e.g. the Japanese printing).
+            'otherLanguages' => $this->otherLanguages($catalogItem),
             // "Where to buy" — live retailer offers from the deals tracker (the
             // single source; replaces the old per-item retailer_links JSON).
             'whereToBuy' => $this->whereToBuy($catalogItem),
@@ -337,6 +340,47 @@ class CatalogController extends Controller
             'in_stock' => (bool) $link->last_in_stock,
             'checked_at' => $link->last_checked_at?->toIso8601String(),
         ])->values()->all();
+    }
+
+    /**
+     * The same card in other languages — matched within the product line by name
+     * + collector number (+ variant, so a base printing pairs with a base, not an
+     * alt art), differing only in language. Lets a card page cross-link its e.g.
+     * Japanese printing. Empty when there's no equivalent (common for games whose
+     * languages don't share a numbering scheme).
+     *
+     * @return array<int, array{language: string, name: string, set: ?string, url: string}>
+     */
+    protected function otherLanguages(CatalogItem $item): array
+    {
+        if (! $item->name || ! $item->number) {
+            return [];
+        }
+
+        return CatalogItem::query()
+            ->where('product_line_id', $item->product_line_id)
+            ->where('item_type', $item->item_type->value)
+            ->where('name', $item->name)
+            ->where('number', $item->number)
+            ->where('language', '!=', $item->language)
+            ->whereKeyNot($item->id)
+            ->when(
+                $item->getAttribute('attributes')['variant'] ?? null,
+                fn (Builder $q, $variant) => $q->where('attributes->variant', $variant),
+            )
+            ->with(['productLine:id,slug', 'set:id,slug,name'])
+            ->orderBy('language')
+            ->limit(6)
+            ->get()
+            ->map(fn (CatalogItem $c) => [
+                'language' => $c->language,
+                'name' => $c->display_name,
+                'set' => $c->set?->name,
+                'url' => $c->path(),
+            ])
+            ->filter(fn (array $x) => $x['url'] !== null)
+            ->values()
+            ->all();
     }
 
     /**
