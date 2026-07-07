@@ -24,7 +24,7 @@ Route::post('webhooks/dodo', [WebhookController::class, 'dodo'])->name('webhooks
 |
 */
 
-Route::prefix('v1')->name('api.v1.')->group(function () {
+Route::prefix('v1')->middleware('throttle:api')->name('api.v1.')->group(function () {
     // Public liveness check.
     Route::get('ping', [PingController::class, 'show'])->name('ping');
 
