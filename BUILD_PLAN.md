@@ -4,9 +4,9 @@
 
 ---
 
-## Status snapshot — updated 2026-06-27
+## Status snapshot — updated 2026-07-07
 
-**Phases 0–4 are built and live** (CardFoo.com / pullhit.com). **Phase 5 (Marketplace) is deferred to the *final* phase — it gates on sorting out payments (merchant-of-record / Stripe Connect / payout compliance) and isn't worth the build time until that's settled.** Near-term effort goes to deepening what's live (pricing coverage, mobile/PWA, monetization). Substantial scope was added on top of the original brief — see **§14** (2026-06 base sprint), **§14.1** (community/giveaways, multi-game image backfill, broad eBay sweeps, homepage), and **§14.2** (the late-June sprint: **sealed product catalog + valuation**, a **4th game (Cyberpunk)**, **social graph/profiles**, AI-assisted sweep matching, shareable collection folders).
+**Phases 0–4 are built and live** (CardFoo.com / pullhit.com). **Phase 5 (Marketplace) is deferred to the *final* phase — it gates on sorting out payments (merchant-of-record / Stripe Connect / payout compliance) and isn't worth the build time until that's settled.** Near-term effort goes to deepening what's live (pricing coverage, mobile/PWA, monetization). Substantial scope was added on top of the original brief — see **§14** (2026-06 base sprint), **§14.1** (community/giveaways, multi-game image backfill, broad eBay sweeps, homepage), **§14.2** (late-June: **sealed product catalog + valuation**, a **4th game (Cyberpunk)**, **social graph/profiles**, AI-assisted sweep matching, shareable collection folders), and **§14.3** (early-July: **pricing depth** — PriceCharting completed-sales + multi-year history blended into price charts, cited sealed MSRP sourcing, retailer/prerelease **stamp promos** as distinct printings, the **Compare** page, where-to-buy unified on the deals tracker).
 
 | Phase | Status |
 |---|---|
@@ -408,16 +408,30 @@ Layered on §14/§14.1, same guardrails (§13). Roughly by impact:
 - **Admin** per-user **detail page** — sessions/IP + device, scan history with detections, profile/collection/wishlist links, billing — linked from the roster.
 - **Ops/auth** — Postmark transactional email (welcome / verify-on-signup / password reset), payment receipts, cancel-subscription confirm modal, Dodo live-mode fix. **Root-caused a silent outage:** the Laravel Cloud **scheduler was off**, so eBay sweeps and daily snapshots weren't running — now enabled.
 
-### Updated next focus
+## 14.3 Sprint — early 2026-07 (pricing depth: PriceCharting history, MSRP, promo variants, compare)
 
-> **Marketplace (Phase 5) is intentionally LAST** — it gates on payments (merchant-of-record / Stripe Connect / payout compliance) and isn't worth building until that's resolved. Near-term work deepens what's already live.
+Layered on §14/§14.1/§14.2, same guardrails (§13). Roughly by impact:
 
-1. ✅ **Proactive sealed comp coverage** *(done).* `valuation:sweep-sealed` warms real eBay comps for valuable, stale sealed SKUs by name (the broad sweep is number-based, so it skipped sealed), cost-capped + scheduled hourly; Cases/Displays excluded (thin + ambiguous).
-2. **Phase 6 — PWA + mobile bottom-tab nav** (the brief's mobile-first goal is only partly met). Highest-value near-term build.
-3. **Early Adopter product** — $250 one-time, Guru benefits + badge + 500 monthly giveaway entries (Dodo product id staged in env). Quick monetization win.
-4. **TCGCSV sealed price errors** — the ultra-high tail (mispriced "Booster Box Cases", e.g. $40k–$60k) seeds bogus values; add a sanity bound / review pass on import.
-5. **Long-tail cleanup** — 80 sealed-unmatched sets (manual TCGplayer-group override map), sweep `no_number` misses, reconciliation backlog (graded re-seed, JP editions).
-6. **Phase 5 — Marketplace** *(final, payments-blocked).* First-party listings/orders/payments → first-party **sold data** → the wash-trade-detection wedge. Resume once the money rails are decided.
+- **PriceCharting completed-sales + long-term history blend** *(biggest pricing addition).* On a sealed-product view we lazily fetch its PriceCharting page **once** (Oxylabs, **no-render** — PriceCharting strips its sold table for headless clients; console slug keeps the literal `&`) and: (a) blend its **eBay + TCGplayer completed sales** into our valuation through the same sold-comp classifier (deduped on `(source_listing_id, venue)`; `valuation:sweep-pricecharting` warms boxes/ETBs in bulk — matched **316/369**, **5,443 comps**), and (b) parse the embedded monthly `chart_data` into a **multi-year price series** (`pc_price_history` column). The card **and** compare **price-history charts** now blend that monthly history into the 3M/1Y windows (our own weekly sold data only reaches back a few weeks) plus a **Max** window for the full multi-year curve. **Once-ever** lazy pull (never re-pulled once `pc_synced_at` set); the admin "Refresh" **force**-re-pulls and live-updates the chart/values/last-sale with a toast (no reload). PriceCharting has its **own** daily Oxylabs cap separate from eBay so a sweep can't starve on-view refreshes. Source-neutral in the UI.
+- **Sealed MSRP sourcing (cited, never-guess).** `SealedMsrpResearcher` finds each sealed product's original US MSRP via the Anthropic web-search tool with a **cited** result (mirrors the pull-rate researcher — omits rather than guesses); `sealed:backfill-msrp` fills boxes/ETBs first, resumable, marks not-found (`msrp_source`). Sealed pages show **"% since release MSRP"** (green/red, with the citation). Release dates inherited from the parent set.
+- **Retailer/prerelease STAMP promos as distinct printings.** GameStop / EB Games / prerelease / staff stamps trade on their own — modeled as a new `stamp` **variant-defining** facet (separate value, same `base_key` → grouped as a printing of the base card). `StampMatcher` routes comps **per-stamp** (a base card rejects any stamped sale; GameStop never absorbs EB Games; a custom typed stamp matches by its own words). Admin New/Edit card gains a free-text **Stamp** field. Root-caused e.g. Chaos Rising **Ho-Oh #10** reading **$49** (55/59 comps were stamped promos) → **$1.46**.
+- **Comp-quality fixes + global prune.** Booster **bundles** were getting **zero** comps (the single-card blocklist's `bundle` term) — now skipped for sealed. **Empty/opened** boxes rejected by title. A **global `valuation:prune-bad-comps`** removed **457** now-invalid comps across **199** cards.
+- **Compare page** (`/compare`, nav-linked) — chart up to **5 cards'** value over time on one multi-line chart (absolute $ or rebased **% change**; 3M/1Y/Max), a search-to-add typeahead on the lightweight `/search/suggest`, shareable `?ids=`.
+- **Where-to-buy unified on the deals tracker.** Dropped the dead per-item `retailer_links` JSON; the card page now shows the **live** `TrackedProduct`/`RetailerLink` offers (retailer, price, in-stock) that also power `/deals`.
+- **Graded browse filter** — filter browse by grading company + grade, showing the **graded** value in place of raw, with grade-aware price sorting and scope-narrowed facet options.
+- **Live card-page + UX polish** — a completed refresh live-swaps values, the price-history chart, and "last sold" with a toast (no reload). **iOS share** sends the current URL after SPA nav (canonical/og:url synced); browse/search share the full query. **Dashboard** movers + set allocation now link. **Homepage** popular-search chips are data-driven. **Browse Back** button steps through the drill-down (push, not replace). Oxylabs caps raised to 1,000/day each (eBay + PriceCharting).
+
+### Updated next focus (2026-07-07)
+
+> **Marketplace (Phase 5) is intentionally LAST** — it gates on payments (merchant-of-record / Stripe Connect / payout compliance). §15 Tier 1 #1 (**public price-history charts**) is now **done** — multi-year, blended, source-neutral, on card + compare pages; graded + sealed pricing deepened (§15 Tier 1 #3).
+
+1. **Phase 6 — PWA + mobile bottom-tab nav.** Still the highest-value near-term build; the brief's mobile-first goal is only partly met.
+2. **Import the promo/stamp variants** — the `stamp` facet + per-stamp routing are built; now **populate** the GameStop / EB Games / prerelease / staff variants (source a list + bulk/admin add) so their comps route + value instead of being pruned off the base card.
+3. **Finish MSRP + PriceCharting coverage** — run `sealed:backfill-msrp` and `valuation:sweep-pricecharting` across all lines/types (boxes/ETBs done first); resolve the **53** unmatched PriceCharting products + the ~**80** sealed-unmatched sets (name-match / override map).
+4. **Early Adopter product** — $250 one-time, Guru benefits + badge + 500 monthly giveaway entries (Dodo product id staged in env). Quick monetization win.
+5. **TCGCSV sealed price sanity bound** — mispriced "Booster Box Cases" ($40k+) still seed bogus synthetic values on import; add a bound / review pass (MSRP + PriceCharting now give a cross-check).
+6. **Loud transparency polish** (§15 Tier 1 #2) — make sure every public card/sealed page surfaces "N sold · last sale · confidence · range" + the expandable **"see the comps"** list.
+7. **Phase 5 — Marketplace** *(final, payments-blocked).* First-party listings/orders/payments → first-party **sold data** → the wash-trade-detection wedge. Resume once the money rails are decided.
 
 ---
 
