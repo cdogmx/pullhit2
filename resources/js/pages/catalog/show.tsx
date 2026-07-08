@@ -411,8 +411,9 @@ export default function Show({
                 </Breadcrumb>
 
                 <div className="grid gap-8 md:grid-cols-[minmax(0,320px)_1fr]">
-                    {/* Image — sticky alongside the scrolling detail column */}
-                    <div className="md:sticky md:top-6 md:self-start">
+                    {/* Image — sticky alongside the scrolling detail column;
+                        top clears the sticky h-16 site header (64px) plus a gap. */}
+                    <div className="md:sticky md:top-20 md:self-start">
                         <div className="mx-auto w-full max-w-[300px] overflow-hidden rounded-xl border border-border bg-muted shadow-sm">
                             {item.image_url ? (
                                 <button
