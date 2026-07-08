@@ -15,6 +15,7 @@ import {
     LayoutGrid,
     LibraryBig,
     Library,
+    ListTree,
     PencilRuler,
     Radar,
     Rss,
@@ -112,24 +113,35 @@ const pokemonNavItems: NavItem[] = [
     { title: 'Japanese', href: '/browse/pokemon?language=ja', icon: Languages },
 ];
 
+// Ordered by the catalog hierarchy (Structure → Brand → Set → Card), then the
+// review/moderation queues, pricing ops, and platform admin.
 const adminNavItems: NavItem[] = [
     { title: 'Admin', href: '/admin', icon: Shield },
-    { title: 'Users', href: '/admin/users', icon: Users },
-    { title: 'Transactions', href: '/admin/transactions', icon: CreditCard },
+
+    // Catalog — brand → series → set → subset → card
+    { title: 'Structure', href: '/admin/structure', icon: ListTree },
     { title: 'Brands', href: '/admin/brands', icon: Boxes },
     { title: 'Sets', href: '/admin/sets', icon: Library },
     { title: 'Cards', href: '/admin/cards', icon: PencilRuler },
+
+    // Review & moderation
     { title: 'Suggestions', href: '/admin/suggestions', icon: Inbox },
     {
         title: 'Card reports',
         href: '/admin/card-reports',
         icon: FlagTriangleRight,
     },
-    { title: 'Giveaways', href: '/admin/giveaways', icon: Gift },
+    { title: 'Reconcile', href: '/admin/reconcile', icon: GitCompare },
+    { title: 'Scan feedback', href: '/admin/scan-feedback', icon: ScanLine },
+
+    // Pricing & availability ops
     { title: 'eBay sweep', href: '/admin/ebay-sweep', icon: Radar },
     { title: 'Stock alerts', href: '/admin/stock-alerts', icon: Bell },
-    { title: 'Scan feedback', href: '/admin/scan-feedback', icon: ScanLine },
-    { title: 'Reconcile', href: '/admin/reconcile', icon: GitCompare },
+
+    // Platform
+    { title: 'Users', href: '/admin/users', icon: Users },
+    { title: 'Transactions', href: '/admin/transactions', icon: CreditCard },
+    { title: 'Giveaways', href: '/admin/giveaways', icon: Gift },
 ];
 
 export function AppSidebar() {

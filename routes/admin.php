@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\ReconcileController;
 use App\Http\Controllers\Admin\ScanFeedbackController;
 use App\Http\Controllers\Admin\SetController;
 use App\Http\Controllers\Admin\StockAlertController;
+use App\Http\Controllers\Admin\StructureController;
 use App\Http\Controllers\Admin\SuggestionController;
 use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\UserController;
@@ -47,6 +48,9 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('sets/{set}/sealed', [SetController::class, 'storeSealed'])->name('sets.sealed');
     Route::patch('sealed/{catalogItem}', [SetController::class, 'updateSealed'])->name('sealed.update');
     Route::get('sets/{set}/missing', [SetController::class, 'missing'])->name('sets.missing');
+
+    // Catalog structure reference (brand → series → set → subset → card).
+    Route::get('structure', StructureController::class)->name('structure');
 
     // PriceCharting reconciliation review queue
     Route::get('reconcile', [ReconcileController::class, 'index'])->name('reconcile.index');
