@@ -37,12 +37,18 @@ export default function AdminSuggestions({ suggestions }: Props) {
             {},
             {
                 preserveScroll: true,
-                onSuccess: () =>
-                    toast.success(
-                        action === 'approve'
-                            ? 'Edit applied to the catalog.'
-                            : 'Suggestion rejected.',
-                    ),
+                // The controller catches an invalid edit and flashes `error`
+                // (the suggestion stays pending), so reflect the real outcome
+                // instead of always claiming success.
+                onSuccess: (page) => {
+                    const flash = page.props.flash;
+
+                    if (flash?.error) {
+                        toast.error(flash.error);
+                    } else {
+                        toast.success(flash?.success ?? 'Done.');
+                    }
+                },
             },
         );
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\ItemEditSuggestion;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -41,9 +42,15 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // One-shot flash so the client can surface the real outcome of a
+            // redirect action (e.g. an approve that failed validation).
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+            ],
             // Admin review-queue badge (cheap count; admins only).
             'pendingSuggestions' => $request->user()?->is_admin
-                ? \App\Models\ItemEditSuggestion::where('status', 'pending')->count()
+                ? ItemEditSuggestion::where('status', 'pending')->count()
                 : null,
             // Unread in-app notifications badge for the signed-in user.
             'unreadNotifications' => $request->user()?->unreadNotifications()->count() ?? 0,
