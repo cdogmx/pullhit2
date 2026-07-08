@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ChevronDown, Zap } from 'lucide-react';
+import { ChevronDown, Menu, Zap } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { SiteSearch } from '@/components/site-search';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,9 +14,19 @@ import {
     DropdownMenuSubTrigger,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+    Sheet,
+    SheetClose,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from '@/components/ui/sheet';
 import { UserMenuContent } from '@/components/user-menu-content';
 import { useInitials } from '@/hooks/use-initials';
+import { cn } from '@/lib/utils';
 import { dashboard, home, login, register } from '@/routes';
+import type { Auth } from '@/types';
 
 /**
  * Shared marketing/public chrome header. Auth-aware: shows sign-in actions for
@@ -73,7 +83,8 @@ export function SiteHeader() {
     return (
         <header className="sticky top-0 z-40 w-full border-b border-border bg-background/80 backdrop-blur">
             <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3 md:gap-6">
+                    <MobileMenu auth={auth} />
                     <Link
                         href={home()}
                         className="flex items-center gap-2"
@@ -240,5 +251,119 @@ export function SiteHeader() {
                 </div>
             </div>
         </header>
+    );
+}
+
+/**
+ * Mobile hamburger menu (hidden ≥ md) — a left drawer surfacing every header
+ * nav link, since the desktop bar is hidden on small screens and the bottom
+ * tab bar only carries the five primary destinations. Each link closes the
+ * drawer on navigation via SheetClose.
+ */
+function MobileMenu({ auth }: { auth: Auth }) {
+    return (
+        <Sheet>
+            <SheetTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden"
+                    aria-label="Open menu"
+                >
+                    <Menu className="size-5" />
+                </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-80 overflow-y-auto">
+                <SheetHeader>
+                    <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+
+                <nav className="flex flex-col px-2 pb-8">
+                    <MenuHeading>Browse</MenuHeading>
+                    <MenuLink href="/browse">All cards</MenuLink>
+                    {catalogMenu.map((game) =>
+                        game.links ? (
+                            <div key={game.label}>
+                                <p className="px-3 pt-2 text-xs font-medium text-muted-foreground">
+                                    {game.label}
+                                </p>
+                                {game.links.map((l) => (
+                                    <MenuLink key={l.href} href={l.href} indent>
+                                        {l.label}
+                                    </MenuLink>
+                                ))}
+                            </div>
+                        ) : (
+                            <MenuLink key={game.href} href={game.href!}>
+                                {game.label}
+                            </MenuLink>
+                        ),
+                    )}
+
+                    <MenuHeading>Explore</MenuHeading>
+                    <MenuLink href="/movers">Movers</MenuLink>
+                    <MenuLink href="/deals">Deals</MenuLink>
+                    <MenuLink href="/compare">Compare</MenuLink>
+                    <MenuLink href="/rip-or-keep">Rip or Keep?</MenuLink>
+                    {moreMenu.map((item) => (
+                        <MenuLink key={item.href} href={item.href}>
+                            {item.label}
+                        </MenuLink>
+                    ))}
+
+                    {auth.user ? (
+                        <>
+                            <MenuHeading>Account</MenuHeading>
+                            <MenuLink href={dashboard().url}>Dashboard</MenuLink>
+                        </>
+                    ) : (
+                        <>
+                            <MenuHeading>Account</MenuHeading>
+                            <MenuLink href={login().url}>Log in</MenuLink>
+                            <MenuLink href={register().url}>Get started</MenuLink>
+                        </>
+                    )}
+                </nav>
+            </SheetContent>
+        </Sheet>
+    );
+}
+
+function MenuHeading({ children }: { children: React.ReactNode }) {
+    return (
+        <p className="px-3 pt-4 pb-1 text-xs font-semibold tracking-wide text-muted-foreground/70 uppercase">
+            {children}
+        </p>
+    );
+}
+
+function MenuLink({
+    href,
+    children,
+    indent = false,
+}: {
+    href: string;
+    children: React.ReactNode;
+    indent?: boolean;
+}) {
+    const className = cn(
+        'block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
+        indent && 'pl-6',
+    );
+
+    // Hash links (e.g. /#features) need a real anchor to scroll; the rest are
+    // client-side Inertia navigations.
+    return (
+        <SheetClose asChild>
+            {href.includes('#') ? (
+                <a href={href} className={className}>
+                    {children}
+                </a>
+            ) : (
+                <Link href={href} className={className}>
+                    {children}
+                </Link>
+            )}
+        </SheetClose>
     );
 }
