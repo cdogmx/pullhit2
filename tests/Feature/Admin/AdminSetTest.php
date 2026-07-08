@@ -3,6 +3,7 @@
 use App\Jobs\ImportSetJob;
 use App\Models\CatalogItem;
 use App\Models\ProductLine;
+use App\Models\SeriesMeta;
 use App\Models\Set;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
@@ -72,26 +73,32 @@ test('rename-series moves every set in a brand series (and can ungroup)', functi
     $b = Set::factory()->for($line)->create(['series' => 'Old Series']);
     $other = Set::factory()->for($line)->create(['series' => 'Keep']);
 
-    // Rename.
+    // Rename + set an image.
     $this->actingAs($this->admin)
-        ->post('/admin/structure/rename-series', [
+        ->post('/admin/structure/series', [
             'product_line_id' => $line->id,
             'from' => 'Old Series',
             'to' => 'New Series',
+            'logo_url' => 'https://cdn.example.com/new-series.png',
         ])->assertRedirect();
 
     expect($a->fresh()->series)->toBe('New Series')
         ->and($b->fresh()->series)->toBe('New Series')
         ->and($other->fresh()->series)->toBe('Keep'); // untouched
 
-    // Ungroup (blank target).
+    // The image landed on the (renamed) series.
+    expect(SeriesMeta::where('product_line_id', $line->id)->where('name', 'New Series')->value('logo_path'))
+        ->toBe('https://cdn.example.com/new-series.png');
+
+    // Ungroup (blank target) drops the metadata too.
     $this->actingAs($this->admin)
-        ->post('/admin/structure/rename-series', [
+        ->post('/admin/structure/series', [
             'product_line_id' => $line->id,
             'from' => 'New Series',
             'to' => '',
         ])->assertRedirect();
 
     expect($a->fresh()->series)->toBeNull()
-        ->and($b->fresh()->series)->toBeNull();
+        ->and($b->fresh()->series)->toBeNull()
+        ->and(SeriesMeta::where('product_line_id', $line->id)->where('name', 'New Series')->exists())->toBeFalse();
 });

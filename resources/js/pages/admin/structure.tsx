@@ -1,7 +1,8 @@
 import { Head, useForm } from '@inertiajs/react';
-import { ChevronRight, Layers, Library, Pencil } from 'lucide-react';
+import { ChevronRight, Image as ImageIcon, Layers, Library, Pencil } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { ImageUploadField } from '@/components/admin/image-upload-field';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,6 +15,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { languageLabel } from '@/lib/format';
 
 type SetRow = {
@@ -27,6 +29,7 @@ type SetRow = {
 type SeriesGroup = {
     series: string;
     value: string | null;
+    image: string | null;
     grouped: boolean;
     set_count: number;
     sets: SetRow[];
@@ -43,12 +46,13 @@ type Brand = {
 
 type Props = { brands: Brand[] };
 
-/** The series being renamed: which brand, the current value, its display label. */
+/** The series being edited: which brand, its current value, label, image. */
 type RenameTarget = {
     brandId: number;
     from: string | null;
     label: string;
     count: number;
+    image: string | null;
 };
 
 export default function AdminStructure({ brands }: Props) {
@@ -82,7 +86,12 @@ function RenameSeriesDialog({
     target: RenameTarget | null;
     onOpenChange: (open: boolean) => void;
 }) {
-    const form = useForm({ product_line_id: 0, from: '' as string | null, to: '' });
+    const form = useForm({
+        product_line_id: 0,
+        from: '' as string | null,
+        to: '',
+        logo_url: '',
+    });
 
     useEffect(() => {
         if (target) {
@@ -90,6 +99,7 @@ function RenameSeriesDialog({
                 product_line_id: target.brandId,
                 from: target.from,
                 to: target.from ?? '',
+                logo_url: target.image ?? '',
             });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,7 +111,7 @@ function RenameSeriesDialog({
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        form.post('/admin/structure/rename-series', {
+        form.post('/admin/structure/series', {
             preserveScroll: true,
             onSuccess: (page) => {
                 const flash = page.props.flash;
@@ -122,26 +132,46 @@ function RenameSeriesDialog({
             <DialogContent>
                 <form onSubmit={submit}>
                     <DialogHeader>
-                        <DialogTitle>Rename series</DialogTitle>
+                        <DialogTitle>Edit series</DialogTitle>
                         <DialogDescription>
-                            Renames the series on all {target.count} set
-                            {target.count === 1 ? '' : 's'} in it. Use an existing
-                            name to merge them; leave blank to ungroup.
+                            Applies to all {target.count} set
+                            {target.count === 1 ? '' : 's'} in this series. Rename
+                            to an existing series to merge; leave the name blank to
+                            ungroup.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="py-4">
-                        <Input
-                            autoFocus
-                            value={form.data.to}
-                            onChange={(e) => form.setData('to', e.target.value)}
-                            placeholder="e.g. Mega Evolution"
-                        />
-                        {form.errors.to && (
-                            <p className="mt-1 text-xs text-red-600">
-                                {form.errors.to}
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-1.5">
+                            <Label className="text-xs">Name</Label>
+                            <Input
+                                autoFocus
+                                value={form.data.to}
+                                onChange={(e) =>
+                                    form.setData('to', e.target.value)
+                                }
+                                placeholder="e.g. Mega Evolution"
+                            />
+                            {form.errors.to && (
+                                <p className="text-xs text-red-600">
+                                    {form.errors.to}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="grid gap-1.5">
+                            <Label className="text-xs">
+                                Series image (optional)
+                            </Label>
+                            <ImageUploadField
+                                value={form.data.logo_url}
+                                onChange={(u) => form.setData('logo_url', u)}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Shown on the series tile in browse. Falls back to a
+                                card from the series when empty.
                             </p>
-                        )}
+                        </div>
                     </div>
 
                     <DialogFooter>
@@ -190,7 +220,7 @@ function Explainer() {
                     />
                     <Term
                         label="Series"
-                        body="NOT a separate record — just the “Series” text field on each set. Sets that share the same value group under one tile in browse (e.g. every set with series “Mega Evolution”). To group a set, set its Series (on the Sets page); to rename or merge a whole series at once, use the Rename button below."
+                        body="NOT a separate record — just the “Series” text field on each set. Sets that share the same value group under one tile in browse (e.g. every set with series “Mega Evolution”). To group a set, set its Series (on the Sets page); to rename, merge, or give a series its own tile image, use its Edit button below."
                     />
                     <Term
                         label="Set"
@@ -245,13 +275,21 @@ function BrandTree({
                 {brand.series.map((group) => (
                     <div key={group.series}>
                         <div className="mb-1.5 flex items-center gap-2">
-                            <Layers
-                                className={
-                                    group.grouped
-                                        ? 'size-4 text-primary'
-                                        : 'size-4 text-muted-foreground/50'
-                                }
-                            />
+                            {group.image ? (
+                                <img
+                                    src={group.image}
+                                    alt={group.series}
+                                    className="size-6 shrink-0 rounded object-contain"
+                                />
+                            ) : (
+                                <Layers
+                                    className={
+                                        group.grouped
+                                            ? 'size-4 text-primary'
+                                            : 'size-4 text-muted-foreground/50'
+                                    }
+                                />
+                            )}
                             <span
                                 className={
                                     group.grouped
@@ -264,20 +302,28 @@ function BrandTree({
                             <Badge variant="outline" className="text-[10px]">
                                 {group.set_count}
                             </Badge>
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    onRename({
-                                        brandId: brand.id,
-                                        from: group.value,
-                                        label: group.series,
-                                        count: group.set_count,
-                                    })
-                                }
-                                className="ml-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                            >
-                                <Pencil className="size-3" /> Rename
-                            </button>
+                            {group.grouped && (
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        onRename({
+                                            brandId: brand.id,
+                                            from: group.value,
+                                            label: group.series,
+                                            count: group.set_count,
+                                            image: group.image,
+                                        })
+                                    }
+                                    className="ml-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                >
+                                    {group.image ? (
+                                        <ImageIcon className="size-3" />
+                                    ) : (
+                                        <Pencil className="size-3" />
+                                    )}{' '}
+                                    Edit
+                                </button>
+                            )}
                         </div>
                         <div className="ml-6 flex flex-wrap gap-1.5">
                             {group.sets.map((s) => (

@@ -4,6 +4,7 @@ namespace App\Actions\Catalog;
 
 use App\Models\CatalogItem;
 use App\Models\ProductLine;
+use App\Models\SeriesMeta;
 use App\Models\Set;
 use App\Support\Catalog\Subsets;
 use Illuminate\Contracts\Database\Eloquent\Builder as BuilderContract;
@@ -141,6 +142,11 @@ class BrowseTiles
             ->selectRaw('sets.series as series, min(catalog_items.primary_image_path) as thumb')
             ->pluck('thumb', 'series');
 
+        // An admin-set series logo overrides the auto-picked card thumbnail.
+        $logos = SeriesMeta::where('product_line_id', $line->id)
+            ->whereNotNull('logo_path')
+            ->pluck('logo_path', 'name');
+
         return Set::query()
             ->where('product_line_id', $line->id)
             ->when($lang, fn (Builder $q, $l) => $q->where('language', $l))
@@ -154,7 +160,7 @@ class BrowseTiles
                 'slug' => $row->series,
                 'name' => $row->series,
                 'count' => (int) $row->getAttribute('set_count'),
-                'thumb' => $thumbs[$row->series] ?? null,
+                'thumb' => $logos[$row->series] ?? $thumbs[$row->series] ?? null,
             ])
             ->all();
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ProductLine;
+use App\Models\SeriesMeta;
 use App\Models\Set;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -23,11 +24,16 @@ class StructureController extends Controller
 
     public function index(): Response
     {
-        $brands = ProductLine::orderBy('name')->get()->map(function (ProductLine $line) {
+        $logosByLine = SeriesMeta::get(['product_line_id', 'name', 'logo_path'])
+            ->groupBy('product_line_id');
+
+        $brands = ProductLine::orderBy('name')->get()->map(function (ProductLine $line) use ($logosByLine) {
             $sets = Set::where('product_line_id', $line->id)
                 ->orderByDesc('released_at')
                 ->orderBy('name')
                 ->get(['id', 'name', 'slug', 'series', 'language', 'released_at']);
+
+            $logos = ($logosByLine[$line->id] ?? collect())->pluck('logo_path', 'name');
 
             $series = $sets
                 ->groupBy(fn (Set $s) => $s->series ?: self::UNGROUPED)
@@ -36,6 +42,7 @@ class StructureController extends Controller
                     // The real DB value (null for the ungrouped bucket) — what the
                     // rename action targets.
                     'value' => $group->first()->series ?: null,
+                    'image' => $logos[$name] ?? null,
                     'grouped' => $name !== self::UNGROUPED,
                     'set_count' => $group->count(),
                     'sets' => $group->map(fn (Set $s) => [
@@ -67,36 +74,51 @@ class StructureController extends Controller
     }
 
     /**
-     * Rename (or merge/ungroup) a series across every set in a brand. Since a
-     * series is just the sets' shared string, renaming to an existing name merges
-     * the two, and an empty target ungroups them. This is the series level's
-     * "update/delete".
+     * Update a series across a brand in one action: rename it (renaming to an
+     * existing name merges; a blank target ungroups) AND set its browse-tile
+     * image. Series is just the sets' shared string, so the rename is a bulk
+     * update on `sets`; the image lives in the series_meta side-table.
      */
-    public function renameSeries(Request $request): RedirectResponse
+    public function updateSeries(Request $request): RedirectResponse
     {
         $data = $request->validate([
             'product_line_id' => ['required', 'integer', 'exists:product_lines,id'],
             'from' => ['nullable', 'string', 'max:255'],
             'to' => ['nullable', 'string', 'max:255'],
+            'logo_url' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $lineId = (int) $data['product_line_id'];
         $from = ($data['from'] ?? null) ?: null;
         $to = trim((string) ($data['to'] ?? '')) ?: null;
+        $logo = ($data['logo_url'] ?? null) ?: null;
 
-        if ($from === $to) {
-            return back();
+        $count = 0;
+        if ($from !== $to) {
+            $count = Set::where('product_line_id', $lineId)
+                ->when(
+                    $from === null,
+                    fn (Builder $q) => $q->whereNull('series'),
+                    fn (Builder $q) => $q->where('series', $from),
+                )
+                ->update(['series' => $to]);
         }
 
-        $count = Set::where('product_line_id', $data['product_line_id'])
-            ->when(
-                $from === null,
-                fn (Builder $q) => $q->whereNull('series'),
-                fn (Builder $q) => $q->where('series', $from),
-            )
-            ->update(['series' => $to]);
+        // Move the metadata to follow the rename; drop it when ungrouped.
+        if ($from !== null && $from !== $to) {
+            SeriesMeta::where('product_line_id', $lineId)->where('name', $from)->delete();
+        }
+
+        if ($to !== null) {
+            SeriesMeta::updateOrCreate(
+                ['product_line_id' => $lineId, 'name' => $to],
+                ['logo_path' => $logo],
+            );
+        }
 
         $label = $to ?? 'ungrouped';
+        $moved = $count > 0 ? "Moved {$count} set(s) to \"{$label}\". " : '';
 
-        return back()->with('success', "Moved {$count} set(s) to \"{$label}\".");
+        return back()->with('success', $moved.'Series saved.');
     }
 }

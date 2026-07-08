@@ -51,7 +51,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
 
     // Catalog structure reference (brand → series → set → subset → card).
     Route::get('structure', [StructureController::class, 'index'])->name('structure');
-    Route::post('structure/rename-series', [StructureController::class, 'renameSeries'])->name('structure.rename-series');
+    Route::post('structure/series', [StructureController::class, 'updateSeries'])->name('structure.series');
 
     // PriceCharting reconciliation review queue
     Route::get('reconcile', [ReconcileController::class, 'index'])->name('reconcile.index');
