@@ -54,22 +54,39 @@ return [
     ],
 
     // PriceCharting completed-sales + long-term history via Oxylabs. Fetched
-    // once per card on view (shares the eBay daily Oxylabs cap), then only again
-    // after the refresh window — its monthly series changes slowly.
+    // once per card on view (its OWN daily counter, separate from eBay), then
+    // only again after the refresh window — its monthly series changes slowly.
     'pricecharting' => [
         'enabled' => env('PRICECHARTING_REFRESH_ENABLED', true),
         // Its OWN Oxylabs daily budget (separate counter from eBay) so a bulk
         // PriceCharting sweep can't starve the interactive eBay on-view refresh.
-        // eBay 1000 + PriceCharting 1000 = 2000/day ≈ 60k/month, under the ~98k
-        // plan ceiling (~3.2k/day) with headroom for retries/growth.
-        'daily_cap' => (int) env('PRICECHARTING_DAILY_CAP', 1000),
+        // eBay 3000 + PriceCharting 2000 = 5000/day ≈ 150k/month, under the
+        // 220k plan ceiling (~7.3k/day) with headroom for retries/growth.
+        'daily_cap' => (int) env('PRICECHARTING_DAILY_CAP', 2000),
+
+        // Singles are only worth a PriceCharting pull (graded + long-term
+        // history) above this value — spending a scrape on a 10¢ common is
+        // waste, and there are ~50k of them. Sealed products always pull.
+        'singles_min_cents' => (int) env('PRICECHARTING_SINGLES_MIN_CENTS', 500),
+
+        // Low rarities we skip for singles UNLESS the card is from a vintage set
+        // (old commons/uncommons can still be valuable). Comma-separated; C/UC
+        // are the One Piece / Japanese abbreviations.
+        'skip_rarities' => array_filter(array_map(
+            'trim',
+            explode(',', (string) env('PRICECHARTING_SKIP_RARITIES', 'Common,Uncommon,C,UC')),
+        )),
+
+        // A set released before this year counts as "vintage" — its low-rarity
+        // singles bypass the skip above.
+        'vintage_before_year' => (int) env('PRICECHARTING_VINTAGE_BEFORE_YEAR', 2004),
     ],
 
     // Real eBay sold-comp ingestion via Oxylabs. Lazy + cost-capped.
     'ebay' => [
         'enabled' => env('EBAY_REFRESH_ENABLED', true),
         'geo' => 'United States',
-        'daily_cap' => (int) env('EBAY_DAILY_CAP', 1000), // max Oxylabs requests/day
+        'daily_cap' => (int) env('EBAY_DAILY_CAP', 3000), // max Oxylabs requests/day
         'max_results' => 60,
 
         // On a card view, refresh its eBay comps if they're older than this. The
