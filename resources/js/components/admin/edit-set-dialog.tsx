@@ -26,9 +26,9 @@ import type { AdminOption, AdminSet } from '@/types';
 
 /**
  * Admin: create a set (pass `set={null}` + `productLines` + `languages`) or edit
- * one (pass `set`). On create the brand, language, and series are chosen; on edit
- * they're fixed (brand/language feed the card identity hash) and only name, code,
- * release date, description, and logo are editable.
+ * one (pass `set`). Both show every field; on edit, brand and language are shown
+ * read-only (changing them would desync the set's cards without a migration),
+ * while name, code, series, release date, description, and logo are editable.
  */
 export function EditSetDialog({
     set,
@@ -122,9 +122,9 @@ export function EditSetDialog({
                     </DialogHeader>
 
                     <div className="grid gap-3 py-4">
-                        {creating && (
-                            <div className="grid gap-1.5">
-                                <Label className="text-xs">Brand</Label>
+                        <div className="grid gap-1.5">
+                            <Label className="text-xs">Brand</Label>
+                            {creating ? (
                                 <Select
                                     value={String(form.data.product_line_id)}
                                     onValueChange={(v) =>
@@ -148,13 +148,15 @@ export function EditSetDialog({
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {form.errors.product_line_id && (
-                                    <p className="text-xs text-red-600">
-                                        {form.errors.product_line_id}
-                                    </p>
-                                )}
-                            </div>
-                        )}
+                            ) : (
+                                <Input value={set?.brand ?? '—'} disabled />
+                            )}
+                            {form.errors.product_line_id && (
+                                <p className="text-xs text-red-600">
+                                    {form.errors.product_line_id}
+                                </p>
+                            )}
+                        </div>
 
                         <div className="grid gap-1.5">
                             <Label className="text-xs">Name</Label>
@@ -198,10 +200,10 @@ export function EditSetDialog({
                             </div>
                         </div>
 
-                        {creating && (
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="grid gap-1.5">
-                                    <Label className="text-xs">Language</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="grid gap-1.5">
+                                <Label className="text-xs">Language</Label>
+                                {creating ? (
                                     <Select
                                         value={form.data.language}
                                         onValueChange={(v) =>
@@ -219,24 +221,30 @@ export function EditSetDialog({
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                </div>
-                                <div className="grid gap-1.5">
-                                    <Label className="text-xs">
-                                        Series (optional)
-                                    </Label>
+                                ) : (
                                     <Input
-                                        value={form.data.series}
-                                        onChange={(e) =>
-                                            form.setData(
-                                                'series',
-                                                e.target.value,
-                                            )
+                                        value={
+                                            set?.language
+                                                ? languageLabel(set.language)
+                                                : '—'
                                         }
-                                        placeholder="Scarlet & Violet"
+                                        disabled
                                     />
-                                </div>
+                                )}
                             </div>
-                        )}
+                            <div className="grid gap-1.5">
+                                <Label className="text-xs">
+                                    Series (optional)
+                                </Label>
+                                <Input
+                                    value={form.data.series}
+                                    onChange={(e) =>
+                                        form.setData('series', e.target.value)
+                                    }
+                                    placeholder="Scarlet & Violet"
+                                />
+                            </div>
+                        </div>
 
                         <div className="grid gap-1.5">
                             <Label className="text-xs">Description</Label>

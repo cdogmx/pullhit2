@@ -127,17 +127,22 @@ class SetController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'code' => ['nullable', 'string', 'max:50'],
+            'series' => ['nullable', 'string', 'max:255'],
             'released_at' => ['nullable', 'date'],
             'description' => ['nullable', 'string', 'max:5000'],
             'logo_url' => ['nullable', 'url', 'max:1000'],
         ]);
 
+        // Brand + language are intentionally not editable here: they'd desync the
+        // set's cards (identity hashes + browse filtering) without a full card
+        // migration. Series is descriptive, so it's safe to edit.
         $set->update([
             'name' => $data['name'],
-            'code' => $data['code'] ?: null,
-            'released_at' => $data['released_at'] ?: null,
-            'description' => $data['description'] ?: null,
-            'logo_path' => $data['logo_url'] ?: null,
+            'code' => ($data['code'] ?? null) ?: null,
+            'series' => ($data['series'] ?? null) ?: null,
+            'released_at' => ($data['released_at'] ?? null) ?: null,
+            'description' => ($data['description'] ?? null) ?: null,
+            'logo_path' => ($data['logo_url'] ?? null) ?: null,
         ]);
 
         return back()->with('success', "Updated {$set->name}.");

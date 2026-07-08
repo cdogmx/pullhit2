@@ -48,3 +48,19 @@ test('the missing report lists cards absent from the catalog', function () {
         ->assertJsonPath('present', 1)
         ->assertJsonPath('missing.0.id', 'sv8-2');
 });
+
+test('updating a set edits series (and leaves brand/language alone)', function () {
+    $set = Set::factory()->create(['name' => 'Old', 'series' => null, 'language' => 'ja']);
+
+    $this->actingAs($this->admin)
+        ->patch("/admin/sets/{$set->id}", [
+            'name' => 'First Partner Illustration Collection - Series 2',
+            'series' => 'First Partners',
+        ])
+        ->assertRedirect();
+
+    $set->refresh();
+    expect($set->series)->toBe('First Partners')
+        ->and($set->name)->toBe('First Partner Illustration Collection - Series 2')
+        ->and($set->language)->toBe('ja'); // untouched
+});
