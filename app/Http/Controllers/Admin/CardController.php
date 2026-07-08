@@ -167,22 +167,24 @@ class CardController extends Controller
         Cache::increment($key);
         $ingested = $ingest($catalogItem);
 
-        // Sealed products also refresh PriceCharting — it's the source of the
-        // completed-sales blend AND the long-term monthly history line. Force it
-        // (bypass the on-view TTL) under PriceCharting's own daily cap.
+        // Cards also refresh PriceCharting — it's the source of the completed-sales
+        // blend AND the long-term monthly history line (per grade tier for
+        // singles). Force it (bypass the on-view TTL) under PC's own daily cap.
         $this->refreshPricecharting($catalogItem, $pcIngest);
 
         return response()->json([
             'ok' => true,
             'ingested' => $ingested,
-            // Fresh long-term series so the card page updates its history line live.
-            'price_history_long' => $catalogItem->pc_price_history ?? [],
+            // Fresh long-term series (per grade tier) so the card page updates its
+            // history line live.
+            'price_history_long' => $catalogItem->longTermHistoryTiers(),
         ]);
     }
 
     private function refreshPricecharting(CatalogItem $catalogItem, IngestPricechartingComps $pcIngest): void
     {
-        if ($catalogItem->item_type !== ItemType::Sealed || ! config('valuation.pricecharting.enabled', true)) {
+        if (! in_array($catalogItem->item_type, [ItemType::Single, ItemType::Sealed], true)
+            || ! config('valuation.pricecharting.enabled', true)) {
             return;
         }
 

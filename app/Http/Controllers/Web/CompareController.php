@@ -44,8 +44,8 @@ class CompareController extends Controller
                 'latest' => $item->defaultMarketValue?->median,
                 'series' => $history($item, self::HISTORY_DAYS),
                 // Long-term monthly series (PriceCharting) for the "Max" window —
-                // read-only; the card page owns pulling it (once per item).
-                'series_long' => $item->pc_price_history ?? [],
+                // the ungraded line; read-only; the card page owns pulling it.
+                'series_long' => $item->longTermHistory('ungraded'),
             ])
             ->values();
 

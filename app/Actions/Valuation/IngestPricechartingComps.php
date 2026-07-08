@@ -33,10 +33,11 @@ class IngestPricechartingComps
         $companyIds = GradingCompany::pluck('id', 'slug')->all();
         $data = $this->source->fetchData($item);
 
-        // Long-term monthly series (older than eBay's sold view) + a sync marker,
-        // stored whether or not any comps pass — it drives the on-view TTL too.
+        // Long-term monthly series per grade tier (older than eBay's sold view) +
+        // a sync marker, stored whether or not any comps pass — it drives the
+        // on-view TTL too. Shape: {"ungraded": [...], "9": [...], "10": [...]}.
         $item->forceFill([
-            'pc_price_history' => $data->history !== [] ? $data->history : null,
+            'pc_price_history' => $data->histories !== [] ? $data->histories : null,
             'pc_synced_at' => Carbon::now(),
         ])->save();
 

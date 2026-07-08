@@ -29,12 +29,12 @@ test('an already-synced sealed product never re-pulls on view (once-ever)', func
     }
 });
 
-test('singles never pull PriceCharting (they have no sealed page)', function () {
+test('a never-synced single also dispatches a pull on view (per-grade history)', function () {
     $single = CatalogItem::factory()->create(['item_type' => ItemType::Single, 'pc_synced_at' => null]);
 
     app(MaybeRefreshPricecharting::class)($single);
 
-    Queue::assertNothingPushed();
+    Queue::assertPushed(RefreshPricechartingData::class, fn ($j) => $j->catalogItemId === $single->id);
 });
 
 test('the job itself skips an already-synced item unless forced', function () {

@@ -289,8 +289,9 @@ class CatalogController extends Controller
             'refreshedAt' => $catalogItem->ebay_refreshed_at?->toIso8601String(),
             'priceHistory' => $history($catalogItem, 365, $headlineState?->state_key),
             // Long-term monthly series from PriceCharting (older than our sold
-            // data) — a separate multi-year line on the chart. Empty until synced.
-            'priceHistoryLong' => $model->pc_price_history ?? [],
+            // data), keyed by grade tier — a separate multi-year line the chart
+            // picks per selected state. Empty until synced.
+            'priceHistoryLong' => $model->longTermHistoryTiers(),
             // The single most recent REAL sold comp (raw state) — the headline
             // trust signal ("last sold $X, Yd ago"), null when none.
             'lastSale' => $this->lastSale($catalogItem),

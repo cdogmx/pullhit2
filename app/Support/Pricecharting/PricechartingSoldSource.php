@@ -2,8 +2,10 @@
 
 namespace App\Support\Pricecharting;
 
+use App\Enums\ItemType;
 use App\Models\CatalogItem;
 use App\Models\PricechartingProduct;
+use App\Models\Set;
 use App\Support\Ebay\OxylabsClient;
 
 /**
@@ -35,9 +37,12 @@ class PricechartingSoldSource
 
         $html = $this->client->fetchHtml($url, config('valuation.ebay.geo', 'United States'), render: false);
 
+        $histories = $this->chartParser->parseAll($html);
+
         return new PricechartingData(
             comps: $this->parser->parse($html, 'used'),
-            history: $this->chartParser->parse($html, 'used'),
+            history: $histories['ungraded'] ?? [],
+            histories: $histories,
         );
     }
 
@@ -69,9 +74,9 @@ class PricechartingSoldSource
 
     /**
      * Find the PriceCharting product for a catalog item: an explicit pricecharting_id
-     * wins; otherwise best-match a sealed price-guide product by set name + sealed
-     * type + variant (Case / Pokémon Center / Plus), the same axes the comp
-     * classifier guards on.
+     * wins; otherwise best-match by set name — a single by its card number + name +
+     * variant, or a sealed price-guide product by sealed type + variant (Case /
+     * Pokémon Center / Plus), the same axes the comp classifier guards on.
      */
     public function matchProduct(CatalogItem $item): ?PricechartingProduct
     {
@@ -82,6 +87,10 @@ class PricechartingSoldSource
         $set = $item->set;
         if (! $set) {
             return null;
+        }
+
+        if ($item->item_type === ItemType::Single) {
+            return $this->matchSingle($item, $set);
         }
 
         $candidates = PricechartingProduct::query()
@@ -114,6 +123,66 @@ class PricechartingSoldSource
         }
 
         return null;
+    }
+
+    /**
+     * Match a single card to its PriceCharting product by set + collector number
+     * + variant. PriceCharting names singles "Pikachu ex #276", tagging non-base
+     * printings in brackets ("Weedle [Reverse Holo] #1", "Pikachu [Ball] #55").
+     * We only return a confident 1:1 match — ambiguity yields null, never a guess.
+     */
+    private function matchSingle(CatalogItem $item, Set $set): ?PricechartingProduct
+    {
+        $number = $this->cardNumber($item->number);
+        if ($number === null) {
+            return null;
+        }
+
+        $candidates = PricechartingProduct::query()
+            ->where('is_sealed', false)
+            ->where('console_name', 'like', '%'.$set->name.'%')
+            ->where('product_name', 'like', '%#'.$number)
+            ->get()
+            // LIKE '%#276' also matches '#1276'; require the number to be the whole tail.
+            ->filter(fn (PricechartingProduct $p) => str_ends_with(trim(mb_strtolower($p->product_name)), '#'.$number));
+
+        if ($candidates->isEmpty()) {
+            return null;
+        }
+
+        $want = $this->variantTag($item);
+        $matched = $candidates->filter(fn (PricechartingProduct $p) => $this->productTag($p->product_name) === $want);
+
+        return $matched->count() === 1 ? $matched->first() : null;
+    }
+
+    /** The printed collector number, dropping any "/total" suffix ("276/191" → "276"). */
+    private function cardNumber(?string $number): ?string
+    {
+        if ($number === null) {
+            return null;
+        }
+
+        $number = trim((string) preg_replace('#/.*$#', '', trim($number)));
+
+        return $number !== '' ? mb_strtolower($number) : null;
+    }
+
+    /** The bracket qualifier in a product name, lowercased ("" when there is none). */
+    private function productTag(string $productName): string
+    {
+        return preg_match('/\[([^\]]+)\]/', $productName, $m) ? mb_strtolower(trim($m[1])) : '';
+    }
+
+    /** The bracket tag we expect for this item's printing ("" for a base printing). */
+    private function variantTag(CatalogItem $item): string
+    {
+        return match ($item->getAttribute('attributes')['variant'] ?? 'normal') {
+            'reverse_holo' => 'reverse holo',
+            'poke_ball' => 'ball',
+            'master_ball' => 'master ball',
+            default => '', // normal / holo — the base printing carries no bracket
+        };
     }
 
     /** Whether a PriceCharting product name denotes the item's sealed type. */

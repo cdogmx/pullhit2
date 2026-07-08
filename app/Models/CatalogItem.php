@@ -57,6 +57,34 @@ class CatalogItem extends Model
         ];
     }
 
+    /**
+     * Long-term monthly price history from PriceCharting, normalized to a
+     * grade-tier map: {"ungraded": [...], "9": [...], "10": [...]}. Transparently
+     * upgrades the legacy flat-array shape (a bare ungraded series).
+     *
+     * @return array<string, array<int, array{t: string, price: int}>>
+     */
+    public function longTermHistoryTiers(): array
+    {
+        $h = $this->pc_price_history;
+        if (empty($h) || ! is_array($h)) {
+            return [];
+        }
+
+        // Legacy shape: a list of {t, price} points === the ungraded series.
+        return array_is_list($h) ? ['ungraded' => $h] : $h;
+    }
+
+    /**
+     * One grade tier's long-term series ("ungraded" by default).
+     *
+     * @return array<int, array{t: string, price: int}>
+     */
+    public function longTermHistory(string $tier = 'ungraded'): array
+    {
+        return $this->longTermHistoryTiers()[$tier] ?? [];
+    }
+
     protected static function booted(): void
     {
         // New cards get a URL slug, unique within their set.

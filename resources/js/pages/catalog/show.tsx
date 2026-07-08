@@ -67,8 +67,8 @@ type Props = {
     refreshedAt: string | null;
     /** Weekly-median sold-price history (the card's raw state) + estimated flag. */
     priceHistory: PriceHistory;
-    /** Long-term monthly series (PriceCharting) for the chart's "Max" window. */
-    priceHistoryLong: PricePoint[];
+    /** Long-term monthly series (PriceCharting), keyed by grade tier, for "Max". */
+    priceHistoryLong: Record<string, PricePoint[]>;
     /** The most recent real sold comp (raw state), or null. */
     lastSale: { price: number; sold_at: string; venue: string } | null;
     /** The viewer's owned copies of this card, or null. */
@@ -243,7 +243,7 @@ export default function Show({
                     setRefreshedAt(body.refreshed_at);
                     setLastSale(body.last_sale ?? null);
 
-                    if (Array.isArray(body.price_history_long)) {
+                    if (body.price_history_long) {
                         setLongTerm(body.price_history_long);
                     }
 
@@ -292,9 +292,9 @@ export default function Show({
 
             if (!res.ok || body.ok === false) {
                 setUpdating(false); // disabled or daily cap reached
-            } else if (Array.isArray(body.price_history_long)) {
-                // Sealed refresh also re-pulled PriceCharting — show the fresh
-                // long-term line immediately (the value poll swaps in the rest).
+            } else if (body.price_history_long) {
+                // Refresh also re-pulled PriceCharting — show the fresh long-term
+                // line immediately (the value poll swaps in the rest).
                 setLongTerm(body.price_history_long);
                 setChartVersion((v) => v + 1);
             }
@@ -616,9 +616,10 @@ export default function Show({
                                     states={values.map((v) => ({
                                         state_key: v.state_key,
                                         label: v.label,
+                                        grade: v.grade,
                                     }))}
                                     defaultStateKey={headline.state_key}
-                                    longTerm={longTerm}
+                                    longTermByTier={longTerm}
                                     refreshKey={chartVersion}
                                 />
 

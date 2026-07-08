@@ -18,7 +18,48 @@ const WINDOWS = [
 type WindowKey = (typeof WINDOWS)[number]['key'] | 'max';
 
 /** A selectable priced state (condition or graded slab). */
-export type ChartState = { state_key: string; label: string };
+export type ChartState = {
+    state_key: string;
+    label: string;
+    /** Grade of a slab state (null/undefined for raw conditions). */
+    grade?: number | null;
+};
+
+/** PriceCharting long-term series, keyed by grade tier ("ungraded", "9", "10"). */
+export type LongTermByTier = Record<string, PricePoint[]>;
+
+/** The tier key for a grade, matching the backend ("9.5" → "9.5", 10 → "10"). */
+function gradeTierKey(grade: number): string {
+    return String(grade);
+}
+
+/**
+ * The long-term series for a selected state's grade: the exact tier if present,
+ * else the nearest available graded tier, else the ungraded line — so a graded
+ * state still gets a multi-year line when its own tier wasn't captured.
+ */
+function longTermForGrade(
+    byTier: LongTermByTier,
+    grade: number | null | undefined,
+): PricePoint[] {
+    if (grade == null) {
+        return byTier.ungraded ?? [];
+    }
+
+    const exact = byTier[gradeTierKey(grade)];
+
+    if (exact?.length) {
+        return exact;
+    }
+
+    const numeric = Object.keys(byTier)
+        .filter((k) => k !== 'ungraded')
+        .map(Number)
+        .filter((n) => !Number.isNaN(n))
+        .sort((a, b) => Math.abs(a - grade) - Math.abs(b - grade));
+
+    return (numeric.length ? byTier[gradeTierKey(numeric[0])] : byTier.ungraded) ?? [];
+}
 
 /**
  * The card page's "Price history" chart — weekly-median sold prices over a
@@ -33,7 +74,7 @@ export function PriceHistoryChart({
     itemId,
     states = [],
     defaultStateKey,
-    longTerm = [],
+    longTermByTier = {},
     refreshKey = 0,
 }: {
     /** Server-rendered series for the default state. */
@@ -43,18 +84,33 @@ export function PriceHistoryChart({
     states?: ChartState[];
     /** The state_key the server-rendered `history` belongs to. */
     defaultStateKey?: string;
-    /** Long-term monthly series (PriceCharting) — powers the "Max" window. */
-    longTerm?: PricePoint[];
+    /** Long-term monthly series (PriceCharting) per grade tier — powers "Max". */
+    longTermByTier?: LongTermByTier;
     /** Bump to force a re-fetch of the shown series (e.g. after a live refresh). */
     refreshKey?: number;
 }) {
+    const initialKey = defaultStateKey ?? states[0]?.state_key ?? '';
+    const [stateKey, setStateKey] = useState(initialKey);
+
+    // The multi-year line tracks the selected state's grade (ungraded vs a slab).
+    const longTerm = useMemo(
+        () =>
+            longTermForGrade(
+                longTermByTier,
+                states.find((s) => s.state_key === stateKey)?.grade,
+            ),
+        [longTermByTier, states, stateKey],
+    );
     const hasLongTerm = longTerm.length >= 2;
+
     // Lead with the multi-year view when we have little/no sold history of our own.
     const [win, setWin] = useState<WindowKey>(
         hasLongTerm && history.points.length < 2 ? 'max' : '1y',
     );
-    const initialKey = defaultStateKey ?? states[0]?.state_key ?? '';
-    const [stateKey, setStateKey] = useState(initialKey);
+
+    // Switching to a state without a long-term line hides "Max"; fall back to 1Y
+    // (derived, not stored) so the chart never goes blank.
+    const activeWin: WindowKey = win === 'max' && !hasLongTerm ? '1y' : win;
     // Per-state series cache, seeded with the server-rendered default. A state
     // is "loading" until its entry lands here (success or failure both fill it).
     const [cache, setCache] = useState<Record<string, PriceHistory>>(
@@ -132,7 +188,7 @@ export function PriceHistoryChart({
 
     const shown = useMemo(() => {
         // "Max" plots the long-term monthly (PriceCharting) series as-is.
-        if (win === 'max') {
+        if (activeWin === 'max') {
             return longTerm;
         }
 
@@ -158,21 +214,21 @@ export function PriceHistoryChart({
 
         // Window is measured back from the most recent point (pure — no clock
         // read in render), so the chart is stable regardless of when it renders.
-        const days = WINDOWS.find((w) => w.key === win)?.days ?? 400;
+        const days = WINDOWS.find((w) => w.key === activeWin)?.days ?? 400;
         const latest = new Date(pts[pts.length - 1].t).getTime();
         const cutoff = latest - days * 86_400_000;
         const filtered = pts.filter((p) => new Date(p.t).getTime() >= cutoff);
 
         // Don't collapse to an empty chart if the window has <2 points.
         return filtered.length >= 2 ? filtered : pts;
-    }, [current.points, win, longTerm, hasLongTerm]);
+    }, [current.points, activeWin, longTerm, hasLongTerm]);
 
     // Nothing to show at all (no sold series, no states, no long-term line).
     if (history.points.length < 2 && states.length <= 1 && !hasLongTerm) {
         return null;
     }
 
-    const isMax = win === 'max';
+    const isMax = activeWin === 'max';
     const hasSeries = shown.length >= 2;
 
     return (
@@ -213,7 +269,7 @@ export function PriceHistoryChart({
                                 onClick={() => setWin(w.key)}
                                 className={cn(
                                     'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
-                                    win === w.key
+                                    activeWin === w.key
                                         ? 'bg-accent text-accent-foreground'
                                         : 'text-muted-foreground hover:text-foreground',
                                 )}

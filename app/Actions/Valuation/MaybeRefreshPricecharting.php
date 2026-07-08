@@ -7,18 +7,18 @@ use App\Jobs\RefreshPricechartingData;
 use App\Models\CatalogItem;
 
 /**
- * On a sealed-product view, lazily pull its PriceCharting data (completed sales +
- * long-term monthly history) EXACTLY ONCE — if it's already been synced, it's
- * never re-pulled automatically (an admin "Refresh" forces a fresh pull, and a
- * batch sweep can re-warm en masse). Only sealed products resolve to a
- * PriceCharting page, so singles are skipped. Fire-and-forget (queued).
+ * On a card view, lazily pull its PriceCharting data (completed sales + long-term
+ * monthly history, per grade tier for singles) EXACTLY ONCE — if it's already
+ * been synced, it's never re-pulled automatically (an admin "Refresh" forces a
+ * fresh pull, and a batch sweep can re-warm en masse). Both singles and sealed
+ * products resolve to a PriceCharting page. Fire-and-forget (queued).
  */
 class MaybeRefreshPricecharting
 {
     public function __invoke(CatalogItem $item): void
     {
         if (! config('valuation.pricecharting.enabled', true)
-            || $item->item_type !== ItemType::Sealed
+            || ! in_array($item->item_type, [ItemType::Single, ItemType::Sealed], true)
             || ! $this->isDue($item)) {
             return;
         }
