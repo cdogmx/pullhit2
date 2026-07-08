@@ -50,7 +50,8 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('sets/{set}/missing', [SetController::class, 'missing'])->name('sets.missing');
 
     // Catalog structure reference (brand → series → set → subset → card).
-    Route::get('structure', StructureController::class)->name('structure');
+    Route::get('structure', [StructureController::class, 'index'])->name('structure');
+    Route::post('structure/rename-series', [StructureController::class, 'renameSeries'])->name('structure.rename-series');
 
     // PriceCharting reconciliation review queue
     Route::get('reconcile', [ReconcileController::class, 'index'])->name('reconcile.index');

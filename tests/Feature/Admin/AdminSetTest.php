@@ -2,6 +2,7 @@
 
 use App\Jobs\ImportSetJob;
 use App\Models\CatalogItem;
+use App\Models\ProductLine;
 use App\Models\Set;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
@@ -63,4 +64,34 @@ test('updating a set edits series (and leaves brand/language alone)', function (
     expect($set->series)->toBe('First Partners')
         ->and($set->name)->toBe('First Partner Illustration Collection - Series 2')
         ->and($set->language)->toBe('ja'); // untouched
+});
+
+test('rename-series moves every set in a brand series (and can ungroup)', function () {
+    $line = ProductLine::factory()->create();
+    $a = Set::factory()->for($line)->create(['series' => 'Old Series']);
+    $b = Set::factory()->for($line)->create(['series' => 'Old Series']);
+    $other = Set::factory()->for($line)->create(['series' => 'Keep']);
+
+    // Rename.
+    $this->actingAs($this->admin)
+        ->post('/admin/structure/rename-series', [
+            'product_line_id' => $line->id,
+            'from' => 'Old Series',
+            'to' => 'New Series',
+        ])->assertRedirect();
+
+    expect($a->fresh()->series)->toBe('New Series')
+        ->and($b->fresh()->series)->toBe('New Series')
+        ->and($other->fresh()->series)->toBe('Keep'); // untouched
+
+    // Ungroup (blank target).
+    $this->actingAs($this->admin)
+        ->post('/admin/structure/rename-series', [
+            'product_line_id' => $line->id,
+            'from' => 'New Series',
+            'to' => '',
+        ])->assertRedirect();
+
+    expect($a->fresh()->series)->toBeNull()
+        ->and($b->fresh()->series)->toBeNull();
 });

@@ -1,7 +1,19 @@
-import { Head } from '@inertiajs/react';
-import { ChevronRight, Layers, Library } from 'lucide-react';
+import { Head, useForm } from '@inertiajs/react';
+import { ChevronRight, Layers, Library, Pencil } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { languageLabel } from '@/lib/format';
 
 type SetRow = {
@@ -14,12 +26,14 @@ type SetRow = {
 
 type SeriesGroup = {
     series: string;
+    value: string | null;
     grouped: boolean;
     set_count: number;
     sets: SetRow[];
 };
 
 type Brand = {
+    id: number;
     brand: string;
     slug: string;
     set_count: number;
@@ -29,7 +43,17 @@ type Brand = {
 
 type Props = { brands: Brand[] };
 
+/** The series being renamed: which brand, the current value, its display label. */
+type RenameTarget = {
+    brandId: number;
+    from: string | null;
+    label: string;
+    count: number;
+};
+
 export default function AdminStructure({ brands }: Props) {
+    const [rename, setRename] = useState<RenameTarget | null>(null);
+
     return (
         <>
             <Head title="Admin · Catalog structure" />
@@ -38,11 +62,96 @@ export default function AdminStructure({ brands }: Props) {
 
                 <div className="space-y-3">
                     {brands.map((b) => (
-                        <BrandTree key={b.slug} brand={b} />
+                        <BrandTree key={b.slug} brand={b} onRename={setRename} />
                     ))}
                 </div>
             </div>
+
+            <RenameSeriesDialog
+                target={rename}
+                onOpenChange={(o) => !o && setRename(null)}
+            />
         </>
+    );
+}
+
+function RenameSeriesDialog({
+    target,
+    onOpenChange,
+}: {
+    target: RenameTarget | null;
+    onOpenChange: (open: boolean) => void;
+}) {
+    const form = useForm({ product_line_id: 0, from: '' as string | null, to: '' });
+
+    useEffect(() => {
+        if (target) {
+            form.setData({
+                product_line_id: target.brandId,
+                from: target.from,
+                to: target.from ?? '',
+            });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [target?.brandId, target?.from]);
+
+    if (!target) {
+        return null;
+    }
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        form.post('/admin/structure/rename-series', {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                const flash = page.props.flash;
+
+                if (flash?.error) {
+                    toast.error(flash.error);
+                } else {
+                    toast.success(flash?.success ?? 'Series updated.');
+                }
+
+                onOpenChange(false);
+            },
+        });
+    };
+
+    return (
+        <Dialog open onOpenChange={onOpenChange}>
+            <DialogContent>
+                <form onSubmit={submit}>
+                    <DialogHeader>
+                        <DialogTitle>Rename series</DialogTitle>
+                        <DialogDescription>
+                            Renames the series on all {target.count} set
+                            {target.count === 1 ? '' : 's'} in it. Use an existing
+                            name to merge them; leave blank to ungroup.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-4">
+                        <Input
+                            autoFocus
+                            value={form.data.to}
+                            onChange={(e) => form.setData('to', e.target.value)}
+                            placeholder="e.g. Mega Evolution"
+                        />
+                        {form.errors.to && (
+                            <p className="mt-1 text-xs text-red-600">
+                                {form.errors.to}
+                            </p>
+                        )}
+                    </div>
+
+                    <DialogFooter>
+                        <Button type="submit" disabled={form.processing}>
+                            Save
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -81,7 +190,7 @@ function Explainer() {
                     />
                     <Term
                         label="Series"
-                        body="NOT a separate record — just the “Series” text field on each set. Sets that share the same value group under one tile in browse (e.g. every set with series “Mega Evolution”). To group sets, give them the same Series; to rename a group, edit that field on each member set."
+                        body="NOT a separate record — just the “Series” text field on each set. Sets that share the same value group under one tile in browse (e.g. every set with series “Mega Evolution”). To group a set, set its Series (on the Sets page); to rename or merge a whole series at once, use the Rename button below."
                     />
                     <Term
                         label="Set"
@@ -114,7 +223,13 @@ function Term({ label, body }: { label: string; body: string }) {
     );
 }
 
-function BrandTree({ brand }: { brand: Brand }) {
+function BrandTree({
+    brand,
+    onRename,
+}: {
+    brand: Brand;
+    onRename: (target: RenameTarget) => void;
+}) {
     return (
         <details className="group rounded-lg border border-border bg-card">
             <summary className="flex cursor-pointer list-none items-center gap-3 p-4">
@@ -149,6 +264,20 @@ function BrandTree({ brand }: { brand: Brand }) {
                             <Badge variant="outline" className="text-[10px]">
                                 {group.set_count}
                             </Badge>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    onRename({
+                                        brandId: brand.id,
+                                        from: group.value,
+                                        label: group.series,
+                                        count: group.set_count,
+                                    })
+                                }
+                                className="ml-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                            >
+                                <Pencil className="size-3" /> Rename
+                            </button>
                         </div>
                         <div className="ml-6 flex flex-wrap gap-1.5">
                             {group.sets.map((s) => (
