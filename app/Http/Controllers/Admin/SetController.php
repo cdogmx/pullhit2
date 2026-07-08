@@ -34,7 +34,7 @@ class SetController extends Controller
         // All sealed products, grouped by set — for the per-set "Sealed" manager.
         $sealedBySet = CatalogItem::where('item_type', ItemType::Sealed)
             ->orderBy('name')
-            ->get(['id', 'set_id', 'name', 'number', 'attributes', 'msrp', 'released_at', 'primary_image_path'])
+            ->get(['id', 'set_id', 'name', 'number', 'item_type', 'attributes', 'msrp', 'released_at', 'primary_image_path'])
             ->groupBy('set_id');
 
         $sets = Set::with('productLine:id,name')->orderByDesc('released_at')->orderBy('name')->get()->map(function (Set $set) use ($sealedBySet) {
