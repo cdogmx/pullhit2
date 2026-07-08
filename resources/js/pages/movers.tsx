@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { TrendingDown, TrendingUp } from 'lucide-react';
+import { Combobox } from '@/components/ui/combobox';
 import {
     Select,
     SelectContent,
@@ -110,24 +111,21 @@ export default function Movers({
                     )}
 
                     {line && sets.length > 0 && (
-                        <Select
-                            value={set ?? 'all'}
-                            onValueChange={(v) =>
-                                go({ set: v === 'all' ? null : v })
-                            }
-                        >
-                            <SelectTrigger className="h-9 w-52">
-                                <SelectValue placeholder="All sets" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All sets</SelectItem>
-                                {sets.map((s) => (
-                                    <SelectItem key={s.slug} value={s.slug}>
-                                        {s.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            className="w-52"
+                            value={set ?? ''}
+                            onChange={(v) => go({ set: v || null })}
+                            placeholder="All sets"
+                            searchPlaceholder="Search sets…"
+                            emptyText="No matching sets."
+                            options={[
+                                { value: '', label: 'All sets' },
+                                ...sets.map((s) => ({
+                                    value: s.slug,
+                                    label: s.name,
+                                })),
+                            ]}
+                        />
                     )}
 
                     <div className="inline-flex items-center gap-0.5 rounded-md border border-border p-0.5">
