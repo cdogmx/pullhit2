@@ -1,17 +1,20 @@
 <?php
 
+use App\Enums\ItemType;
 use App\Models\CatalogItem;
 use App\Models\GradingCompany;
 use App\Models\MarketValue;
 use App\Models\ProductLine;
+use App\Models\Set;
 use App\Models\Vertical;
 use Inertia\Testing\AssertableInertia as Assert;
 
-function moverCard(ProductLine $line, string $name, float $trend, int $median = 5000): CatalogItem
+function moverCard(ProductLine $line, string $name, float $trend, int $median = 5000, array $overrides = []): CatalogItem
 {
     $item = CatalogItem::factory()->for($line)->create([
         'name' => $name,
         'primary_image_path' => "images/{$name}.jpg",
+        ...$overrides,
     ]);
 
     MarketValue::factory()->for($item, 'catalogItem')->create([
@@ -91,6 +94,42 @@ test('graded values are never ranked (ungraded only)', function () {
     $this->get('/movers')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->has('gainers', 0));
+});
+
+test('the type filter narrows to singles or sealed', function () {
+    moverCard($this->line, 'A Single', 30.0); // Single is the factory default
+    moverCard($this->line, 'A Box', 25.0, 5000, ['item_type' => ItemType::Sealed]);
+
+    $this->get('/movers?type=single')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('type', 'single')
+            ->has('gainers', 1)
+            ->where('gainers.0.name', fn ($n) => str_contains($n, 'A Single')));
+
+    $this->get('/movers?type=sealed')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('type', 'sealed')
+            ->has('gainers', 1)
+            ->where('gainers.0.name', fn ($n) => str_contains($n, 'A Box')));
+});
+
+test('the set filter scopes to one set and implies its line', function () {
+    $setA = Set::factory()->for($this->line)->create(['slug' => 'set-a', 'name' => 'Set A']);
+    $setB = Set::factory()->for($this->line)->create(['slug' => 'set-b', 'name' => 'Set B']);
+    moverCard($this->line, 'In A', 30.0, 5000, ['set_id' => $setA->id]);
+    moverCard($this->line, 'In B', 40.0, 5000, ['set_id' => $setB->id]);
+
+    // A bare ?set= implies its line, and the set list is exposed for the filter.
+    $this->get('/movers?set=set-a')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('set', 'set-a')
+            ->where('line', 'pokemon')
+            ->has('sets', 2)
+            ->has('gainers', 1)
+            ->where('gainers.0.name', fn ($n) => str_contains($n, 'In A')));
 });
 
 test('the line filter scopes movers to one product line', function () {

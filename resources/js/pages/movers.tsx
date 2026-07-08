@@ -1,5 +1,12 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { TrendingDown, TrendingUp } from 'lucide-react';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -16,17 +23,52 @@ type Mover = {
     change: number | null;
 };
 
-type Line = { slug: string; name: string };
+type Option = { slug: string; name: string };
 
-type Props = {
+type Filters = {
+    line: string | null;
+    set: string | null;
+    type: string | null;
+};
+
+type Props = Filters & {
     gainers: Mover[];
     losers: Mover[];
-    lines: Line[];
-    line: string | null;
+    lines: Option[];
+    sets: Option[];
     meta: { title: string; description: string };
 };
 
-export default function Movers({ gainers, losers, lines, line, meta }: Props) {
+const TYPES = [
+    { key: null, label: 'All' },
+    { key: 'single', label: 'Singles' },
+    { key: 'sealed', label: 'Sealed' },
+] as const;
+
+export default function Movers({
+    gainers,
+    losers,
+    lines,
+    sets,
+    line,
+    set,
+    type,
+    meta,
+}: Props) {
+    // Navigate with a patched filter set; dropping a filter clears it, and
+    // changing the brand resets the set (a set only exists within one brand).
+    const go = (patch: Partial<Filters>) => {
+        const next: Filters = { line, set, type, ...patch };
+        const query = Object.fromEntries(
+            Object.entries(next).filter(([, v]) => v),
+        );
+
+        router.get('/movers', query, {
+            preserveScroll: true,
+            preserveState: false,
+        });
+    };
+
     return (
         <>
             <Head title="Biggest movers">
@@ -44,20 +86,72 @@ export default function Movers({ gainers, losers, lines, line, meta }: Props) {
                     </p>
                 </div>
 
-                {/* Product-line filter */}
-                {lines.length > 1 && (
-                    <div className="mb-6 flex flex-wrap gap-2">
-                        <FilterChip label="All games" href="/movers" active={!line} />
-                        {lines.map((l) => (
-                            <FilterChip
-                                key={l.slug}
-                                label={l.name}
-                                href={`/movers?line=${l.slug}`}
-                                active={line === l.slug}
-                            />
-                        ))}
+                {/* Filters: brand · set · item type */}
+                <div className="mb-6 flex flex-wrap items-center gap-3">
+                    {lines.length > 1 && (
+                        <Select
+                            value={line ?? 'all'}
+                            onValueChange={(v) =>
+                                go({ line: v === 'all' ? null : v, set: null })
+                            }
+                        >
+                            <SelectTrigger className="h-9 w-44">
+                                <SelectValue placeholder="All games" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All games</SelectItem>
+                                {lines.map((l) => (
+                                    <SelectItem key={l.slug} value={l.slug}>
+                                        {l.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+
+                    {line && sets.length > 0 && (
+                        <Select
+                            value={set ?? 'all'}
+                            onValueChange={(v) =>
+                                go({ set: v === 'all' ? null : v })
+                            }
+                        >
+                            <SelectTrigger className="h-9 w-52">
+                                <SelectValue placeholder="All sets" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All sets</SelectItem>
+                                {sets.map((s) => (
+                                    <SelectItem key={s.slug} value={s.slug}>
+                                        {s.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+
+                    <div className="inline-flex items-center gap-0.5 rounded-md border border-border p-0.5">
+                        {TYPES.map((t) => {
+                            const active = (type ?? null) === t.key;
+
+                            return (
+                                <button
+                                    key={t.label}
+                                    type="button"
+                                    onClick={() => go({ type: t.key })}
+                                    className={cn(
+                                        'rounded px-3 py-1 text-xs font-medium transition-colors',
+                                        active
+                                            ? 'bg-accent text-accent-foreground'
+                                            : 'text-muted-foreground hover:text-foreground',
+                                    )}
+                                >
+                                    {t.label}
+                                </button>
+                            );
+                        })}
                     </div>
-                )}
+                </div>
 
                 <div className="grid gap-6 lg:grid-cols-2">
                     <MoverColumn
@@ -73,31 +167,6 @@ export default function Movers({ gainers, losers, lines, line, meta }: Props) {
                 </div>
             </div>
         </>
-    );
-}
-
-function FilterChip({
-    label,
-    href,
-    active,
-}: {
-    label: string;
-    href: string;
-    active: boolean;
-}) {
-    return (
-        <Link
-            href={href}
-            preserveScroll
-            className={cn(
-                'rounded-full border px-3 py-1 text-sm font-medium transition-colors',
-                active
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border text-muted-foreground hover:text-foreground',
-            )}
-        >
-            {label}
-        </Link>
     );
 }
 
