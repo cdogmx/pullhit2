@@ -395,6 +395,7 @@ export default function Welcome({
                         <Section
                             title="Biggest movers"
                             sub="Largest 30-day swings on real sold-price data."
+                            href="/movers"
                         >
                             <HScroller>
                                 {movers.map((c, i) => (

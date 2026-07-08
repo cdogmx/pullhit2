@@ -12,6 +12,7 @@ use App\Http\Controllers\Web\DealsController;
 use App\Http\Controllers\Web\FeedController;
 use App\Http\Controllers\Web\FollowController;
 use App\Http\Controllers\Web\HomeController;
+use App\Http\Controllers\Web\MoversController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\RankingsController;
 use App\Http\Controllers\Web\RipOrKeepController;
@@ -82,6 +83,9 @@ Route::get('deals', DealsController::class)->name('deals');
 
 // Compare up to 5 cards' value over time (selection in ?ids=, shareable).
 Route::get('compare', CompareController::class)->name('compare');
+
+// Biggest 30-day movers — gainers & losers on real sold-price data (?line=slug).
+Route::get('movers', MoversController::class)->name('movers');
 
 // "Rip or Keep?" — the AI Sensei reasons over a sealed product's real data.
 // Public (viral) but the AI turn is throttled to bound cost/abuse.

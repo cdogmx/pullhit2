@@ -133,6 +133,9 @@ export function SiteHeader() {
                             </DropdownMenuContent>
                         </DropdownMenu>
 
+                        <a href="/movers" className={NAV_LINK}>
+                            Movers
+                        </a>
                         <a href="/deals" className={NAV_LINK}>
                             Deals
                         </a>

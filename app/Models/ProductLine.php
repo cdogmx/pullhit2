@@ -36,4 +36,10 @@ class ProductLine extends Model
     {
         return $this->hasMany(Set::class);
     }
+
+    /** @return HasMany<CatalogItem, $this> */
+    public function catalogItems(): HasMany
+    {
+        return $this->hasMany(CatalogItem::class);
+    }
 }

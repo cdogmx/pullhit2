@@ -21,6 +21,7 @@ const footerNav: {
         heading: 'Product',
         links: [
             { title: 'Browse catalog', href: '/browse' },
+            { title: 'Biggest movers', href: '/movers' },
             { title: 'Card scanner', href: '/scan' },
             { title: 'Wishlist', href: '/wishlist' },
         ],
