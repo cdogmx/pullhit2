@@ -11,13 +11,14 @@ import {
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
-import { Combobox } from '@/components/ui/combobox';
 import { DataTable } from '@/components/admin/data-table';
 import type { DataTableColumn } from '@/components/admin/data-table';
 import { EditSetDialog } from '@/components/admin/edit-set-dialog';
+import { ManageSealedDialog } from '@/components/admin/manage-sealed-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Combobox } from '@/components/ui/combobox';
 import {
     Dialog,
     DialogContent,
@@ -36,6 +37,7 @@ import { languageLabel } from '@/lib/format';
 import type {
     AdminOption,
     AdminSet,
+    CatalogItem,
     MissingReport,
     SetSearchResult,
 } from '@/types';
@@ -64,6 +66,9 @@ export default function AdminSets({
     } | null>(null);
     const [checking, setChecking] = useState<number | null>(null);
     const [sealedSet, setSealedSet] = useState<AdminSet | null>(null);
+    // Manage-sealed is keyed by id so it reflects fresh props after an edit/delete.
+    const [managingSetId, setManagingSetId] = useState<number | null>(null);
+    const [editingSealed, setEditingSealed] = useState<CatalogItem | null>(null);
     const [editingSet, setEditingSet] = useState<AdminSet | null>(null);
     const [creatingSet, setCreatingSet] = useState(false);
     const [lang, setLang] = useState('');
@@ -87,6 +92,23 @@ export default function AdminSets({
             ),
         [sets, lang, brand],
     );
+
+    // The live set behind the manage-sealed dialog (from props, so it refreshes).
+    const managingSet =
+        managingSetId != null
+            ? (sets.find((s) => s.id === managingSetId) ?? null)
+            : null;
+
+    const deleteSealed = (item: CatalogItem) => {
+        if (!confirm(`Delete "${item.name}"? This removes the product and its values.`)) {
+            return;
+        }
+
+        router.delete(`/admin/cards/${item.id}`, {
+            preserveScroll: true,
+            onSuccess: () => toast.success('Sealed product deleted.'),
+        });
+    };
 
     const removeSet = (set: AdminSet) => {
         const tail =
@@ -246,9 +268,9 @@ export default function AdminSets({
                     <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => setSealedSet(s)}
+                        onClick={() => setManagingSetId(s.id)}
                     >
-                        <Package className="size-4" /> Add sealed
+                        <Package className="size-4" /> Sealed ({s.sealed?.length ?? 0})
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => resync(s)}>
                         <RefreshCw className="size-4" /> Re-sync
@@ -411,12 +433,38 @@ export default function AdminSets({
                 </Card>
             </div>
 
+            <ManageSealedDialog
+                set={managingSet}
+                open={managingSet !== null}
+                onOpenChange={(o) => !o && setManagingSetId(null)}
+                onAdd={() => {
+                    const s = managingSet;
+                    setManagingSetId(null);
+                    setSealedSet(s);
+                }}
+                onEdit={(item) => {
+                    setManagingSetId(null);
+                    setEditingSealed(item);
+                }}
+                onDelete={deleteSealed}
+            />
+
+            {/* Create (from a set) */}
             <AddSealedDialog
                 set={sealedSet}
                 sealedTypes={sealedTypes}
                 languages={languages}
                 open={sealedSet !== null}
                 onOpenChange={(o) => !o && setSealedSet(null)}
+            />
+
+            {/* Edit (an existing sealed product) */}
+            <AddSealedDialog
+                item={editingSealed}
+                sealedTypes={sealedTypes}
+                languages={languages}
+                open={editingSealed !== null}
+                onOpenChange={(o) => !o && setEditingSealed(null)}
             />
 
             <EditSetDialog

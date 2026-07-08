@@ -31,7 +31,13 @@ class SetController extends Controller
 {
     public function index(): Response
     {
-        $sets = Set::with('productLine:id,name')->orderByDesc('released_at')->orderBy('name')->get()->map(function (Set $set) {
+        // All sealed products, grouped by set — for the per-set "Sealed" manager.
+        $sealedBySet = CatalogItem::where('item_type', ItemType::Sealed)
+            ->orderBy('name')
+            ->get(['id', 'set_id', 'name', 'number', 'attributes', 'msrp', 'released_at', 'primary_image_path'])
+            ->groupBy('set_id');
+
+        $sets = Set::with('productLine:id,name')->orderByDesc('released_at')->orderBy('name')->get()->map(function (Set $set) use ($sealedBySet) {
             $itemIds = $set->catalogItems()->pluck('id');
 
             return [
@@ -48,6 +54,24 @@ class SetController extends Controller
                 'items' => $itemIds->count(),
                 'valued' => MarketValue::whereIn('catalog_item_id', $itemIds)->distinct('catalog_item_id')->count('catalog_item_id'),
                 'images' => $set->catalogItems()->whereNotNull('primary_image_path')->count(),
+                'sealed' => ($sealedBySet->get($set->id) ?? collect())
+                    ->map(fn (CatalogItem $ci) => [
+                        'id' => $ci->id,
+                        'name' => $ci->name,
+                        'number' => $ci->number,
+                        'item_type' => $ci->item_type->value,
+                        'language' => $ci->getAttribute('attributes')['language'] ?? $set->language,
+                        'rarity' => null,
+                        'variant' => null,
+                        'base_key' => null,
+                        'image_url' => $ci->primary_image_path,
+                        'msrp' => $ci->msrp,
+                        'released_at' => $ci->released_at?->toDateString(),
+                        'attributes' => $ci->attributes,
+                        'set' => ['slug' => $set->slug, 'name' => $set->name, 'code' => $set->code],
+                    ])
+                    ->values()
+                    ->all(),
             ];
         });
 

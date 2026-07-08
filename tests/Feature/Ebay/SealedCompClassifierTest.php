@@ -62,3 +62,15 @@ test('a sealed comp far outside the band is rejected', function () {
 
     expect($this->classifier->classify(cand('Surging Sparks Booster Box Sealed', 500000), $box, 30000, $this->companies))->toBeNull();
 });
+
+test('a product mis-typed as booster_box still matches by its own name (Collection)', function () {
+    // Real trap: admin defaults the sealed type to booster_box, but the product
+    // is an "Illustration Collection". The name's own type word rescues it.
+    $item = sealed('First Partner Illustration Collection - Series 2', 'booster_box');
+
+    // Real collection listings — accepted via the name-inferred type.
+    expect($this->classifier->classify(cand('Pokemon First Partner Illustration Collection Series 2 Sealed', 4500), $item, 0, $this->companies))->not->toBeNull();
+    expect($this->classifier->classify(cand('Pokemon TCG First Partner Illustration Collection Series 2', 3000), $item, 0, $this->companies))->not->toBeNull();
+    // Still rejects a multi-box lot.
+    expect($this->classifier->classify(cand('5 x First Partner Illustration Collection Series 2', 20000), $item, 0, $this->companies))->toBeNull();
+});

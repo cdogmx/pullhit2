@@ -189,7 +189,35 @@ class SoldCompClassifier
             return false;
         }
 
-        return $this->sealedTypePresent($item->attributes['sealed_type'] ?? null, $lower);
+        $stored = $item->getAttribute('attributes')['sealed_type'] ?? null;
+        if ($this->sealedTypePresent($stored, $lower)) {
+            return true;
+        }
+
+        // Fall back to the type the PRODUCT NAME itself states. A sealed product
+        // mis-typed in admin (e.g. a "First Partner Illustration Collection"
+        // saved as booster_box, the dialog's default) would otherwise reject
+        // every real comp — its own name's type word is authoritative.
+        $inferred = $this->inferSealedType($name);
+
+        return $inferred !== null && $inferred !== $stored && $this->sealedTypePresent($inferred, $lower);
+    }
+
+    /** The sealed type a product name states, or null if it names none. */
+    private function inferSealedType(string $name): ?string
+    {
+        return match (true) {
+            str_contains($name, 'elite trainer box') || (bool) preg_match('/\betb\b/', $name) => 'elite_trainer_box',
+            str_contains($name, 'booster box') => 'booster_box',
+            str_contains($name, 'build') && str_contains($name, 'battle') => 'build_and_battle',
+            str_contains($name, 'bundle') => 'booster_bundle',
+            str_contains($name, 'blister') || str_contains($name, 'checklane') => 'blister',
+            (bool) preg_match('/\btin\b/', $name) => 'tin',
+            str_contains($name, 'collection') => 'collection',
+            str_contains($name, 'sleeved') => 'sleeved_booster_pack',
+            str_contains($name, 'booster pack') || (bool) preg_match('/\bpack\b/', $name) => 'booster_pack',
+            default => null,
+        };
     }
 
     /** Whether the listing names the product's sealed type (ETB abbreviations allowed). */

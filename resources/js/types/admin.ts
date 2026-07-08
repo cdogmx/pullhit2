@@ -1,3 +1,5 @@
+import type { CatalogItem } from './catalog';
+
 export type AdminStats = {
     sets: number;
     items: number;
@@ -30,6 +32,8 @@ export type AdminSet = {
     items: number;
     valued: number;
     images: number;
+    /** The set's sealed products, for the per-set sealed manager. */
+    sealed: CatalogItem[];
 };
 
 export type AdminBrand = {
