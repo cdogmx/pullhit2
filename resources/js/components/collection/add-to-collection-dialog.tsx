@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { Plus } from 'lucide-react';
+import { LibraryBig, Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
@@ -45,12 +45,15 @@ export function AddToCollectionDialog({
     catalogItemId,
     gradingCompanies,
     trigger,
+    ownedQty = 0,
     postOptions,
 }: {
     catalogItemId: number;
     gradingCompanies: GradingCompanyOption[];
     /** Custom trigger element; defaults to a labelled "Add to collection" button. */
     trigger?: ReactNode;
+    /** Quantity the viewer already owns — flips the default trigger to "N in collection". */
+    ownedQty?: number;
     /**
      * Extra Inertia visit options merged into the submit (e.g. `reset: ['items']`
      * so the browse infinite-scroll list doesn't re-append on the redirect).
@@ -111,12 +114,18 @@ export function AddToCollectionDialog({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                {trigger ?? (
-                    <Button variant="default" size="sm">
-                        <Plus className="size-4" />
-                        Add to collection
-                    </Button>
-                )}
+                {trigger ??
+                    (ownedQty > 0 ? (
+                        <Button variant="secondary" size="sm">
+                            <LibraryBig className="size-4" />
+                            {ownedQty} in collection
+                        </Button>
+                    ) : (
+                        <Button variant="default" size="sm">
+                            <Plus className="size-4" />
+                            Add to collection
+                        </Button>
+                    ))}
             </DialogTrigger>
             <DialogContent>
                 <form onSubmit={submit}>

@@ -52,10 +52,13 @@ export function WishlistButton({
     catalogItemId,
     wishlisted: initial,
     className,
+    variant = 'icon',
 }: {
     catalogItemId: number;
     wishlisted: boolean;
     className?: string;
+    /** 'icon' = round heart overlay (browse tiles); 'button' = labelled button. */
+    variant?: 'icon' | 'button';
 }) {
     const [wishlisted, setWishlisted] = useState(initial);
     const [picker, setPicker] = useState<TargetsResponse | null>(null);
@@ -133,21 +136,41 @@ export function WishlistButton({
 
     return (
         <>
-            <button
-                type="button"
-                onClick={toggle}
-                aria-label={
-                    wishlisted ? 'Remove from wishlist' : 'Add to wishlist'
-                }
-                title={wishlisted ? 'On your wishlist' : 'Add to wishlist'}
-                className={cn(
-                    'flex size-8 items-center justify-center rounded-full bg-background/85 ring-1 ring-border backdrop-blur transition-colors hover:bg-rose-500 hover:text-white hover:ring-rose-500',
-                    wishlisted ? 'text-rose-500' : 'text-foreground',
-                    className,
-                )}
-            >
-                <Heart className={cn('size-4', wishlisted && 'fill-current')} />
-            </button>
+            {variant === 'button' ? (
+                <Button
+                    type="button"
+                    size="sm"
+                    variant={wishlisted ? 'secondary' : 'outline'}
+                    onClick={toggle}
+                    aria-label={
+                        wishlisted ? 'Remove from wishlist' : 'Add to wishlist'
+                    }
+                    className={cn(wishlisted && 'text-rose-500', className)}
+                >
+                    <Heart
+                        className={cn('size-4', wishlisted && 'fill-current')}
+                    />
+                    {wishlisted ? 'Wishlisted' : 'Wishlist'}
+                </Button>
+            ) : (
+                <button
+                    type="button"
+                    onClick={toggle}
+                    aria-label={
+                        wishlisted ? 'Remove from wishlist' : 'Add to wishlist'
+                    }
+                    title={wishlisted ? 'On your wishlist' : 'Add to wishlist'}
+                    className={cn(
+                        'flex size-8 items-center justify-center rounded-full bg-background/85 ring-1 ring-border backdrop-blur transition-colors hover:bg-rose-500 hover:text-white hover:ring-rose-500',
+                        wishlisted ? 'text-rose-500' : 'text-foreground',
+                        className,
+                    )}
+                >
+                    <Heart
+                        className={cn('size-4', wishlisted && 'fill-current')}
+                    />
+                </button>
+            )}
 
             <Dialog
                 open={!!picker}

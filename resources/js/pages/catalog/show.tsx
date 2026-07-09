@@ -491,12 +491,14 @@ export default function Show({
                                 <AddToCollectionDialog
                                     catalogItemId={item.id}
                                     gradingCompanies={gradingCompanies}
+                                    ownedQty={ownedQty}
                                 />
                                 <WishlistButton
                                     catalogItemId={item.id}
                                     wishlisted={wishlisted}
+                                    variant="button"
                                 />
-                                {ownership && (
+                                {ownership && ownedGain !== 0 && (
                                     <Link
                                         href="/collection"
                                         className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-medium transition-colors hover:bg-muted"
@@ -507,20 +509,18 @@ export default function Show({
                                             )
                                             .join(', ')}
                                     >
-                                        In your collection · ×{ownedQty}
-                                        {ownedGain !== 0 && (
-                                            <span
-                                                className={cn(
-                                                    'font-semibold',
-                                                    ownedGain > 0
-                                                        ? 'text-emerald-600 dark:text-emerald-400'
-                                                        : 'text-red-600 dark:text-red-400',
-                                                )}
-                                            >
-                                                {ownedGain > 0 ? '+' : ''}
-                                                {formatMoney(ownedGain)}
-                                            </span>
-                                        )}
+                                        Unrealized
+                                        <span
+                                            className={cn(
+                                                'font-semibold',
+                                                ownedGain > 0
+                                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                                    : 'text-red-600 dark:text-red-400',
+                                            )}
+                                        >
+                                            {ownedGain > 0 ? '+' : ''}
+                                            {formatMoney(ownedGain)}
+                                        </span>
                                     </Link>
                                 )}
                             </div>
