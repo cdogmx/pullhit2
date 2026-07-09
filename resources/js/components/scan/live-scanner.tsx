@@ -1,10 +1,24 @@
-import { ArrowRight, ImageIcon, Loader2, X } from 'lucide-react';
+import { ArrowRight, ImageIcon, Loader2, ScanLine, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CatalogItem, ScanDetected } from '@/types';
 
 const MAX_PX = 1568;
+
+// Auto-capture tuning (heuristic, not true rectangle detection): sample the
+// central card region each tick and fire when it's detailed (a card fills the
+// frame) AND steady (not moving) for a short hold. Values are 0–255 scale.
+const SAMPLE_W = 48;
+const SAMPLE_H = 67; // ~5:7 card aspect
+const DETECT_MS = 130;
+const CONTENT_EDGE = 14; // edge density that says "a card is here"
+const CLEAR_EDGE = 9; // below this the frame is empty again (re-arm)
+const STABLE_MOTION = 7; // per-pixel frame delta under which we call it steady
+const STABLE_TICKS = 5; // ~650ms held steady before auto-firing
+const COOLDOWN_MS = 1500;
+
+type DetectState = 'off' | 'search' | 'hold' | 'captured';
 
 /**
  * Continuous live-camera scanner (Collectr-style): a framed viewfinder, a shutter
@@ -36,6 +50,14 @@ export function LiveScanner({
     const streamRef = useRef<MediaStream | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [ready, setReady] = useState(false);
+    const [auto, setAuto] = useState(true);
+    const [detect, setDetect] = useState<DetectState>('search');
+
+    // Refs so the detection interval always sees the latest values.
+    const busyRef = useRef(busy);
+    busyRef.current = busy;
+    const autoRef = useRef(auto);
+    autoRef.current = auto;
 
     useEffect(() => {
         let cancelled = false;
@@ -97,6 +119,122 @@ export function LiveScanner({
         onShutter(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
     };
 
+    const captureRef = useRef(capture);
+    captureRef.current = capture;
+
+    // Auto-capture: watch the central card region; fire when a detailed subject
+    // holds steady, then wait for the frame to clear before arming the next.
+    useEffect(() => {
+        if (!ready || error) {
+            return;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = SAMPLE_W;
+        canvas.height = SAMPLE_H;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        let prev: Uint8ClampedArray | null = null;
+        let stable = 0;
+        let phase: 'search' | 'captured' = 'search';
+        let cooldownUntil = 0;
+
+        const id = window.setInterval(() => {
+            const video = videoRef.current;
+
+            if (!video || !video.videoWidth || !ctx) {
+                return;
+            }
+
+            // Sample the central 5:7 region (matches the on-screen frame).
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+            const rh = vh * 0.7;
+            const rw = rh * (5 / 7);
+            ctx.drawImage(video, (vw - rw) / 2, (vh - rh) / 2, rw, rh, 0, 0, SAMPLE_W, SAMPLE_H);
+            const { data } = ctx.getImageData(0, 0, SAMPLE_W, SAMPLE_H);
+
+            const gray = new Uint8ClampedArray(SAMPLE_W * SAMPLE_H);
+
+            for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+                gray[j] = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+            }
+
+            // Edge density = how much detail is in the region (a card vs a wall).
+            let edge = 0;
+            let n = 0;
+
+            for (let y = 1; y < SAMPLE_H - 1; y++) {
+                for (let x = 1; x < SAMPLE_W - 1; x++) {
+                    const o = y * SAMPLE_W + x;
+                    edge +=
+                        Math.abs(gray[o + 1] - gray[o - 1]) +
+                        Math.abs(gray[o + SAMPLE_W] - gray[o - SAMPLE_W]);
+                    n++;
+                }
+            }
+
+            edge /= n;
+
+            // Motion = mean per-pixel change vs the previous tick (steadiness).
+            let motion = 0;
+
+            if (prev) {
+                for (let k = 0; k < gray.length; k++) {
+                    motion += Math.abs(gray[k] - prev[k]);
+                }
+
+                motion /= gray.length;
+            }
+
+            prev = gray;
+
+            if (!autoRef.current) {
+                setDetect('off');
+
+                return;
+            }
+
+            if (busyRef.current || Date.now() < cooldownUntil) {
+                return;
+            }
+
+            // After a capture, wait for the card to leave before re-arming.
+            if (phase === 'captured') {
+                if (edge < CLEAR_EDGE) {
+                    phase = 'search';
+                    setDetect('search');
+                }
+
+                return;
+            }
+
+            if (edge >= CONTENT_EDGE && motion <= STABLE_MOTION) {
+                stable += 1;
+                setDetect('hold');
+
+                if (stable >= STABLE_TICKS) {
+                    stable = 0;
+                    phase = 'captured';
+                    cooldownUntil = Date.now() + COOLDOWN_MS;
+                    setDetect('captured');
+                    captureRef.current();
+                }
+            } else {
+                stable = 0;
+                setDetect('search');
+            }
+        }, DETECT_MS);
+
+        return () => window.clearInterval(id);
+    }, [ready, error]);
+
+    const bracketColor =
+        detect === 'captured'
+            ? 'border-green-400'
+            : detect === 'hold'
+              ? 'border-amber-400'
+              : 'border-emerald-400/50';
+
     return (
         <div className="relative overflow-hidden rounded-2xl border border-border bg-black text-white">
             {/* Viewfinder */}
@@ -109,14 +247,15 @@ export function LiveScanner({
                     className="size-full object-cover"
                 />
 
-                {/* Card frame overlay */}
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                {/* Card frame overlay — brackets tint as detection progresses. */}
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3">
                     <div className="relative aspect-[5/7] h-[70%]">
                         {(['tl', 'tr', 'bl', 'br'] as const).map((corner) => (
                             <span
                                 key={corner}
                                 className={cn(
-                                    'absolute size-8 border-emerald-400',
+                                    'absolute size-8 transition-colors',
+                                    bracketColor,
                                     corner === 'tl' &&
                                         'top-0 left-0 rounded-tl-lg border-t-4 border-l-4',
                                     corner === 'tr' &&
@@ -129,6 +268,15 @@ export function LiveScanner({
                             />
                         ))}
                     </div>
+                    {auto && !busy && (
+                        <span className="rounded-full bg-black/55 px-3 py-1 text-xs font-medium backdrop-blur">
+                            {detect === 'hold'
+                                ? 'Hold steady…'
+                                : detect === 'captured'
+                                  ? 'Captured!'
+                                  : 'Point at a card — it captures automatically'}
+                        </span>
+                    )}
                 </div>
 
                 {/* Close */}
@@ -141,12 +289,27 @@ export function LiveScanner({
                     <X className="size-5" />
                 </button>
 
-                {/* Busy / camera-error states */}
-                {busy && (
+                {/* Top-right: Auto toggle, or the "reading" indicator when busy. */}
+                {busy ? (
                     <div className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 text-xs font-medium backdrop-blur">
                         <Loader2 className="size-3.5 animate-spin" />
                         Reading…
                     </div>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => setAuto((a) => !a)}
+                        aria-pressed={auto}
+                        className={cn(
+                            'absolute top-3 right-3 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold backdrop-blur transition-colors',
+                            auto
+                                ? 'bg-emerald-500 text-white'
+                                : 'bg-black/55 text-white/80',
+                        )}
+                    >
+                        <ScanLine className="size-3.5" />
+                        Auto {auto ? 'on' : 'off'}
+                    </button>
                 )}
                 {error && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6 text-center text-sm">
