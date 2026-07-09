@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { Camera, History, ImagePlus, Loader2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { LiveScanner } from '@/components/scan/live-scanner';
 import { ScanConfirmCard } from '@/components/scan/scan-confirm-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -119,7 +120,12 @@ export default function ScanIndex({
     gradingCompanies,
     folders,
 }: Props) {
-    const [mode, setMode] = useState<'single' | 'bulk'>('single');
+    // A restored scan opens in the confirm flow; a fresh session leads with live.
+    const [mode, setMode] = useState<'live' | 'single' | 'bulk'>(() =>
+        readStoredScan() ? 'single' : 'live',
+    );
+    // Live-scan sub-phase: capturing cards vs reviewing the stack before add.
+    const [phase, setPhase] = useState<'capture' | 'review'>('capture');
     const [busy, setBusy] = useState(false);
     const [step, setStep] = useState(0);
     const [usage, setUsage] = useState(initialUsage);
@@ -179,7 +185,7 @@ export default function ScanIndex({
     const pctNum =
         pct.trim() === '' || !Number.isFinite(parsedPct) ? 100 : parsedPct;
 
-    const steps = STEP_COPY[mode];
+    const steps = STEP_COPY[mode === 'bulk' ? 'bulk' : 'single'];
 
     // Rotate the progress copy while a scan is in flight.
     useEffect(() => {
@@ -200,7 +206,17 @@ export default function ScanIndex({
         setFromStorage(false);
         setPhoto(null);
         setChosenCards([]);
+        setPhase('capture');
         storeScan(null);
+    };
+
+    const changeMode = (m: 'live' | 'single' | 'bulk') => {
+        setMode(m);
+        setPhase('capture');
+
+        if (m === 'live') {
+            clearScan();
+        }
     };
 
     const scrollToCard = (i: number) =>
@@ -208,14 +224,19 @@ export default function ScanIndex({
             .getElementById(`scan-card-${i}`)
             ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    // Send a base64 JPEG (from the web downscale or the native camera) to /scan.
-    const submitImage = async (image: string) => {
+    // Send a base64 JPEG (web downscale, live-camera frame, or native camera) to
+    // /scan. `append` (live scanning) stacks the read onto the running list and
+    // auto-picks the best match; otherwise it replaces the current scan.
+    const submitImage = async (image: string, append = false) => {
         setStep(0);
         setBusy(true);
-        setDetected(null);
-        setChosenCards([]);
         setFromStorage(false);
         setPhoto(`data:image/jpeg;base64,${image}`);
+
+        if (!append) {
+            setDetected(null);
+            setChosenCards([]);
+        }
 
         try {
             const res = await fetch('/scan', {
@@ -226,7 +247,12 @@ export default function ScanIndex({
                     'X-XSRF-TOKEN': xsrfToken(),
                 },
                 credentials: 'same-origin',
-                body: JSON.stringify({ image, media_type: 'image/jpeg', mode }),
+                body: JSON.stringify({
+                    image,
+                    media_type: 'image/jpeg',
+                    // Live capture reads one card at a time.
+                    mode: append ? 'single' : mode === 'bulk' ? 'bulk' : 'single',
+                }),
             });
 
             if (res.status === 429) {
@@ -245,11 +271,35 @@ export default function ScanIndex({
 
             const result: ScanResult = await res.json();
             setUsage(result.usage);
-            setDetected(result.detected);
-            storeScan(result.detected);
 
-            if (result.detected.length === 0) {
-                toast.message('No cards detected in that photo.');
+            if (append) {
+                const entry = result.detected[0];
+
+                if (!entry) {
+                    toast.message('No card detected — line it up and try again.');
+
+                    return;
+                }
+
+                // Stack it, pre-choosing the top candidate so the strip + total
+                // fill in immediately (the review step lets them adjust).
+                setDetected((prev) => {
+                    const next = [...(prev ?? []), entry];
+                    storeScan(next);
+
+                    return next;
+                });
+                setChosenCards((prev) => [
+                    ...prev,
+                    entry.candidates[0]?.card ?? null,
+                ]);
+            } else {
+                setDetected(result.detected);
+                storeScan(result.detected);
+
+                if (result.detected.length === 0) {
+                    toast.message('No cards detected in that photo.');
+                }
             }
         } catch {
             toast.error('Could not process that image.');
@@ -267,9 +317,12 @@ export default function ScanIndex({
         }
     };
 
+    // In live capture, uploads from the library stack too.
+    const appendMode = mode === 'live' && phase === 'capture';
+
     const onFile = async (file: File) => {
         try {
-            await submitImage(await downscale(file));
+            await submitImage(await downscale(file), appendMode);
         } catch {
             toast.error('Could not process that image.');
         }
@@ -291,11 +344,11 @@ export default function ScanIndex({
             <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="inline-flex rounded-md border border-border p-0.5 text-sm">
-                        {(['single', 'bulk'] as const).map((m) => (
+                        {(['live', 'single', 'bulk'] as const).map((m) => (
                             <button
                                 key={m}
                                 type="button"
-                                onClick={() => setMode(m)}
+                                onClick={() => changeMode(m)}
                                 className={cn(
                                     'rounded px-3 py-1 capitalize transition-colors',
                                     mode === m
@@ -303,7 +356,11 @@ export default function ScanIndex({
                                         : 'text-muted-foreground hover:text-foreground',
                                 )}
                             >
-                                {m === 'single' ? 'Single card' : 'Bulk (page)'}
+                                {m === 'live'
+                                    ? 'Live scan'
+                                    : m === 'single'
+                                      ? 'Single card'
+                                      : 'Bulk (page)'}
                             </button>
                         ))}
                     </div>
@@ -325,107 +382,139 @@ export default function ScanIndex({
                     Scan history
                 </Link>
 
-                <Card>
-                    <CardContent className="pt-6">
-                        <button
-                            type="button"
-                            onClick={() =>
-                                isNativeApp()
-                                    ? captureNative()
-                                    : fileRef.current?.click()
-                            }
-                            disabled={busy}
-                            className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border py-12 text-muted-foreground transition-colors hover:bg-accent/40 disabled:opacity-60"
-                        >
-                            {busy ? (
-                                <Loader2 className="size-8 animate-spin" />
-                            ) : (
-                                <Camera className="size-8" />
-                            )}
-                            <span className="text-sm font-medium">
-                                {busy
-                                    ? steps[step]
-                                    : mode === 'single'
-                                      ? 'Take or upload a photo of one card'
-                                      : 'Take or upload a photo of a binder page'}
-                            </span>
-                            {busy && (
-                                <span className="flex gap-1">
-                                    {steps.map((_, i) => (
-                                        <span
-                                            key={i}
-                                            className={cn(
-                                                'size-1.5 rounded-full transition-colors',
-                                                i === step
-                                                    ? 'bg-primary'
-                                                    : 'bg-muted-foreground/30',
-                                            )}
-                                        />
-                                    ))}
-                                </span>
-                            )}
-                        </button>
+                {/* Hidden pickers — available to both the live scanner (gallery)
+                    and the upload flow. */}
+                <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                        const f = e.target.files?.[0];
 
-                        {/* Camera forces the rear camera; the library button has
-                            no capture, so it opens the photo picker / files. */}
-                        {!busy && (
+                        if (f) {
+                            void onFile(f);
+                        }
+                    }}
+                />
+                <input
+                    ref={libraryRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                        const f = e.target.files?.[0];
+
+                        if (f) {
+                            void onFile(f);
+                        }
+                    }}
+                />
+
+                {/* Live continuous scanner (Collectr-style). */}
+                {mode === 'live' && phase === 'capture' && (
+                    <LiveScanner
+                        scanned={detected ?? []}
+                        chosenCards={chosenCards}
+                        total={total}
+                        busy={busy}
+                        onShutter={(img) => void submitImage(img, true)}
+                        onGallery={() => libraryRef.current?.click()}
+                        onNext={() => setPhase('review')}
+                        onExit={() => changeMode('single')}
+                    />
+                )}
+
+                {/* Upload flow (single card / bulk page). */}
+                {mode !== 'live' && (
+                    <Card>
+                        <CardContent className="pt-6">
                             <button
                                 type="button"
-                                onClick={() => libraryRef.current?.click()}
-                                className="mt-3 flex w-full items-center justify-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                                onClick={() =>
+                                    isNativeApp()
+                                        ? captureNative()
+                                        : fileRef.current?.click()
+                                }
+                                disabled={busy}
+                                className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border py-12 text-muted-foreground transition-colors hover:bg-accent/40 disabled:opacity-60"
                             >
-                                <ImagePlus className="size-4" />
-                                Choose from library
+                                {busy ? (
+                                    <Loader2 className="size-8 animate-spin" />
+                                ) : (
+                                    <Camera className="size-8" />
+                                )}
+                                <span className="text-sm font-medium">
+                                    {busy
+                                        ? steps[step]
+                                        : mode === 'single'
+                                          ? 'Take or upload a photo of one card'
+                                          : 'Take or upload a photo of a binder page'}
+                                </span>
+                                {busy && (
+                                    <span className="flex gap-1">
+                                        {steps.map((_, i) => (
+                                            <span
+                                                key={i}
+                                                className={cn(
+                                                    'size-1.5 rounded-full transition-colors',
+                                                    i === step
+                                                        ? 'bg-primary'
+                                                        : 'bg-muted-foreground/30',
+                                                )}
+                                            />
+                                        ))}
+                                    </span>
+                                )}
                             </button>
-                        )}
 
-                        <input
-                            ref={fileRef}
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            className="hidden"
-                            onChange={(e) => {
-                                const f = e.target.files?.[0];
+                            {!busy && (
+                                <button
+                                    type="button"
+                                    onClick={() => libraryRef.current?.click()}
+                                    className="mt-3 flex w-full items-center justify-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                                >
+                                    <ImagePlus className="size-4" />
+                                    Choose from library
+                                </button>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
 
-                                if (f) {
-                                    void onFile(f);
-                                }
-                            }}
-                        />
-                        <input
-                            ref={libraryRef}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                                const f = e.target.files?.[0];
-
-                                if (f) {
-                                    void onFile(f);
-                                }
-                            }}
-                        />
-                    </CardContent>
-                </Card>
-
-                {detected && detected.length > 0 && (
+                {detected &&
+                    detected.length > 0 &&
+                    (mode !== 'live' || phase === 'review') && (
                     <div className="space-y-3">
                         <div className="flex items-center justify-between gap-3">
                             <h2 className="text-sm font-semibold text-muted-foreground">
                                 {fromStorage
                                     ? 'Your recent scan'
-                                    : `Detected ${detected.length} ${detected.length === 1 ? 'card' : 'cards'} — confirm and add`}
+                                    : `${detected.length} ${detected.length === 1 ? 'card' : 'cards'} scanned — confirm and add`}
                             </h2>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={clearScan}
-                            >
-                                <X className="size-4" />
-                                Clear
-                            </Button>
+                            <div className="flex items-center gap-1">
+                                {mode === 'live' && phase === 'review' && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setPhase('capture')}
+                                    >
+                                        <Camera className="size-4" />
+                                        Scan more
+                                    </Button>
+                                )}
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={clearScan}
+                                >
+                                    <X className="size-4" />
+                                    Clear
+                                </Button>
+                            </div>
                         </div>
                         {fromStorage && (
                             <p className="text-xs text-muted-foreground">
