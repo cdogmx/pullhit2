@@ -471,74 +471,7 @@ export default function Show({
                                     <Badge>{humanize(item.variant)}</Badge>
                                 )}
                             </div>
-
-                            <div className="mt-4">
-                                <ShareButtons
-                                    title={item.display_name ?? item.name}
-                                    path={item.url}
-                                    text={`${item.display_name ?? item.name}${
-                                        item.set
-                                            ? ` (${item.set.name}${item.number ? ` #${item.number}` : ''})`
-                                            : ''
-                                    } — price & value on CardFoo`}
-                                />
-                            </div>
                         </div>
-
-                        {/* Owner actions */}
-                        {user && (
-                            <div className="flex flex-wrap items-center gap-2">
-                                <AddToCollectionDialog
-                                    catalogItemId={item.id}
-                                    gradingCompanies={gradingCompanies}
-                                    ownedQty={ownedQty}
-                                />
-                                <WishlistButton
-                                    catalogItemId={item.id}
-                                    wishlisted={wishlisted}
-                                    variant="button"
-                                />
-                                {ownership && ownedGain !== 0 && (
-                                    <Link
-                                        href="/collection"
-                                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-medium transition-colors hover:bg-muted"
-                                        title={ownership
-                                            .map(
-                                                (o) =>
-                                                    `${o.state_label} ×${o.quantity}`,
-                                            )
-                                            .join(', ')}
-                                    >
-                                        Unrealized
-                                        <span
-                                            className={cn(
-                                                'font-semibold',
-                                                ownedGain > 0
-                                                    ? 'text-emerald-600 dark:text-emerald-400'
-                                                    : 'text-red-600 dark:text-red-400',
-                                            )}
-                                        >
-                                            {ownedGain > 0 ? '+' : ''}
-                                            {formatMoney(ownedGain)}
-                                        </span>
-                                    </Link>
-                                )}
-                            </div>
-                        )}
-
-                        {user && (
-                            <SuggestEditDialog
-                                item={item}
-                                trigger={
-                                    <button
-                                        type="button"
-                                        className="self-start text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                                    >
-                                        Suggest an edit
-                                    </button>
-                                }
-                            />
-                        )}
 
                         {/* Market value (read from market_values; never live). */}
                         {headline ? (
@@ -715,6 +648,69 @@ export default function Show({
                                     )}
                                 </div>
                             </div>
+                        )}
+
+                        {/* Actions — sit directly under the value box */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            {user && (
+                                <>
+                                    <AddToCollectionDialog
+                                        catalogItemId={item.id}
+                                        gradingCompanies={gradingCompanies}
+                                        ownedQty={ownedQty}
+                                    />
+                                    <WishlistButton
+                                        catalogItemId={item.id}
+                                        wishlisted={wishlisted}
+                                        variant="button"
+                                    />
+                                </>
+                            )}
+                            <ShareButtons
+                                title={item.display_name ?? item.name}
+                                path={item.url}
+                                text={`${item.display_name ?? item.name}${
+                                    item.set
+                                        ? ` (${item.set.name}${item.number ? ` #${item.number}` : ''})`
+                                        : ''
+                                } — price & value on CardFoo`}
+                            />
+                            {user && ownership && ownedGain !== 0 && (
+                                <Link
+                                    href="/collection"
+                                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-medium transition-colors hover:bg-muted"
+                                    title={ownership
+                                        .map((o) => `${o.state_label} ×${o.quantity}`)
+                                        .join(', ')}
+                                >
+                                    Unrealized
+                                    <span
+                                        className={cn(
+                                            'font-semibold',
+                                            ownedGain > 0
+                                                ? 'text-emerald-600 dark:text-emerald-400'
+                                                : 'text-red-600 dark:text-red-400',
+                                        )}
+                                    >
+                                        {ownedGain > 0 ? '+' : ''}
+                                        {formatMoney(ownedGain)}
+                                    </span>
+                                </Link>
+                            )}
+                        </div>
+
+                        {user && (
+                            <SuggestEditDialog
+                                item={item}
+                                trigger={
+                                    <button
+                                        type="button"
+                                        className="self-start text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                                    >
+                                        Suggest an edit
+                                    </button>
+                                }
+                            />
                         )}
 
                         {/* Where to buy — live retailer offers from the deals
