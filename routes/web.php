@@ -116,6 +116,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('collection', [CollectionController::class, 'index'])->name('collection.index');
     Route::get('collection/targets', [CollectionController::class, 'targets'])->name('collection.targets');
     Route::get('collection/owned/{catalogItem}', [CollectionController::class, 'owned'])->name('collection.owned');
+    Route::get('collection/holdings/{catalogItem}', [CollectionController::class, 'holdings'])->name('collection.holdings');
+    Route::post('collection/{catalogItem}/quantity', [CollectionController::class, 'setQuantity'])->name('collection.set-quantity');
     Route::get('collection/export', [CollectionController::class, 'export'])->name('collection.export');
     Route::get('collection/import', [CollectionController::class, 'importForm'])->name('collection.import');
     Route::post('collection/import/preview', [CollectionController::class, 'importPreview'])->name('collection.import.preview');

@@ -1,6 +1,6 @@
 import { useForm } from '@inertiajs/react';
-import { LibraryBig, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { LibraryBig, Minus, Plus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { ListTargetPicker } from '@/components/shared/list-target-picker';
@@ -25,6 +25,14 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { GradingCompanyOption } from '@/types';
+
+type Holding = {
+    collection_id: number;
+    condition: string | null;
+    grading_company_id: number | null;
+    grade: number | null;
+    quantity: number;
+};
 
 const CONDITIONS: { value: string; label: string }[] = [
     { value: 'NM', label: 'Near Mint' },
@@ -67,6 +75,12 @@ export function AddToCollectionDialog({
 }) {
     const [open, setOpen] = useState(false);
     const [mode, setMode] = useState<'raw' | 'graded'>('raw');
+    // The viewer's existing holdings of this card, so the quantity field can
+    // pre-fill with how many they already own of the selected collection + state.
+    const [holdings, setHoldings] = useState<Holding[] | null>(null);
+    const [defaultCollectionId, setDefaultCollectionId] = useState<number | null>(
+        null,
+    );
 
     const form = useForm({
         catalog_item_id: catalogItemId,
@@ -75,19 +89,85 @@ export function AddToCollectionDialog({
         condition: 'NM',
         grading_company_id: '' as number | '',
         grade: '',
-        quantity: 1,
+        quantity: ownedQty,
         unit_cost: '',
         acquired_at: '',
         source: '',
     });
 
+    // Load current holdings whenever the dialog opens.
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        let active = true;
+        fetch(`/collection/holdings/${catalogItemId}`, {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        })
+            .then((r) => r.json())
+            .then((d: { default_collection_id: number; holdings: Holding[] }) => {
+                if (active) {
+                    setHoldings(d.holdings);
+                    setDefaultCollectionId(d.default_collection_id);
+                }
+            })
+            .catch(() => active && setHoldings([]));
+
+        return () => {
+            active = false;
+        };
+    }, [open, catalogItemId]);
+
+    // How many the viewer owns of the currently-selected collection + state.
+    const ownedForSelection = useMemo(() => {
+        if (!holdings || form.data.new_collection_name) {
+            return form.data.new_collection_name ? 0 : null;
+        }
+
+        const collectionId = form.data.collection_id ?? defaultCollectionId;
+        const match = holdings.find((h) => {
+            if (h.collection_id !== collectionId) {
+                return false;
+            }
+
+            return mode === 'graded'
+                ? h.grading_company_id === Number(form.data.grading_company_id) &&
+                      h.grade === Number(form.data.grade)
+                : h.grading_company_id === null &&
+                      h.condition === form.data.condition;
+        });
+
+        return match?.quantity ?? 0;
+         
+    }, [
+        holdings,
+        defaultCollectionId,
+        mode,
+        form.data.collection_id,
+        form.data.new_collection_name,
+        form.data.condition,
+        form.data.grading_company_id,
+        form.data.grade,
+    ]);
+
+    // Pre-fill the quantity with what's already owned for the current selection.
+    useEffect(() => {
+        if (ownedForSelection !== null) {
+            form.setData('quantity', ownedForSelection);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ownedForSelection]);
+
+    const setQty = (n: number) => form.setData('quantity', Math.max(0, n));
+
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         form.transform((d) => ({
-            catalog_item_id: d.catalog_item_id,
             collection_id: d.collection_id || null,
             new_collection_name: d.new_collection_name || null,
-            quantity: Number(d.quantity) || 1,
+            quantity: Math.max(0, Number(d.quantity) || 0),
             unit_cost: d.unit_cost ? Math.round(parseFloat(d.unit_cost) * 100) : 0,
             acquired_at: d.acquired_at || null,
             source: d.source || null,
@@ -100,13 +180,12 @@ export function AddToCollectionDialog({
                 : { condition: d.condition, grading_company_id: null, grade: null }),
         }));
 
-        form.post('/collection', {
+        form.post(`/collection/${catalogItemId}/quantity`, {
             preserveScroll: true,
             ...postOptions,
             onSuccess: () => {
                 setOpen(false);
-                form.reset();
-                toast.success('Added to your collection.');
+                toast.success('Collection updated.');
             },
         });
     };
@@ -130,10 +209,10 @@ export function AddToCollectionDialog({
             <DialogContent>
                 <form onSubmit={submit}>
                     <DialogHeader>
-                        <DialogTitle>Add to collection</DialogTitle>
+                        <DialogTitle>Your collection</DialogTitle>
                         <DialogDescription>
-                            Record a copy you own. Value is read from market data for the
-                            state you pick.
+                            Set how many copies you own of this state. Value is read
+                            from market data for the state you pick.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -234,16 +313,43 @@ export function AddToCollectionDialog({
 
                         <div className="grid grid-cols-2 gap-3">
                             <div className="grid gap-2">
-                                <Label htmlFor="quantity">Quantity</Label>
-                                <Input
-                                    id="quantity"
-                                    type="number"
-                                    min={1}
-                                    value={form.data.quantity}
-                                    onChange={(e) =>
-                                        form.setData('quantity', Number(e.target.value))
-                                    }
-                                />
+                                <Label htmlFor="quantity">Quantity owned</Label>
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        className="size-9 shrink-0"
+                                        aria-label="Decrease quantity"
+                                        onClick={() =>
+                                            setQty(Number(form.data.quantity) - 1)
+                                        }
+                                    >
+                                        <Minus className="size-4" />
+                                    </Button>
+                                    <Input
+                                        id="quantity"
+                                        type="number"
+                                        min={0}
+                                        value={form.data.quantity}
+                                        onChange={(e) =>
+                                            setQty(Number(e.target.value))
+                                        }
+                                        className="text-center"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        className="size-9 shrink-0"
+                                        aria-label="Increase quantity"
+                                        onClick={() =>
+                                            setQty(Number(form.data.quantity) + 1)
+                                        }
+                                    >
+                                        <Plus className="size-4" />
+                                    </Button>
+                                </div>
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="unit_cost">Cost per card ($)</Label>
@@ -285,7 +391,7 @@ export function AddToCollectionDialog({
 
                     <DialogFooter>
                         <Button type="submit" disabled={form.processing}>
-                            Add to collection
+                            Save
                         </Button>
                     </DialogFooter>
                 </form>

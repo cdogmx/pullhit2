@@ -8,6 +8,7 @@ use App\Actions\Collection\CreateCollection;
 use App\Actions\Collection\ExportCollectionCsv;
 use App\Actions\Collection\PublicCollection;
 use App\Actions\Collection\RemoveFromCollection;
+use App\Actions\Collection\SetCollectionQuantity;
 use App\Actions\Collection\UpdateCollectionItem;
 use App\Actions\Import\BuildImportPreview;
 use App\Actions\Import\ImportCollection;
@@ -285,6 +286,57 @@ class CollectionController extends Controller
                 ->where('catalog_item_id', $catalogItem->id)
                 ->sum('quantity'),
         ]);
+    }
+
+    /**
+     * The viewer's holdings of one card, broken down by collection + priced state
+     * — so the "set quantity" modal can pre-fill with what they already own.
+     */
+    public function holdings(Request $request, CatalogItem $catalogItem): JsonResponse
+    {
+        return response()->json([
+            'default_collection_id' => $request->user()->defaultCollection()->id,
+            'holdings' => $request->user()->collectionItems()
+                ->where('catalog_item_id', $catalogItem->id)
+                ->get(['collection_id', 'condition', 'grading_company_id', 'grade', 'quantity'])
+                ->map(fn (CollectionItem $ci) => [
+                    'collection_id' => $ci->collection_id,
+                    'condition' => $ci->condition?->value,
+                    'grading_company_id' => $ci->grading_company_id,
+                    'grade' => $ci->grade !== null ? (float) $ci->grade : null,
+                    'quantity' => (int) $ci->quantity,
+                ]),
+        ]);
+    }
+
+    /**
+     * Set how many copies of a card the viewer owns of a given priced state to an
+     * exact number (the "how many do I have" model), creating the collection if
+     * asked. Reconciles cost-basis lots to match.
+     */
+    public function setQuantity(Request $request, CatalogItem $catalogItem, SetCollectionQuantity $set, CreateCollection $create): RedirectResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'collection_id' => ['nullable', 'integer', Rule::exists('collections', 'id')->where('user_id', $user->id)],
+            'new_collection_name' => ['nullable', 'string', 'max:255'],
+            'quantity' => ['required', 'integer', 'min:0', 'max:100000'],
+            'condition' => ['nullable', Rule::enum(Condition::class)],
+            'grading_company_id' => ['nullable', 'integer', 'exists:grading_companies,id'],
+            'grade' => ['nullable', 'numeric', 'min:1', 'max:10', 'required_with:grading_company_id'],
+            'unit_cost' => ['nullable', 'integer', 'min:0'],
+            'acquired_at' => ['nullable', 'date'],
+            'source' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if (! empty($data['new_collection_name'])) {
+            $data['collection_id'] = $create($user, $data['new_collection_name'])->id;
+        }
+
+        $set($user, $catalogItem, $data, (int) $data['quantity']);
+
+        return back()->with('success', 'Collection updated.');
     }
 
     public function update(Request $request, CollectionItem $collectionItem, UpdateCollectionItem $update): RedirectResponse
