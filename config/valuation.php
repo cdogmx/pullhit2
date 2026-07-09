@@ -60,9 +60,9 @@ return [
         'enabled' => env('PRICECHARTING_REFRESH_ENABLED', true),
         // Its OWN Oxylabs daily budget (separate counter from eBay) so a bulk
         // PriceCharting sweep can't starve the interactive eBay on-view refresh.
-        // eBay 3000 + PriceCharting 2000 = 5000/day ≈ 150k/month, under the
-        // 220k plan ceiling (~7.3k/day) with headroom for retries/growth.
-        'daily_cap' => (int) env('PRICECHARTING_DAILY_CAP', 2000),
+        // eBay 3500 + PriceCharting 3500 = 7000/day ≈ 210k/month, under the
+        // 220k plan ceiling (~7.3k/day) with a small buffer for retries.
+        'daily_cap' => (int) env('PRICECHARTING_DAILY_CAP', 3500),
 
         // Singles are only worth a PriceCharting pull (graded + long-term
         // history) above this value — spending a scrape on a 10¢ common is
@@ -86,7 +86,7 @@ return [
     'ebay' => [
         'enabled' => env('EBAY_REFRESH_ENABLED', true),
         'geo' => 'United States',
-        'daily_cap' => (int) env('EBAY_DAILY_CAP', 3000), // max Oxylabs requests/day
+        'daily_cap' => (int) env('EBAY_DAILY_CAP', 3500), // max Oxylabs requests/day
         'max_results' => 60,
 
         // On a card view, refresh its eBay comps if they're older than this. The
