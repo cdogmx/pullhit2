@@ -147,9 +147,6 @@ export function SiteHeader() {
                         <a href="/movers" className={NAV_LINK}>
                             Movers
                         </a>
-                        <a href="/deals" className={NAV_LINK}>
-                            Deals
-                        </a>
                         <a href="/compare" className={NAV_LINK}>
                             Compare
                         </a>
@@ -302,7 +299,6 @@ function MobileMenu({ auth }: { auth: Auth }) {
 
                     <MenuHeading>Explore</MenuHeading>
                     <MenuLink href="/movers">Movers</MenuLink>
-                    <MenuLink href="/deals">Deals</MenuLink>
                     <MenuLink href="/compare">Compare</MenuLink>
                     <MenuLink href="/rip-or-keep">Rip or Keep?</MenuLink>
                     {moreMenu.map((item) => (
