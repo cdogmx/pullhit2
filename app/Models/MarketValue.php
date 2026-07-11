@@ -71,4 +71,24 @@ class MarketValue extends Model
     {
         return $this->belongsTo(GradingCompany::class);
     }
+
+    /**
+     * A price surge — recent sales are up sharply over the trailing baseline.
+     * Real data only, backed by enough sales to trust, and not one seller
+     * pumping it (guards against a manipulated spike).
+     */
+    public function isSurging(): bool
+    {
+        $threshold = (float) config('valuation.surge_pct', 25);
+        // A credible surge, not a thin-prior artifact (e.g. a "+6200%" jump from
+        // one sparse earlier sale) — those would make the flag look broken.
+        $ceiling = (float) config('valuation.surge_max_pct', 300);
+        $trend = (float) ($this->trend_30d ?? 0);
+
+        return ! $this->is_estimated
+            && $trend >= $threshold
+            && $trend <= $ceiling
+            && (int) ($this->n_sales ?? 0) >= 5
+            && ($this->top_seller_share === null || (float) $this->top_seller_share <= 0.5);
+    }
 }

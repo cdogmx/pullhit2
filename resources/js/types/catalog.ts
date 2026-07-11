@@ -75,6 +75,8 @@ export type MarketValue = {
     /** Share of comps from the single most-frequent seller (null = too few to judge). */
     top_seller_share?: number | null;
     is_estimated: boolean;
+    /** Recent sales up sharply on real data — drives the "Surging" flag. */
+    is_surging?: boolean;
     half_life_days: number;
     trend_30d: number | null;
     currency: string;

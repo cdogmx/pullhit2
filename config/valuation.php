@@ -4,6 +4,12 @@ return [
     // Max age of observations the engine will consider.
     'lookback_days' => 365,
 
+    // A card is "surging" when its 30-day trend is at least this many percent up
+    // (with enough real sales behind it) — drives the surge flag. Capped at
+    // surge_max_pct so thin-prior artifacts (a "+6200%" jump) don't flag.
+    'surge_pct' => (int) env('VALUATION_SURGE_PCT', 25),
+    'surge_max_pct' => (int) env('VALUATION_SURGE_MAX_PCT', 300),
+
     // Hampel/MAD outlier rejection: reject |x - median| > k * 1.4826 * MAD.
     'mad_k' => 3.0,
 

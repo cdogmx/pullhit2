@@ -36,6 +36,8 @@ class MarketValueResource extends JsonResource
             // Single-seller dominance of the comps (null = too few to judge).
             'top_seller_share' => $this->top_seller_share !== null ? round($this->top_seller_share, 3) : null,
             'is_estimated' => (bool) $this->is_estimated,
+            // Recent sales up sharply on real, non-manipulated data.
+            'is_surging' => $this->isSurging(),
             'half_life_days' => $this->half_life_days,
             'trend_30d' => $this->trend_30d,
             'currency' => $this->currency,

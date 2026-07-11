@@ -1,3 +1,4 @@
+import { Flame } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
     confidenceDotClass,
@@ -113,6 +114,15 @@ export function PriceTag({
                     {value.confidence_label} confidence
                 </Badge>
                 {value.is_estimated && <Badge variant="outline">Estimated</Badge>}
+                {value.is_surging && (
+                    <Badge
+                        className="gap-1 border-transparent bg-orange-500 text-white hover:bg-orange-500"
+                        title={`Sold prices are up ${value.trend_30d}% over 30 days on real sales.`}
+                    >
+                        <Flame className="size-3" />
+                        Surging
+                    </Badge>
+                )}
                 {value.top_seller_share != null && value.top_seller_share > 0.5 && (
                     <Badge
                         variant="outline"
