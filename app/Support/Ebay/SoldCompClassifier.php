@@ -407,14 +407,23 @@ class SoldCompClassifier
             }
         }
 
-        // One Piece alternate-art ("parallel") is a distinct printing worth well
-        // above the base — the base card's search carries no such qualifier, so
-        // alt-art sales would leak in. A base card rejects alt-art/parallel
-        // listings; an alt-art card requires the wording. Gated to One Piece.
+        // One Piece special printings (alt-art/parallel, full-art, manga,
+        // championship/winner, judge, pre-release, …) trade well above the base
+        // card, and the base card's search carries no qualifier — so those sales
+        // would leak in. Keep them in their own lane: a base card rejects any
+        // special printing, a special card rejects plain base sales, and alt-art
+        // is separated from the other specials. Gated to One Piece.
         if ($item->productLine?->slug === 'one-piece') {
+            $listSpecial = (bool) preg_match('/\balt(ernate)?[\s-]*art\b|\bparallel\b|\bfull[\s-]*art\b|\bmanga\b|championship|\bwinner\b|\bfinalist\b|\btop\s*player\b|\bjudge\b|pre[\s-]?release|\berrata\b|\banniversary\b/', $lower);
             $listAlt = (bool) preg_match('/\balt(ernate)?[\s-]*art\b|\bparallel\b/', $lower);
-            $itemAlt = str_contains((string) ($attributes['finish'] ?? ''), 'alternate_art');
-            if ($itemAlt !== $listAlt) {
+            $finish = (string) ($attributes['finish'] ?? '');
+            $itemSpecial = $finish !== '' && $finish !== 'normal';
+            $itemAlt = str_contains($finish, 'alternate_art');
+
+            if ($itemSpecial !== $listSpecial) {
+                return false;
+            }
+            if ($itemSpecial && $itemAlt !== $listAlt) {
                 return false;
             }
         }

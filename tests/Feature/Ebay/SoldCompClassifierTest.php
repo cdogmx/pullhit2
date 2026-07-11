@@ -247,3 +247,27 @@ test('a base One Piece card rejects alt-art/parallel listings, and the alt-art r
         ->and($a('One Piece Trafalgar Law ST03-008 Alternate Art', 4000))->not->toBeNull()
         ->and($a('One Piece Trafalgar Law ST03-008', 1000))->toBeNull();
 });
+
+test('a base One Piece card rejects every special printing; a full-art card rejects base sales', function () {
+    $line = ProductLine::factory()->create(['slug' => 'one-piece']);
+    $base = CatalogItem::factory()->for($line)->create([
+        'name' => 'Monkey D. Luffy', 'number' => 'OP01-024',
+        'attributes' => ['language' => 'en', 'variant' => 'normal'],
+    ]);
+    $fullArt = CatalogItem::factory()->for($line)->create([
+        'name' => 'Monkey D. Luffy', 'number' => 'OP01-024',
+        'attributes' => ['language' => 'en', 'variant' => 'normal', 'finish' => 'full_art_prb01'],
+    ]);
+
+    $b = fn (string $t, int $cents) => $this->classifier->classify(candidate($t, $cents), $base, 5000, []);
+    $f = fn (string $t, int $cents) => $this->classifier->classify(candidate($t, $cents), $fullArt, 20000, []);
+
+    expect($b('One Piece Monkey D. Luffy OP01-024 Full Art', 20000))->toBeNull()   // full-art → not the base
+        ->and($b('One Piece Monkey D. Luffy OP01-024 Manga', 30000))->toBeNull()   // manga → not the base
+        ->and($b('One Piece Monkey D. Luffy OP01-024 Championship 2024', 18000))->toBeNull()
+        ->and($b('One Piece Monkey D. Luffy OP01-024 Leader', 5000))->not->toBeNull() // plain base kept
+        // full-art card rejects a plain base sale, and (foil-style) an alt-art one.
+        ->and($f('One Piece Monkey D. Luffy OP01-024', 5000))->toBeNull()
+        ->and($f('One Piece Monkey D. Luffy OP01-024 Alternate Art', 15000))->toBeNull()
+        ->and($f('One Piece Monkey D. Luffy OP01-024 Full Art', 20000))->not->toBeNull();
+});
