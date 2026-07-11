@@ -68,6 +68,12 @@ export function PriceTag({
                         {trend}
                     </span>
                 )}
+                {value.is_surging && (
+                    <Flame
+                        className="size-3.5 shrink-0 text-orange-500"
+                        aria-label="Surging"
+                    />
+                )}
                 <span
                     className={cn(
                         'size-1.5 shrink-0 rounded-full bg-current',
