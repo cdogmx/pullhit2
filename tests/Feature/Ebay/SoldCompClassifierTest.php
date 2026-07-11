@@ -223,3 +223,27 @@ test('a non-foil Lorcana card rejects foil/cold-foil listings but keeps regulars
         ->and($c('Pocahontas - Peacekeeper 22/204 Winterspell Non-Foil', 500))->not->toBeNull()
         ->and($c('Disney Lorcana Pocahontas - Peacekeeper 22/204 Winterspell', 550))->not->toBeNull();
 });
+
+test('a base One Piece card rejects alt-art/parallel listings, and the alt-art requires it', function () {
+    $line = ProductLine::factory()->create(['slug' => 'one-piece']);
+    $base = CatalogItem::factory()->for($line)->create([
+        'name' => 'Trafalgar Law', 'number' => 'ST03-008',
+        'attributes' => ['language' => 'en', 'variant' => 'normal'],
+    ]);
+    $alt = CatalogItem::factory()->for($line)->create([
+        'name' => 'Trafalgar Law', 'number' => 'ST03-008',
+        'attributes' => ['language' => 'en', 'variant' => 'normal', 'finish' => 'alternate_art'],
+    ]);
+
+    $anchor = 1000;
+    $b = fn (string $t, int $cents) => $this->classifier->classify(candidate($t, $cents), $base, $anchor, []);
+    $a = fn (string $t, int $cents) => $this->classifier->classify(candidate($t, $cents), $alt, 4000, []);
+
+    // Base card: alt-art / parallel sales don't belong to it.
+    expect($b('One Piece Trafalgar Law ST03-008 Alternate Art', 4000))->toBeNull()
+        ->and($b('Trafalgar Law ST03-008 Parallel', 3500))->toBeNull()
+        ->and($b('One Piece Trafalgar Law ST03-008 Leader', 1000))->not->toBeNull()
+        // Alt-art card: needs the alt-art wording; a plain base sale isn't it.
+        ->and($a('One Piece Trafalgar Law ST03-008 Alternate Art', 4000))->not->toBeNull()
+        ->and($a('One Piece Trafalgar Law ST03-008', 1000))->toBeNull();
+});

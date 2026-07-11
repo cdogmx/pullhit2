@@ -407,6 +407,18 @@ class SoldCompClassifier
             }
         }
 
+        // One Piece alternate-art ("parallel") is a distinct printing worth well
+        // above the base — the base card's search carries no such qualifier, so
+        // alt-art sales would leak in. A base card rejects alt-art/parallel
+        // listings; an alt-art card requires the wording. Gated to One Piece.
+        if ($item->productLine?->slug === 'one-piece') {
+            $listAlt = (bool) preg_match('/\balt(ernate)?[\s-]*art\b|\bparallel\b/', $lower);
+            $itemAlt = str_contains((string) ($attributes['finish'] ?? ''), 'alternate_art');
+            if ($itemAlt !== $listAlt) {
+                return false;
+            }
+        }
+
         // Retailer / prerelease STAMP promos (GameStop, EB Games, prerelease, …)
         // are distinct printings that trade on their own. Route by the specific
         // stamp: a base card rejects any stamped listing, a stamped card requires
