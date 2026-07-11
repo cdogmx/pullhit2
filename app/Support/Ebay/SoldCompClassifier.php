@@ -394,6 +394,19 @@ class SoldCompClassifier
             return false;
         }
 
+        // Lorcana foil ("cold foil") is a distinct printing that trades well above
+        // the base card — and the eBay search mixes the two. A non-foil card
+        // rejects foil listings and a foil card requires the foil wording. Gated
+        // to Lorcana so Pokémon "holo/foil" phrasing isn't affected.
+        if ($item->productLine?->slug === 'lorcana') {
+            $listFoil = (bool) preg_match('/\bfoil\b/', $lower)
+                && ! (bool) preg_match('/non[\s-]?foil/', $lower);
+            $itemFoil = in_array($variant, ['foil', 'cold_foil'], true);
+            if ($itemFoil !== $listFoil) {
+                return false;
+            }
+        }
+
         // Retailer / prerelease STAMP promos (GameStop, EB Games, prerelease, …)
         // are distinct printings that trade on their own. Route by the specific
         // stamp: a base card rejects any stamped listing, a stamped card requires

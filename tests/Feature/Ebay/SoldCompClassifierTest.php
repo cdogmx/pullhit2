@@ -2,6 +2,7 @@
 
 use App\Models\CatalogItem;
 use App\Models\GradingCompany;
+use App\Models\ProductLine;
 use App\Models\Set;
 use App\Support\Ebay\SoldCandidate;
 use App\Support\Ebay\SoldCompClassifier;
@@ -202,4 +203,23 @@ test('it parses Beckett, hyphenated, and word-separated grade forms', function (
     // "PSA GEM MINT 10" (grade words between company and number)
     $words = $this->classifier->classify(candidate('Pikachu ex 276/217 PSA GEM MINT 10', 400000), $this->item, $this->anchor, $companies);
     expect($words->grade)->toBe(10.0)->and($words->gradingCompanyId)->toBe($this->psa->id);
+});
+
+test('a non-foil Lorcana card rejects foil/cold-foil listings but keeps regulars', function () {
+    $line = ProductLine::factory()->create(['slug' => 'lorcana']);
+    $card = CatalogItem::factory()->for($line)->create([
+        'name' => 'Pocahontas - Peacekeeper', 'number' => '22',
+        'attributes' => ['language' => 'en', 'variant' => 'normal'],
+    ]);
+
+    $anchor = 500; // ~$5 non-foil
+    $c = fn (string $t, int $cents) => $this->classifier->classify(candidate($t, $cents), $card, $anchor, []);
+
+    // Foil / cold-foil sales belong to the (pricier) foil printing → rejected.
+    expect($c('Pocahontas Peacekeeper Legendary Cold Foil Winterspell', 2000))->toBeNull()
+        ->and($c('Pocahontas - Peacekeeper 22/204 Winterspell Foil', 1500))->toBeNull()
+        // Regular / non-foil / unqualified sales are the non-foil card → kept.
+        ->and($c('Pocahontas - Peacekeeper 22 Winterspell Regular', 600))->not->toBeNull()
+        ->and($c('Pocahontas - Peacekeeper 22/204 Winterspell Non-Foil', 500))->not->toBeNull()
+        ->and($c('Disney Lorcana Pocahontas - Peacekeeper 22/204 Winterspell', 550))->not->toBeNull();
 });
