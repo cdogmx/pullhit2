@@ -10,6 +10,10 @@ return [
     'surge_pct' => (int) env('VALUATION_SURGE_PCT', 25),
     'surge_max_pct' => (int) env('VALUATION_SURGE_MAX_PCT', 300),
 
+    // Placeholder premium for a generated Lorcana foil vs its non-foil card,
+    // used only to seed an estimate — real foil comps replace it on view.
+    'lorcana_foil_multiplier' => (float) env('LORCANA_FOIL_MULTIPLIER', 2.0),
+
     // Hampel/MAD outlier rejection: reject |x - median| > k * 1.4826 * MAD.
     'mad_k' => 3.0,
 

@@ -39,7 +39,7 @@ final class TcgVertical
                     Attr::make('rarity', 'Rarity', Type::String, searchable: true, indexed: true),
                     // variant (holo-ness), edition (print run), and finish (error/
                     // promo tag) each distinguish printings of the same card.
-                    Attr::make('variant', 'Variant', Type::Enum, required: true, searchable: true, indexed: true, options: ['normal', 'holo', 'reverse_holo'], variantDefining: true),
+                    Attr::make('variant', 'Variant', Type::Enum, required: true, searchable: true, indexed: true, options: ['normal', 'holo', 'reverse_holo', 'foil'], variantDefining: true),
                     // Print run — distinct market values per edition (1st Ed Charizard
                     // ≫ Shadowless ≫ Unlimited). Optional: only set where it applies.
                     Attr::make('edition', 'Edition', Type::Enum, searchable: true, indexed: true, options: ['unlimited', 'shadowless', 'first_edition'], variantDefining: true),
@@ -57,8 +57,9 @@ final class TcgVertical
 
                     // Lorcana facets (product line `lorcana`). Optional at the
                     // vertical level — Pokémon never sets them, Lorcana never sets
-                    // hp. Lorcana has no holo/edition axis, so `variant` is always
-                    // 'normal' and alt-arts (Enchanted/Iconic) are distinct cards.
+                    // hp. Lorcana's printing axis is `variant` = 'normal' | 'foil'
+                    // (cold foil trades higher); alt-arts (Enchanted/Iconic) are
+                    // distinct cards.
                     Attr::make('ink_color', 'Ink', Type::String, searchable: true, indexed: true),
                     Attr::make('franchise', 'Franchise', Type::String, searchable: true, indexed: true),
                     Attr::make('classifications', 'Classifications', Type::String, searchable: true),

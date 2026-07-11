@@ -31,6 +31,12 @@ final class CardSearchTerms
             $out[] = 'Reverse Holo';
         }
 
+        // Lorcana foil is a distinct printing — pin its search to "Foil" so we
+        // fetch the foil's (pricier) sales, not the base card's.
+        if (($attributes['variant'] ?? null) === 'foil') {
+            $out[] = 'Foil';
+        }
+
         if (! empty($attributes['finish'])) {
             $out[] = self::finishTerm((string) $attributes['finish']);
         }
