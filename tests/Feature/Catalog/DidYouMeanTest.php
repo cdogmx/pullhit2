@@ -28,7 +28,7 @@ test('it returns null for an exact match, a too-short query, or gibberish', func
         ->and(app(SuggestSearch::class)->didYouMean('zzxqwty'))->toBeNull(); // nothing close
 });
 
-test('the browse page surfaces a did-you-mean on a zero-result search', function () {
+test('the browse page auto-corrects a typo and shows results for the correction', function () {
     $vertical = Vertical::factory()->create(['slug' => 'tcg']);
     $line = ProductLine::factory()->for($vertical)->create(['slug' => 'pokemon']);
     $set = Set::factory()->for($line)->create();
@@ -39,6 +39,23 @@ test('the browse page surfaces a did-you-mean on a zero-result search', function
     $this->get('/browse?q=graninj')
         ->assertOk()
         ->assertInertia(fn ($page) => $page
+            ->where('autoCorrectedTo', 'Greninja')
+            ->where('didYouMean', null)
+            ->where('pagination.total', fn ($t) => $t > 0));
+});
+
+test('?exact pins the exact query — no auto-correct, just a suggestion', function () {
+    $vertical = Vertical::factory()->create(['slug' => 'tcg']);
+    $line = ProductLine::factory()->for($vertical)->create(['slug' => 'pokemon']);
+    $set = Set::factory()->for($line)->create();
+    CatalogItem::factory()->for($line)->for($set)->create([
+        'name' => 'Greninja', 'item_type' => ItemType::Single,
+    ]);
+
+    $this->get('/browse?q=graninj&exact=1')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
             ->where('pagination.total', 0)
+            ->where('autoCorrectedTo', null)
             ->where('didYouMean', 'Greninja'));
 });

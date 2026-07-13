@@ -174,12 +174,30 @@ class CatalogController extends Controller
 
         $paginator = $search($filters);
 
-        // On a zero-result search (usually a typo), offer a "did you mean" — the
-        // closest card/set/brand name by edit distance.
+        // On a zero-result search (usually a typo), find the closest card/set/brand
+        // name by edit distance. If searching THAT returns results, auto-correct
+        // and show them ("Showing results for X") — unless ?exact pins the query;
+        // otherwise fall back to a "did you mean" suggestion on the empty page.
         $q = trim((string) ($filters['q'] ?? ''));
-        $didYouMean = $q !== '' && $paginator->total() === 0
-            ? app(SuggestSearch::class)->didYouMean($q)
-            : null;
+        $didYouMean = null;
+        $autoCorrectedTo = null;
+
+        if ($q !== '' && $paginator->total() === 0) {
+            $correction = app(SuggestSearch::class)->didYouMean($q);
+
+            if ($correction !== null && ! request()->boolean('exact')) {
+                $corrected = $search([...$filters, 'q' => $correction]);
+
+                if ($corrected->total() > 0) {
+                    $paginator = $corrected;
+                    $autoCorrectedTo = $correction;
+                } else {
+                    $didYouMean = $correction;
+                }
+            } else {
+                $didYouMean = $correction;
+            }
+        }
 
         return Inertia::render('catalog/browse', [
             ...$common,
@@ -196,6 +214,7 @@ class CatalogController extends Controller
                 'total' => $paginator->total(),
                 'has_more' => $paginator->hasMorePages(),
             ],
+            'autoCorrectedTo' => $autoCorrectedTo,
             'didYouMean' => $didYouMean,
         ]);
     }

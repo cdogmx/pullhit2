@@ -79,6 +79,8 @@ type Props = {
     blurb: string | null;
     /** A "did you mean" correction shown on a zero-result search. */
     didYouMean?: string | null;
+    /** When a typo was auto-corrected, the term we searched instead. */
+    autoCorrectedTo?: string | null;
 };
 
 const SORTS = [
@@ -198,6 +200,7 @@ export default function Browse({
     tileLanguages,
     blurb,
     didYouMean,
+    autoCorrectedTo,
 }: Props) {
     const { auth } = usePage().props;
     const canAdd = Boolean(auth.user);
@@ -279,6 +282,7 @@ export default function Browse({
         'tiles',
         'tileLanguages',
         'didYouMean',
+        'autoCorrectedTo',
     ];
 
     // Push a history entry by default so the browser Back button steps back
@@ -305,6 +309,20 @@ export default function Browse({
         router.get(
             '/browse',
             {},
+            {
+                preserveState: true,
+                preserveScroll: true,
+                reset: ['items'],
+                only: LIST_PROPS,
+            },
+        );
+    }
+
+    // Re-run the current query with auto-correct off (pins the exact term).
+    function searchExact() {
+        router.get(
+            '/browse',
+            { ...buildQuery(filters), exact: 1 },
             {
                 preserveState: true,
                 preserveScroll: true,
@@ -642,6 +660,24 @@ export default function Browse({
                                 }
                                 onReset={reset}
                             />
+                        )}
+
+                        {autoCorrectedTo && filters.q && (
+                            <p className="mb-3 text-sm text-muted-foreground">
+                                Showing results for{' '}
+                                <span className="font-semibold text-foreground">
+                                    {autoCorrectedTo}
+                                </span>
+                                . Search instead for{' '}
+                                <button
+                                    type="button"
+                                    onClick={searchExact}
+                                    className="font-semibold text-primary hover:underline"
+                                >
+                                    {filters.q}
+                                </button>
+                                .
+                            </p>
                         )}
 
                         {items.length === 0 ? (
