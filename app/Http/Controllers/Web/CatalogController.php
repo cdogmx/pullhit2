@@ -6,6 +6,7 @@ use App\Actions\Catalog\BrowseTiles;
 use App\Actions\Catalog\CatalogFilterOptions;
 use App\Actions\Catalog\SearchCatalog;
 use App\Actions\Catalog\ShowCatalogItem;
+use App\Actions\Catalog\SuggestSearch;
 use App\Actions\Valuation\MaybeRefreshEbay;
 use App\Actions\Valuation\MaybeRefreshPricecharting;
 use App\Actions\Valuation\PriceHistory;
@@ -173,6 +174,13 @@ class CatalogController extends Controller
 
         $paginator = $search($filters);
 
+        // On a zero-result search (usually a typo), offer a "did you mean" — the
+        // closest card/set/brand name by edit distance.
+        $q = trim((string) ($filters['q'] ?? ''));
+        $didYouMean = $q !== '' && $paginator->total() === 0
+            ? app(SuggestSearch::class)->didYouMean($q)
+            : null;
+
         return Inertia::render('catalog/browse', [
             ...$common,
             'tiles' => [],
@@ -188,6 +196,7 @@ class CatalogController extends Controller
                 'total' => $paginator->total(),
                 'has_more' => $paginator->hasMorePages(),
             ],
+            'didYouMean' => $didYouMean,
         ]);
     }
 

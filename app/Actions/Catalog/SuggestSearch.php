@@ -54,6 +54,39 @@ class SuggestSearch
         ];
     }
 
+    /**
+     * The single best "did you mean" correction for a query — the closest card,
+     * set, or brand name by edit distance — or null when the query isn't a
+     * fuzzable typo or nothing is close enough. Used on a zero-result search page.
+     */
+    public function didYouMean(string $q): ?string
+    {
+        $q = trim($q);
+        if (! $this->fuzzable($q)) {
+            return null;
+        }
+
+        $best = null;
+        $bestDist = PHP_INT_MAX;
+
+        $consider = function (iterable $names) use ($q, &$best, &$bestDist) {
+            foreach ($names as $name) {
+                $dist = $this->distance($q, (string) $name);
+                if ($dist !== null && $dist < $bestDist) {
+                    $bestDist = $dist;
+                    $best = (string) $name;
+                }
+            }
+        };
+
+        $consider($this->prefilter(CatalogItem::query()->where('item_type', 'single'), 'name', $q)->orderByDesc('popularity')->limit(150)->pluck('name'));
+        $consider($this->prefilter(Set::query(), 'name', $q)->limit(60)->pluck('name'));
+        $consider(ProductLine::pluck('name')); // tiny table — no prefilter needed
+
+        // Only offer a real correction, and never just echo the query back.
+        return $best !== null && mb_strtolower($best) !== mb_strtolower($q) ? $best : null;
+    }
+
     /** @return array<int, array<string, mixed>> */
     private function brands(string $q): array
     {
@@ -197,10 +230,16 @@ class SuggestSearch
     private function prefilter(Builder $query, string $column, string $q): Builder
     {
         $prefix = mb_substr(mb_strtolower($q), 0, 2);
+        // SOUNDEX widens recall (a typo anywhere after the start), but only MySQL/
+        // MariaDB ship it — elsewhere (SQLite tests) fall back to the prefix.
+        $soundex = in_array($query->getConnection()->getDriverName(), ['mysql', 'mariadb'], true);
 
-        return $query->where(function (Builder $w) use ($column, $q, $prefix) {
-            $w->whereRaw("SOUNDEX({$column}) = SOUNDEX(?)", [$q])
-                ->orWhere($column, 'like', $prefix.'%');
+        return $query->where(function (Builder $w) use ($column, $q, $prefix, $soundex) {
+            $w->where($column, 'like', $prefix.'%');
+
+            if ($soundex) {
+                $w->orWhereRaw("SOUNDEX({$column}) = SOUNDEX(?)", [$q]);
+            }
         });
     }
 

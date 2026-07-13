@@ -77,6 +77,8 @@ type Props = {
     tileLanguages: string[];
     /** Admin-authored description for the current brand/set. */
     blurb: string | null;
+    /** A "did you mean" correction shown on a zero-result search. */
+    didYouMean?: string | null;
 };
 
 const SORTS = [
@@ -195,6 +197,7 @@ export default function Browse({
     tiles,
     tileLanguages,
     blurb,
+    didYouMean,
 }: Props) {
     const { auth } = usePage().props;
     const canAdd = Boolean(auth.user);
@@ -275,6 +278,7 @@ export default function Browse({
         'blurb',
         'tiles',
         'tileLanguages',
+        'didYouMean',
     ];
 
     // Push a history entry by default so the browser Back button steps back
@@ -643,8 +647,26 @@ export default function Browse({
                         {items.length === 0 ? (
                             <div className="rounded-lg border border-dashed border-border py-20 text-center">
                                 <p className="text-sm text-muted-foreground">
-                                    No items match your filters.
+                                    {filters.q
+                                        ? `No results for “${filters.q}”.`
+                                        : 'No items match your filters.'}
                                 </p>
+                                {didYouMean && (
+                                    <p className="mt-2 text-sm">
+                                        Did you mean{' '}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setQ(didYouMean);
+                                                update({ q: didYouMean });
+                                            }}
+                                            className="font-semibold text-primary hover:underline"
+                                        >
+                                            {didYouMean}
+                                        </button>
+                                        ?
+                                    </p>
+                                )}
                                 <Button
                                     variant="outline"
                                     size="sm"
