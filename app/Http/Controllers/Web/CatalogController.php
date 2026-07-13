@@ -215,6 +215,9 @@ class CatalogController extends Controller
                 'has_more' => $paginator->hasMorePages(),
             ],
             'autoCorrectedTo' => $autoCorrectedTo,
+            // The original query (server-authoritative) — used by the banner and
+            // the empty-state so they don't depend on the client's filter state.
+            'searchedQuery' => $q !== '' ? $q : null,
             'didYouMean' => $didYouMean,
         ]);
     }

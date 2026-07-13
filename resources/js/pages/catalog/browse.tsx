@@ -81,6 +81,8 @@ type Props = {
     didYouMean?: string | null;
     /** When a typo was auto-corrected, the term we searched instead. */
     autoCorrectedTo?: string | null;
+    /** The original query as the server saw it (banner/empty-state echo). */
+    searchedQuery?: string | null;
 };
 
 const SORTS = [
@@ -201,6 +203,7 @@ export default function Browse({
     blurb,
     didYouMean,
     autoCorrectedTo,
+    searchedQuery,
 }: Props) {
     const { auth } = usePage().props;
     const canAdd = Boolean(auth.user);
@@ -283,6 +286,7 @@ export default function Browse({
         'tileLanguages',
         'didYouMean',
         'autoCorrectedTo',
+        'searchedQuery',
     ];
 
     // Push a history entry by default so the browser Back button steps back
@@ -318,11 +322,11 @@ export default function Browse({
         );
     }
 
-    // Re-run the current query with auto-correct off (pins the exact term).
+    // Re-run the original query with auto-correct off (pins the exact term).
     function searchExact() {
         router.get(
             '/browse',
-            { ...buildQuery(filters), exact: 1 },
+            { ...buildQuery({ ...filters, q: searchedQuery ?? null }), exact: 1 },
             {
                 preserveState: true,
                 preserveScroll: true,
@@ -662,7 +666,7 @@ export default function Browse({
                             />
                         )}
 
-                        {autoCorrectedTo && filters.q && (
+                        {autoCorrectedTo && searchedQuery && (
                             <p className="mb-3 text-sm text-muted-foreground">
                                 Showing results for{' '}
                                 <span className="font-semibold text-foreground">
@@ -674,7 +678,7 @@ export default function Browse({
                                     onClick={searchExact}
                                     className="font-semibold text-primary hover:underline"
                                 >
-                                    {filters.q}
+                                    {searchedQuery}
                                 </button>
                                 .
                             </p>
@@ -683,8 +687,8 @@ export default function Browse({
                         {items.length === 0 ? (
                             <div className="rounded-lg border border-dashed border-border py-20 text-center">
                                 <p className="text-sm text-muted-foreground">
-                                    {filters.q
-                                        ? `No results for “${filters.q}”.`
+                                    {searchedQuery
+                                        ? `No results for “${searchedQuery}”.`
                                         : 'No items match your filters.'}
                                 </p>
                                 {didYouMean && (

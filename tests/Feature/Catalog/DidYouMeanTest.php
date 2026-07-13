@@ -40,6 +40,7 @@ test('the browse page auto-corrects a typo and shows results for the correction'
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('autoCorrectedTo', 'Greninja')
+            ->where('searchedQuery', 'graninj')
             ->where('didYouMean', null)
             ->where('pagination.total', fn ($t) => $t > 0));
 });
