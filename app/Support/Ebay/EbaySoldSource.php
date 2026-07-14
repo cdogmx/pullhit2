@@ -22,12 +22,27 @@ class EbaySoldSource
      */
     public function fetch(CatalogItem $item): array
     {
-        $html = $this->client->fetchHtml(
-            $this->soldSearchUrl($item),
-            config('valuation.ebay.geo', 'United States'),
-        );
+        $url = $this->soldSearchUrl($item);
+        $geo = config('valuation.ebay.geo', 'United States');
+        $attempts = max(1, (int) config('valuation.ebay.fetch_attempts', 3));
 
-        return EbayHtmlParser::parse($html);
+        // eBay/Oxylabs intermittently return a valid results-page shell with NO
+        // rendered listing cards (a degraded render or soft anti-bot). Those look
+        // identical to a real zero, so re-fetch until we get listings — trusting
+        // only an EXPLICIT "no matches" page as a genuine zero.
+        for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            $html = $this->client->fetchHtml($url, $geo);
+            $candidates = EbayHtmlParser::parse($html);
+
+            if ($candidates !== [] || EbayHtmlParser::isEmptyResults($html)) {
+                return $candidates;
+            }
+        }
+
+        // Every attempt came back empty without eBay declaring zero matches — a
+        // block or persistent degraded render. Signal it so the caller retries
+        // later instead of caching a false "no comps".
+        throw new EbayBlockedException("eBay returned no usable results after {$attempts} attempt(s).");
     }
 
     public function soldSearchUrl(CatalogItem $item): string
@@ -39,6 +54,12 @@ class EbaySoldSource
             'LH_Complete' => 1,
             '_ipg' => config('valuation.ebay.max_results', 60),
         ];
+
+        // Ship-to US postal code so eBay ranks/estimates from a domestic buyer's
+        // vantage (matches the geo we scrape from). Configurable; default US ZIP.
+        if ($postal = config('valuation.ebay.postal', '53094')) {
+            $params['_stpos'] = $postal;
+        }
 
         // Filter to the card's language (eBay "Language" item aspect) so an
         // English card's comps aren't polluted by Japanese/Chinese printings and

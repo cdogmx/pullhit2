@@ -4,10 +4,12 @@ namespace App\Actions\Valuation;
 
 use App\Models\CatalogItem;
 use App\Models\GradingCompany;
+use App\Support\Ebay\EbayBlockedException;
 use App\Support\Ebay\EbaySoldSource;
 use App\Support\Ebay\SoldComp;
 use App\Support\Ebay\SoldCompClassifier;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Pull real eBay sold comps for a catalog item, filter/classify them, ingest the
@@ -28,9 +30,20 @@ class IngestEbaySoldComps
         $anchor = $this->anchorCents($item);
         $companyIds = GradingCompany::pluck('id', 'slug')->all();
 
+        try {
+            $candidates = $this->source->fetch($item);
+        } catch (EbayBlockedException) {
+            // Anti-bot interstitial / captcha — NOT a genuine empty result. Leave
+            // ebay_refreshed_at untouched so the next view retries, rather than
+            // holding a false "no comps" for the freshness window.
+            Log::info('eBay fetch blocked; will retry on next view.', ['item' => $item->id]);
+
+            return 0;
+        }
+
         $accepted = array_values(array_filter(array_map(
             fn ($candidate) => $this->classifier->classify($candidate, $item, $anchor, $companyIds),
-            $this->source->fetch($item),
+            $candidates,
         )));
 
         // Always record the attempt so we respect the TTL even on a dry result.

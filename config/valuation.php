@@ -99,6 +99,16 @@ return [
         'daily_cap' => (int) env('EBAY_DAILY_CAP', 3500), // max Oxylabs requests/day
         'max_results' => 60,
 
+        // Ship-to US postal code (_stpos) — eBay ranks/estimates from a domestic
+        // buyer's vantage, matching the geo we scrape from.
+        'postal' => env('EBAY_POSTAL', '53094'),
+
+        // eBay/Oxylabs occasionally return a valid results-page shell with NO
+        // rendered listing cards (a degraded render / soft anti-bot). Re-fetch up
+        // to this many times before giving up; an explicit "no matches" page is
+        // trusted immediately. Kept small — each attempt is a paid Oxylabs call.
+        'fetch_attempts' => (int) env('EBAY_FETCH_ATTEMPTS', 3),
+
         // On a card view, refresh its eBay comps if they're older than this. The
         // detail page shows an "updating" indicator and live-swaps the new values.
         'view_refresh_hours' => (int) env('EBAY_VIEW_REFRESH_HOURS', 12),

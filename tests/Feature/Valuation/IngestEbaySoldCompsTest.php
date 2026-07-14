@@ -54,8 +54,10 @@ test('it ingests genuine eBay comps, drops synthetic, and de-estimates the value
 });
 
 test('it keeps the synthetic placeholder when no genuine comps are found', function () {
+    // A real empty search still returns a full results page (srp markers + a
+    // "no matches" message) — a legitimate zero, so we DO stamp refreshed_at.
     Http::fake([
-        'realtime.oxylabs.io/*' => Http::response(['results' => [['content' => '<ul></ul>']]], 200),
+        'realtime.oxylabs.io/*' => Http::response(['results' => [['content' => '<div class="srp-river-results"><h3>0 results found. No exact matches found.</h3></div>']]], 200),
     ]);
 
     $count = app(IngestEbaySoldComps::class)($this->item);
@@ -63,4 +65,33 @@ test('it keeps the synthetic placeholder when no genuine comps are found', funct
     expect($count)->toBe(0);
     expect(SaleObservation::where('catalog_item_id', $this->item->id)->where('is_synthetic', true)->count())->toBe(3);
     expect($this->item->fresh()->ebay_refreshed_at)->not->toBeNull();
+});
+
+test('it retries a degraded render (results shell, no cards) and then ingests', function () {
+    // First fetch: a valid SRP shell with no rendered listings and no
+    // "no matches" message (a degraded render). Second: the real page.
+    Http::fake([
+        'realtime.oxylabs.io/*' => Http::sequence()
+            ->push(['results' => [['content' => '<div class="srp-river-results"></div>']]], 200)
+            ->push(['results' => [['content' => OXY_HTML]]], 200),
+    ]);
+
+    $count = app(IngestEbaySoldComps::class)($this->item);
+
+    expect($count)->toBe(2);
+    expect($this->item->fresh()->ebay_refreshed_at)->not->toBeNull();
+});
+
+test('an anti-bot page is not cached as empty — it keeps synthetic and does not stamp refreshed_at', function () {
+    // No srp markers, no listings → an interstitial/captcha, not a real zero.
+    Http::fake([
+        'realtime.oxylabs.io/*' => Http::response(['results' => [['content' => '<html><body>Pardon Our Interruption... please verify.</body></html>']]], 200),
+    ]);
+
+    $count = app(IngestEbaySoldComps::class)($this->item);
+
+    expect($count)->toBe(0);
+    expect(SaleObservation::where('catalog_item_id', $this->item->id)->where('is_synthetic', true)->count())->toBe(3);
+    // Left null so the next view retries instead of holding a false "no comps".
+    expect($this->item->fresh()->ebay_refreshed_at)->toBeNull();
 });

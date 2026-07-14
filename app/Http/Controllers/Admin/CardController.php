@@ -16,6 +16,7 @@ use App\Models\CollectionItem;
 use App\Models\GradingCompany;
 use App\Models\Set;
 use App\Support\Catalog\StampMatcher;
+use App\Support\Ebay\EbayBlockedException;
 use App\Support\Ebay\EbaySoldSource;
 use App\Support\Ebay\SoldCompClassifier;
 use App\Support\Verticals\Definitions\TcgVertical;
@@ -216,6 +217,15 @@ class CardController extends Controller
             ->value('median') ?? 0);
         $companyIds = GradingCompany::pluck('id', 'slug')->all();
 
+        try {
+            $fetched = $source->fetch($catalogItem);
+        } catch (EbayBlockedException) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'eBay blocked this lookup (anti-bot). Try again in a moment.',
+            ], 502);
+        }
+
         $candidates = array_map(function ($c) use ($catalogItem, $anchor, $companyIds, $classifier) {
             return [
                 'title' => $c->title,
@@ -226,7 +236,7 @@ class CardController extends Controller
                 'image_url' => $c->imageUrl,
                 ...$classifier->diagnose($c, $catalogItem, $anchor, $companyIds),
             ];
-        }, $source->fetch($catalogItem));
+        }, $fetched);
 
         return response()->json([
             'ok' => true,

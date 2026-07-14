@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -66,12 +67,30 @@ export function CompPreviewDialog({
 }
 
 function PreviewBody({ catalogItemId }: { catalogItemId: number }) {
+    // A Retry bumps `attempt`, which re-keys the fetcher so it remounts fresh —
+    // no need to reset state inside the effect.
+    const [attempt, setAttempt] = useState(0);
+
+    return (
+        <PreviewFetch
+            key={attempt}
+            catalogItemId={catalogItemId}
+            onRetry={() => setAttempt((a) => a + 1)}
+        />
+    );
+}
+
+function PreviewFetch({
+    catalogItemId,
+    onRetry,
+}: {
+    catalogItemId: number;
+    onRetry: () => void;
+}) {
     const [data, setData] = useState<Preview | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // The dialog keys this component by card id, so it mounts fresh each open
-        // — one fetch per mount, no reset of prior state needed.
         let alive = true;
 
         fetch(`/admin/cards/${catalogItemId}/comp-preview`, {
@@ -100,7 +119,14 @@ function PreviewBody({ catalogItemId }: { catalogItemId: number }) {
     }, [catalogItemId]);
 
     if (error) {
-        return <p className="py-8 text-center text-sm text-destructive">{error}</p>;
+        return (
+            <div className="flex flex-col items-center gap-3 py-8">
+                <p className="text-center text-sm text-destructive">{error}</p>
+                <Button variant="outline" size="sm" onClick={onRetry}>
+                    Retry
+                </Button>
+            </div>
+        );
     }
 
     if (!data) {

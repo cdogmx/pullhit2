@@ -67,3 +67,31 @@ test('it parses live (quoted) s-card markup and extracts the seller', function (
         // parser still attributes it to this card.
         ->and($cands[0]->soldAt?->toDateString())->toBe('2026-06-11');
 });
+
+// eBay serves its LEGACY "s-item" layout interchangeably with the current
+// s-card one — the price nests inside an <span class=ITALIC>, and the seller
+// lives in an s-item__seller-info-text span ("name (feedback) 100%").
+const EBAY_LEGACY_ITEM = <<<'HTML'
+<li class="s-item s-item__pl-on-bottom"><div class="s-item__image-section"><div class="s-item__image"><a class="s-item__link" href="https://www.ebay.com/itm/226789012345?hash=item42"><div class="s-item__image-wrapper"><img src="https://i.ebayimg.com/images/g/AbC/s-l225.jpg"></div></a></div></div><div class="s-item__info clearfix"><a class="s-item__link" href="https://www.ebay.com/itm/226789012345?hash=item42"><div class="s-item__title"><span role="heading" aria-level="3">Pokemon TCG Scarlet &amp; Violet Black Bolt Booster Bundle Sealed</span></div></a><div class="s-item__subtitle"><span class="SECONDARY_INFO">Brand New</span></div><span class="s-item__price"><span class="ITALIC">$69.99</span></span><div class="s-item__caption"><span class="s-item__caption--signal POSITIVE"><span>Sold  Jul 14, 2026</span></span></div><span class="s-item__seller-info-text">nyrk2014 (5,500) 100%</span></div></li>
+HTML;
+
+test('it parses the legacy s-item layout (nested price, seller-info span)', function () {
+    $cands = EbayHtmlParser::parse(EBAY_LEGACY_ITEM);
+
+    expect($cands)->toHaveCount(1);
+    expect($cands[0]->title)->toBe('Pokemon TCG Scarlet & Violet Black Bolt Booster Bundle Sealed')
+        ->and($cands[0]->priceCents)->toBe(6999)
+        ->and($cands[0]->itemId)->toBe('226789012345')
+        ->and($cands[0]->seller)->toBe('nyrk2014')
+        ->and($cands[0]->soldAt?->toDateString())->toBe('2026-07-14')
+        ->and($cands[0]->imageUrl)->toBe('https://i.ebayimg.com/images/g/AbC/s-l500.jpg');
+});
+
+test('isEmptyResults detects only an explicit zero-match page', function () {
+    expect(EbayHtmlParser::isEmptyResults('<h1>0 results</h1>'))->toBeTrue()
+        ->and(EbayHtmlParser::isEmptyResults('No exact matches found'))->toBeTrue()
+        // A degraded render (srp shell, no cards, no message) is NOT a real zero.
+        ->and(EbayHtmlParser::isEmptyResults('<div class="srp-river-results"></div>'))->toBeFalse()
+        ->and(EbayHtmlParser::isEmptyResults('<html><body>Pardon Our Interruption</body></html>'))->toBeFalse()
+        ->and(EbayHtmlParser::isEmptyResults(''))->toBeFalse();
+});
