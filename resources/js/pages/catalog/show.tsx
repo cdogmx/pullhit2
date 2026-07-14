@@ -7,12 +7,14 @@ import {
     Maximize2,
     Pencil,
     RefreshCw,
+    Search,
     TrendingDown,
     TrendingUp,
 } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
+import { CompPreviewDialog } from '@/components/admin/comp-preview-dialog';
 import { EditCardImageDialog } from '@/components/admin/edit-card-image-dialog';
 import { EbayListings } from '@/components/catalog/ebay-listings';
 import { EbayShopButton } from '@/components/catalog/ebay-shop-button';
@@ -145,6 +147,7 @@ export default function Show({
 }: Props) {
     const user = usePage().props.auth?.user;
     const isAdmin = Boolean(user?.is_admin);
+    const [compPreviewOpen, setCompPreviewOpen] = useState(false);
     const attributes = item.attributes ?? {};
     const printings = item.variants ?? [];
 
@@ -597,20 +600,30 @@ export default function Show({
                                         for qualifying purchases.
                                     </p>
                                     {isAdmin && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={forceRefresh}
-                                            disabled={updating}
-                                        >
-                                            <RefreshCw
-                                                className={cn(
-                                                    'size-4',
-                                                    updating && 'animate-spin',
-                                                )}
-                                            />
-                                            Refresh
-                                        </Button>
+                                        <div className="flex items-center gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setCompPreviewOpen(true)}
+                                            >
+                                                <Search className="size-4" />
+                                                Preview comps
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={forceRefresh}
+                                                disabled={updating}
+                                            >
+                                                <RefreshCw
+                                                    className={cn(
+                                                        'size-4',
+                                                        updating && 'animate-spin',
+                                                    )}
+                                                />
+                                                Refresh
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -621,20 +634,30 @@ export default function Show({
                                         Market value
                                     </span>
                                     {isAdmin && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={forceRefresh}
-                                            disabled={updating}
-                                        >
-                                            <RefreshCw
-                                                className={cn(
-                                                    'size-4',
-                                                    updating && 'animate-spin',
-                                                )}
-                                            />
-                                            Get values
-                                        </Button>
+                                        <div className="flex items-center gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setCompPreviewOpen(true)}
+                                            >
+                                                <Search className="size-4" />
+                                                Preview comps
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={forceRefresh}
+                                                disabled={updating}
+                                            >
+                                                <RefreshCw
+                                                    className={cn(
+                                                        'size-4',
+                                                        updating && 'animate-spin',
+                                                    )}
+                                                />
+                                                Get values
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                                 <div className="mt-2 text-sm text-muted-foreground">
@@ -1056,6 +1079,15 @@ export default function Show({
                     currentUrl={item.image_url ?? null}
                     open={editingImage}
                     onOpenChange={setEditingImage}
+                />
+            )}
+
+            {isAdmin && (
+                <CompPreviewDialog
+                    catalogItemId={item.id}
+                    name={item.display_name ?? item.name}
+                    open={compPreviewOpen}
+                    onOpenChange={setCompPreviewOpen}
                 />
             )}
 

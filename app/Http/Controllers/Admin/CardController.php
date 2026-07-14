@@ -13,8 +13,11 @@ use App\Http\Requests\Admin\StoreCardRequest;
 use App\Http\Requests\Admin\UpdateCardRequest;
 use App\Models\CatalogItem;
 use App\Models\CollectionItem;
+use App\Models\GradingCompany;
 use App\Models\Set;
 use App\Support\Catalog\StampMatcher;
+use App\Support\Ebay\EbaySoldSource;
+use App\Support\Ebay\SoldCompClassifier;
 use App\Support\Verticals\Definitions\TcgVertical;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -178,6 +181,60 @@ class CardController extends Controller
             // Fresh long-term series (per grade tier) so the card page updates its
             // history line live.
             'price_history_long' => $catalogItem->longTermHistoryTiers(),
+        ]);
+    }
+
+    /**
+     * Admin comp-preview: run the LIVE eBay sold search for a card and return
+     * every raw candidate tagged with the classifier's verdict (would-ingest vs
+     * would-reject + the exact reason) plus the resolved priced state. A read-only
+     * window into precisely what a refresh would do — nothing is stored. Costs one
+     * Oxylabs call, so it honours the same daily cap as a refresh.
+     */
+    public function compPreview(
+        CatalogItem $catalogItem,
+        EbaySoldSource $source,
+        SoldCompClassifier $classifier,
+    ): JsonResponse {
+        if (! config('valuation.ebay.enabled')) {
+            return response()->json(['ok' => false, 'message' => 'eBay lookups are disabled.'], 422);
+        }
+
+        $key = 'ebay:daily:'.Carbon::now()->toDateString();
+        Cache::add($key, 0, Carbon::now()->endOfDay());
+
+        if ((int) Cache::get($key, 0) >= (int) config('valuation.ebay.daily_cap')) {
+            return response()->json(['ok' => false, 'message' => 'Daily eBay request cap reached.'], 429);
+        }
+
+        Cache::increment($key);
+
+        // Same anchor the ingest uses: the raw NM (or SEALED) median.
+        $anchor = (int) ($catalogItem->marketValues()
+            ->whereNull('grading_company_id')
+            ->orderByRaw("CASE WHEN state_key IN ('NM', 'SEALED') THEN 0 ELSE 1 END")
+            ->value('median') ?? 0);
+        $companyIds = GradingCompany::pluck('id', 'slug')->all();
+
+        $candidates = array_map(function ($c) use ($catalogItem, $anchor, $companyIds, $classifier) {
+            return [
+                'title' => $c->title,
+                'price' => $c->priceCents,
+                'sold_at' => $c->soldAt?->toIso8601String(),
+                'seller' => $c->seller,
+                'url' => $c->url,
+                'image_url' => $c->imageUrl,
+                ...$classifier->diagnose($c, $catalogItem, $anchor, $companyIds),
+            ];
+        }, $source->fetch($catalogItem));
+
+        return response()->json([
+            'ok' => true,
+            'query' => $source->searchQuery($catalogItem),
+            'url' => $source->soldSearchUrl($catalogItem),
+            'anchor' => $anchor,
+            'ingested' => count(array_filter($candidates, fn ($c) => $c['verdict'] === 'ingest')),
+            'candidates' => $candidates,
         ]);
     }
 

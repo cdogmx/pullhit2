@@ -116,6 +116,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('cards', [CardController::class, 'index'])->name('cards.index');
     Route::post('cards', [CardController::class, 'store'])->name('cards.store');
     Route::post('cards/{catalogItem}/refresh', [CardController::class, 'refresh'])->name('cards.refresh');
+    Route::get('cards/{catalogItem}/comp-preview', [CardController::class, 'compPreview'])->name('cards.comp-preview');
     Route::patch('cards/{catalogItem}', [CardController::class, 'update'])->name('cards.update');
     Route::delete('cards/{catalogItem}', [CardController::class, 'destroy'])->name('cards.destroy');
 });

@@ -56,6 +56,38 @@ class SoldCompClassifier
         return $comp;
     }
 
+    /**
+     * Explain how a candidate would be handled — the admin comp-preview window.
+     * Returns the accept/reject verdict, the priced state it would land in on
+     * accept, and the exact reject reason otherwise. Mirrors classify() gate for
+     * gate (same order, same rules) so the preview shows exactly what a real
+     * refresh would do — no side effects.
+     *
+     * @param  array<string, int>  $companyIds  grading company slug => id
+     * @return array{verdict: 'ingest'|'reject', reason: ?string, state: ?string}
+     */
+    public function diagnose(SoldCandidate $candidate, CatalogItem $item, int $anchorCents, array $companyIds): array
+    {
+        if ($reason = $this->structuralRejectReason($candidate, $item)) {
+            return ['verdict' => 'reject', 'reason' => $reason, 'state' => null];
+        }
+
+        if ($item->item_type === ItemType::Sealed) {
+            return $this->bandOk($candidate->priceCents, $anchorCents)
+                ? ['verdict' => 'ingest', 'reason' => null, 'state' => 'SEALED']
+                : ['verdict' => 'reject', 'reason' => 'price outside sanity band', 'state' => 'SEALED'];
+        }
+
+        $comp = $this->pricedState($candidate, $companyIds);
+        $state = $comp->gradeLabel ?? $comp->condition;
+
+        if ($comp->gradingCompanyId === null && ! $this->bandOk($candidate->priceCents, $anchorCents)) {
+            return ['verdict' => 'reject', 'reason' => 'price outside sanity band', 'state' => $state];
+        }
+
+        return ['verdict' => 'ingest', 'reason' => null, 'state' => $state];
+    }
+
     /** Price within [min, max] × anchor — true when there's no anchor to judge. */
     private function bandOk(int $priceCents, int $anchorCents): bool
     {
@@ -77,17 +109,27 @@ class SoldCompClassifier
      */
     public function structurallyInvalid(SoldCandidate $candidate, CatalogItem $item): bool
     {
+        return $this->structuralRejectReason($candidate, $item) !== null;
+    }
+
+    /**
+     * The specific reason a listing fails the non-price gates, or null when it
+     * passes them all — the reason-returning core of {@see structurallyInvalid()}.
+     * The admin comp-preview shows these verbatim; ingestion just checks for null.
+     */
+    public function structuralRejectReason(SoldCandidate $candidate, CatalogItem $item): ?string
+    {
         $lower = mb_strtolower($candidate->title);
 
         // Sealed products use their own variant-aware gates.
         if ($item->item_type === ItemType::Sealed) {
-            return $this->sealedInvalid($lower, $item);
+            return $this->sealedRejectReason($lower, $item);
         }
 
         // Blocklist — mystery boxes, proxies, codes, repacks, etc.
         foreach ((array) config('valuation.ebay.blocklist', []) as $bad) {
             if (str_contains($lower, $bad)) {
-                return true;
+                return "blocklisted term “{$bad}”";
             }
         }
 
@@ -96,22 +138,26 @@ class SoldCompClassifier
         if (preg_match('/\b(lot|sets|playset|bulk|joblot)\b/', $lower)
             || preg_match('/\bx\s?\d{2,}\b/', $lower)
             || preg_match('/\b\d{2,}\s*cards?\b/', $lower)) {
-            return true;
+            return 'multi-quantity lot';
         }
 
         // Multi-card bundles (e.g. First Partners starter sets).
         if ($this->isMultiCardTitle($lower, $item)) {
-            return true;
+            return 'multiple cards (bundle/set)';
         }
 
         // The card's primary name token must appear.
         $primary = mb_strtolower((string) preg_replace('/[^a-z0-9]/i', '', (string) strtok($item->name, ' ')));
         if ($primary !== '' && ! str_contains((string) preg_replace('/[^a-z0-9]/', '', $lower), $primary)) {
-            return true;
+            return 'title does not name this card';
         }
 
         // Printing match — keep an edition's comps from mixing with another's.
-        return ! $this->printingMatches($item, $lower);
+        if (! $this->printingMatches($item, $lower)) {
+            return 'wrong printing / variant';
+        }
+
+        return null;
     }
 
     /**
@@ -121,7 +167,7 @@ class SoldCompClassifier
      * listing must agree with THIS product's case / Pokémon-Center / Plus status
      * and its sealed type, and must not be a multi-product bundle or lot.
      */
-    private function sealedInvalid(string $lower, CatalogItem $item): bool
+    private function sealedRejectReason(string $lower, CatalogItem $item): ?string
     {
         $name = mb_strtolower($item->name);
 
@@ -130,7 +176,7 @@ class SoldCompClassifier
         // this guard it would kill every real "Booster Bundle" sealed comp.
         foreach ((array) config('valuation.ebay.blocklist', []) as $bad) {
             if (! str_contains($name, $bad) && str_contains($lower, $bad)) {
-                return true;
+                return "blocklisted term “{$bad}”";
             }
         }
 
@@ -138,7 +184,7 @@ class SoldCompClassifier
         // sealed sale — reject by title (don't rely on them being price outliers).
         // "unopened" is safe: the word boundary won't match inside it.
         if (preg_match('/\b(empty|opened|no packs?|box only|packs? removed|no cards?|inserts only)\b/', $lower)) {
-            return true;
+            return 'opened / empty box';
         }
 
         // Multi-product bundles / multi-quantity lots ("2x", "10 box", "lot",
@@ -148,18 +194,22 @@ class SoldCompClassifier
             || preg_match('/\b([2-9]|\d{2,})\s*x\b|\bx\s*([2-9]|\d{2,})\b/', $lower)
             || preg_match('/\b([2-9]|\d{2,})\s*(boxes|box|etbs?|tins?|bundles?|packs?|cases?|decks?)\b/', $lower)
             || str_contains($lower, ' + ')) {
-            return true;
+            return 'multi-product lot';
         }
 
         // The listing must describe this exact sealed variant.
         if (! $this->sealedVariantMatches($item, $lower)) {
-            return true;
+            return 'wrong sealed type / variant';
         }
 
         // The set name's first token must appear (e.g. "crown", "151").
         $primary = mb_strtolower((string) preg_replace('/[^a-z0-9]/i', '', (string) strtok($item->name, ' ')));
 
-        return $primary !== '' && ! str_contains((string) preg_replace('/[^a-z0-9]/', '', $lower), $primary);
+        if ($primary !== '' && ! str_contains((string) preg_replace('/[^a-z0-9]/', '', $lower), $primary)) {
+            return 'title does not name this product';
+        }
+
+        return null;
     }
 
     /**
