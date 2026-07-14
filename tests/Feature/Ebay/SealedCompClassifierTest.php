@@ -57,6 +57,37 @@ test('a Booster Box rejects an ETB listing and a 2-box bundle', function () {
     expect($this->classifier->classify(cand('Pokemon Surging Sparks Booster Box Factory Sealed', 30000), $box, $anchor, $this->companies))->not->toBeNull();
 });
 
+test('a Booster Bundle keeps listings that state its pack count, rejects real lots', function () {
+    $bundle = sealed('Black Bolt Booster Bundle', 'booster_bundle');
+    $anchor = 7000;
+
+    // "6 Packs" is the bundle's CONTENTS, not a quantity — must ingest.
+    foreach ([
+        'Pokemon TCG Scarlet & Violet Black Bolt Booster Bundle - 6 Packs! NEW! SEALED!',
+        'Pokemon Scarlet & Violet Black Bolt Booster Bundle 6 Packs Sealed New TCG',
+        'Pokemon TCG Scarlet & Violet Black Bolt Booster Bundle (6 Packs) EN',
+        'Pokemon TCG Scarlet & Violet Black Bolt Booster Bundle 6 Packs English 2025',
+    ] as $title) {
+        expect($this->classifier->classify(cand($title, 7200), $bundle, $anchor, $this->companies))
+            ->not->toBeNull("should ingest: {$title}");
+    }
+
+    // Genuine multi-quantity — a count of the bundle's OWN unit, a multiplier.
+    expect($this->classifier->classify(cand('Black Bolt Booster Bundle x2 Sealed', 14000), $bundle, $anchor, $this->companies))->toBeNull();
+    expect($this->classifier->classify(cand('Lot of 3 Black Bolt Booster Bundle Sealed', 21000), $bundle, $anchor, $this->companies))->toBeNull();
+    expect($this->classifier->classify(cand('2 Bundles Black Bolt Booster Sealed', 14000), $bundle, $anchor, $this->companies))->toBeNull();
+});
+
+test('a Booster Box keeps its internal pack count (36 packs), rejects a box count', function () {
+    $box = sealed('Prismatic Evolutions Booster Box', 'booster_box');
+    $anchor = 30000;
+
+    // A box legitimately holds 36 packs — the pack count is contents.
+    expect($this->classifier->classify(cand('Prismatic Evolutions Booster Box 36 Packs Factory Sealed', 32000), $box, $anchor, $this->companies))->not->toBeNull();
+    // Two boxes is a lot.
+    expect($this->classifier->classify(cand('Prismatic Evolutions 2 Booster Boxes Sealed', 60000), $box, $anchor, $this->companies))->toBeNull();
+});
+
 test('a sealed comp far outside the band is rejected', function () {
     $box = sealed('Surging Sparks Booster Box', 'booster_box');
 

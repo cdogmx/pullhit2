@@ -187,14 +187,23 @@ class SoldCompClassifier
             return 'opened / empty box';
         }
 
-        // Multi-product bundles / multi-quantity lots ("2x", "10 box", "lot",
-        // "ETB + booster box"). A leading quantity before a product word is the
-        // tell; a bare "Booster Box" / "Set of 5" product name is not caught.
+        // Multi-product lots — an explicit "lot", a quantity multiplier ("2x" /
+        // "x3"), or a "+"-joined multi-product title ("ETB + booster box").
         if (preg_match('/\b(lot|lots)\b/', $lower)
             || preg_match('/\b([2-9]|\d{2,})\s*x\b|\bx\s*([2-9]|\d{2,})\b/', $lower)
-            || preg_match('/\b([2-9]|\d{2,})\s*(boxes|box|etbs?|tins?|bundles?|packs?|cases?|decks?)\b/', $lower)
             || str_contains($lower, ' + ')) {
             return 'multi-product lot';
+        }
+
+        // A COUNT of the product's OWN unit is a lot ("2 booster boxes", "3
+        // bundles", "6 loose packs" for a pack product). But a count of a
+        // sub-unit the product legitimately CONTAINS — a Booster Bundle's "6
+        // Packs", an ETB's "9 Packs", a Booster Box's "36 Packs" — is its
+        // contents, not a lot. So the counted noun is keyed to this product's
+        // own type rather than any product word.
+        $unit = $this->sealedUnitPattern($item);
+        if ($unit !== null && preg_match('/\b([2-9]|\d{2,})\s*(?:'.$unit.')\b/', $lower)) {
+            return 'multi-quantity lot';
         }
 
         // The listing must describe this exact sealed variant.
@@ -251,6 +260,32 @@ class SoldCompClassifier
         $inferred = $this->inferSealedType($name);
 
         return $inferred !== null && $inferred !== $stored && $this->sealedTypePresent($inferred, $lower);
+    }
+
+    /**
+     * A regex alternation of the product's OWN unit noun(s) — the thing that,
+     * when counted ≥2, means a multi-quantity lot. Keyed to the sealed type (or
+     * the type the name states), so a Booster Bundle's "6 Packs" (a sub-unit it
+     * contains) isn't mistaken for a lot, while "2 Bundles" is. Null when the
+     * type is unknown — then only the lot/×N/“+” signals apply.
+     */
+    private function sealedUnitPattern(CatalogItem $item): ?string
+    {
+        $type = $item->getAttribute('attributes')['sealed_type'] ?? null;
+        $type = $type ?: $this->inferSealedType(mb_strtolower($item->name));
+
+        return match ($type) {
+            'booster_box' => 'booster boxes|booster box|boxes',
+            'booster_box_case' => 'cases?',
+            'booster_pack', 'sleeved_booster_pack' => 'packs?',
+            'booster_bundle', 'bundle' => 'bundles?',
+            'elite_trainer_box' => 'etbs?|elite trainer boxes?',
+            'tin' => 'tins?',
+            'collection' => 'collections?',
+            'blister', 'checklane' => 'blisters?|checklanes?',
+            'build_and_battle' => 'build\s*&?\s*battle boxes?|kits?',
+            default => null,
+        };
     }
 
     /** The sealed type a product name states, or null if it names none. */
