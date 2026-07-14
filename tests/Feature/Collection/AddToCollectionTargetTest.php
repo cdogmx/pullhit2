@@ -65,12 +65,28 @@ test('creating a new collection beyond the tier limit is rejected', function () 
     expect($user->collections()->where('name', 'Too many')->exists())->toBeFalse();
 });
 
-test('the targets endpoint lists the user collections and create allowance', function () {
+test('the targets endpoint lists the user collections, their folders, and create allowance', function () {
     $user = buyer();
-    $user->defaultCollection();
+    $collection = $user->defaultCollection();
+    $collection->ensureFolder('Graded');
 
     $this->actingAs($user)->getJson('/collection/targets')
         ->assertOk()
-        ->assertJsonStructure(['targets', 'can_create', 'limit'])
+        ->assertJsonStructure(['targets' => [['id', 'name', 'is_default', 'folders']], 'can_create', 'limit'])
+        ->assertJsonPath('targets.0.folders.0', 'Graded')
         ->assertJsonPath('can_create', true);
+});
+
+test('adding a card files it into a folder inside the chosen collection', function () {
+    $user = buyer();
+    $item = CatalogItem::factory()->create();
+
+    $this->actingAs($user)->post("/collection/{$item->id}/quantity", [
+        'quantity' => 2,
+        'condition' => 'NM',
+        'folder' => 'For trade',
+    ])->assertRedirect();
+
+    expect($user->collectionItems()->where('catalog_item_id', $item->id)->value('folder'))
+        ->toBe('For trade');
 });

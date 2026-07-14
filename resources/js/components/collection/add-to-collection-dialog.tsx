@@ -3,7 +3,7 @@ import { LibraryBig, Minus, Plus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
-import { ListTargetPicker } from '@/components/shared/list-target-picker';
+import { CollectionFolderPicker } from '@/components/collection/collection-folder-picker';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -219,37 +219,22 @@ export function AddToCollectionDialog({
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
-                        {/* Which collection (pick existing or create new) */}
-                        <ListTargetPicker
-                            endpoint="/collection/targets"
-                            label="collection"
+                        {/* Which collection + folder (dropdowns, each with a + to
+                            create). The folder is always scoped to the collection. */}
+                        <CollectionFolderPicker
                             open={open}
-                            onChange={(id, newName) => {
-                                form.setData('collection_id', id);
+                            onChange={(choice) => {
+                                form.setData(
+                                    'collection_id',
+                                    choice.collectionId,
+                                );
                                 form.setData(
                                     'new_collection_name',
-                                    newName ?? '',
+                                    choice.newCollectionName ?? '',
                                 );
+                                form.setData('folder', choice.folder ?? '');
                             }}
                         />
-
-                        {/* Optional folder — a grouping WITHIN the chosen collection. */}
-                        <div className="grid gap-2">
-                            <Label htmlFor="folder">Folder (optional)</Label>
-                            <Input
-                                id="folder"
-                                value={form.data.folder}
-                                onChange={(e) =>
-                                    form.setData('folder', e.target.value)
-                                }
-                                placeholder="e.g. Graded slabs, For trade…"
-                                maxLength={60}
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Files this card into a folder inside the chosen
-                                collection. Type a new name to create one.
-                            </p>
-                        </div>
 
                         {/* Raw vs graded */}
                         <div className="inline-flex rounded-md border border-border p-0.5 text-sm">

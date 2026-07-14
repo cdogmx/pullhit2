@@ -54,6 +54,7 @@ class PublicCollection
                 // Fields the full-edit modal needs (owner only).
                 $holding += [
                     'id' => $ci->id,
+                    'collection_id' => $ci->collection_id,
                     'condition' => $ci->condition?->value,
                     'grade' => $ci->grade,
                     'grading_company' => $ci->gradingCompany ? ['id' => $ci->gradingCompany->id] : null,

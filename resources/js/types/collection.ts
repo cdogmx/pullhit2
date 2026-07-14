@@ -1,5 +1,6 @@
 export type Holding = {
     id: number;
+    collection_id: number;
     state_key: string;
     state_label: string;
     condition: string | null;

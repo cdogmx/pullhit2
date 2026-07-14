@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Actions\Collection\AddToCollection;
+use App\Actions\Collection\BuildCollectionTree;
 use App\Actions\Collection\BuildPortfolio;
 use App\Actions\Collection\CreateCollection;
 use App\Actions\Collection\ExportCollectionCsv;
@@ -334,16 +335,23 @@ class CollectionController extends Controller
      * The user's collections + whether they can create another (for the
      * "add to collection" picker).
      */
-    public function targets(Request $request): JsonResponse
+    public function targets(Request $request, BuildCollectionTree $tree): JsonResponse
     {
         $user = $request->user();
         $limit = Entitlements::for($user)->collectionLimit();
 
+        // Reuse the collection → folder tree so the picker can offer each
+        // collection's own folders (dropdown) alongside the collection dropdown.
+        $targets = collect($tree($user))->map(fn ($c) => [
+            'id' => $c['id'],
+            'name' => $c['name'],
+            'is_default' => $c['is_default'],
+            'folders' => array_map(fn ($f) => $f['name'], $c['folders']),
+        ])->all();
+
         return response()->json([
-            'targets' => $user->collections()->orderByDesc('is_default')->orderBy('name')
-                ->get(['id', 'name', 'is_default'])
-                ->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'is_default' => (bool) $c->is_default]),
-            'can_create' => $user->collections()->count() < $limit,
+            'targets' => $targets,
+            'can_create' => count($targets) < $limit,
             'limit' => $limit === PHP_INT_MAX ? null : $limit,
         ]);
     }

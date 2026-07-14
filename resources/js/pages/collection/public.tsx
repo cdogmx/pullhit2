@@ -32,6 +32,7 @@ type Holding = {
     added_at?: string | null;
     // Owner-only edit fields (present when canEdit).
     id?: number;
+    collection_id?: number;
     condition?: string | null;
     grade?: number | null;
     grading_company?: { id: number } | null;
@@ -101,7 +102,6 @@ export default function PublicCollection({
     summary,
     holdings,
     canEdit = false,
-    collections = [],
     gradingCompanies = [],
 }: Props) {
     const title = folder
@@ -351,6 +351,7 @@ export default function PublicCollection({
                     editing && editing.id != null
                         ? {
                               id: editing.id,
+                              collection_id: editing.collection_id ?? 0,
                               name: editing.name ?? 'Holding',
                               condition: editing.condition ?? null,
                               grade: editing.grade ?? null,
@@ -362,9 +363,6 @@ export default function PublicCollection({
                           }
                         : null
                 }
-                collections={collections
-                    .filter((col) => col.slug !== collection.slug)
-                    .map((col) => ({ id: col.id, name: col.name }))}
                 gradingCompanies={gradingCompanies}
                 open={editing !== null}
                 onOpenChange={(o) => !o && setEditing(null)}

@@ -510,6 +510,7 @@ export function HoldingsTable({
                     editing
                         ? {
                               id: editing.id,
+                              collection_id: editing.collection_id,
                               name:
                                   editing.catalog_item?.display_name ??
                                   editing.catalog_item?.name ??
@@ -526,10 +527,6 @@ export function HoldingsTable({
                           }
                         : null
                 }
-                collections={otherCollections.map((col) => ({
-                    id: col.id,
-                    name: col.name,
-                }))}
                 gradingCompanies={gradingCompanies}
                 open={editing !== null}
                 onOpenChange={(o) => !o && setEditing(null)}

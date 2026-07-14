@@ -1,6 +1,8 @@
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { CollectionFolderPicker } from '@/components/collection/collection-folder-picker';
+import type { CollectionFolderChoice } from '@/components/collection/collection-folder-picker';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -26,6 +28,7 @@ import type { GradingCompanyOption } from '@/types';
 /** The subset of a holding the edit modal reads. */
 export type EditableHolding = {
     id: number;
+    collection_id: number;
     name: string;
     condition: string | null;
     grade: number | null;
@@ -36,8 +39,6 @@ export type EditableHolding = {
     folder: string | null;
 };
 
-export type MoveTarget = { id: number; name: string };
-
 const CONDITIONS = [
     { value: 'NM', label: 'Near Mint' },
     { value: 'LP', label: 'Lightly Played' },
@@ -46,17 +47,13 @@ const CONDITIONS = [
     { value: 'DMG', label: 'Damaged' },
 ];
 
-const KEEP = '__keep__';
-
 export function EditHoldingDialog({
     holding,
-    collections,
     gradingCompanies,
     open,
     onOpenChange,
 }: {
     holding: EditableHolding | null;
-    collections: MoveTarget[];
     gradingCompanies: GradingCompanyOption[];
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -69,7 +66,6 @@ export function EditHoldingDialog({
                     <EditHoldingForm
                         key={holding.id}
                         holding={holding}
-                        collections={collections}
                         gradingCompanies={gradingCompanies}
                         onOpenChange={onOpenChange}
                     />
@@ -81,12 +77,10 @@ export function EditHoldingDialog({
 
 function EditHoldingForm({
     holding,
-    collections,
     gradingCompanies,
     onOpenChange,
 }: {
     holding: EditableHolding;
-    collections: MoveTarget[];
     gradingCompanies: GradingCompanyOption[];
     onOpenChange: (open: boolean) => void;
 }) {
@@ -101,9 +95,12 @@ function EditHoldingForm({
     );
     const [quantity, setQuantity] = useState(String(holding.quantity));
     const [forSale, setForSale] = useState(holding.is_for_sale);
-    const [folder, setFolder] = useState(holding.folder ?? '');
     const [notes, setNotes] = useState(holding.notes ?? '');
-    const [moveTo, setMoveTo] = useState(KEEP);
+    const [choice, setChoice] = useState<CollectionFolderChoice>({
+        collectionId: holding.collection_id,
+        newCollectionName: null,
+        folder: holding.folder,
+    });
     const [saving, setSaving] = useState(false);
 
     const submit = (e: React.FormEvent) => {
@@ -112,7 +109,7 @@ function EditHoldingForm({
         const payload: Record<string, string | number | boolean | null> = {
             quantity: Math.max(0, parseInt(quantity, 10) || 0),
             is_for_sale: forSale,
-            folder: folder.trim() === '' ? null : folder.trim(),
+            folder: choice.folder,
             notes: notes.trim() === '' ? null : notes.trim().slice(0, 1000),
         };
 
@@ -126,8 +123,12 @@ function EditHoldingForm({
             payload.grade = null;
         }
 
-        if (moveTo !== KEEP) {
-            payload.collection_id = Number(moveTo);
+        // A different collection than the holding's current one → move it.
+        if (
+            choice.collectionId != null &&
+            choice.collectionId !== holding.collection_id
+        ) {
+            payload.collection_id = choice.collectionId;
         }
 
         setSaving(true);
@@ -223,25 +224,25 @@ function EditHoldingForm({
                     </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
-                    <div className="grid gap-1.5">
-                        <Label className="text-xs">Quantity</Label>
-                        <Input
-                            type="number"
-                            min={0}
-                            value={quantity}
-                            onChange={(e) => setQuantity(e.target.value)}
-                        />
-                    </div>
-                    <div className="grid gap-1.5">
-                        <Label className="text-xs">Folder</Label>
-                        <Input
-                            value={folder}
-                            onChange={(e) => setFolder(e.target.value)}
-                            placeholder="Optional"
-                        />
-                    </div>
+                <div className="grid gap-1.5">
+                    <Label className="text-xs">Quantity</Label>
+                    <Input
+                        type="number"
+                        min={0}
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                    />
                 </div>
+
+                {/* Collection + folder dropdowns (move + file), each with a + to
+                    create. Folders are scoped to the chosen collection. */}
+                <CollectionFolderPicker
+                    open={true}
+                    initialCollectionId={holding.collection_id}
+                    initialFolder={holding.folder}
+                    allowNewCollection={false}
+                    onChange={setChoice}
+                />
 
                 <label className="flex items-center gap-2 text-sm">
                     <Checkbox
@@ -260,30 +261,6 @@ function EditHoldingForm({
                         maxLength={1000}
                     />
                 </div>
-
-                {collections.length > 0 && (
-                    <div className="grid gap-1.5">
-                        <Label className="text-xs">Move to collection</Label>
-                        <Select value={moveTo} onValueChange={setMoveTo}>
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value={KEEP}>
-                                    Keep here
-                                </SelectItem>
-                                {collections.map((col) => (
-                                    <SelectItem
-                                        key={col.id}
-                                        value={String(col.id)}
-                                    >
-                                        {col.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                )}
             </div>
 
             <DialogFooter>

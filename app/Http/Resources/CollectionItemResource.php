@@ -22,6 +22,7 @@ class CollectionItemResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'collection_id' => $this->collection_id,
             'state_key' => $this->stateKey(),
             'state_label' => $this->stateLabel(),
             'condition' => $this->condition?->value,
