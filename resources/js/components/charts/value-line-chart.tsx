@@ -7,6 +7,7 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
+import { ChartWatermark } from '@/components/charts/chart-watermark';
 import { formatMoney } from '@/lib/format';
 import type { PricePoint } from '@/types';
 
@@ -69,8 +70,13 @@ export function ValueLineChart({
     const color = up ? '#10b981' : '#ef4444';
 
     return (
-        <div className={className} style={{ height }}>
-            <ResponsiveContainer width="100%" height="100%">
+        <div className={`relative ${className ?? ''}`} style={{ height }}>
+            <ChartWatermark />
+            <ResponsiveContainer
+                width="100%"
+                height="100%"
+                className="relative z-10"
+            >
                 <LineChart
                     data={data}
                     margin={{ top: 8, right: 12, bottom: 0, left: 4 }}
