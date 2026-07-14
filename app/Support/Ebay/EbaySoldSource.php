@@ -32,21 +32,31 @@ class EbaySoldSource
 
     public function soldSearchUrl(CatalogItem $item): string
     {
-        $query = $this->searchQuery($item);
-
-        return 'https://www.ebay.com/sch/i.html?'.http_build_query([
-            '_nkw' => $query,
+        $params = [
+            '_nkw' => $this->searchQuery($item),
             '_sacat' => 0,
             'LH_Sold' => 1,
             'LH_Complete' => 1,
             '_ipg' => config('valuation.ebay.max_results', 60),
-        ]);
+        ];
+
+        // Filter to the card's language (eBay "Language" item aspect) so an
+        // English card's comps aren't polluted by Japanese/Chinese printings and
+        // vice-versa. Omitted when the language is unknown (don't over-restrict).
+        if ($language = $this->ebayLanguage($item)) {
+            $params['Language'] = $language;
+        }
+
+        return 'https://www.ebay.com/sch/i.html?'.http_build_query($params);
     }
 
     /**
-     * The eBay keyword string for a catalog item. Singles use the card-identity
-     * form ("Name - Number - Set (CODE) - 1st Edition"); sealed products use the
-     * natural retail wording instead (see {@see sealedSearchQuery()}).
+     * The eBay keyword string for a catalog item. Singles use
+     * "{Game} - {Name} - {Variant} - {Number}" (e.g. "Pokemon - Snivy - Reverse
+     * Holo - 1"); sealed products use the natural retail wording instead (see
+     * {@see sealedSearchQuery()}). The set is left to the Language URL aspect and
+     * the collector number to disambiguate — real listings rarely carry the set
+     * CODE, which only added noise.
      */
     public function searchQuery(CatalogItem $item): string
     {
@@ -54,23 +64,47 @@ class EbaySoldSource
             return $this->sealedSearchQuery($item);
         }
 
-        $parts = [$item->name];
+        $parts = [];
+
+        if ($line = $item->productLine) {
+            $game = trim(Str::ascii($line->name));
+            if ($game !== '') {
+                $parts[] = $game;
+            }
+        }
+
+        $parts[] = $item->name;
+
+        // Pin the search to this exact printing (Reverse Holo / 1st Edition /
+        // Foil / a finish or stamp) — the "variant" component.
+        foreach (CardSearchTerms::qualifiers($item) as $term) {
+            $parts[] = $term;
+        }
 
         if ($item->number) {
             $parts[] = $item->number;
         }
 
-        $set = $item->set;
-        if ($set) {
-            $parts[] = $set->code ? "{$set->name} ({$set->code})" : $set->name;
-        }
-
-        // Pin the search to this exact printing (1st Edition / Shadowless / Reverse …).
-        foreach (CardSearchTerms::qualifiers($item) as $term) {
-            $parts[] = $term;
-        }
-
         return implode(' - ', $parts);
+    }
+
+    /** The eBay "Language" aspect value for a card's language, or null if unknown. */
+    private function ebayLanguage(CatalogItem $item): ?string
+    {
+        $language = $item->language ?? ($item->getAttribute('attributes')['language'] ?? null);
+
+        return match ($language) {
+            'en' => 'English',
+            'ja' => 'Japanese',
+            'ko' => 'Korean',
+            'zh-CN', 'zh-TW' => 'Chinese',
+            'fr' => 'French',
+            'de' => 'German',
+            'it' => 'Italian',
+            'es' => 'Spanish',
+            'pt' => 'Portuguese',
+            default => null,
+        };
     }
 
     /**

@@ -30,16 +30,40 @@ test('qualifiers pin the search to a printing', function () {
     expect(CardSearchTerms::qualifiers($make(['variant' => 'holo'])))->toBe([]);
 });
 
-test('the sold-comp eBay query includes the printing terms', function () {
+test('a single query is game - name - variant - number (no set/code)', function () {
     $item = CatalogItem::factory()->make([
-        'name' => 'Charizard', 'number' => '4',
-        'attributes' => ['variant' => 'holo', 'edition' => 'first_edition'],
+        'name' => 'Snivy', 'number' => '1',
+        'attributes' => ['language' => 'en', 'variant' => 'reverse_holo'],
     ]);
-    $item->setRelation('set', Set::factory()->make(['name' => 'Base', 'code' => 'BS']));
+    $item->setRelation('productLine', ProductLine::factory()->make(['name' => 'Pokémon']));
+    $item->setRelation('set', Set::factory()->make(['name' => 'Black Bolt', 'code' => 'BLK']));
 
     $query = (new EbaySoldSource(app(OxylabsClient::class)))->searchQuery($item);
 
-    expect($query)->toContain('Charizard')->toContain('4')->toContain('Base (BS)')->toContain('1st Edition');
+    expect($query)->toBe('Pokemon - Snivy - Reverse Holo - 1');
+});
+
+test('the sold-comp eBay query still carries every printing qualifier', function () {
+    $item = CatalogItem::factory()->make([
+        'name' => 'Charizard', 'number' => '4',
+        'attributes' => ['language' => 'en', 'variant' => 'holo', 'edition' => 'first_edition'],
+    ]);
+    $item->setRelation('productLine', ProductLine::factory()->make(['name' => 'Pokémon']));
+
+    $query = (new EbaySoldSource(app(OxylabsClient::class)))->searchQuery($item);
+
+    expect($query)->toBe('Pokemon - Charizard - 1st Edition - 4');
+});
+
+test('the sold URL filters to the card language via the Language aspect', function () {
+    $en = CatalogItem::factory()->make(['name' => 'Snivy', 'number' => '1', 'attributes' => ['language' => 'en']]);
+    $ja = CatalogItem::factory()->make(['name' => 'Snivy', 'number' => '1', 'attributes' => ['language' => 'ja']]);
+    $unknown = CatalogItem::factory()->make(['name' => 'Snivy', 'number' => '1', 'attributes' => []]);
+    $src = new EbaySoldSource(app(OxylabsClient::class));
+
+    expect($src->soldSearchUrl($en))->toContain('Language=English')
+        ->and($src->soldSearchUrl($ja))->toContain('Language=Japanese')
+        ->and($src->soldSearchUrl($unknown))->not->toContain('Language=');
 });
 
 test('a sealed query uses natural retail wording, not the card-identity form', function () {
