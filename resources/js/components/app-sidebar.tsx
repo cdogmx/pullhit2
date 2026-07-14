@@ -13,7 +13,6 @@ import {
     Inbox,
     Languages,
     LayoutGrid,
-    LibraryBig,
     Library,
     ListTree,
     PencilRuler,
@@ -29,6 +28,7 @@ import {
     Zap,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
+import { NavCollections } from '@/components/nav-collections';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -53,11 +53,6 @@ const mainNavItems: NavItem[] = [
         title: 'Scan',
         href: '/scan',
         icon: ScanLine,
-    },
-    {
-        title: 'Collection',
-        href: '/collection',
-        icon: LibraryBig,
     },
     {
         title: 'Wishlist',
@@ -191,6 +186,7 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNav} />
+                <NavCollections />
                 <NavMain items={pokemonNavItems} label="Pokémon" />
                 {isAdmin && <NavMain items={adminNav} label="Admin" />}
 

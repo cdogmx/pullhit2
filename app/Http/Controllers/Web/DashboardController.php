@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Actions\Collection\BuildCollectionTree;
 use App\Actions\Collection\BuildPortfolio;
 use App\Http\Controllers\Controller;
 use App\Models\CollectionItem;
@@ -20,7 +21,7 @@ use Inertia\Response;
  */
 class DashboardController extends Controller
 {
-    public function index(Request $request, BuildPortfolio $build): Response
+    public function index(Request $request, BuildPortfolio $build, BuildCollectionTree $tree): Response
     {
         $user = $request->user();
 
@@ -50,6 +51,9 @@ class DashboardController extends Controller
             'portfolioHistory' => $this->portfolioHistory($user),
             'recentScans' => $this->recentScans($user),
             'recent' => $this->recentAdditions($portfolio['items']),
+            // Collection → folder hierarchy with per-collection/per-folder value,
+            // computed from the already-loaded portfolio items (no re-query).
+            'collectionsTree' => $tree($user, $portfolio['items']),
             'counts' => [
                 'collections' => $user->collections()->count(),
                 'wishlists' => $user->wishlists()->count(),

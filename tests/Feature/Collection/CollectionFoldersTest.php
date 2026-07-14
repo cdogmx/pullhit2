@@ -82,3 +82,53 @@ test('a non-owner cannot toggle a folder', function () {
 
     expect($folder->fresh()->is_public)->toBeFalse();
 });
+
+test('an owner can create an empty folder up front', function () {
+    $user = folderUser();
+    $collection = $user->defaultCollection();
+
+    $this->actingAs($user)
+        ->post('/collection/folders', ['collection_id' => $collection->id, 'name' => 'For trade'])
+        ->assertRedirect();
+
+    expect($collection->folders()->where('name', 'For trade')->exists())->toBeTrue();
+
+    // The empty folder is listed on the collection page (count 0).
+    $this->actingAs($user)->get('/collection')
+        ->assertInertia(fn (Assert $p) => $p
+            ->where('folders.0.name', 'For trade')
+            ->where('folders.0.items_count', 0));
+});
+
+test('the owner folder page shows only that folder’s holdings; others 403', function () {
+    $user = folderUser();
+    addToFolder($user, 'Graded', 'Charizard');
+    addToFolder($user, 'Raw', 'Squirtle');
+    $folder = $user->defaultCollection()->ensureFolder('Graded');
+
+    $this->actingAs($user)->get("/collection/folders/{$folder->id}")
+        ->assertOk()
+        ->assertInertia(fn (Assert $p) => $p
+            ->component('collection/folder')
+            ->where('folder.name', 'Graded')
+            ->where('collection.id', $user->defaultCollection()->id)
+            ->has('holdings', 1));
+
+    $this->actingAs(folderUser())
+        ->get("/collection/folders/{$folder->id}")
+        ->assertForbidden();
+});
+
+test('deleting a folder un-files its cards but keeps them in the collection', function () {
+    $user = folderUser();
+    addToFolder($user, 'Graded', 'Charizard');
+    $folder = $user->defaultCollection()->ensureFolder('Graded');
+
+    $this->actingAs($user)
+        ->delete("/collection/folders/{$folder->id}")
+        ->assertRedirect();
+
+    expect($user->defaultCollection()->folders()->whereKey($folder->id)->exists())->toBeFalse()
+        ->and($user->collectionItems()->count())->toBe(1) // card still owned
+        ->and($user->collectionItems()->whereNotNull('folder')->count())->toBe(0); // just un-filed
+});

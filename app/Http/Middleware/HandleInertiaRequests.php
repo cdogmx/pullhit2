@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Actions\Collection\BuildCollectionTree;
 use App\Models\ItemEditSuggestion;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -51,6 +52,11 @@ class HandleInertiaRequests extends Middleware
             // Admin review-queue badge (cheap count; admins only).
             'pendingSuggestions' => $request->user()?->is_admin
                 ? ItemEditSuggestion::where('status', 'pending')->count()
+                : null,
+            // The signed-in user's collection → folder tree for the sidebar nav
+            // (structural: names + counts, no market values). Null when signed out.
+            'collectionTree' => $request->user()
+                ? app(BuildCollectionTree::class)($request->user())
                 : null,
             // Unread in-app notifications badge for the signed-in user.
             'unreadNotifications' => $request->user()?->unreadNotifications()->count() ?? 0,

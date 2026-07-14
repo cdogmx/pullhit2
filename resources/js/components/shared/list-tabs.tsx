@@ -37,6 +37,7 @@ export function ListTabs({
     queryKey,
     entityBase,
     noun,
+    createHint,
 }: {
     lists: ListSummary[];
     active: string;
@@ -45,6 +46,8 @@ export function ListTabs({
     queryKey: string;
     entityBase: string;
     noun: string;
+    /** Optional helper shown under the name input while creating a new list. */
+    createHint?: string;
 }) {
     const [creating, setCreating] = useState(false);
     const [name, setName] = useState('');
@@ -55,6 +58,7 @@ export function ListTabs({
         if (!name.trim()) {
             return;
         }
+
         router.post(
             entityBase,
             { name: name.trim() },
@@ -72,7 +76,9 @@ export function ListTabs({
         if (!current) {
             return;
         }
+
         const next = window.prompt(`Rename ${noun}`, current.name);
+
         if (next && next.trim() && next.trim() !== current.name) {
             router.patch(
                 `${entityBase}/${current.id}`,
@@ -86,6 +92,7 @@ export function ListTabs({
         if (!current) {
             return;
         }
+
         router.patch(
             `${entityBase}/${current.id}`,
             { is_public: !current.is_public },
@@ -97,6 +104,7 @@ export function ListTabs({
         if (!current || current.is_default) {
             return;
         }
+
         if (window.confirm(`Delete “${current.name}”? Its cards move to your default ${noun}.`)) {
             router.delete(`${entityBase}/${current.id}`, { preserveScroll: true });
         }
@@ -159,18 +167,25 @@ export function ListTabs({
             )}
 
             {creating ? (
-                <span className="inline-flex items-center gap-1">
-                    <Input
-                        autoFocus
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && create()}
-                        placeholder={`${noun} name`}
-                        className="h-8 w-40"
-                    />
-                    <Button size="icon" className="size-8" onClick={create}>
-                        <Check className="size-4" />
-                    </Button>
+                <span className="inline-flex flex-col gap-0.5">
+                    <span className="inline-flex items-center gap-1">
+                        <Input
+                            autoFocus
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && create()}
+                            placeholder={`${noun} name`}
+                            className="h-8 w-40"
+                        />
+                        <Button size="icon" className="size-8" onClick={create}>
+                            <Check className="size-4" />
+                        </Button>
+                    </span>
+                    {createHint && (
+                        <span className="text-[11px] text-muted-foreground">
+                            {createHint}
+                        </span>
+                    )}
                 </span>
             ) : atLimit ? (
                 <Button asChild variant="outline" size="sm">

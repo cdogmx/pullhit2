@@ -58,7 +58,13 @@ class SetCollectionQuantity
                 $this->trimLots($holding, $current - $target);
             }
 
-            $holding->update(['quantity' => $target]);
+            $updates = ['quantity' => $target];
+            // File into a folder when one was given — but never wipe an existing
+            // folder on a re-add with the field left blank.
+            if (! empty($attrs['folder'])) {
+                $updates['folder'] = $attrs['folder'];
+            }
+            $holding->update($updates);
 
             return $holding;
         });

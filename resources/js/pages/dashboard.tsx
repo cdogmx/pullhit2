@@ -2,10 +2,13 @@ import { Head, Link } from '@inertiajs/react';
 import {
     ArrowRight,
     Award,
+    Folder,
     Gift,
     Heart,
     Home,
+    Library,
     LibraryBig,
+    Lock,
     Package,
     Plus,
     ScanLine,
@@ -80,6 +83,26 @@ type RecentItem = {
     added_at: string | null;
 };
 
+type FolderNode = {
+    id: number;
+    name: string;
+    slug: string;
+    is_public: boolean;
+    items_count: number;
+    value: number | null;
+};
+
+type CollectionNode = {
+    id: number;
+    name: string;
+    slug: string;
+    is_default: boolean;
+    is_public: boolean;
+    items_count: number;
+    value: number | null;
+    folders: FolderNode[];
+};
+
 type Props = {
     user: {
         name: string;
@@ -100,6 +123,7 @@ type Props = {
     portfolioHistory: PricePoint[];
     recentScans: RecentScan[];
     recent: RecentItem[];
+    collectionsTree: CollectionNode[];
     counts: { collections: number; wishlists: number };
 };
 
@@ -141,6 +165,7 @@ export default function Dashboard({
     portfolioHistory,
     recentScans,
     recent,
+    collectionsTree,
     counts,
 }: Props) {
     const c = portfolio.currency;
@@ -356,6 +381,11 @@ export default function Dashboard({
                             </Card>
                         </div>
 
+                        {/* Your collections → folders hierarchy */}
+                        {collectionsTree.length > 0 && (
+                            <CollectionsCard tree={collectionsTree} currency={c} />
+                        )}
+
                         {/* Community standing */}
                         <Card>
                             <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
@@ -482,6 +512,92 @@ export default function Dashboard({
                 />
             </div>
         </>
+    );
+}
+
+/** The default collection lives at /collection; others carry ?collection=slug. */
+function collectionHref(c: CollectionNode): string {
+    return c.is_default ? '/collection' : `/collection?collection=${c.slug}`;
+}
+
+/**
+ * "Your collections" — the collection → folder hierarchy at a glance. Each
+ * collection shows its value + card count and links through; its folders (which
+ * belong to that collection only) nest beneath it, each linking to its own page.
+ */
+function CollectionsCard({
+    tree,
+    currency,
+}: {
+    tree: CollectionNode[];
+    currency: string;
+}) {
+    return (
+        <Card>
+            <CardContent className="pt-6">
+                <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-sm font-semibold">Your collections</h2>
+                    <Link
+                        href="/collection"
+                        className="text-xs font-medium text-primary hover:underline"
+                    >
+                        Manage →
+                    </Link>
+                </div>
+                <ul className="space-y-1">
+                    {tree.map((col) => (
+                        <li key={col.id}>
+                            <Link
+                                href={collectionHref(col)}
+                                className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent/50"
+                            >
+                                <Library className="size-4 shrink-0 text-muted-foreground" />
+                                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                                    {col.name}
+                                    {col.is_default && (
+                                        <span className="ml-1 text-xs font-normal text-muted-foreground">
+                                            default
+                                        </span>
+                                    )}
+                                    {!col.is_public && (
+                                        <Lock className="ml-1 inline size-3 text-muted-foreground" />
+                                    )}
+                                </span>
+                                <span className="shrink-0 text-xs text-muted-foreground">
+                                    {col.value != null &&
+                                        `${formatMoney(col.value, currency)} · `}
+                                    {col.items_count}{' '}
+                                    {col.items_count === 1 ? 'card' : 'cards'}
+                                </span>
+                            </Link>
+
+                            {col.folders.length > 0 && (
+                                <ul className="mt-0.5 ml-4 space-y-0.5 border-l border-border pl-3">
+                                    {col.folders.map((f) => (
+                                        <li key={f.id}>
+                                            <Link
+                                                href={`/collection/folders/${f.id}`}
+                                                className="flex items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-accent/50"
+                                            >
+                                                <Folder className="size-3.5 shrink-0 text-muted-foreground" />
+                                                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                                                    {f.name}
+                                                </span>
+                                                <span className="shrink-0 text-xs text-muted-foreground">
+                                                    {f.value != null &&
+                                                        `${formatMoney(f.value, currency)} · `}
+                                                    {f.items_count}
+                                                </span>
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </li>
+                    ))}
+                </ul>
+            </CardContent>
+        </Card>
     );
 }
 

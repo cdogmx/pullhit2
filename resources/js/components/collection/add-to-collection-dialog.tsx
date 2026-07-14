@@ -93,6 +93,7 @@ export function AddToCollectionDialog({
         unit_cost: '',
         acquired_at: '',
         source: '',
+        folder: '',
     });
 
     // Load current holdings whenever the dialog opens.
@@ -171,6 +172,7 @@ export function AddToCollectionDialog({
             unit_cost: d.unit_cost ? Math.round(parseFloat(d.unit_cost) * 100) : 0,
             acquired_at: d.acquired_at || null,
             source: d.source || null,
+            folder: d.folder.trim() || null,
             ...(mode === 'graded'
                 ? {
                       grading_company_id: d.grading_company_id || null,
@@ -230,6 +232,24 @@ export function AddToCollectionDialog({
                                 );
                             }}
                         />
+
+                        {/* Optional folder — a grouping WITHIN the chosen collection. */}
+                        <div className="grid gap-2">
+                            <Label htmlFor="folder">Folder (optional)</Label>
+                            <Input
+                                id="folder"
+                                value={form.data.folder}
+                                onChange={(e) =>
+                                    form.setData('folder', e.target.value)
+                                }
+                                placeholder="e.g. Graded slabs, For trade…"
+                                maxLength={60}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Files this card into a folder inside the chosen
+                                collection. Type a new name to create one.
+                            </p>
+                        </div>
 
                         {/* Raw vs graded */}
                         <div className="inline-flex rounded-md border border-border p-0.5 text-sm">

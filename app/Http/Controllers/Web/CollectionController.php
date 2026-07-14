@@ -91,20 +91,93 @@ class CollectionController extends Controller
             ->selectRaw('folder, count(*) as c')->groupBy('folder')
             ->pluck('c', 'folder');
 
-        return collect($counts)->map(function ($count, $name) use ($collection, $user) {
-            $folder = $collection->ensureFolder((string) $name);
+        // Materialise a metadata row for every folder that has holdings, then list
+        // ALL of the collection's folders — including empty ones the user created
+        // up front — with their live counts.
+        foreach ($counts->keys() as $name) {
+            $collection->ensureFolder((string) $name);
+        }
 
-            return [
-                'id' => $folder->id,
-                'name' => $folder->name,
-                'slug' => $folder->slug,
-                'is_public' => $folder->is_public,
-                'items_count' => (int) $count,
-                'public_url' => $folder->is_public && $user->username
-                    ? url("/collection/{$user->username}/{$collection->slug}/folder/{$folder->slug}")
-                    : null,
-            ];
-        })->values()->all();
+        return $collection->folders()->orderBy('name')->get()->map(fn ($folder) => [
+            'id' => $folder->id,
+            'name' => $folder->name,
+            'slug' => $folder->slug,
+            'is_public' => $folder->is_public,
+            'items_count' => (int) ($counts[$folder->name] ?? 0),
+            'public_url' => $folder->is_public && $user->username
+                ? url("/collection/{$user->username}/{$collection->slug}/folder/{$folder->slug}")
+                : null,
+        ])->values()->all();
+    }
+
+    /** Create an (initially empty) folder inside a collection the user owns. */
+    public function storeFolder(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'collection_id' => ['required', 'integer'],
+            'name' => ['required', 'string', 'max:60'],
+        ]);
+
+        $collection = Collection::where('id', $data['collection_id'])
+            ->where('user_id', $request->user()->id)->firstOrFail();
+
+        $collection->ensureFolder($data['name']);
+
+        return back()->with('success', 'Folder created.');
+    }
+
+    /**
+     * Delete a folder: its holdings stay in the collection but lose the folder
+     * label (they move to "no folder"), then the shareable row is removed.
+     */
+    public function destroyFolder(Request $request, CollectionFolder $collectionFolder): RedirectResponse
+    {
+        $collection = $collectionFolder->collection;
+        abort_unless($collection->user_id === $request->user()->id, 403);
+
+        $collection->items()->where('folder', $collectionFolder->name)
+            ->update(['folder' => null]);
+        $collectionFolder->delete();
+
+        return back()->with('success', 'Folder deleted.');
+    }
+
+    /**
+     * A single folder within a collection (owner view) — its holdings, a
+     * folder-scoped summary, breadcrumb context, and the folder's own share
+     * controls. Folders are always scoped to their parent collection.
+     */
+    public function showFolder(Request $request, CollectionFolder $collectionFolder, BuildPortfolio $build): Response
+    {
+        $user = $request->user();
+        $collection = $collectionFolder->collection;
+        abort_unless($collection->user_id === $user->id, 403);
+
+        $portfolio = $build($user, $collection->id, $collectionFolder->name);
+
+        $publicUrl = $collectionFolder->is_public && $user->username
+            ? url("/collection/{$user->username}/{$collection->slug}/folder/{$collectionFolder->slug}")
+            : null;
+
+        return Inertia::render('collection/folder', [
+            'collection' => [
+                'id' => $collection->id,
+                'name' => $collection->name,
+                'slug' => $collection->slug,
+                'is_default' => $collection->is_default,
+            ],
+            'folder' => [
+                'id' => $collectionFolder->id,
+                'name' => $collectionFolder->name,
+                'slug' => $collectionFolder->slug,
+                'is_public' => $collectionFolder->is_public,
+                'public_url' => $publicUrl,
+            ],
+            'holdings' => CollectionItemResource::collection($portfolio['items'])->resolve(),
+            'summary' => $portfolio['summary'],
+            'gradingCompanies' => GradingCompany::orderBy('name')
+                ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
+        ]);
     }
 
     /** Toggle a folder's public/private visibility (owner only). */
@@ -328,6 +401,7 @@ class CollectionController extends Controller
             'unit_cost' => ['nullable', 'integer', 'min:0'],
             'acquired_at' => ['nullable', 'date'],
             'source' => ['nullable', 'string', 'max:255'],
+            'folder' => ['nullable', 'string', 'max:60'],
         ]);
 
         if (! empty($data['new_collection_name'])) {

@@ -123,7 +123,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('collection/import/preview', [CollectionController::class, 'importPreview'])->name('collection.import.preview');
     Route::post('collection/import', [CollectionController::class, 'importStore'])->name('collection.import.store');
     Route::post('collection', [CollectionController::class, 'store'])->name('collection.store');
+    Route::post('collection/folders', [CollectionController::class, 'storeFolder'])->name('collection.folders.store');
+    Route::get('collection/folders/{collectionFolder}', [CollectionController::class, 'showFolder'])->name('collection.folders.show');
     Route::patch('collection/folders/{collectionFolder}', [CollectionController::class, 'updateFolder'])->name('collection.folders.update');
+    Route::delete('collection/folders/{collectionFolder}', [CollectionController::class, 'destroyFolder'])->name('collection.folders.destroy');
     Route::patch('collection/{collectionItem}', [CollectionController::class, 'update'])->name('collection.update');
     Route::delete('collection/{collectionItem}', [CollectionController::class, 'destroy'])->name('collection.destroy');
 
