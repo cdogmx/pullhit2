@@ -569,9 +569,22 @@ function ProductCard({
                                 target{' '}
                                 {money(product.target_price, product.currency)}{' '}
                                 · every {product.check_interval_minutes}m
-                                {product.catalog_name
-                                    ? ` · 📇 ${product.catalog_name}`
-                                    : ''}
+                                {product.catalog_item_id ? (
+                                    <>
+                                        {' · '}
+                                        <a
+                                            href={`/catalog/${product.catalog_item_id}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-0.5 text-primary hover:underline"
+                                        >
+                                            📇 {product.catalog_name ?? 'catalog item'}
+                                            <ExternalLink className="size-3" />
+                                        </a>
+                                    </>
+                                ) : (
+                                    ''
+                                )}
                                 {!product.is_active ? ' · paused' : ''}
                             </p>
                         </div>
