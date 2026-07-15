@@ -95,31 +95,18 @@ class CandidateMatcher
         $score = 0.0;
         $reasons = [];
 
-        if ($numerator !== null && $item->number) {
-            $itemNum = $this->numerator($item->number);
-            if ($card->number && strcasecmp($item->number, $card->number) === 0) {
-                $score += 0.5;
-                $reasons[] = 'number';
-            } elseif ($itemNum === $numerator) {
-                $score += 0.4;
-                $reasons[] = 'number';
-            } elseif (ctype_digit($numerator) && $itemNum !== null && ctype_digit($itemNum)) {
-                // Same-name card carrying a plainly different collector number is
-                // usually a different printing/set — demote (don't reject: the
-                // read number can be misread, and the right card may be missing).
-                $score -= 0.15;
-            }
-        }
-
+        // 1) NAME — the anchor. It's the field the AI reads reliably, so it both
+        //    gates and weights everything else. A real match needs the CORE name
+        //    to agree; a shared mechanic suffix ("ex"/"mega") alone is not a match
+        //    ("Greninja ex" ⇄ "Mega Greninja ex" match on "greninja"; "Mega
+        //    Greninja ex" ⇄ "Mega Charizard ex" don't). nameQuality is the balanced
+        //    (Dice) overlap, so an item carrying EXTRA identity tokens the read
+        //    didn't ("Mega") ranks below the exact name.
         $nameHit = false;
+        $nameQuality = 1.0; // when no name was read, number/code carry full weight
         if ($nameTokens !== []) {
             $itemTokens = $this->tokens($item->name);
             $hits = count(array_intersect($nameTokens, $itemTokens));
-
-            // A real name match needs the CORE name to agree — a shared mechanic
-            // suffix ("ex"/"mega") alone is not a match. "Greninja ex" ⇄ "Mega
-            // Greninja ex" match (share "greninja"); "Mega Greninja ex" ⇄ "Mega
-            // Charizard ex" don't (only "mega"+"ex" in common).
             $readCore = array_diff($nameTokens, self::TYPE_TOKENS);
             $itemCore = array_diff($itemTokens, self::TYPE_TOKENS);
             $coreHit = $readCore === []
@@ -128,41 +115,57 @@ class CandidateMatcher
 
             if ($coreHit) {
                 $nameHit = true;
-                // Balanced (Dice) overlap so an item with EXTRA identity tokens
-                // the read didn't mention ("Mega") scores below the exact name.
-                $dice = 2 * $hits / (count($nameTokens) + count($itemTokens));
-                $score += 0.4 * $dice;
+                $nameQuality = 2 * $hits / (count($nameTokens) + count($itemTokens));
+                $score += 0.4 * $nameQuality;
                 $reasons[] = 'name';
+            } else {
+                // A read name that doesn't match the core name → drop outright. No
+                // number/set-code coincidence rescues a wrong-name card (that's how
+                // "Cinccino ex" landed on "Drowzee #16"). The scanner then asks the
+                // user to search rather than show an unrelated card.
+                return ['item' => $item, 'score' => 0.0, 'reasons' => $reasons];
             }
         }
 
-        // The printed set CODE (e.g. "MEW" = 151, "BLK" = Black Bolt) pins the
-        // exact set far more reliably than the set NAME — the AI rarely reads the
-        // full name, and codes match verbatim where names don't ("MEW" vs "151").
-        $codeMatched = null;
+        // 2) NUMBER — a strong positive, but the AI often misreads/fabricates it,
+        //    so a mismatch is NOT penalised (that punishes the correctly-named
+        //    card) and its credit is SCALED by name quality, so a bare number
+        //    coincidence can't lift a weak partial-name match above an exact one.
+        if ($numerator !== null && $item->number) {
+            if ($card->number && strcasecmp($item->number, $card->number) === 0) {
+                $score += 0.5 * $nameQuality;
+                $reasons[] = 'number';
+            } elseif ($this->numerator($item->number) === $numerator) {
+                $score += 0.4 * $nameQuality;
+                $reasons[] = 'number';
+            }
+        }
+
+        // 3) SET CODE — "MEW" = 151, "BLK" = Black Bolt: pins the exact set where
+        //    the fuzzy set NAME can't. Same treatment as the number: reward a hit
+        //    (scaled by name quality), never penalise a miss.
+        $codeCompared = false;
         if ($card->setCode && $item->set?->code) {
             $read = $this->normCode($card->setCode);
             $itemCode = $this->normCode($item->set->code);
             if ($read !== '' && $itemCode !== '') {
-                $codeMatched = $read === $itemCode;
-                if ($codeMatched) {
-                    $score += 0.35;
+                $codeCompared = true;
+                if ($read === $itemCode) {
+                    $score += 0.35 * $nameQuality;
                     $reasons[] = 'set_code';
-                } else {
-                    $score -= 0.2; // a definite different set
                 }
             }
         }
 
         // Fall back to the fuzzy set NAME only when the code didn't already decide.
-        if ($codeMatched === null && $card->setName && $item->set && $this->setMatches($card->setName, $item->set->name)) {
-            $score += 0.2;
+        if (! $codeCompared && $card->setName && $item->set && $this->setMatches($card->setName, $item->set->name)) {
+            $score += 0.2 * $nameQuality;
             $reasons[] = 'set';
         }
 
-        // Printing: the vision-detected edition/variant breaks the tie between
-        // otherwise-identical printings (Unlimited vs 1st Edition vs Shadowless,
-        // holo vs reverse). A clear mismatch is demoted so it never wins.
+        // 4) PRINTING — the vision-detected edition/variant breaks the tie between
+        //    otherwise-identical printings (Unlimited vs 1st Edition vs Shadowless,
+        //    holo vs reverse). A clear mismatch is demoted so it never wins.
         $attributes = $item->getAttribute('attributes') ?? [];
 
         if ($card->edition && isset($attributes['edition'])) {
@@ -182,15 +185,6 @@ class CandidateMatcher
             } elseif ($reverseMismatch) {
                 $score -= 0.2; // reverse vs non-reverse is a real, value-changing mismatch
             }
-        }
-
-        // A read name that shares NOTHING with this item, kept alive only by a
-        // number coincidence (and no set/edition corroboration), is almost always
-        // the wrong card from a catalog gap. Drop it so the scanner asks the user
-        // to search rather than confidently showing an unrelated card.
-        if ($nameTokens !== [] && ! $nameHit
-            && array_intersect(['name', 'set', 'set_code', 'edition'], $reasons) === []) {
-            return ['item' => $item, 'score' => 0.0, 'reasons' => $reasons];
         }
 
         return ['item' => $item, 'score' => round(min(1.0, max(0.0, $score)), 2), 'reasons' => $reasons];

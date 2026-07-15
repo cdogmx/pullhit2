@@ -187,6 +187,37 @@ test('an exact name outranks one carrying an extra identity word', function () {
         ->toBeLessThan($matches[0]['score']);
 });
 
+test('a number + set-code coincidence never beats the read name', function () {
+    // The AI misreads the number/code; a wrong-name card that happens to share
+    // them ("Drowzee #16 SFA") must NOT win over the correctly-named card.
+    $sfa = Set::factory()->create(['name' => 'Shrouded Fable', 'code' => 'SFA']);
+    CatalogItem::factory()->create(['name' => 'Drowzee', 'number' => '16',
+        'set_id' => $sfa->id, 'attributes' => ['language' => 'en']]);
+    $right = CatalogItem::factory()->create(['name' => 'Cinccino ex', 'number' => '105',
+        'attributes' => ['language' => 'en']]);
+
+    $matches = app(CandidateMatcher::class)->match(new IdentifiedCard(
+        name: 'Cinccino ex', number: '016/064', setName: null, language: 'en', setCode: 'SFA',
+    ));
+
+    expect($matches[0]['item']->id)->toBe($right->id)
+        ->and(collect($matches)->pluck('item.name'))->not->toContain('Drowzee');
+});
+
+test('an exact name beats a partial-name card riding a number coincidence', function () {
+    $exact = CatalogItem::factory()->create(['name' => 'Energy Recycler', 'number' => '108',
+        'attributes' => ['language' => 'en']]);
+    // Shares only the common word "Energy" and matches the (misread) number.
+    CatalogItem::factory()->create(['name' => 'V Guard Energy', 'number' => '169',
+        'attributes' => ['language' => 'en']]);
+
+    $matches = app(CandidateMatcher::class)->match(new IdentifiedCard(
+        name: 'Energy Recycler', number: '169/089', setName: null, language: 'en',
+    ));
+
+    expect($matches[0]['item']->id)->toBe($exact->id);
+});
+
 test('a detected reverse holo demotes the non-reverse printing', function () {
     $holo = CatalogItem::factory()->create(['name' => 'Pikachu', 'number' => '58',
         'attributes' => ['language' => 'en', 'rarity' => 'Common', 'variant' => 'holo']]);
