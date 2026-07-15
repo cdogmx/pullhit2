@@ -203,6 +203,47 @@ export function ScanConfirmCard({
         );
     };
 
+    /**
+     * The user searched for and picked a different card than the scanner offered
+     * — an explicit correction. Teach the recognition cache the right association
+     * (and heal a wrong cache hit) so a re-scan of this exact card is an instant,
+     * AI-free match next time. Quiet + fire-and-forget.
+     */
+    const teachCorrection = (card: CatalogItem) => {
+        const detectedId = detected.candidates[0]?.card.id ?? null;
+
+        if (!detected.fingerprint || card.id === detectedId) {
+            return;
+        }
+
+        const m = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+        void fetch('/scan/feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': m ? decodeURIComponent(m[1]) : '',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                source: detected.source,
+                was_correct: false,
+                phash: detected.fingerprint,
+                identified: id,
+                detected_catalog_item_id: detectedId,
+                corrected_catalog_item_id: card.id,
+            }),
+        }).catch(() => {});
+    };
+
+    const pickManual = (card: CatalogItem | null) => {
+        setManualCard(card);
+
+        if (card) {
+            teachCorrection(card);
+        }
+    };
+
     const add = () => {
         if (!chosen) {
             return;
@@ -411,7 +452,7 @@ export function ScanConfirmCard({
                         <p className="text-sm text-muted-foreground">
                             No catalog match found — search for the right card:
                         </p>
-                        <CatalogSearchSelect onSelect={setManualCard} />
+                        <CatalogSearchSelect onSelect={pickManual} />
                     </div>
                 ) : (
                     <>
@@ -438,7 +479,7 @@ export function ScanConfirmCard({
                         {searchOpen ? (
                             <CatalogSearchSelect
                                 onSelect={(c) => {
-                                    setManualCard(c);
+                                    pickManual(c);
                                     setSearchOpen(false);
                                 }}
                             />
