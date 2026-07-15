@@ -15,6 +15,19 @@ use Illuminate\Database\Eloquent\Builder;
 class CandidateMatcher
 {
     /**
+     * Card-mechanic tokens that are NOT part of a card's core identity: "ex",
+     * "gx", "mega", … appear across thousands of unrelated cards, so a match on
+     * these alone ("Mega Greninja ex" vs "Mega Charizard ex") is meaningless. The
+     * core name (the Pokémon/trainer name) must agree; these only refine the rank.
+     *
+     * @var array<int, string>
+     */
+    protected const TYPE_TOKENS = [
+        'ex', 'gx', 'v', 'vmax', 'vstar', 'vunion', 'break', 'prime',
+        'tag', 'team', 'lv', 'mega',
+    ];
+
+    /**
      * @return array<int, array{item: CatalogItem, score: float, reasons: array<int, string>}>
      */
     public function match(IdentifiedCard $card): array
@@ -25,6 +38,12 @@ class CandidateMatcher
         if ($numerator === null && $nameTokens === []) {
             return []; // nothing to match on
         }
+
+        // Narrow the DB fetch by the CORE name tokens (the Pokémon/trainer name),
+        // not the shared mechanic suffixes — so "Mega Greninja EX" queries on
+        // "greninja", not the flood of every "ex"/"mega" card.
+        $coreTokens = array_values(array_diff($nameTokens, self::TYPE_TOKENS));
+        $queryTokens = $coreTokens !== [] ? $coreTokens : $nameTokens;
 
         // Both a number (hundreds share one) and a broad name token (e.g. "vmax",
         // also hundreds) are individually weak, so an unordered window can drop
@@ -45,11 +64,11 @@ class CandidateMatcher
         $items = CatalogItem::query()
             ->with(['set', 'productLine', 'defaultMarketValue.gradingCompany'])
             ->when($card->language, fn (Builder $q) => $q->where('language', $card->language))
-            ->where(function (Builder $q) use ($numerator, $nameTokens) {
+            ->where(function (Builder $q) use ($numerator, $queryTokens) {
                 if ($numerator !== null) {
                     $q->orWhere('number', 'like', $numerator.'/%')->orWhere('number', $numerator);
                 }
-                foreach ($nameTokens as $t) {
+                foreach ($queryTokens as $t) {
                     $q->orWhere('name', 'like', '%'.$t.'%');
                 }
             })
@@ -77,12 +96,18 @@ class CandidateMatcher
         $reasons = [];
 
         if ($numerator !== null && $item->number) {
+            $itemNum = $this->numerator($item->number);
             if ($card->number && strcasecmp($item->number, $card->number) === 0) {
                 $score += 0.5;
                 $reasons[] = 'number';
-            } elseif ($this->numerator($item->number) === $numerator) {
+            } elseif ($itemNum === $numerator) {
                 $score += 0.4;
                 $reasons[] = 'number';
+            } elseif (ctype_digit($numerator) && $itemNum !== null && ctype_digit($itemNum)) {
+                // Same-name card carrying a plainly different collector number is
+                // usually a different printing/set — demote (don't reject: the
+                // read number can be misread, and the right card may be missing).
+                $score -= 0.15;
             }
         }
 
@@ -90,14 +115,47 @@ class CandidateMatcher
         if ($nameTokens !== []) {
             $itemTokens = $this->tokens($item->name);
             $hits = count(array_intersect($nameTokens, $itemTokens));
-            if ($hits > 0) {
+
+            // A real name match needs the CORE name to agree — a shared mechanic
+            // suffix ("ex"/"mega") alone is not a match. "Greninja ex" ⇄ "Mega
+            // Greninja ex" match (share "greninja"); "Mega Greninja ex" ⇄ "Mega
+            // Charizard ex" don't (only "mega"+"ex" in common).
+            $readCore = array_diff($nameTokens, self::TYPE_TOKENS);
+            $itemCore = array_diff($itemTokens, self::TYPE_TOKENS);
+            $coreHit = $readCore === []
+                ? $hits > 0
+                : array_intersect($readCore, $itemCore) !== [];
+
+            if ($coreHit) {
                 $nameHit = true;
-                $score += 0.4 * ($hits / count($nameTokens));
+                // Balanced (Dice) overlap so an item with EXTRA identity tokens
+                // the read didn't mention ("Mega") scores below the exact name.
+                $dice = 2 * $hits / (count($nameTokens) + count($itemTokens));
+                $score += 0.4 * $dice;
                 $reasons[] = 'name';
             }
         }
 
-        if ($card->setName && $item->set && $this->setMatches($card->setName, $item->set->name)) {
+        // The printed set CODE (e.g. "MEW" = 151, "BLK" = Black Bolt) pins the
+        // exact set far more reliably than the set NAME — the AI rarely reads the
+        // full name, and codes match verbatim where names don't ("MEW" vs "151").
+        $codeMatched = null;
+        if ($card->setCode && $item->set?->code) {
+            $read = $this->normCode($card->setCode);
+            $itemCode = $this->normCode($item->set->code);
+            if ($read !== '' && $itemCode !== '') {
+                $codeMatched = $read === $itemCode;
+                if ($codeMatched) {
+                    $score += 0.35;
+                    $reasons[] = 'set_code';
+                } else {
+                    $score -= 0.2; // a definite different set
+                }
+            }
+        }
+
+        // Fall back to the fuzzy set NAME only when the code didn't already decide.
+        if ($codeMatched === null && $card->setName && $item->set && $this->setMatches($card->setName, $item->set->name)) {
             $score += 0.2;
             $reasons[] = 'set';
         }
@@ -131,7 +189,7 @@ class CandidateMatcher
         // the wrong card from a catalog gap. Drop it so the scanner asks the user
         // to search rather than confidently showing an unrelated card.
         if ($nameTokens !== [] && ! $nameHit
-            && array_intersect(['name', 'set', 'edition'], $reasons) === []) {
+            && array_intersect(['name', 'set', 'set_code', 'edition'], $reasons) === []) {
             return ['item' => $item, 'score' => 0.0, 'reasons' => $reasons];
         }
 
@@ -165,6 +223,12 @@ class CandidateMatcher
         }
 
         return $head;
+    }
+
+    /** Uppercased alphanumeric form of a set code, so "op07"/"OP-07" compare equal. */
+    protected function normCode(string $code): string
+    {
+        return strtoupper((string) preg_replace('/[^0-9A-Za-z]/', '', $code));
     }
 
     /**

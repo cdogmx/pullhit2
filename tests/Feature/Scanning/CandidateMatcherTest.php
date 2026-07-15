@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\CatalogItem;
+use App\Models\Set;
 use App\Support\Scanning\CandidateMatcher;
 use App\Support\Scanning\IdentifiedCard;
 
@@ -130,7 +131,7 @@ test('a single shared set-name word is not a set match', function () {
     // number-only coincidence must still be dropped, not propped up by it.
     CatalogItem::factory()->create([
         'name' => 'Varoom', 'number' => '64',
-        'set_id' => \App\Models\Set::factory()->create(['name' => 'Paldean Fates']),
+        'set_id' => Set::factory()->create(['name' => 'Paldean Fates']),
         'attributes' => ['language' => 'en', 'rarity' => 'Common'],
     ]);
 
@@ -140,6 +141,50 @@ test('a single shared set-name word is not a set match', function () {
     ));
 
     expect($matches)->toBe([]);
+});
+
+test('the set code disambiguates same-name cards across sets', function () {
+    $mew = Set::factory()->create(['name' => '151', 'code' => 'MEW']);
+    $obf = Set::factory()->create(['name' => 'Obsidian Flames', 'code' => 'OBF']);
+    $inMew = CatalogItem::factory()->create(['name' => 'Charizard ex', 'number' => '6',
+        'set_id' => $mew->id, 'attributes' => ['language' => 'en']]);
+    CatalogItem::factory()->create(['name' => 'Charizard ex', 'number' => '125',
+        'set_id' => $obf->id, 'attributes' => ['language' => 'en']]);
+
+    $matches = app(CandidateMatcher::class)->match(new IdentifiedCard(
+        name: 'Charizard ex', number: null, setName: null, language: 'en', setCode: 'MEW',
+    ));
+
+    expect($matches[0]['item']->id)->toBe($inMew->id)
+        ->and($matches[0]['reasons'])->toContain('set_code');
+});
+
+test('a shared mechanic word (Mega/EX) alone is not a name match', function () {
+    // A scan of "Mega Greninja ex" must NOT collapse onto "Mega Charizard ex" —
+    // they share only the mechanic tokens "mega"/"ex", not the core name.
+    CatalogItem::factory()->create(['name' => 'Mega Charizard ex', 'number' => '125',
+        'attributes' => ['language' => 'en']]);
+
+    $matches = app(CandidateMatcher::class)->match(new IdentifiedCard(
+        name: 'Mega Greninja ex', number: null, setName: null, language: 'en',
+    ));
+
+    expect($matches)->toBe([]);
+});
+
+test('an exact name outranks one carrying an extra identity word', function () {
+    $plain = CatalogItem::factory()->create(['name' => 'Greninja ex', 'number' => '106',
+        'attributes' => ['language' => 'en']]);
+    $mega = CatalogItem::factory()->create(['name' => 'Mega Greninja ex', 'number' => '122',
+        'attributes' => ['language' => 'en']]);
+
+    $matches = app(CandidateMatcher::class)->match(new IdentifiedCard(
+        name: 'Greninja ex', number: null, setName: null, language: 'en',
+    ));
+
+    expect($matches[0]['item']->id)->toBe($plain->id)
+        ->and(collect($matches)->firstWhere('item.id', $mega->id)['score'])
+        ->toBeLessThan($matches[0]['score']);
 });
 
 test('a detected reverse holo demotes the non-reverse printing', function () {

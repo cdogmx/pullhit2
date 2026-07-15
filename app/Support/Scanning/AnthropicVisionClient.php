@@ -139,7 +139,10 @@ class AnthropicVisionClient
     protected function identifyInstruction(): string
     {
         return 'Identify this trading card. Read the card name, the collector number exactly as printed '.
-            '(e.g. "029/086"), and the set name. Detect the language/script: en, ja, ko, zh-CN, zh-TW, '.
+            '(e.g. "029/086"), and the set name. Also read the set CODE — the short letters/digits printed '.
+            'in a bottom corner next to the collector number (e.g. "MEW", "PAL", "BLK", "OP07", "SV6"); it '.
+            'is the set abbreviation, NOT the collector number — set it to null if you cannot read it. '.
+            'Detect the language/script: en, ja, ko, zh-CN, zh-TW, '.
             'fr, de, it, es, or pt — never guess English if the script is not Latin. If the card is in a '.
             'professional grading slab (PSA, BGS, CGC, SGC), set is_graded true and read the company and '.
             'numeric grade; otherwise is_graded false. '.
@@ -197,6 +200,7 @@ class AnthropicVisionClient
                     'name' => $nullableString,
                     'number' => $nullableString + ['description' => 'Collector number as printed, e.g. "029/086", or null.'],
                     'set_name' => $nullableString,
+                    'set_code' => $nullableString + ['description' => 'Short set code near the collector number, e.g. "MEW", "PAL", "BLK", "OP07", "SV6", or null.'],
                     'language' => $nullableString + ['description' => 'en, ja, ko, zh-CN, zh-TW, fr, de, it, es, pt, or null.'],
                     'edition' => $nullableString + ['description' => "'first_edition', 'shadowless', 'unlimited', or null. Only when clearly visible."],
                     'variant' => $nullableString + ['description' => "'reverse_holo', 'holo', 'normal', or null. The foil pattern."],
