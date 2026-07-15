@@ -421,11 +421,11 @@ class CollectionController extends Controller
         return back()->with('success', 'Collection updated.');
     }
 
-    public function update(Request $request, CollectionItem $collectionItem, UpdateCollectionItem $update): RedirectResponse
+    public function update(Request $request, CollectionItem $collectionItem, UpdateCollectionItem $update, CreateCollection $create): RedirectResponse
     {
         $this->authorize('update', $collectionItem);
 
-        $update($collectionItem, $request->validate([
+        $data = $request->validate([
             'quantity' => ['sometimes', 'integer', 'min:0', 'max:100000'],
             'is_for_sale' => ['sometimes', 'boolean'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:1000'],
@@ -434,9 +434,18 @@ class CollectionController extends Controller
             'condition' => ['sometimes', 'nullable', Rule::enum(Condition::class)],
             'grading_company_id' => ['sometimes', 'nullable', 'integer', 'exists:grading_companies,id'],
             'grade' => ['sometimes', 'nullable', 'numeric', 'min:1', 'max:10', 'required_with:grading_company_id'],
-            // Move a holding to another of the user's collections.
+            // Move a holding to another of the user's collections, or a new one.
             'collection_id' => ['sometimes', 'integer', Rule::exists('collections', 'id')->where('user_id', $request->user()->id)],
-        ]));
+            'new_collection_name' => ['sometimes', 'nullable', 'string', 'max:60'],
+        ]);
+
+        // "New collection…" from the move picker — create it (tier-gated) first.
+        if (! empty($data['new_collection_name'])) {
+            $data['collection_id'] = $create($request->user(), $data['new_collection_name'])->id;
+        }
+        unset($data['new_collection_name']);
+
+        $update($collectionItem, $data);
 
         return back()->with('success', 'Collection updated.');
     }

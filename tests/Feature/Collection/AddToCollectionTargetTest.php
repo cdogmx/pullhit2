@@ -77,6 +77,25 @@ test('the targets endpoint lists the user collections, their folders, and create
         ->assertJsonPath('can_create', true);
 });
 
+test('editing a holding can move it to a brand-new collection', function () {
+    $user = buyer();
+    $item = CatalogItem::factory()->create();
+    $holding = $user->collectionItems()->create([
+        'collection_id' => $user->defaultCollection()->id,
+        'catalog_item_id' => $item->id,
+        'condition' => 'NM',
+        'quantity' => 1,
+    ]);
+
+    $this->actingAs($user)->patch("/collection/{$holding->id}", [
+        'new_collection_name' => 'Slabs',
+    ])->assertRedirect();
+
+    $created = $user->collections()->where('name', 'Slabs')->first();
+    expect($created)->not->toBeNull()
+        ->and($holding->fresh()->collection_id)->toBe($created->id);
+});
+
 test('adding a card files it into a folder inside the chosen collection', function () {
     $user = buyer();
     $item = CatalogItem::factory()->create();

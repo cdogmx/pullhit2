@@ -123,8 +123,10 @@ function EditHoldingForm({
             payload.grade = null;
         }
 
-        // A different collection than the holding's current one → move it.
-        if (
+        // Move the holding: to a brand-new collection, or a different existing one.
+        if (choice.newCollectionName) {
+            payload.new_collection_name = choice.newCollectionName;
+        } else if (
             choice.collectionId != null &&
             choice.collectionId !== holding.collection_id
         ) {
@@ -240,7 +242,6 @@ function EditHoldingForm({
                     open={true}
                     initialCollectionId={holding.collection_id}
                     initialFolder={holding.folder}
-                    allowNewCollection={false}
                     onChange={setChoice}
                 />
 
