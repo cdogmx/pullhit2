@@ -218,6 +218,44 @@ test('an exact name beats a partial-name card riding a number coincidence', func
     expect($matches[0]['item']->id)->toBe($exact->id);
 });
 
+test('a set-coded number is fetched verbatim and survives a name misread', function () {
+    // One Piece numbers ("OP13-098") carry a set prefix the numerator strips, so
+    // the card must be fetched by its raw number. It should win on the exact
+    // number even when the AI grabbed the wrong text as the name.
+    $op = Set::factory()->create(['name' => 'Carrying on His Will', 'code' => 'OP13']);
+    $right = CatalogItem::factory()->create(['name' => 'Never Existed In The First Place',
+        'number' => 'OP13-098', 'set_id' => $op->id, 'attributes' => ['language' => 'en']]);
+    // A same-word Lorcana coincidence that must not win.
+    CatalogItem::factory()->create(['name' => 'The Cold Never Bothered Me', 'number' => '130',
+        'attributes' => ['language' => 'en']]);
+
+    $matches = app(CandidateMatcher::class)->match(new IdentifiedCard(
+        name: 'Never Existed in the First Place', number: 'OP13-098', setName: null, language: 'en',
+    ));
+
+    expect($matches[0]['item']->id)->toBe($right->id)
+        ->and($matches[0]['reasons'])->toContain('number');
+});
+
+test('a correctly-named card is not crowded out by a common collector number', function () {
+    // 120 popular cards share the number "40"; the unpopular, exactly-named card
+    // must still make the fetch window (ordering leads with the name).
+    CatalogItem::factory()->count(120)->create([
+        'name' => 'Filler Card', 'number' => '40', 'popularity' => 500,
+        'attributes' => ['language' => 'en'],
+    ]);
+    $right = CatalogItem::factory()->create([
+        'name' => 'Sneezy - Startlingly Loud', 'number' => '42', 'popularity' => 1,
+        'attributes' => ['language' => 'en'],
+    ]);
+
+    $matches = app(CandidateMatcher::class)->match(new IdentifiedCard(
+        name: 'Sneezy - Startlingly Loud', number: '40/204', setName: null, language: 'en',
+    ));
+
+    expect($matches[0]['item']->id)->toBe($right->id);
+});
+
 test('a detected reverse holo demotes the non-reverse printing', function () {
     $holo = CatalogItem::factory()->create(['name' => 'Pikachu', 'number' => '58',
         'attributes' => ['language' => 'en', 'rarity' => 'Common', 'variant' => 'holo']]);

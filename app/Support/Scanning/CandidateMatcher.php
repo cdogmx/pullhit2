@@ -28,6 +28,19 @@ class CandidateMatcher
     ];
 
     /**
+     * Common words that carry no identity — dropped from the DB-fetch tokens so a
+     * name full of them ("Never Existed In The First Place") doesn't pull the
+     * whole catalog and crowd the real card out of the window. Kept in scoring.
+     *
+     * @var array<int, string>
+     */
+    protected const STOP_TOKENS = [
+        'the', 'a', 'an', 'of', 'in', 'on', 'to', 'and', 'or', 'for', 'with',
+        'at', 'by', 'from', 'it', 'its', 'his', 'her', 'my', 'your', 'this',
+        'that', 'as', 'is', 'are', 'was', 'be', 'no', 'not',
+    ];
+
+    /**
      * @return array<int, array{item: CatalogItem, score: float, reasons: array<int, string>}>
      */
     public function match(IdentifiedCard $card): array
@@ -39,32 +52,53 @@ class CandidateMatcher
             return []; // nothing to match on
         }
 
-        // Narrow the DB fetch by the CORE name tokens (the Pokémon/trainer name),
-        // not the shared mechanic suffixes — so "Mega Greninja EX" queries on
-        // "greninja", not the flood of every "ex"/"mega" card.
-        $coreTokens = array_values(array_diff($nameTokens, self::TYPE_TOKENS));
-        $queryTokens = $coreTokens !== [] ? $coreTokens : $nameTokens;
+        // Narrow the DB fetch by the DISTINCTIVE name tokens — drop mechanic
+        // suffixes ("ex"/"mega") AND common stop-words ("the"/"in"/"of"), so a
+        // card like "Never Existed In The First Place" queries on
+        // "never/existed/first/place", not the flood of every card with "the".
+        $coreTokens = array_diff($nameTokens, self::TYPE_TOKENS, self::STOP_TOKENS);
+        $queryTokens = $coreTokens !== [] ? array_values($coreTokens) : $nameTokens;
 
-        // Both a number (hundreds share one) and a broad name token (e.g. "vmax",
-        // also hundreds) are individually weak, so an unordered window can drop
-        // the real card. Order by a relevance proxy that rewards matching the
-        // number AND the name together, so the exact card is always in the window.
+        // The full printed number ("OP13-098") verbatim — the numerator strips its
+        // set prefix/format, so a set-coded card must be fetched by its raw number
+        // too, or it never enters the window.
+        $rawNumber = $card->number;
+
+        // A bare collector number (e.g. "40") is shared by hundreds of cards, so
+        // ordering the window by it can crowd out the correctly-named card (which
+        // may be unpopular). Rank by a relevance proxy where the NAME — the anchor
+        // — dominates: a distinctive set-coded exact number is top, then a full
+        // name match, then any name-token match, and only then a bare number.
         $relevance = [];
         $bindings = [];
+        if ($rawNumber !== null) {
+            $relevance[] = '(CASE WHEN `number` = ? THEN 4 ELSE 0 END)';
+            $bindings[] = $rawNumber;
+        }
+        if ($card->name) {
+            $relevance[] = '(CASE WHEN `name` LIKE ? THEN 3 ELSE 0 END)';
+            $bindings[] = '%'.$card->name.'%';
+        }
+        if ($queryTokens !== []) {
+            $likes = implode(' OR ', array_fill(0, count($queryTokens), '`name` LIKE ?'));
+            $relevance[] = "(CASE WHEN {$likes} THEN 2 ELSE 0 END)";
+            foreach ($queryTokens as $t) {
+                $bindings[] = '%'.$t.'%';
+            }
+        }
         if ($numerator !== null) {
             $relevance[] = '(CASE WHEN `number` = ? THEN 2 WHEN `number` LIKE ? THEN 1 ELSE 0 END)';
             $bindings[] = $numerator;
             $bindings[] = $numerator.'/%';
         }
-        if ($card->name) {
-            $relevance[] = '(CASE WHEN `name` LIKE ? THEN 2 ELSE 0 END)';
-            $bindings[] = '%'.$card->name.'%';
-        }
 
         $items = CatalogItem::query()
             ->with(['set', 'productLine', 'defaultMarketValue.gradingCompany'])
             ->when($card->language, fn (Builder $q) => $q->where('language', $card->language))
-            ->where(function (Builder $q) use ($numerator, $queryTokens) {
+            ->where(function (Builder $q) use ($numerator, $rawNumber, $queryTokens) {
+                if ($rawNumber !== null) {
+                    $q->orWhere('number', $rawNumber);
+                }
                 if ($numerator !== null) {
                     $q->orWhere('number', 'like', $numerator.'/%')->orWhere('number', $numerator);
                 }
@@ -95,6 +129,13 @@ class CandidateMatcher
         $score = 0.0;
         $reasons = [];
 
+        // A distinctive EXACT number — one carrying a set prefix ("OP13-098",
+        // "SWSH004") — is a near-unique identifier, strong enough to keep a card
+        // even when the AI misread the name (dense One Piece text, wrong field).
+        $exactNumber = $numerator !== null && $card->number && $item->number
+            && strcasecmp((string) $item->number, (string) $card->number) === 0;
+        $strongExact = $exactNumber && preg_match('/[a-z]/i', (string) $item->number) === 1;
+
         // 1) NAME — the anchor. It's the field the AI reads reliably, so it both
         //    gates and weights everything else. A real match needs the CORE name
         //    to agree; a shared mechanic suffix ("ex"/"mega") alone is not a match
@@ -118,11 +159,12 @@ class CandidateMatcher
                 $nameQuality = 2 * $hits / (count($nameTokens) + count($itemTokens));
                 $score += 0.4 * $nameQuality;
                 $reasons[] = 'name';
-            } else {
+            } elseif (! $strongExact) {
                 // A read name that doesn't match the core name → drop outright. No
                 // number/set-code coincidence rescues a wrong-name card (that's how
                 // "Cinccino ex" landed on "Drowzee #16"). The scanner then asks the
-                // user to search rather than show an unrelated card.
+                // user to search rather than show an unrelated card. Exception: a
+                // distinctive set-coded exact number (above) survives a name miss.
                 return ['item' => $item, 'score' => 0.0, 'reasons' => $reasons];
             }
         }
