@@ -32,6 +32,17 @@ const CONDITIONS = [
     { value: 'SEALED', label: 'Sealed' },
 ];
 
+/** Human labels for the matcher's "why this card" reason keys. */
+const REASON_LABELS: Record<string, string> = {
+    number: 'number',
+    name: 'name',
+    set: 'set name',
+    set_code: 'set code',
+    edition: 'edition',
+    variant: 'foil',
+    recognized: 'prior scan',
+};
+
 /**
  * One detected card in the confirm grid: pick the right catalog match, set the
  * state (raw/graded) + quantity + cost, and add it to the collection. Adds POST
@@ -267,6 +278,7 @@ export function ScanConfirmCard({
                     <span className="font-medium">{id.name ?? 'Unknown card'}</span>{' '}
                     <span className="text-muted-foreground">
                         {id.number}
+                        {id.set_code ? ` · ${id.set_code}` : ''}
                         {id.set_name ? ` · ${id.set_name}` : ''}
                         {id.language ? ` · ${languageLabel(id.language)}` : ''}
                     </span>
@@ -314,6 +326,30 @@ export function ScanConfirmCard({
                         )}
                     </div>
                 )}
+
+                {/* Why the top match was chosen — so a wrong pick is easy to spot
+                    (e.g. matched on name only, no number/set corroboration). */}
+                {chosen &&
+                    chosen.reasons.length > 0 &&
+                    chosen.reasons[0] !== 'manual' && (
+                        <div className="flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
+                            <span>Matched on</span>
+                            {chosen.reasons.map((r) => (
+                                <Badge
+                                    key={r}
+                                    variant="secondary"
+                                    className="px-1.5 py-0 text-[10px] font-normal"
+                                >
+                                    {REASON_LABELS[r] ?? r}
+                                </Badge>
+                            ))}
+                            {chosen.score < 0.5 && (
+                                <span className="font-medium text-amber-600 dark:text-amber-500">
+                                    · low confidence — verify or search
+                                </span>
+                            )}
+                        </div>
+                    )}
 
                 {/* Detection-quality feedback — teaches the cache + flags AI misses. */}
                 {detected.candidates.length > 0 && (

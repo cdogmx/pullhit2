@@ -15,6 +15,7 @@ export type ScanIdentified = {
     name: string | null;
     number: string | null;
     set_name: string | null;
+    set_code: string | null;
     language: string | null;
     is_graded: boolean;
     grading_company: string | null;

@@ -101,6 +101,7 @@ class ScanCards
                 'name' => $card->name,
                 'number' => $card->number,
                 'set_name' => $card->setName,
+                'set_code' => $card->setCode,
                 'language' => $card->language,
                 'is_graded' => $card->isGraded,
                 'grading_company' => $card->gradingCompany,
