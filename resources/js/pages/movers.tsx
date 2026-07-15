@@ -18,7 +18,7 @@ type Mover = {
     href: string | null;
     image: string | null;
     value: number | null;
-    /** 30-day change as a percent (e.g. 15 = +15%). */
+    /** Change over the selected window as a percent (e.g. 15 = +15%). */
     trend: number;
     /** Dollar change over the window, in cents (signed). */
     change: number | null;
@@ -30,6 +30,7 @@ type Filters = {
     line: string | null;
     set: string | null;
     type: string | null;
+    window: string | null;
 };
 
 type Props = Filters & {
@@ -46,6 +47,20 @@ const TYPES = [
     { key: 'sealed', label: 'Sealed' },
 ] as const;
 
+const WINDOWS = [
+    { key: 'daily', label: 'Daily' },
+    { key: '7d', label: '7D' },
+    { key: '30d', label: '30D' },
+    { key: '90d', label: '90D' },
+] as const;
+
+const WINDOW_TEXT: Record<string, string> = {
+    daily: 'day-over-day',
+    '7d': '7-day',
+    '30d': '30-day',
+    '90d': '90-day',
+};
+
 export default function Movers({
     gainers,
     losers,
@@ -54,12 +69,14 @@ export default function Movers({
     line,
     set,
     type,
+    window,
     meta,
 }: Props) {
+    const activeWindow = window ?? 'daily';
     // Navigate with a patched filter set; dropping a filter clears it, and
     // changing the brand resets the set (a set only exists within one brand).
     const go = (patch: Partial<Filters>) => {
-        const next: Filters = { line, set, type, ...patch };
+        const next: Filters = { line, set, type, window, ...patch };
         const query = Object.fromEntries(
             Object.entries(next).filter(([, v]) => v),
         );
@@ -82,9 +99,33 @@ export default function Movers({
                         Biggest movers
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        The largest 30-day swings on real sold-price data —
-                        ungraded values with at least a few recent sales.
+                        The largest {WINDOW_TEXT[activeWindow] ?? '30-day'} swings
+                        on real sold-price data — ungraded values re-priced
+                        recently, with at least a few sales.
                     </p>
+                </div>
+
+                {/* Window: daily · 7d · 30d · 90d */}
+                <div className="mb-4 inline-flex items-center gap-0.5 rounded-md border border-border p-0.5">
+                    {WINDOWS.map((w) => {
+                        const active = activeWindow === w.key;
+
+                        return (
+                            <button
+                                key={w.key}
+                                type="button"
+                                onClick={() => go({ window: w.key })}
+                                className={cn(
+                                    'rounded px-3 py-1 text-xs font-medium transition-colors',
+                                    active
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                )}
+                            >
+                                {w.label}
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* Filters: brand · set · item type */}
