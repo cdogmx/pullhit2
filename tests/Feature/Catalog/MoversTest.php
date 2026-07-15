@@ -8,6 +8,7 @@ use App\Models\Set;
 use App\Models\ValueSnapshot;
 use App\Models\Vertical;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /** Seed a today + yesterday value snapshot so the DAILY move equals $trend. */
@@ -49,6 +50,10 @@ function moverCard(ProductLine $line, string $name, float $trend, int $median = 
 }
 
 beforeEach(function () {
+    // Movers are cached by the latest snapshot day; every test shares "today",
+    // so clear it to keep tests isolated.
+    Cache::flush();
+
     $vertical = Vertical::factory()->create(['slug' => 'tcg']);
     $this->line = ProductLine::factory()->for($vertical)->create(['slug' => 'pokemon', 'name' => 'Pokémon']);
 });

@@ -12,6 +12,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -135,6 +136,27 @@ class MoversController extends Controller
             return collect();
         }
 
+        // The moves only change when a new day's snapshots land, so cache them
+        // keyed by the latest snapshot day (+ window + filters) — the ~6k-row
+        // correlated baseline lookup then runs once per day, not per request. The
+        // refDate in the key self-invalidates when the daily job advances it.
+        $key = sprintf(
+            'movers:%s:%d:%s:%s:%s',
+            $refDate, $windowDays,
+            $filters['lineId'] ?? '', $filters['setId'] ?? '', $filters['type']?->value ?? '',
+        );
+
+        return Cache::remember($key, now()->addHours(12), fn () => $this->queryMoves($filters, $windowDays, $refDate));
+    }
+
+    /**
+     * The uncached move computation (see {@see computeMoves()} for the caching).
+     *
+     * @param  array{lineId: int|null, setId: int|null, type: ItemType|null}  $filters
+     * @return Collection<int, array{id: int, value: int, trend: float, change: int}>
+     */
+    private function queryMoves(array $filters, int $windowDays, string $refDate): Collection
+    {
         // "Fresh" = re-valued in the last day (daily) or few days (longer windows).
         $freshFrom = Carbon::parse($refDate)->subDays(min($windowDays, 3))->toDateString();
         // The baseline is the latest snapshot on-or-before this cutoff (computed
