@@ -323,9 +323,10 @@ class CatalogController extends Controller
             // data), keyed by grade tier — a separate multi-year line the chart
             // picks per selected state. Empty until synced.
             'priceHistoryLong' => $model->longTermHistoryTiers(),
-            // The single most recent REAL sold comp (raw state) — the headline
-            // trust signal ("last sold $X, Yd ago"), null when none.
-            'lastSale' => $this->lastSale($catalogItem),
+            // The most recent REAL sold comp per priced state — the headline
+            // trust signal ("last sold $X, Yd ago"), so it tracks the chart's
+            // state dropdown. Keyed by state_key; a state with no sale is absent.
+            'lastSales' => $catalogItem->lastSalesByState(),
             'ownership' => $this->ownership($request, $model),
             'wishlisted' => (bool) $request->user()?->wishlistItems()
                 ->where('catalog_item_id', $catalogItem->id)->exists(),
@@ -386,28 +387,6 @@ class CatalogController extends Controller
     protected function otherLanguages(CatalogItem $item): array
     {
         return app(CrossLanguageMatcher::class)->forItem($item);
-    }
-
-    /**
-     * The newest REAL (non-synthetic, non-outlier) raw sold comp — the "last
-     * sold $X, Yd ago" headline signal. Null when a card has no real sales.
-     *
-     * @return array{price: int, sold_at: string, venue: string}|null
-     */
-    protected function lastSale(CatalogItem $item): ?array
-    {
-        $o = $item->saleObservations()
-            ->whereNull('grading_company_id')
-            ->where('is_synthetic', false)
-            ->where('is_outlier', false)
-            ->orderByDesc('observed_at')
-            ->first(['price', 'observed_at', 'venue']);
-
-        return $o ? [
-            'price' => (int) $o->price,
-            'sold_at' => $o->observed_at->toIso8601String(),
-            'venue' => $o->venue->value,
-        ] : null;
     }
 
     /**

@@ -62,36 +62,14 @@ class CatalogController extends Controller
             'market_values' => MarketValueResource::collection($catalogItem->marketValues),
             'refreshed_at' => $catalogItem->ebay_refreshed_at?->toIso8601String(),
             'refreshing' => $refreshing,
-            // The "last sold" signal can change after a refresh — return it so the
-            // page updates it in the same poll (no reload).
-            'last_sale' => $this->lastSale($catalogItem),
+            // The "last sold" signal (per priced state) can change after a refresh
+            // — return it so the page updates it in the same poll (no reload).
+            'last_sales' => $catalogItem->lastSalesByState(),
             // Long-term monthly history (PriceCharting), keyed by grade tier — so a
             // card that syncs it after load (or on refresh) shows the "Max" line
             // without a reload.
             'price_history_long' => $catalogItem->longTermHistoryTiers(),
         ]);
-    }
-
-    /**
-     * The newest REAL (non-synthetic, non-outlier) raw sold comp — the "last sold
-     * $X, Yd ago" headline signal. Mirrors the web controller's card render.
-     *
-     * @return array{price: int, sold_at: string, venue: string}|null
-     */
-    private function lastSale(CatalogItem $catalogItem): ?array
-    {
-        $o = $catalogItem->saleObservations()
-            ->whereNull('grading_company_id')
-            ->where('is_synthetic', false)
-            ->where('is_outlier', false)
-            ->orderByDesc('observed_at')
-            ->first(['price', 'observed_at', 'venue']);
-
-        return $o ? [
-            'price' => (int) $o->price,
-            'sold_at' => $o->observed_at->toIso8601String(),
-            'venue' => $o->venue->value,
-        ] : null;
     }
 
     /**

@@ -178,6 +178,44 @@ class CatalogItem extends Model
     }
 
     /**
+     * The newest REAL (non-synthetic, non-outlier) sold comp for EACH priced
+     * state, keyed by its market_values state_key ("NM", "psa-10", …) — the "last
+     * sold" signal per condition/grade, so the card page can show it for whichever
+     * state the chart dropdown selects. States with no real sale are absent.
+     *
+     * @return array<string, array{price: int, sold_at: string, venue: string}>
+     */
+    public function lastSalesByState(): array
+    {
+        $companies = GradingCompany::pluck('slug', 'id'); // id => slug (no N+1)
+
+        $out = [];
+        $observations = $this->saleObservations()
+            ->where('is_synthetic', false)
+            ->where('is_outlier', false)
+            ->orderByDesc('observed_at')
+            ->get(['price', 'observed_at', 'venue', 'condition', 'grading_company_id', 'grade']);
+
+        foreach ($observations as $o) {
+            // The same key market_values uses (PricedStateKey), built inline off
+            // the preloaded company slugs.
+            $key = $o->grading_company_id !== null
+                ? ($companies[$o->grading_company_id] ?? "company{$o->grading_company_id}")
+                    .'-'.($o->grade !== null ? rtrim(rtrim(sprintf('%.1f', (float) $o->grade), '0'), '.') : '?')
+                : ($o->condition?->value ?? 'raw');
+
+            // Newest-first, so the first row for a state is its last sale.
+            $out[$key] ??= [
+                'price' => (int) $o->price,
+                'sold_at' => $o->observed_at->toIso8601String(),
+                'venue' => $o->venue->value,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * Deals-tracker products watching this card for in-stock-at-target offers —
      * the single source of "where to buy" links (retailer, live price, stock).
      *

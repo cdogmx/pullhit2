@@ -71,8 +71,11 @@ type Props = {
     priceHistory: PriceHistory;
     /** Long-term monthly series (PriceCharting), keyed by grade tier, for "Max". */
     priceHistoryLong: Record<string, PricePoint[]>;
-    /** The most recent real sold comp (raw state), or null. */
-    lastSale: { price: number; sold_at: string; venue: string } | null;
+    /** The most recent real sold comp per priced state (keyed by state_key). */
+    lastSales: Record<
+        string,
+        { price: number; sold_at: string; venue: string }
+    >;
     /** The viewer's owned copies of this card, or null. */
     ownership: OwnedState[] | null;
     /** Whether the viewer has this card on their wishlist. */
@@ -137,7 +140,7 @@ export default function Show({
     refreshedAt: initialRefreshedAt,
     priceHistory,
     priceHistoryLong: initialPriceHistoryLong,
-    lastSale: initialLastSale,
+    lastSales: initialLastSales,
     ownership,
     sealedTypes,
     languages,
@@ -160,7 +163,7 @@ export default function Show({
     // price-history chart's series too.
     const [values, setValues] = useState(item.market_values ?? []);
     const [refreshedAt, setRefreshedAt] = useState(initialRefreshedAt);
-    const [lastSale, setLastSale] = useState(initialLastSale);
+    const [lastSales, setLastSales] = useState(initialLastSales);
     const [longTerm, setLongTerm] = useState(initialPriceHistoryLong);
     const [updating, setUpdating] = useState(refreshing);
     const [chartVersion, setChartVersion] = useState(0);
@@ -175,6 +178,8 @@ export default function Show({
     );
     const headline =
         values.find((v) => v.state_key === selectedStateKey) ?? defaultState;
+    // "Last sold" tracks the selected state too (null when that state has no sale).
+    const lastSale = headline ? (lastSales[headline.state_key] ?? null) : null;
 
     // Sealed appreciation: how the current sealed value compares to the original
     // release MSRP (both in cents). Only meaningful for sealed product with an
@@ -252,7 +257,7 @@ export default function Show({
                 if (body.refreshed_at && body.refreshed_at !== baseline) {
                     setValues(body.market_values ?? []);
                     setRefreshedAt(body.refreshed_at);
-                    setLastSale(body.last_sale ?? null);
+                    setLastSales(body.last_sales ?? {});
 
                     if (body.price_history_long) {
                         setLongTerm(body.price_history_long);
