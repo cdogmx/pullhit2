@@ -164,9 +164,17 @@ export default function Show({
     const [longTerm, setLongTerm] = useState(initialPriceHistoryLong);
     const [updating, setUpdating] = useState(refreshing);
     const [chartVersion, setChartVersion] = useState(0);
-    const headline =
+    // The headline state (NM/SEALED, else the first). The price-history chart's
+    // state dropdown is lifted here, so picking e.g. "PSA 10" updates the
+    // displayed value, label, and "see the comps" too — not just the chart.
+    const defaultState =
         values.find((v) => v.state_key === 'NM' || v.state_key === 'SEALED') ??
         values[0];
+    const [selectedStateKey, setSelectedStateKey] = useState<string | undefined>(
+        defaultState?.state_key,
+    );
+    const headline =
+        values.find((v) => v.state_key === selectedStateKey) ?? defaultState;
 
     // Sealed appreciation: how the current sealed value compares to the original
     // release MSRP (both in cents). Only meaningful for sealed product with an
@@ -555,7 +563,8 @@ export default function Show({
                                         label: v.label,
                                         grade: v.grade,
                                     }))}
-                                    defaultStateKey={headline.state_key}
+                                    defaultStateKey={defaultState?.state_key}
+                                    onStateChange={setSelectedStateKey}
                                     longTermByTier={longTerm}
                                     refreshKey={chartVersion}
                                 />

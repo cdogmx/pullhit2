@@ -74,6 +74,7 @@ export function PriceHistoryChart({
     itemId,
     states = [],
     defaultStateKey,
+    onStateChange,
     longTermByTier = {},
     refreshKey = 0,
 }: {
@@ -84,6 +85,9 @@ export function PriceHistoryChart({
     states?: ChartState[];
     /** The state_key the server-rendered `history` belongs to. */
     defaultStateKey?: string;
+    /** Notifies the parent which priced state is selected, so the page's headline
+     *  value/label can track the chart's dropdown. */
+    onStateChange?: (stateKey: string) => void;
     /** Long-term monthly series (PriceCharting) per grade tier — powers "Max". */
     longTermByTier?: LongTermByTier;
     /** Bump to force a re-fetch of the shown series (e.g. after a live refresh). */
@@ -91,6 +95,13 @@ export function PriceHistoryChart({
 }) {
     const initialKey = defaultStateKey ?? states[0]?.state_key ?? '';
     const [stateKey, setStateKey] = useState(initialKey);
+
+    // Switch the shown series AND report the choice up so the page's headline
+    // price tracks the dropdown.
+    const chooseState = (key: string) => {
+        setStateKey(key);
+        onStateChange?.(key);
+    };
 
     // The multi-year line tracks the selected state's grade (ungraded vs a slab).
     const longTerm = useMemo(
@@ -239,7 +250,7 @@ export function PriceHistoryChart({
                 </p>
                 <div className="flex items-center gap-2">
                     {states.length > 1 && (
-                        <Select value={stateKey} onValueChange={setStateKey}>
+                        <Select value={stateKey} onValueChange={chooseState}>
                             <SelectTrigger className="h-7 w-auto gap-1 text-xs">
                                 <SelectValue />
                             </SelectTrigger>
