@@ -18,7 +18,7 @@ type Target = {
     folders: string[];
 };
 
-type TargetsResponse = {
+export type CollectionTargets = {
     targets: Target[];
     can_create: boolean;
     limit: number | null;
@@ -46,6 +46,7 @@ export function CollectionFolderPicker({
     initialFolder = null,
     includeFolder = true,
     allowNewCollection = true,
+    preloaded,
     onChange,
 }: {
     /** Fetch only once true (the parent dialog is open). */
@@ -55,13 +56,23 @@ export function CollectionFolderPicker({
     includeFolder?: boolean;
     /** The edit/move flow can't create collections — hide the collection "+". */
     allowNewCollection?: boolean;
+    /** Skip the fetch when the caller already has the targets (e.g. a scan grid
+     *  that loads them once for many cards). */
+    preloaded?: CollectionTargets;
     onChange: (choice: CollectionFolderChoice) => void;
 }) {
-    const [data, setData] = useState<TargetsResponse | null>(null);
+    const [data, setData] = useState<CollectionTargets | null>(preloaded ?? null);
 
-    const [collectionId, setCollectionId] = useState<number | null>(
-        initialCollectionId,
-    );
+    const [collectionId, setCollectionId] = useState<number | null>(() => {
+        if (initialCollectionId != null) {
+            return initialCollectionId;
+        }
+
+        const def =
+            preloaded?.targets.find((t) => t.is_default) ?? preloaded?.targets[0];
+
+        return def?.id ?? null;
+    });
     const [creatingCollection, setCreatingCollection] = useState(false);
     const [newCollection, setNewCollection] = useState('');
 
@@ -70,8 +81,9 @@ export function CollectionFolderPicker({
     const [newFolder, setNewFolder] = useState('');
 
     // Load targets once the dialog opens; seed the collection to the default.
+    // Skipped entirely when the caller preloaded them.
     useEffect(() => {
-        if (!open || data) {
+        if (preloaded || !open || data) {
             return;
         }
 
@@ -81,7 +93,7 @@ export function CollectionFolderPicker({
             credentials: 'same-origin',
         })
             .then((r) => r.json())
-            .then((d: TargetsResponse) => {
+            .then((d: CollectionTargets) => {
                 if (!active) {
                     return;
                 }

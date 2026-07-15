@@ -2,6 +2,11 @@ import { router } from '@inertiajs/react';
 import { Check, Search, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { CollectionFolderPicker } from '@/components/collection/collection-folder-picker';
+import type {
+    CollectionFolderChoice,
+    CollectionTargets,
+} from '@/components/collection/collection-folder-picker';
 import { CardPickTile } from '@/components/scan/card-pick-tile';
 import { CatalogSearchSelect } from '@/components/scan/catalog-search-select';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +43,7 @@ export function ScanConfirmCard({
     scanPhoto = null,
     index = 0,
     onChosenChange,
-    folders = [],
+    targets = null,
 }: {
     detected: ScanDetected;
     gradingCompanies: GradingCompanyOption[];
@@ -49,8 +54,9 @@ export function ScanConfirmCard({
     /** Notifies the parent which catalog item is currently selected (for the
      *  scanned-value total + scroller), or null when nothing matches. */
     onChosenChange?: (index: number, card: CatalogItem | null) => void;
-    /** The user's existing collection folders, for the add-to-folder picker. */
-    folders?: string[];
+    /** The user's collections + folders, loaded once by the scan page and shared
+     *  across every card so the picker doesn't fetch per card. */
+    targets?: CollectionTargets | null;
 }) {
     const id = detected.identified;
     // The per-card crop (bulk) or the whole scanned photo (single) to show.
@@ -64,7 +70,11 @@ export function ScanConfirmCard({
     const [grade, setGrade] = useState(id.grade != null ? String(id.grade) : '');
     const [quantity, setQuantity] = useState(1);
     const [cost, setCost] = useState('');
-    const [folder, setFolder] = useState('');
+    const [choice, setChoice] = useState<CollectionFolderChoice>({
+        collectionId: null,
+        newCollectionName: null,
+        folder: null,
+    });
     const [busy, setBusy] = useState(false);
     const [added, setAdded] = useState(false);
     // How many of the chosen card the user already owns (keyed by card id so a
@@ -188,13 +198,15 @@ export function ScanConfirmCard({
         }
 
         setBusy(true);
-        const trimmedFolder = folder.trim();
         const cardId = chosen.card.id;
         const payload = {
             catalog_item_id: cardId,
             quantity,
             unit_cost: cost ? Math.round(parseFloat(cost) * 100) : 0,
-            ...(trimmedFolder ? { folder: trimmedFolder } : {}),
+            // Which collection + folder (dropdowns, each with a + to create new).
+            collection_id: choice.newCollectionName ? null : choice.collectionId,
+            new_collection_name: choice.newCollectionName,
+            folder: choice.folder,
             ...(mode === 'graded'
                 ? { grading_company_id: companyId || null, grade: grade ? Number(grade) : null }
                 : { condition }),
@@ -497,26 +509,15 @@ export function ScanConfirmCard({
                                             placeholder="0.00"
                                         />
                                     </div>
-                                    <div className="grid gap-1">
-                                        <Label className="text-xs">Folder</Label>
-                                        <Input
-                                            list={`folders-${index}`}
-                                            value={folder}
-                                            onChange={(e) =>
-                                                setFolder(e.target.value)
-                                            }
-                                            placeholder="Optional"
-                                            maxLength={255}
-                                        />
-                                        {folders.length > 0 && (
-                                            <datalist id={`folders-${index}`}>
-                                                {folders.map((f) => (
-                                                    <option key={f} value={f} />
-                                                ))}
-                                            </datalist>
-                                        )}
-                                    </div>
                                 </div>
+
+                                {/* Collection + folder dropdowns, each with a + to
+                                    create. Folder is scoped to the collection. */}
+                                <CollectionFolderPicker
+                                    open={true}
+                                    preloaded={targets ?? undefined}
+                                    onChange={setChoice}
+                                />
 
                                 <Button
                                     size="sm"

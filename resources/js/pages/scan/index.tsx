@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { Camera, History, ImagePlus, Loader2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import type { CollectionTargets } from '@/components/collection/collection-folder-picker';
 import { LiveScanner } from '@/components/scan/live-scanner';
 import { ScanConfirmCard } from '@/components/scan/scan-confirm-card';
 import { Button } from '@/components/ui/button';
@@ -118,7 +119,6 @@ function downscale(file: File): Promise<string> {
 export default function ScanIndex({
     usage: initialUsage,
     gradingCompanies,
-    folders,
 }: Props) {
     // A restored scan opens in the confirm flow; a fresh session leads with live.
     const [mode, setMode] = useState<'live' | 'single' | 'bulk'>(() =>
@@ -132,6 +132,24 @@ export default function ScanIndex({
     const [detected, setDetected] = useState<ScanDetected[] | null>(
         readStoredScan,
     );
+    // Collections + folders for the per-card add picker — loaded once and shared
+    // across every confirm card so it never fetches per card.
+    const [targets, setTargets] = useState<CollectionTargets | null>(null);
+    useEffect(() => {
+        let active = true;
+        fetch('/collection/targets', {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        })
+            .then((r) => r.json())
+            .then((d: CollectionTargets) => active && setTargets(d))
+            .catch(() => {});
+
+        return () => {
+            active = false;
+        };
+    }, []);
+
     // Whether the shown results were restored from a previous session.
     const [fromStorage, setFromStorage] = useState<boolean>(
         () => readStoredScan() !== null,
@@ -644,7 +662,7 @@ export default function ScanIndex({
                                     onChosenChange={handleChosen}
                                     scanPhoto={photo}
                                     gradingCompanies={gradingCompanies}
-                                    folders={folders}
+                                    targets={targets}
                                 />
                             </div>
                         ))}
