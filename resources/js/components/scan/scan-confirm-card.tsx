@@ -316,13 +316,39 @@ export function ScanConfirmCard({
 
             <div className="min-w-0 flex-1 space-y-2">
                 <div className="text-sm">
-                    <span className="font-medium">{id.name ?? 'Unknown card'}</span>{' '}
-                    <span className="text-muted-foreground">
-                        {id.number}
-                        {id.set_code ? ` · ${id.set_code}` : ''}
-                        {id.set_name ? ` · ${id.set_name}` : ''}
-                        {id.language ? ` · ${languageLabel(id.language)}` : ''}
-                    </span>
+                    {/* Headline is the MATCHED card (what you'll actually add) — the
+                        AI's raw number/set are often misread, so leading with them
+                        was misleading. Fall back to the raw read when nothing matched. */}
+                    {chosenCard ? (
+                        <>
+                            <span className="font-medium">
+                                {chosenCard.display_name ?? chosenCard.name}
+                            </span>{' '}
+                            <span className="text-muted-foreground">
+                                {chosenCard.number}
+                                {chosenCard.set?.name
+                                    ? ` · ${chosenCard.set.name}`
+                                    : ''}
+                                {id.language
+                                    ? ` · ${languageLabel(id.language)}`
+                                    : ''}
+                            </span>
+                        </>
+                    ) : (
+                        <>
+                            <span className="font-medium">
+                                {id.name ?? 'Unknown card'}
+                            </span>{' '}
+                            <span className="text-muted-foreground">
+                                {id.number}
+                                {id.set_code ? ` · ${id.set_code}` : ''}
+                                {id.set_name ? ` · ${id.set_name}` : ''}
+                                {id.language
+                                    ? ` · ${languageLabel(id.language)}`
+                                    : ''}
+                            </span>
+                        </>
+                    )}
                     {detected.source === 'cache' ? (
                         <Badge
                             variant="secondary"
@@ -341,6 +367,16 @@ export function ScanConfirmCard({
                         </Badge>
                     )}
                 </div>
+
+                {/* Keep the raw AI read visible (small) when it backs a match, so
+                    a misread is easy to catch against the headline card above. */}
+                {detected.source === 'vision' && chosenCard && id.name && (
+                    <p className="text-[11px] text-muted-foreground">
+                        AI read: {id.name}
+                        {id.number ? ` · ${id.number}` : ''}
+                        {id.set_name ? ` · ${id.set_name}` : ''}
+                    </p>
+                )}
 
                 {/* The chosen match's headline value, so the user sees what the
                     card is worth before adding it. */}
