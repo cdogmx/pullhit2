@@ -120,10 +120,8 @@ export default function ScanIndex({
     usage: initialUsage,
     gradingCompanies,
 }: Props) {
-    // A restored scan opens in the confirm flow; a fresh session leads with live.
-    const [mode, setMode] = useState<'live' | 'single' | 'bulk'>(() =>
-        readStoredScan() ? 'single' : 'live',
-    );
+    // Both a restored scan and a fresh session lead with single (live is opt-in).
+    const [mode, setMode] = useState<'live' | 'single' | 'bulk'>('single');
     // Live-scan sub-phase: capturing cards vs reviewing the stack before add.
     const [phase, setPhase] = useState<'capture' | 'review'>('capture');
     const [busy, setBusy] = useState(false);
