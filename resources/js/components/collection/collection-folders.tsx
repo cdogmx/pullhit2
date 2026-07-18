@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import type { FolderRow } from '@/components/collection/holdings-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 
 export type { FolderRow };
@@ -36,6 +37,7 @@ export function CollectionFolders({
     const [copied, setCopied] = useState<number | null>(null);
     const [creating, setCreating] = useState(false);
     const [name, setName] = useState('');
+    const [confirmDelete, setConfirmDelete] = useState<FolderRow | null>(null);
 
     const create = () => {
         const trimmed = name.trim();
@@ -73,20 +75,14 @@ export function CollectionFolders({
             },
         );
 
-    const remove = (f: FolderRow) => {
-        if (
-            !window.confirm(
-                `Delete folder "${f.name}"? Its cards stay in ${collectionName} but lose the folder label.`,
-            )
-        ) {
-            return;
-        }
-
+    const remove = (f: FolderRow) =>
         router.delete(`/collection/folders/${f.id}`, {
             preserveScroll: true,
-            onSuccess: () => toast.success('Folder deleted.'),
+            onSuccess: () => {
+                toast.success('Folder deleted.');
+                setConfirmDelete(null);
+            },
         });
-    };
 
     const copy = (f: FolderRow) => {
         if (!f.public_url) {
@@ -216,7 +212,7 @@ export function CollectionFolders({
                                     size="icon"
                                     variant="ghost"
                                     className="size-7 text-muted-foreground hover:text-red-600"
-                                    onClick={() => remove(f)}
+                                    onClick={() => setConfirmDelete(f)}
                                     aria-label="Delete folder"
                                 >
                                     <Trash2 className="size-3.5" />
@@ -226,6 +222,20 @@ export function CollectionFolders({
                     ))}
                 </ul>
             )}
+
+            <ConfirmDialog
+                open={confirmDelete !== null}
+                onOpenChange={(o) => !o && setConfirmDelete(null)}
+                title={
+                    confirmDelete
+                        ? `Delete folder "${confirmDelete.name}"?`
+                        : 'Delete folder?'
+                }
+                description={`Its cards stay in ${collectionName} — they just lose the folder label.`}
+                confirmLabel="Delete folder"
+                destructive
+                onConfirm={() => confirmDelete && remove(confirmDelete)}
+            />
         </div>
     );
 }

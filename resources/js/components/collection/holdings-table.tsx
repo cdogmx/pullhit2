@@ -1,11 +1,23 @@
 import { Link, router } from '@inertiajs/react';
-import { Pencil, Search, StickyNote, Tag, Trash2 } from 'lucide-react';
+import { FolderInput, Pencil, Search, StickyNote, Tag, Trash2 } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { CollectionFolderPicker } from '@/components/collection/collection-folder-picker';
+import type { CollectionFolderChoice } from '@/components/collection/collection-folder-picker';
 import { EditHoldingDialog } from '@/components/collection/edit-holding-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -98,6 +110,17 @@ export function HoldingsTable({
     folders?: FolderRow[];
 }) {
     const [editing, setEditing] = useState<Holding | null>(null);
+    // Bulk selection + the actions it enables.
+    const [selected, setSelected] = useState<Set<number>>(new Set());
+    const [movingBulk, setMovingBulk] = useState(false);
+    const [deletingBulk, setDeletingBulk] = useState(false);
+    const [confirmRemove, setConfirmRemove] = useState<Holding | null>(null);
+    const [busy, setBusy] = useState(false);
+    const [moveChoice, setMoveChoice] = useState<CollectionFolderChoice>({
+        collectionId: null,
+        newCollectionName: null,
+        folder: null,
+    });
     const [q, setQ] = useState('');
     const [setFilter, setSetFilter] = useState(ALL);
     const [folderFilter, setFolderFilter] = useState(ALL);
@@ -186,6 +209,87 @@ export function HoldingsTable({
         folderFilter !== ALL ||
         forSaleOnly;
 
+    const clearSelection = () => setSelected(new Set());
+
+    const toggleOne = (id: number) =>
+        setSelected((prev) => {
+            const next = new Set(prev);
+
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+
+            return next;
+        });
+
+    // The header checkbox selects/clears every row currently VISIBLE (so it
+    // respects the active filters rather than silently grabbing the whole table).
+    const allVisibleSelected =
+        visible.length > 0 && visible.every((h) => selected.has(h.id));
+
+    const toggleAllVisible = () =>
+        setSelected((prev) => {
+            const next = new Set(prev);
+            visible.forEach((h) =>
+                allVisibleSelected ? next.delete(h.id) : next.add(h.id),
+            );
+
+            return next;
+        });
+
+    const bulkMove = () => {
+        const payload: Record<string, string | number | number[] | null> = {
+            ids: [...selected],
+            folder: moveChoice.folder,
+        };
+
+        // Only send one of the two — a null collection_id fails validation.
+        if (moveChoice.newCollectionName) {
+            payload.new_collection_name = moveChoice.newCollectionName;
+        } else if (moveChoice.collectionId != null) {
+            payload.collection_id = moveChoice.collectionId;
+        }
+
+        setBusy(true);
+        router.patch('/collection/bulk', payload, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success(`Moved ${selected.size} card(s).`);
+                setMovingBulk(false);
+                clearSelection();
+            },
+            onFinish: () => setBusy(false),
+        });
+    };
+
+    const bulkDelete = () => {
+        setBusy(true);
+        router.delete('/collection/bulk', {
+            data: { ids: [...selected] },
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success(`Removed ${selected.size} card(s).`);
+                setDeletingBulk(false);
+                clearSelection();
+            },
+            onFinish: () => setBusy(false),
+        });
+    };
+
+    const removeOne = (h: Holding) => {
+        setBusy(true);
+        router.delete(`/collection/${h.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Removed from your collection.');
+                setConfirmRemove(null);
+            },
+            onFinish: () => setBusy(false),
+        });
+    };
+
     return (
         <>
             <Card>
@@ -197,6 +301,41 @@ export function HoldingsTable({
                             {holdings.length.toLocaleString()}
                         </span>
                     </div>
+
+                    {/* Bulk action bar — only once something is selected. */}
+                    {selected.size > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
+                            <span className="text-sm font-medium">
+                                {selected.size} selected
+                            </span>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8"
+                                onClick={() => setMovingBulk(true)}
+                            >
+                                <FolderInput className="size-4" />
+                                Move…
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-red-600 hover:text-red-600 dark:text-red-400"
+                                onClick={() => setDeletingBulk(true)}
+                            >
+                                <Trash2 className="size-4" />
+                                Remove
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8"
+                                onClick={clearSelection}
+                            >
+                                Clear
+                            </Button>
+                        </div>
+                    )}
                     <div className="flex flex-wrap items-center gap-2">
                         <div className="relative">
                             <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -289,6 +428,13 @@ export function HoldingsTable({
                     <table className="w-full text-sm">
                         <thead className="text-left text-xs text-muted-foreground">
                             <tr className="border-b border-border">
+                                <th className="w-8 py-2 pr-2">
+                                    <Checkbox
+                                        checked={allVisibleSelected}
+                                        onCheckedChange={toggleAllVisible}
+                                        aria-label="Select all shown"
+                                    />
+                                </th>
                                 <th className="py-2 pr-3 font-medium">Card</th>
                                 <th className="py-2 pr-3 font-medium">State</th>
                                 <th className="py-2 pr-3 text-right font-medium">Qty</th>
@@ -311,7 +457,7 @@ export function HoldingsTable({
                             {visible.length === 0 && (
                                 <tr>
                                     <td
-                                        colSpan={8}
+                                        colSpan={9}
                                         className="py-8 text-center text-muted-foreground"
                                     >
                                         No cards match your filters.
@@ -321,8 +467,18 @@ export function HoldingsTable({
                             {visible.map((h) => (
                                 <tr
                                     key={h.id}
-                                    className="border-b border-border/60 last:border-0"
+                                    className={cn(
+                                        'border-b border-border/60 last:border-0',
+                                        selected.has(h.id) && 'bg-primary/5',
+                                    )}
                                 >
+                                    <td className="py-2 pr-2 align-middle">
+                                        <Checkbox
+                                            checked={selected.has(h.id)}
+                                            onCheckedChange={() => toggleOne(h.id)}
+                                            aria-label={`Select ${h.catalog_item?.name ?? 'card'}`}
+                                        />
+                                    </td>
                                     <td className="py-2 pr-3">
                                         <div className="flex items-center gap-2">
                                             {h.catalog_item?.image_url && (
@@ -485,12 +641,7 @@ export function HoldingsTable({
                                             )}
                                             <button
                                                 type="button"
-                                                onClick={() =>
-                                                    router.delete(
-                                                        `/collection/${h.id}`,
-                                                        { preserveScroll: true },
-                                                    )
-                                                }
+                                                onClick={() => setConfirmRemove(h)}
                                                 className="text-muted-foreground hover:text-red-600"
                                                 aria-label="Remove holding"
                                             >
@@ -530,6 +681,68 @@ export function HoldingsTable({
                 gradingCompanies={gradingCompanies}
                 open={editing !== null}
                 onOpenChange={(o) => !o && setEditing(null)}
+            />
+
+            {/* Bulk move — same collection + folder picker used everywhere else. */}
+            <Dialog open={movingBulk} onOpenChange={setMovingBulk}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            Move {selected.size} card
+                            {selected.size === 1 ? '' : 's'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Pick where these cards should live. The folder is
+                            scoped to the collection you choose.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {movingBulk && (
+                        <CollectionFolderPicker
+                            open={movingBulk}
+                            onChange={setMoveChoice}
+                        />
+                    )}
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setMovingBulk(false)}
+                            disabled={busy}
+                        >
+                            Cancel
+                        </Button>
+                        <Button onClick={bulkMove} disabled={busy}>
+                            Move
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <ConfirmDialog
+                open={deletingBulk}
+                onOpenChange={setDeletingBulk}
+                title={`Remove ${selected.size} card${selected.size === 1 ? '' : 's'}?`}
+                description="They'll be removed from your collection along with their cost-basis history. This can't be undone."
+                confirmLabel="Remove"
+                destructive
+                busy={busy}
+                onConfirm={bulkDelete}
+            />
+
+            <ConfirmDialog
+                open={confirmRemove !== null}
+                onOpenChange={(o) => !o && setConfirmRemove(null)}
+                title="Remove this card?"
+                description={
+                    confirmRemove
+                        ? `"${confirmRemove.catalog_item?.display_name ?? confirmRemove.catalog_item?.name ?? 'This holding'}" will be removed from your collection along with its cost-basis history.`
+                        : undefined
+                }
+                confirmLabel="Remove"
+                destructive
+                busy={busy}
+                onConfirm={() => confirmRemove && removeOne(confirmRemove)}
             />
         </>
     );

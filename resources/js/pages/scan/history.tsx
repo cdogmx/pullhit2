@@ -1,9 +1,11 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { ScanLine, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cardHref, formatMoney, relativeTime } from '@/lib/format';
 import type { AdminPagination } from '@/types';
 
@@ -110,16 +112,16 @@ export default function ScanHistory({ scans, pagination }: Props) {
 }
 
 function ScanCard({ scan }: { scan: Scan }) {
-    const remove = () => {
-        if (!window.confirm('Remove this scan from your history?')) {
-            return;
-        }
+    const [confirmRemove, setConfirmRemove] = useState(false);
 
+    const remove = () =>
         router.delete(`/scan/history/${scan.id}`, {
             preserveScroll: true,
-            onSuccess: () => toast.success('Scan removed.'),
+            onSuccess: () => {
+                toast.success('Scan removed.');
+                setConfirmRemove(false);
+            },
         });
-    };
 
     return (
         <Card>
@@ -167,6 +169,16 @@ function ScanCard({ scan }: { scan: Scan }) {
                     ))}
                 </div>
             </CardContent>
+
+            <ConfirmDialog
+                open={confirmRemove}
+                onOpenChange={setConfirmRemove}
+                title="Remove this scan?"
+                description="It's removed from your scan history. Cards you already added to a collection stay."
+                confirmLabel="Remove"
+                destructive
+                onConfirm={remove}
+            />
         </Card>
     );
 }

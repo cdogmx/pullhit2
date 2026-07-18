@@ -127,6 +127,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('collection/folders/{collectionFolder}', [CollectionController::class, 'showFolder'])->name('collection.folders.show');
     Route::patch('collection/folders/{collectionFolder}', [CollectionController::class, 'updateFolder'])->name('collection.folders.update');
     Route::delete('collection/folders/{collectionFolder}', [CollectionController::class, 'destroyFolder'])->name('collection.folders.destroy');
+    // Bulk actions must precede the {collectionItem} routes, or "bulk" binds as an id.
+    Route::patch('collection/bulk', [CollectionController::class, 'bulkUpdate'])->name('collection.bulk.update');
+    Route::delete('collection/bulk', [CollectionController::class, 'bulkDestroy'])->name('collection.bulk.destroy');
     Route::patch('collection/{collectionItem}', [CollectionController::class, 'update'])->name('collection.update');
     Route::delete('collection/{collectionItem}', [CollectionController::class, 'destroy'])->name('collection.destroy');
 

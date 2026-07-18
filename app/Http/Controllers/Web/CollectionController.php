@@ -458,4 +458,68 @@ class CollectionController extends Controller
 
         return back()->with('success', 'Removed from your collection.');
     }
+
+    /**
+     * Bulk move: re-file many holdings into another collection and/or folder at
+     * once. Scoped to the caller's own holdings (ids they don't own are ignored,
+     * never 403 — a stale selection shouldn't fail the whole batch), and routed
+     * through UpdateCollectionItem so a move that collides with an existing
+     * holding of the same card+state still merges instead of duplicating.
+     */
+    public function bulkUpdate(Request $request, UpdateCollectionItem $update, CreateCollection $create): RedirectResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:500'],
+            'ids.*' => ['integer'],
+            'collection_id' => ['sometimes', 'integer', Rule::exists('collections', 'id')->where('user_id', $user->id)],
+            'new_collection_name' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'folder' => ['sometimes', 'nullable', 'string', 'max:255'],
+        ]);
+
+        if (! empty($data['new_collection_name'])) {
+            $data['collection_id'] = $create($user, $data['new_collection_name'])->id;
+        }
+
+        $attrs = array_filter(
+            ['collection_id' => $data['collection_id'] ?? null, 'folder' => $data['folder'] ?? null],
+            fn ($v) => $v !== null,
+        );
+        // A blank folder is a deliberate "un-file", so keep it when it was sent.
+        if (array_key_exists('folder', $data)) {
+            $attrs['folder'] = $data['folder'] ?: null;
+        }
+
+        if ($attrs === []) {
+            return back()->with('error', 'Nothing to change.');
+        }
+
+        $items = $user->collectionItems()->whereIn('id', $data['ids'])->get();
+        foreach ($items as $item) {
+            $update($item, $attrs);
+        }
+
+        $n = $items->count();
+
+        return back()->with('success', $n === 1 ? 'Moved 1 card.' : "Moved {$n} cards.");
+    }
+
+    /** Bulk remove holdings (own items only; unknown ids are skipped). */
+    public function bulkDestroy(Request $request, RemoveFromCollection $remove): RedirectResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:500'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $items = $request->user()->collectionItems()->whereIn('id', $data['ids'])->get();
+        foreach ($items as $item) {
+            $remove($item);
+        }
+
+        $n = $items->count();
+
+        return back()->with('success', $n === 1 ? 'Removed 1 card.' : "Removed {$n} cards.");
+    }
 }

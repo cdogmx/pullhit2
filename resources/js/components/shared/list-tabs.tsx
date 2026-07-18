@@ -2,6 +2,7 @@ import { Link, router } from '@inertiajs/react';
 import { Check, Globe, Lock, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -51,6 +52,7 @@ export function ListTabs({
 }) {
     const [creating, setCreating] = useState(false);
     const [name, setName] = useState('');
+    const [confirmDelete, setConfirmDelete] = useState(false);
     const atLimit = limit !== null && lists.length >= limit;
     const current = lists.find((x) => x.slug === active);
 
@@ -105,9 +107,10 @@ export function ListTabs({
             return;
         }
 
-        if (window.confirm(`Delete “${current.name}”? Its cards move to your default ${noun}.`)) {
-            router.delete(`${entityBase}/${current.id}`, { preserveScroll: true });
-        }
+        router.delete(`${entityBase}/${current.id}`, {
+            preserveScroll: true,
+            onSuccess: () => setConfirmDelete(false),
+        });
     };
 
     return (
@@ -156,7 +159,7 @@ export function ListTabs({
                         </DropdownMenuItem>
                         {!current.is_default && (
                             <DropdownMenuItem
-                                onClick={remove}
+                                onClick={() => setConfirmDelete(true)}
                                 className="text-red-600 focus:text-red-600"
                             >
                                 <Trash2 className="size-4" /> Delete
@@ -198,6 +201,16 @@ export function ListTabs({
                     <Plus className="size-4" /> New
                 </Button>
             )}
+
+            <ConfirmDialog
+                open={confirmDelete}
+                onOpenChange={setConfirmDelete}
+                title={current ? `Delete “${current.name}”?` : `Delete ${noun}?`}
+                description={`Its cards aren't lost — they move to your default ${noun}.`}
+                confirmLabel={`Delete ${noun}`}
+                destructive
+                onConfirm={remove}
+            />
         </div>
     );
 }
