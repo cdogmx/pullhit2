@@ -278,7 +278,8 @@ class SearchCatalog
             $query->orderBy(
                 Set::select('name')->whereColumn('sets.id', 'catalog_items.set_id'),
                 $direction,
-            )->orderBy('number');
+            );
+            $this->orderByNumber($query);
 
             return;
         }
@@ -290,7 +291,8 @@ class SearchCatalog
             $query->orderBy(
                 Set::select('released_at')->whereColumn('sets.id', 'catalog_items.set_id'),
                 $direction,
-            )->orderBy('number');
+            );
+            $this->orderByNumber($query);
 
             return;
         }
@@ -308,11 +310,33 @@ class SearchCatalog
         }
 
         $column = self::SORTS[$sort] ?? 'number';
-        $query->orderBy($column, $direction);
+
+        if ($column === 'number') {
+            $this->orderByNumber($query, $direction);
+        } else {
+            $query->orderBy($column, $direction);
+        }
 
         if ($column !== 'name') {
             $query->orderBy('name'); // stable tiebreak
         }
+    }
+
+    /**
+     * Order by collector number the way a binder does. `number` is a string, so a
+     * plain sort runs 1, 10, 100, 11, 2 — ordering by length first restores the
+     * numeric run (1, 2, 10, 100) without giving up the prefixed formats we also
+     * store: "SM99" precedes "SM164", and same-length codes ("OP04-008" vs
+     * "OP04-038") still fall out in order lexicographically. Numeric-only numbers
+     * sort ahead of prefixed promos, which is the order sets print them in.
+     *
+     * @param  Builder<CatalogItem>  $query
+     */
+    protected function orderByNumber(Builder $query, string $direction = 'asc'): void
+    {
+        $direction = $direction === 'desc' ? 'desc' : 'asc';
+
+        $query->orderByRaw("LENGTH(number) {$direction}, number {$direction}");
     }
 
     /**

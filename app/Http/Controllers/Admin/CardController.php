@@ -137,7 +137,9 @@ class CardController extends Controller
         match ($sort) {
             'views' => $query->orderByDesc('popularity')->orderBy('name'),
             'updated' => $query->orderByDesc('updated_at'),
-            'number' => $query->orderByRaw('CAST(number AS UNSIGNED)')->orderBy('number'),
+            // Natural order: length first, so 2 precedes 10 precedes 100 and
+            // prefixed promos ("SM99" < "SM164") stay in print order too.
+            'number' => $query->orderByRaw('LENGTH(number), number'),
             default => $query->orderBy('name'),
         };
     }
