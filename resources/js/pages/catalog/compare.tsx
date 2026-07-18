@@ -192,6 +192,18 @@ export default function Compare({ items, maxItems }: Props) {
                                                         COLORS[i % COLORS.length],
                                                 }}
                                             />
+                                            {/* Card thumbnail — makes each series
+                                                recognisable at a glance. */}
+                                            <div className="aspect-[5/7] w-7 shrink-0 overflow-hidden rounded border border-border bg-muted">
+                                                {item.image && (
+                                                    <img
+                                                        src={item.image}
+                                                        alt=""
+                                                        loading="lazy"
+                                                        className="size-full object-cover"
+                                                    />
+                                                )}
+                                            </div>
                                             <div className="min-w-0">
                                                 <p className="max-w-[12rem] truncate text-sm font-medium">
                                                     {item.url ? (
