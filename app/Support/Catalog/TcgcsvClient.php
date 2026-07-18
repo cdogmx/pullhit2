@@ -21,6 +21,9 @@ class TcgcsvClient
     /** TCGplayer category id for English Pokémon. */
     public const POKEMON = 3;
 
+    /** TCGplayer category id for Disney Lorcana. */
+    public const LORCANA = 71;
+
     /** @return array<int, array<string, mixed>> the category's groups (sets) */
     public function groups(int $category = self::POKEMON_JAPAN): array
     {

@@ -9,24 +9,27 @@ use App\Models\Set;
 use App\Models\Vertical;
 use App\Support\Catalog\CardImageStore;
 use App\Support\Catalog\TcgcsvClient;
+use App\Support\Catalog\TcgcsvGame;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
- * Import an ENGLISH Pokémon set from TCGCSV (TCGplayer category 3) into the
- * catalog — for brand-new sets pokemontcg.io hasn't published yet (it lags weeks
- * behind release). The English sibling of ImportJapaneseSet: upsert the
- * (language=en) Set, create a catalog_item per card finish via CreateCatalogItem,
- * store images, seed estimated values from TCGplayer market prices.
+ * Import a set from TCGCSV (a mirror of TCGplayer) by group id — our "day one"
+ * source for a set the per-game APIs haven't published yet, since they lag
+ * release by weeks (pokemontcg.io for English Pokémon, lorcana-api.com for
+ * Lorcana). Upserts the Set, creates a catalog_item per card via
+ * CreateCatalogItem, stores images, and seeds estimated values from TCGplayer
+ * market prices.
  *
- * Normalises the TCGCSV data to pokemontcg.io conventions — clean card names
- * (TCGCSV appends "- 003/084" to some) and zero-stripped collector numbers
- * ("003" → "3") — so a later `catalog:import-set` refines the same rows instead
- * of duplicating them. Only cards (products with a collector Number) are imported;
- * sealed products come via `catalog:import-sealed`.
+ * Normalises to the conventions each game's own importer uses — clean card
+ * names, zero-stripped collector numbers ("003/084" → "3"), and that game's
+ * variant axis — so when that importer catches up it REFINES these rows instead
+ * of duplicating them. The set is matched by slug as well as source id for the
+ * same reason (see upsertSet). Only cards (products with a collector Number) are
+ * imported; sealed products come via `catalog:import-sealed`.
  */
-class ImportEnglishTcgcsvSet
+class ImportTcgcsvSet
 {
     /** TCGplayer subtype names → our `variant` enum. */
     private const SUBTYPE_VARIANT = [
@@ -45,20 +48,26 @@ class ImportEnglishTcgcsvSet
     /**
      * @return array{set: string, items: int, valued: int, images: int}
      */
-    public function __invoke(int $groupId, bool $withPrices = true, bool $withImages = true): array
-    {
-        $group = collect($this->client->groups(TcgcsvClient::POKEMON))->firstWhere('groupId', $groupId)
-            ?? throw new RuntimeException("Pokemon English group [{$groupId}] not found");
+    public function __invoke(
+        int $groupId,
+        bool $withPrices = true,
+        bool $withImages = true,
+        TcgcsvGame $game = TcgcsvGame::Pokemon,
+    ): array {
+        $category = $game->categoryId();
 
-        $products = $this->client->products($groupId, TcgcsvClient::POKEMON);
-        $pricesByProduct = collect($this->client->prices($groupId, TcgcsvClient::POKEMON))->groupBy('productId');
+        $group = collect($this->client->groups($category))->firstWhere('groupId', $groupId)
+            ?? throw new RuntimeException("TCGCSV {$game->value} group [{$groupId}] not found");
+
+        $products = $this->client->products($groupId, $category);
+        $pricesByProduct = collect($this->client->prices($groupId, $category))->groupBy('productId');
 
         $vertical = Vertical::updateOrCreate(['slug' => 'tcg'], ['name' => 'Trading Card Games']);
-        $pokemon = ProductLine::updateOrCreate(
-            ['vertical_id' => $vertical->id, 'slug' => 'pokemon'],
-            ['name' => 'Pokémon'],
+        $productLine = ProductLine::updateOrCreate(
+            ['vertical_id' => $vertical->id, 'slug' => $game->value],
+            ['name' => $game->productLineName()],
         );
-        $set = $this->upsertSet($pokemon->id, $group);
+        $set = $this->upsertSet($productLine->id, $group);
 
         $items = 0;
         $valued = 0;
@@ -80,7 +89,12 @@ class ImportEnglishTcgcsvSet
 
             $imageUrl = null;
             if ($withImages) {
-                $imageUrl = $this->images->store("en-{$groupId}", $productId, $product['imageUrl'] ?? null);
+                $imageUrl = $this->images->store(
+                    "{$game->value}-{$groupId}",
+                    $productId,
+                    $product['imageUrl'] ?? null,
+                    $game->imageLine(),
+                );
                 if ($imageUrl) {
                     $imageCount++;
                 }
@@ -91,10 +105,12 @@ class ImportEnglishTcgcsvSet
                 'tcgplayer_image' => $product['imageUrl'] ?? null,
             ]);
 
-            foreach ($this->variants(($pricesByProduct->get($product['productId'] ?? null) ?? collect())->all()) as $variant => $anchor) {
+            $prices = ($pricesByProduct->get($product['productId'] ?? null) ?? collect())->all();
+
+            foreach ($this->variants($prices, $game) as $variant => $anchor) {
                 $item = ($this->create)(
                     vertical: $vertical,
-                    productLine: $pokemon,
+                    productLine: $productLine,
                     set: $set,
                     itemType: ItemType::Single,
                     name: $name,
@@ -120,26 +136,42 @@ class ImportEnglishTcgcsvSet
     }
 
     /**
-     * One (variant => anchor-cents) per finish present in the price rows; falls
+     * One (variant => anchor-cents) per catalog row this product should produce.
+     * For a game with a finish axis that's one per priced finish; for one without
+     * (Lorcana) every finish collapses into the single `normal` row, anchored on
+     * the base price so a foil premium doesn't inflate the card's value. Falls
      * back to a single un-valued Normal when the set has no prices yet (pre-release).
      *
      * @param  array<int, array<string, mixed>>  $prices
      * @return array<string, int>
      */
-    protected function variants(array $prices): array
+    protected function variants(array $prices, TcgcsvGame $game = TcgcsvGame::Pokemon): array
     {
         if ($prices === []) {
             return ['normal' => 0];
         }
 
+        if (! $game->hasFinishVariants()) {
+            $base = collect($prices)->firstWhere('subTypeName', 'Normal') ?? $prices[0];
+
+            return ['normal' => $this->anchorCents($base)];
+        }
+
         $out = [];
         foreach ($prices as $price) {
             $variant = self::SUBTYPE_VARIANT[$price['subTypeName'] ?? ''] ?? 'normal';
-            $value = $price['marketPrice'] ?? $price['midPrice'] ?? $price['lowPrice'] ?? null;
-            $out[$variant] = $value ? (int) round((float) $value * 100) : 0;
+            $out[$variant] = $this->anchorCents($price);
         }
 
         return $out;
+    }
+
+    /** @param  array<string, mixed>  $price */
+    protected function anchorCents(array $price): int
+    {
+        $value = $price['marketPrice'] ?? $price['midPrice'] ?? $price['lowPrice'] ?? null;
+
+        return $value ? (int) round((float) $value * 100) : 0;
     }
 
     /** @param  array<string, mixed>  $group */
@@ -147,8 +179,8 @@ class ImportEnglishTcgcsvSet
     {
         $fullName = $group['name'] ?? ('Group '.($group['groupId'] ?? ''));
 
-        // TCGplayer prefixes the set code: "ME05: Pitch Black" → code "ME05",
-        // name "Pitch Black".
+        // TCGplayer prefixes the set code on some games: "ME05: Pitch Black" →
+        // code "ME05", name "Pitch Black".
         $code = null;
         $name = $fullName;
         if (preg_match('/^([A-Za-z0-9-]+):\s*(.+)$/', $fullName, $m)) {
@@ -156,21 +188,35 @@ class ImportEnglishTcgcsvSet
             $name = trim($m[2]);
         }
 
+        $slug = Str::slug($name) ?: 'set-'.($group['groupId'] ?? 'x');
+        $groupId = (string) $group['groupId'];
+
+        // Match on the TCGplayer group id first, then fall back to the slug. The
+        // game's own importer keys sets by ITS source id, so without the slug
+        // fallback its later run would create a second row for the same set — and
+        // a full set of duplicate cards under it. Matched either way, external ids
+        // are merged so neither source's id is dropped.
         $set = Set::query()
             ->where('product_line_id', $productLineId)
-            ->where('external_ids->tcgplayer_group_id', (string) $group['groupId'])
+            ->where(fn ($q) => $q
+                ->where('external_ids->tcgplayer_group_id', $groupId)
+                ->orWhere('slug', $slug))
             ->first() ?? new Set;
 
         $set->forceFill([
             'product_line_id' => $productLineId,
-            'slug' => Str::slug($name) ?: 'set-'.($group['groupId'] ?? 'x'),
+            'slug' => $slug,
             'name' => $name,
-            'code' => $code,
+            // Never clear a code the game's own importer already set — it knows the
+            // real printed code ("WUN"), where TCGplayer often carries none.
+            'code' => $code ?: $set->code,
             'language' => 'en',
-            // Clean name links this set to a same-named JP set for cross-language.
+            // Clean name links this set to a same-named set in another language.
             'set_family' => $name,
             'released_at' => isset($group['publishedOn']) ? substr((string) $group['publishedOn'], 0, 10) : null,
-            'external_ids' => ['tcgplayer_group_id' => (string) $group['groupId']],
+            'external_ids' => array_merge((array) ($set->external_ids ?? []), [
+                'tcgplayer_group_id' => $groupId,
+            ]),
         ])->save();
 
         return $set;
@@ -178,7 +224,9 @@ class ImportEnglishTcgcsvSet
 
     /**
      * Strip a trailing " - 003/084" collector-number suffix TCGCSV appends to some
-     * English card names, so they match pokemontcg.io's clean names.
+     * card names, so they match the clean names the per-game APIs publish. Anchored
+     * on the slashed number, so a name that legitimately ends in " - Version"
+     * (every Lorcana character) is left alone.
      */
     protected function cleanName(string $name): string
     {

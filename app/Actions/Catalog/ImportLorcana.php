@@ -100,24 +100,32 @@ class ImportLorcana
     {
         $name = $sampleCard['Set_Name'] ?? $setId;
 
-        // Match on the stable source id, never the slug — renaming a slug can
-        // never duplicate a set on re-import (the slug feeds the identity hash).
+        $slug = Str::slug($name) ?: strtolower($setId);
+
+        // Match on the stable source id first, then fall back to the slug. The id
+        // match means renaming a set can never duplicate it on re-import; the slug
+        // fallback catches a set TCGCSV seeded on release day (keyed by TCGplayer
+        // group id, before this API published it) so we refine that row instead of
+        // creating a second copy of the whole set.
         $set = Set::query()
             ->where('product_line_id', $productLineId)
-            ->where('external_ids->lorcana_set_id', $setId)
+            ->where(fn ($q) => $q
+                ->where('external_ids->lorcana_set_id', $setId)
+                ->orWhere('slug', $slug))
             ->first() ?? new Set;
 
         $set->forceFill([
             'product_line_id' => $productLineId,
-            'slug' => Str::slug($name) ?: strtolower($setId),
+            'slug' => $slug,
             'name' => $name,
             'code' => $setId, // the short set code (e.g. "ARI")
             'language' => 'en',
             'set_family' => $name,
-            'external_ids' => [
+            // Merge, so a TCGplayer group id already on the row survives.
+            'external_ids' => array_merge((array) ($set->external_ids ?? []), array_filter([
                 'lorcana_set_id' => $setId,
                 'lorcana_set_num' => $sampleCard['Set_Num'] ?? null,
-            ],
+            ], fn ($v) => $v !== null)),
         ])->save();
 
         return $set;
