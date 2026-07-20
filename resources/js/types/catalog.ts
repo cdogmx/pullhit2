@@ -69,6 +69,12 @@ export type MarketValue = {
     p75: number;
     low: number;
     high: number;
+    /** Lowest realistic current ask across live listings (null = none found). */
+    for_sale?: number | null;
+    /** How many live asks back the for-sale figure. */
+    for_sale_n?: number | null;
+    /** Sold-anchored blend of median (sold) and for_sale. */
+    combined?: number | null;
     n_sales: number;
     confidence: number;
     confidence_label: string;

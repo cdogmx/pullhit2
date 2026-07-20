@@ -30,6 +30,10 @@ class MarketValueResource extends JsonResource
             'p75' => $this->p75,
             'low' => $this->low,
             'high' => $this->high,
+            // Sold (median) vs current asks vs the blended combined figure.
+            'for_sale' => $this->for_sale,
+            'for_sale_n' => $this->for_sale_n,
+            'combined' => $this->combined,
             'n_sales' => $this->n_sales,
             'confidence' => round($this->confidence, 3),
             'confidence_label' => $this->confidenceLabel(),

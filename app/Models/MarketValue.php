@@ -33,6 +33,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'trend_7d',
     'trend_30d',
     'trend_90d',
+    'for_sale',
+    'for_sale_n',
+    'combined',
     'currency',
     'computed_at',
 ])]
@@ -60,6 +63,9 @@ class MarketValue extends Model
             'trend_7d' => 'float',
             'trend_30d' => 'float',
             'trend_90d' => 'float',
+            'for_sale' => 'integer',
+            'for_sale_n' => 'integer',
+            'combined' => 'integer',
             'computed_at' => 'datetime',
         ];
     }

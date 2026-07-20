@@ -60,6 +60,62 @@ import type {
 } from '@/types';
 
 /**
+ * The three valuations for the selected state, side by side: Sold (realized
+ * comps — the headline number above), For sale (lowest realistic current ask),
+ * and Combined (the sold-anchored blend). Renders only when we have a for-sale
+ * value; otherwise the sold number stands alone.
+ */
+function ForSaleRow({ value }: { value: MarketValue }) {
+    if (value.for_sale == null) {
+        return null;
+    }
+
+    const cell = (
+        label: string,
+        amount: number | null | undefined,
+        sub: string | null,
+        emphasize = false,
+    ) => (
+        <div
+            className={cn(
+                'rounded-lg border px-3 py-2',
+                emphasize
+                    ? 'border-primary/40 bg-primary/5'
+                    : 'border-border bg-muted/30',
+            )}
+        >
+            <div className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                {label}
+            </div>
+            <div className="font-semibold tabular-nums">
+                {amount != null ? formatMoney(amount, value.currency) : '—'}
+            </div>
+            {sub && (
+                <div className="text-[11px] text-muted-foreground">{sub}</div>
+            )}
+        </div>
+    );
+
+    return (
+        <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+            {cell(
+                'Sold',
+                value.median,
+                value.n_sales ? `${value.n_sales} sold` : null,
+            )}
+            {cell(
+                'For sale',
+                value.for_sale,
+                value.for_sale_n
+                    ? `${value.for_sale_n} ask${value.for_sale_n === 1 ? '' : 's'}`
+                    : null,
+            )}
+            {cell('Combined', value.combined, 'sold + ask', true)}
+        </div>
+    );
+}
+
+/**
  * Recent price-direction badges (24h / 7d / 30d) for the selected state. Shows
  * only the windows that have data — so a card too new or too thin for the 30-day
  * trend still shows its 24h/7d direction, and a bone-dry card shows nothing.
@@ -563,6 +619,8 @@ export default function Show({
                                 <div className="mt-3">
                                     <PriceTag value={headline} variant="full" />
                                 </div>
+
+                                <ForSaleRow value={headline} />
 
                                 <TrendRow value={headline} />
 

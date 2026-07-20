@@ -52,6 +52,7 @@ class CatalogItem extends Model
             'popularity' => 'integer',
             'last_viewed_at' => 'datetime',
             'ebay_refreshed_at' => 'datetime',
+            'for_sale_refreshed_at' => 'datetime',
             'pc_synced_at' => 'datetime',
             'pc_price_history' => 'array',
         ];
@@ -175,6 +176,12 @@ class CatalogItem extends Model
     public function saleObservations(): HasMany
     {
         return $this->hasMany(SaleObservation::class);
+    }
+
+    /** @return HasMany<ListingObservation, $this> */
+    public function listingObservations(): HasMany
+    {
+        return $this->hasMany(ListingObservation::class);
     }
 
     /**

@@ -5,6 +5,7 @@ namespace App\Actions\Valuation;
 use App\Models\CatalogItem;
 use App\Models\MarketValue;
 use App\Models\SaleObservation;
+use App\Support\Valuation\CombinedValue;
 use App\Support\Valuation\Observation;
 use App\Support\Valuation\PricedStateKey;
 use App\Support\Valuation\ValuationEngine;
@@ -61,6 +62,12 @@ class RecomputeMarketValue
             $item->saleObservations()->whereIn('id', $outlierIds)->update(['is_outlier' => true]);
         }
 
+        // The sold median moved, so re-blend combined against the existing for-sale
+        // value (for-sale itself is owned by IngestForSaleListings; leave it be).
+        $forSale = MarketValue::where('catalog_item_id', $item->id)
+            ->where('state_key', $stateKey)
+            ->value('for_sale');
+
         return MarketValue::updateOrCreate(
             ['catalog_item_id' => $item->id, 'state_key' => $stateKey],
             [
@@ -82,6 +89,7 @@ class RecomputeMarketValue
                 'trend_7d' => $result->trend7d,
                 'trend_30d' => $result->trend30d,
                 'trend_90d' => $result->trend90d,
+                'combined' => CombinedValue::blend($result->median, $forSale),
                 'currency' => $rows->first()->currency ?? 'USD',
                 'computed_at' => Carbon::now(),
             ],

@@ -8,6 +8,7 @@ use App\Actions\Catalog\SearchCatalog;
 use App\Actions\Catalog\ShowCatalogItem;
 use App\Actions\Catalog\SuggestSearch;
 use App\Actions\Valuation\MaybeRefreshEbay;
+use App\Actions\Valuation\MaybeRefreshForSale;
 use App\Actions\Valuation\MaybeRefreshPricecharting;
 use App\Actions\Valuation\PriceHistory;
 use App\Enums\ItemType;
@@ -299,6 +300,10 @@ class CatalogController extends Controller
         // Lazily pull PriceCharting data (completed sales + long-term monthly
         // history) once per sealed card — fire-and-forget; appears on next load.
         app(MaybeRefreshPricecharting::class)($catalogItem);
+
+        // Refresh the "for sale" asks (eBay Browse + TCGplayer, both free) if
+        // stale — background, appears on the next load.
+        app(MaybeRefreshForSale::class)($catalogItem);
 
         $model = $show($catalogItem); // has marketValues + relations loaded
 

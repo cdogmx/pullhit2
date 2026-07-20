@@ -46,6 +46,32 @@ return [
         'floor_sample' => 12,
     ],
 
+    // "For sale" valuation — the lowest realistic current ask across live
+    // listings (eBay + TCGplayer), and how it blends with the sold value.
+    'for_sale' => [
+        // Junk filter: keep asks within [floor_frac, ceil_frac] × the median ask
+        // (a lone $5 "lot" or a $9,999 moonshot isn't the buy-now price).
+        'floor_frac' => 0.5,
+        'ceil_frac' => 3.0,
+        // The "lowest realistic ask" is this percentile of the kept asks — near
+        // the bottom, but not the single cheapest (which may still be a lowball).
+        'low_percentile' => 0.15,
+        // Need at least this many surviving asks to publish a for-sale value.
+        'min_asks' => 2,
+        // How many eBay active listings to pull per state.
+        'ebay_limit' => 20,
+
+        // Combined = sold-anchored blend. Asks ABOVE the sold median barely lift
+        // it (asking high is cheap); asks BELOW it are a real softening signal and
+        // pull it halfway. combined = sold + (ask - sold) × weight.
+        'combine_up_weight' => 0.15,
+        'combine_down_weight' => 0.5,
+
+        // On-view refresh cadence for active asks (eBay Browse is free; TCGCSV is
+        // cached per group), separate from the sold-comp TTL.
+        'view_refresh_hours' => 6,
+    ],
+
     // Confidence score knobs.
     'confidence' => [
         'target_n' => 12,            // n at which the sample factor saturates
