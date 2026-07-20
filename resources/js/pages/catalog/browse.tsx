@@ -5,17 +5,16 @@ import {
     Layers,
     List,
     Plus,
-    Search,
     SlidersHorizontal,
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { PriceTag } from '@/components/catalog/price-tag';
 import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
+import { SearchSuggest } from '@/components/search-suggest';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
-import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -209,24 +208,17 @@ export default function Browse({
     const canAdd = Boolean(auth.user);
     const [q, setQ] = useState(filters.q ?? '');
     const [view, setView] = useState<'grid' | 'list'>(filters.view ?? 'grid');
-    const firstRender = useRef(true);
 
-    // Debounced search.
-    useEffect(() => {
-        if (firstRender.current) {
-            firstRender.current = false;
+    // Keep the box in sync when the active query changes underneath us (a "did
+    // you mean" jump, a suggestion click landing back here, Back/Forward). Done
+    // during render (not in an effect) per React's "adjust state on prop change"
+    // pattern — no cascading effect render.
+    const [syncedQ, setSyncedQ] = useState(filters.q ?? '');
 
-            return;
-        }
-
-        const timer = setTimeout(
-            () => update({ q: q || null }, { replace: true }),
-            300,
-        );
-
-        return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [q]);
+    if ((filters.q ?? '') !== syncedQ) {
+        setSyncedQ(filters.q ?? '');
+        setQ(filters.q ?? '');
+    }
 
     // Scroll memory: remember where the user was in this browse view so that
     // loading more → opening a card → coming back (browser Back or the "Browse"
@@ -488,18 +480,20 @@ export default function Browse({
                     )}
                 </div>
 
-                {/* Top bar: search + controls */}
+                {/* Top bar: search + controls. Typing shows suggestions; the
+                    full catalog search runs only on Enter / a suggestion click
+                    (SearchSuggest), so we no longer reload the grid per keystroke. */}
                 <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <div className="relative flex-1">
-                        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            value={q}
-                            onChange={(e) => setQ(e.target.value)}
-                            placeholder="Search by name or number…"
-                            className="pl-9"
-                            aria-label="Search catalog"
-                        />
-                    </div>
+                    <SearchSuggest
+                        value={q}
+                        onChange={setQ}
+                        onSubmit={(term) => update({ q: term || null })}
+                        variant="browse"
+                        placeholder="Search by name or number…"
+                        ariaLabel="Search catalog"
+                        clearOnNavigate={false}
+                        className="flex-1"
+                    />
 
                     {isCards && (
                     <div className="flex items-center gap-2">

@@ -5,9 +5,11 @@ namespace App\Actions\Catalog;
 use App\Models\CatalogItem;
 use App\Models\ProductLine;
 use App\Models\Set;
+use App\Support\Catalog\LikeTerm;
 use Illuminate\Contracts\Database\Eloquent\Builder as BuilderContract;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Public type-ahead suggestions, grouped brand → set → card. Three small,
@@ -26,6 +28,16 @@ class SuggestSearch
 
     /** Below this length a fuzzy match is too noisy to be useful. */
     private const FUZZY_MIN_LENGTH = 4;
+
+    /**
+     * Type-ahead cache TTL. The header/browse boxes fire on nearly every
+     * keystroke, so the same prefixes ("c", "ch", "cha", …) recur constantly
+     * within a session and across users. A short cache turns those into instant
+     * hits and, more importantly, shields the shared cloud DB from a burst of
+     * heavy LIKE scans while someone types. The catalog changes slowly, so a few
+     * minutes of staleness in suggestions is invisible.
+     */
+    private const CACHE_TTL = 300;
 
     /** Filler words people add that aren't in any card/set name (mirrors SearchCatalog). */
     private const STOPWORDS = ['set', 'sets', 'card', 'cards', 'the'];
@@ -47,11 +59,15 @@ class SuggestSearch
             return ['brands' => [], 'sets' => [], 'cards' => []];
         }
 
-        return [
-            'brands' => $this->brands($q),
-            'sets' => $this->sets($q),
-            'cards' => $this->cards($q),
-        ];
+        return Cache::remember(
+            'suggest:v1:'.mb_strtolower($q),
+            self::CACHE_TTL,
+            fn () => [
+                'brands' => $this->brands($q),
+                'sets' => $this->sets($q),
+                'cards' => $this->cards($q),
+            ],
+        );
     }
 
     /**
@@ -90,9 +106,10 @@ class SuggestSearch
     /** @return array<int, array<string, mixed>> */
     private function brands(string $q): array
     {
+        $like = LikeTerm::clean($q);
         $exact = $this->toHits(
             ProductLine::query()
-                ->where('name', 'like', '%'.$q.'%')
+                ->where('name', 'like', '%'.$like.'%')
                 ->addSelect(['thumb' => $this->cardThumb('product_line_id', 'product_lines.id')])
                 ->orderBy('name')
                 ->limit(self::BRAND_LIMIT)
@@ -119,9 +136,10 @@ class SuggestSearch
             ->with('productLine:id,slug,name')
             ->addSelect(['thumb' => $this->cardThumb('set_id', 'sets.id')]);
 
+        $like = LikeTerm::clean($q);
         $exact = $this->toHits(
             $base()
-                ->where(fn (Builder $w) => $w->where('name', 'like', '%'.$q.'%')->orWhere('code', 'like', '%'.$q.'%'))
+                ->where(fn (Builder $w) => $w->where('name', 'like', '%'.$like.'%')->orWhere('code', 'like', '%'.$like.'%'))
                 ->orderByDesc('released_at')
                 ->limit(self::SET_LIMIT)
                 ->get()
@@ -229,7 +247,7 @@ class SuggestSearch
      */
     private function prefilter(Builder $query, string $column, string $q): Builder
     {
-        $prefix = mb_substr(mb_strtolower($q), 0, 2);
+        $prefix = LikeTerm::clean(mb_substr(mb_strtolower($q), 0, 2));
         // SOUNDEX widens recall (a typo anywhere after the start), but only MySQL/
         // MariaDB ship it — elsewhere (SQLite tests) fall back to the prefix.
         $soundex = in_array($query->getConnection()->getDriverName(), ['mysql', 'mariadb'], true);
@@ -319,11 +337,12 @@ class SuggestSearch
     private function tokens(string $q): array
     {
         $tokens = array_values(array_filter(
-            preg_split('/\s+/', mb_strtolower(trim($q))) ?: [],
+            // Strip LIKE wildcards so a stray "%"/"_" can't match every row.
+            array_map(LikeTerm::clean(...), preg_split('/\s+/', mb_strtolower(trim($q))) ?: []),
             fn (string $t) => $t !== '' && ! in_array($t, self::STOPWORDS, true),
         ));
 
-        return $tokens === [] ? [mb_strtolower(trim($q))] : $tokens;
+        return $tokens === [] ? [LikeTerm::clean(mb_strtolower(trim($q)))] : $tokens;
     }
 
     /**

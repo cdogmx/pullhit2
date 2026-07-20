@@ -5,6 +5,7 @@ namespace App\Actions\Catalog;
 use App\Models\CatalogItem;
 use App\Models\MarketValue;
 use App\Models\Set;
+use App\Support\Catalog\LikeTerm;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -129,6 +130,15 @@ class SearchCatalog
 
         ['facets' => $facets, 'tokens' => $tokens] = $this->parseQuery($q);
 
+        // The user typed a query, but nothing usable survived parsing — e.g. it
+        // was all LIKE wildcards ("%") or pure filler. Match nothing rather than
+        // silently dropping the constraint and returning the whole catalog.
+        if ($facets === [] && $tokens === []) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
         // Edition/variant phrases → facets (they live in attributes, not the name).
         foreach ($facets as $facet => $value) {
             $query->where("attributes->{$facet}", $value);
@@ -211,7 +221,9 @@ class SearchCatalog
         }
 
         $tokens = array_values(array_filter(
-            preg_split('/\s+/', trim($text)) ?: [],
+            // Strip LIKE wildcards so a stray "%"/"_" can't turn a token into a
+            // match-everything pattern (a full-catalog scan).
+            array_map(LikeTerm::clean(...), preg_split('/\s+/', trim($text)) ?: []),
             fn (string $t) => $t !== '' && ! in_array($t, self::STOPWORDS, true),
         ));
 
