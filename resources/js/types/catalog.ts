@@ -78,6 +78,9 @@ export type MarketValue = {
     /** Recent sales up sharply on real data — drives the "Surging" flag. */
     is_surging?: boolean;
     half_life_days: number;
+    /** Percent change of the recent window's median vs the prior equal window. */
+    trend_1d?: number | null;
+    trend_7d?: number | null;
     trend_30d: number | null;
     currency: string;
     computed_at: string | null;

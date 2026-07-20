@@ -39,6 +39,8 @@ class MarketValueResource extends JsonResource
             // Recent sales up sharply on real, non-manipulated data.
             'is_surging' => $this->isSurging(),
             'half_life_days' => $this->half_life_days,
+            'trend_1d' => $this->trend_1d,
+            'trend_7d' => $this->trend_7d,
             'trend_30d' => $this->trend_30d,
             'currency' => $this->currency,
             'computed_at' => $this->computed_at?->toIso8601String(),

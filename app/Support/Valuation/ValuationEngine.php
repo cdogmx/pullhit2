@@ -89,6 +89,8 @@ class ValuationEngine
             nSales: count($kept),
             confidence: round($confidence, 3),
             halfLifeDays: $halfLife,
+            trend1d: $this->trend($kept, $priors, $asOfTs, 1),
+            trend7d: $this->trend($kept, $priors, $asOfTs, 7),
             trend30d: $this->trend($kept, $priors, $asOfTs, 30),
             trend90d: $this->trend($kept, $priors, $asOfTs, 90),
             outlierKeys: $outlierKeys,
@@ -129,7 +131,19 @@ class ValuationEngine
 
         $days = (float) $hl['constant'] / $velocity;
 
-        return (int) round(max((float) $hl['min_days'], min((float) $hl['max_days'], $days)));
+        // Velocity-aware floor: keep the 14-day floor for steady/thin markets, but
+        // relax it toward hard_min_days for high-velocity cards (a new release
+        // selling dozens a day), where a 2-week-old sale shouldn't anchor today's
+        // price. The floor is the time to accumulate ~floor_sample sales, so it
+        // only drops when there's the volume to support a shorter window.
+        $minDays = (float) $hl['min_days'];
+        $hardMin = (float) ($hl['hard_min_days'] ?? $minDays);
+        $floorSample = (float) ($hl['floor_sample'] ?? 0);
+        $floor = $floorSample > 0
+            ? max($hardMin, min($minDays, $floorSample / $velocity))
+            : $minDays;
+
+        return (int) round(max($floor, min((float) $hl['max_days'], $days)));
     }
 
     protected function confidence(int $n, float $daysSinceNewest, float $median, float $p25, float $p75, float $velocity, ?float $topSellerShare): float

@@ -53,10 +53,66 @@ import type {
     CardListings,
     CatalogItem,
     GradingCompanyOption,
+    MarketValue,
     OwnedState,
     PriceHistory,
     PricePoint,
 } from '@/types';
+
+/**
+ * Recent price-direction badges (24h / 7d / 30d) for the selected state. Shows
+ * only the windows that have data — so a card too new or too thin for the 30-day
+ * trend still shows its 24h/7d direction, and a bone-dry card shows nothing.
+ * Percentages are the recent-window median vs the prior equal-length window.
+ */
+function TrendRow({ value }: { value: MarketValue }) {
+    const windows = [
+        { pct: value.trend_1d, label: '24h' },
+        { pct: value.trend_7d, label: '7d' },
+        { pct: value.trend_30d, label: '30d' },
+    ].filter(
+        (t): t is { pct: number; label: string } =>
+            t.pct != null && Number.isFinite(t.pct),
+    );
+
+    if (windows.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {windows.map(({ pct, label }) => {
+                const flat = Math.abs(pct) < 0.5;
+                const up = pct > 0;
+
+                return (
+                    <span
+                        key={label}
+                        title={`${label} change: recent median vs the prior ${label} window`}
+                        className={cn(
+                            'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-semibold',
+                            flat
+                                ? 'bg-muted text-muted-foreground'
+                                : up
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                  : 'bg-red-500/10 text-red-600 dark:text-red-400',
+                        )}
+                    >
+                        {!flat &&
+                            (up ? (
+                                <TrendingUp className="size-3" />
+                            ) : (
+                                <TrendingDown className="size-3" />
+                            ))}
+                        {flat ? '' : up ? '+' : ''}
+                        {pct.toFixed(0)}%
+                        <span className="font-normal opacity-70">{label}</span>
+                    </span>
+                );
+            })}
+        </div>
+    );
+}
 
 type Props = {
     item: { data: CatalogItem };
@@ -507,6 +563,8 @@ export default function Show({
                                 <div className="mt-3">
                                     <PriceTag value={headline} variant="full" />
                                 </div>
+
+                                <TrendRow value={headline} />
 
                                 {sealedVsMsrp && (
                                     <p className="mt-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">

@@ -20,6 +20,8 @@ readonly class ValuationResult
         public int $nSales,
         public float $confidence,
         public int $halfLifeDays,
+        public ?float $trend1d,
+        public ?float $trend7d,
         public ?float $trend30d,
         public ?float $trend90d,
         public array $outlierKeys = [],

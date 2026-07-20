@@ -27,11 +27,23 @@ return [
         'other' => 1.00,
     ],
 
-    // Velocity-aware recency window. half_life = clamp(constant / sales_per_day).
+    // Velocity-aware recency window. half_life = clamp(constant / sales_per_day),
+    // floored so we never overfit a thin market.
     'half_life' => [
+        // Floor for a normal/thin market: a sale a week keeps a ~2-week memory.
         'min_days' => 14,
         'max_days' => 90,
         'constant' => 7.0,
+
+        // Velocity-aware floor. The 14-day floor is right for steady cards, but
+        // wrong for a freshly-released card selling dozens a day whose price is
+        // still falling — there, a fortnight-old sale shouldn't anchor "today's"
+        // value. So relax the floor toward `hard_min_days` once the window would
+        // still hold ~`floor_sample` sales: floor = clamp(floor_sample / velocity,
+        // hard_min_days, min_days). Only high-velocity cards are affected; steady
+        // ones keep the 14-day floor exactly.
+        'hard_min_days' => 1,
+        'floor_sample' => 12,
     ],
 
     // Confidence score knobs.

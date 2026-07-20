@@ -78,6 +78,8 @@ class RecomputeMarketValue
                 // Estimated when the comps are synthetic placeholders (no real sales yet).
                 'is_estimated' => $rows->contains(fn ($o) => $o->is_synthetic),
                 'half_life_days' => $result->halfLifeDays,
+                'trend_1d' => $result->trend1d,
+                'trend_7d' => $result->trend7d,
                 'trend_30d' => $result->trend30d,
                 'trend_90d' => $result->trend90d,
                 'currency' => $rows->first()->currency ?? 'USD',

@@ -193,8 +193,14 @@ class CatalogItem extends Model
         $observations = $this->saleObservations()
             ->where('is_synthetic', false)
             ->where('is_outlier', false)
+            // eBay sweeps store observed_at as date-only, so on the newest day the
+            // ties must break by ingest order (created_at, then id) — otherwise
+            // "last sold" is whichever same-day row the DB happens to return first
+            // (it was surfacing an early, high sale over the genuinely latest one).
             ->orderByDesc('observed_at')
-            ->get(['price', 'observed_at', 'venue', 'condition', 'grading_company_id', 'grade']);
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get(['id', 'price', 'observed_at', 'created_at', 'venue', 'condition', 'grading_company_id', 'grade']);
 
         foreach ($observations as $o) {
             // The same key market_values uses (PricedStateKey), built inline off
