@@ -1,24 +1,51 @@
 import { ArrowRight, ImageIcon, Loader2, ScanLine, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { detectCardBox, toGray  } from '@/lib/card-detect';
+import type {NormBox} from '@/lib/card-detect';
 import { formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CatalogItem, ScanDetected } from '@/types';
 
 const MAX_PX = 1568;
 
-// Auto-capture tuning (heuristic, not true rectangle detection): sample the
-// central card region each tick and fire when it's detailed (a card fills the
-// frame) AND steady (not moving) for a short hold. Values are 0–255 scale.
-const SAMPLE_W = 48;
-const SAMPLE_H = 67; // ~5:7 card aspect
-const DETECT_MS = 130;
-const CONTENT_EDGE = 14; // edge density that says "a card is here"
-const CLEAR_EDGE = 9; // below this the frame is empty again (re-arm)
-const STABLE_MOTION = 7; // per-pixel frame delta under which we call it steady
-const STABLE_TICKS = 5; // ~650ms held steady before auto-firing
+// Auto-capture tuning. Each tick we sample the WHOLE frame at low res and run a
+// bounding-box detector to find where a card actually is — anywhere in view, not
+// just filling a fixed central box. When a card is locked AND the frame is steady
+// for a short hold, we capture (cropped to the detected card). Values are 0–255.
+const PROXY_LONG = 120; // long edge of the detection proxy canvas
+const DETECT_MS = 120;
+const STABLE_MOTION = 8; // mean per-pixel frame delta under which we call it steady
+const STABLE_TICKS = 4; // ~500ms locked + steady before auto-firing
 const COOLDOWN_MS = 1500;
 
 type DetectState = 'off' | 'search' | 'hold' | 'captured';
+
+/**
+ * Map a video-frame-normalized box to pixels over the (object-cover) video
+ * element, undoing the center-crop cover scaling applies. Returns null until the
+ * element has a rendered and intrinsic size.
+ */
+function coverRect(
+    box: NormBox,
+    v: HTMLVideoElement,
+): { left: number; top: number; width: number; height: number } | null {
+    if (!v.videoWidth || !v.clientWidth) {
+        return null;
+    }
+
+    const cover = Math.max(v.clientWidth / v.videoWidth, v.clientHeight / v.videoHeight);
+    const dispW = v.videoWidth * cover;
+    const dispH = v.videoHeight * cover;
+    const cropX = (dispW - v.clientWidth) / 2;
+    const cropY = (dispH - v.clientHeight) / 2;
+
+    return {
+        left: box.x * dispW - cropX,
+        top: box.y * dispH - cropY,
+        width: box.width * dispW,
+        height: box.height * dispH,
+    };
+}
 
 /**
  * Continuous live-camera scanner (Collectr-style): a framed viewfinder, a shutter
@@ -52,12 +79,26 @@ export function LiveScanner({
     const [ready, setReady] = useState(false);
     const [auto, setAuto] = useState(true);
     const [detect, setDetect] = useState<DetectState>('search');
+    // The lock-on box in element pixels (object-cover mapped), for the overlay.
+    // Computed in the detection tick so render never reads a ref. Null = no lock.
+    const [lockRect, setLockRect] = useState<{
+        left: number;
+        top: number;
+        width: number;
+        height: number;
+    } | null>(null);
 
-    // Refs so the detection interval always sees the latest values.
+    // Refs so the detection interval always sees the latest values without being
+    // torn down and rebuilt each render. Synced in an effect (updating a ref
+    // during render isn't allowed).
     const busyRef = useRef(busy);
-    busyRef.current = busy;
     const autoRef = useRef(auto);
-    autoRef.current = auto;
+    useEffect(() => {
+        busyRef.current = busy;
+        autoRef.current = auto;
+    });
+    // Latest detected box (normalized), read by capture() to crop to the card.
+    const boxRef = useRef<NormBox | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -94,44 +135,56 @@ export function LiveScanner({
         };
     }, []);
 
-    // Grab the current video frame, downscale to a JPEG, and hand it up.
-    const capture = () => {
+    // Grab the current video frame and hand up a JPEG. When a card is locked we
+    // crop to its box (from the FULL-resolution frame) so the card fills the sent
+    // image — that's what makes an off-center or smallish card readable. With no
+    // lock (manual shutter, nothing detected) we send the whole frame.
+    const capture = (cropBox: NormBox | null = boxRef.current) => {
         const video = videoRef.current;
 
         if (!video || busy || !video.videoWidth) {
             return;
         }
 
-        const scale = Math.min(
-            1,
-            MAX_PX / Math.max(video.videoWidth, video.videoHeight),
-        );
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+
+        // Source rect: the locked card (in pixels) or the whole frame.
+        const sx = cropBox ? cropBox.x * vw : 0;
+        const sy = cropBox ? cropBox.y * vh : 0;
+        const sw = cropBox ? cropBox.width * vw : vw;
+        const sh = cropBox ? cropBox.height * vh : vh;
+
+        const scale = Math.min(1, MAX_PX / Math.max(sw, sh));
         const canvas = document.createElement('canvas');
-        canvas.width = Math.round(video.videoWidth * scale);
-        canvas.height = Math.round(video.videoHeight * scale);
+        canvas.width = Math.max(1, Math.round(sw * scale));
+        canvas.height = Math.max(1, Math.round(sh * scale));
         const ctx = canvas.getContext('2d');
 
         if (!ctx) {
             return;
         }
 
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
         onShutter(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
     };
 
+    // Keep the interval's view of capture() current without re-creating the
+    // interval (updating a ref during render isn't allowed, so do it in an effect).
     const captureRef = useRef(capture);
-    captureRef.current = capture;
+    useEffect(() => {
+        captureRef.current = capture;
+    });
 
-    // Auto-capture: watch the central card region; fire when a detailed subject
-    // holds steady, then wait for the frame to clear before arming the next.
+    // Auto-capture: each tick, sample the whole frame at low res, locate the card
+    // (anywhere in view), and fire once a card is locked AND the frame holds
+    // steady. After a capture, wait for the card to leave before re-arming.
     useEffect(() => {
         if (!ready || error) {
             return;
         }
 
         const canvas = document.createElement('canvas');
-        canvas.width = SAMPLE_W;
-        canvas.height = SAMPLE_H;
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         let prev: Uint8ClampedArray | null = null;
         let stable = 0;
@@ -139,41 +192,28 @@ export function LiveScanner({
         let cooldownUntil = 0;
 
         const id = window.setInterval(() => {
-            const video = videoRef.current;
+            const v = videoRef.current;
 
-            if (!video || !video.videoWidth || !ctx) {
+            if (!v || !v.videoWidth || !ctx) {
                 return;
             }
 
-            // Sample the central 5:7 region (matches the on-screen frame).
-            const vw = video.videoWidth;
-            const vh = video.videoHeight;
-            const rh = vh * 0.7;
-            const rw = rh * (5 / 7);
-            ctx.drawImage(video, (vw - rw) / 2, (vh - rh) / 2, rw, rh, 0, 0, SAMPLE_W, SAMPLE_H);
-            const { data } = ctx.getImageData(0, 0, SAMPLE_W, SAMPLE_H);
+            // Size the proxy from the LIVE frame each tick (robust to a late-
+            // arriving or rotated stream); it preserves the frame's aspect so the
+            // detected box maps straight back over the video.
+            const scale = PROXY_LONG / Math.max(v.videoWidth, v.videoHeight);
+            const pw = Math.max(8, Math.round(v.videoWidth * scale));
+            const ph = Math.max(8, Math.round(v.videoHeight * scale));
 
-            const gray = new Uint8ClampedArray(SAMPLE_W * SAMPLE_H);
-
-            for (let i = 0, j = 0; i < data.length; i += 4, j++) {
-                gray[j] = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+            if (canvas.width !== pw || canvas.height !== ph) {
+                canvas.width = pw;
+                canvas.height = ph;
+                prev = null; // dimensions changed — the motion baseline is stale
             }
 
-            // Edge density = how much detail is in the region (a card vs a wall).
-            let edge = 0;
-            let n = 0;
-
-            for (let y = 1; y < SAMPLE_H - 1; y++) {
-                for (let x = 1; x < SAMPLE_W - 1; x++) {
-                    const o = y * SAMPLE_W + x;
-                    edge +=
-                        Math.abs(gray[o + 1] - gray[o - 1]) +
-                        Math.abs(gray[o + SAMPLE_W] - gray[o - SAMPLE_W]);
-                    n++;
-                }
-            }
-
-            edge /= n;
+            ctx.drawImage(v, 0, 0, pw, ph);
+            const { data } = ctx.getImageData(0, 0, pw, ph);
+            const gray = toGray(data, pw, ph);
 
             // Motion = mean per-pixel change vs the previous tick (steadiness).
             let motion = 0;
@@ -194,13 +234,19 @@ export function LiveScanner({
                 return;
             }
 
+            // Locate the card. Keep the box live for the overlay even while busy
+            // or cooling down, so the lock indicator tracks the card.
+            const found = detectCardBox(gray, pw, ph);
+            boxRef.current = found?.box ?? null;
+            setLockRect(found ? coverRect(found.box, v) : null);
+
             if (busyRef.current || Date.now() < cooldownUntil) {
                 return;
             }
 
             // After a capture, wait for the card to leave before re-arming.
             if (phase === 'captured') {
-                if (edge < CLEAR_EDGE) {
+                if (!found) {
                     phase = 'search';
                     setDetect('search');
                 }
@@ -208,7 +254,7 @@ export function LiveScanner({
                 return;
             }
 
-            if (edge >= CONTENT_EDGE && motion <= STABLE_MOTION) {
+            if (found && motion <= STABLE_MOTION) {
                 stable += 1;
                 setDetect('hold');
 
@@ -217,23 +263,23 @@ export function LiveScanner({
                     phase = 'captured';
                     cooldownUntil = Date.now() + COOLDOWN_MS;
                     setDetect('captured');
-                    captureRef.current();
+                    captureRef.current(found.box);
                 }
             } else {
                 stable = 0;
-                setDetect('search');
+                setDetect(found ? 'hold' : 'search');
             }
         }, DETECT_MS);
 
         return () => window.clearInterval(id);
     }, [ready, error]);
 
-    const bracketColor =
+    const lockColor =
         detect === 'captured'
             ? 'border-green-400'
             : detect === 'hold'
               ? 'border-amber-400'
-              : 'border-emerald-400/50';
+              : 'border-emerald-400/60';
 
     return (
         <div className="relative overflow-hidden rounded-2xl border border-border bg-black text-white">
@@ -247,35 +293,39 @@ export function LiveScanner({
                     className="size-full object-cover"
                 />
 
-                {/* Card frame overlay — brackets tint as detection progresses. */}
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3">
-                    <div className="relative aspect-[5/7] h-[70%]">
-                        {(['tl', 'tr', 'bl', 'br'] as const).map((corner) => (
-                            <span
-                                key={corner}
-                                className={cn(
-                                    'absolute size-8 transition-colors',
-                                    bracketColor,
-                                    corner === 'tl' &&
-                                        'top-0 left-0 rounded-tl-lg border-t-4 border-l-4',
-                                    corner === 'tr' &&
-                                        'top-0 right-0 rounded-tr-lg border-t-4 border-r-4',
-                                    corner === 'bl' &&
-                                        'bottom-0 left-0 rounded-bl-lg border-b-4 border-l-4',
-                                    corner === 'br' &&
-                                        'right-0 bottom-0 rounded-br-lg border-r-4 border-b-4',
-                                )}
-                            />
-                        ))}
-                    </div>
+                {/* Detection overlay. The lock-on box follows the card wherever
+                    it is in the frame; a faint centered guide shows when nothing
+                    is detected yet so the viewfinder never looks empty. */}
+                <div className="pointer-events-none absolute inset-0">
+                    {lockRect ? (
+                        <div
+                            className={cn(
+                                'absolute rounded-lg border-4 transition-colors',
+                                lockColor,
+                            )}
+                            style={{
+                                left: lockRect.left,
+                                top: lockRect.top,
+                                width: lockRect.width,
+                                height: lockRect.height,
+                            }}
+                        />
+                    ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="aspect-[5/7] h-[62%] rounded-lg border-2 border-dashed border-white/25" />
+                        </div>
+                    )}
+
                     {auto && !busy && (
-                        <span className="rounded-full bg-black/55 px-3 py-1 text-xs font-medium backdrop-blur">
-                            {detect === 'hold'
-                                ? 'Hold steady…'
-                                : detect === 'captured'
-                                  ? 'Captured!'
-                                  : 'Point at a card — it captures automatically'}
-                        </span>
+                        <div className="absolute inset-x-0 bottom-3 flex justify-center">
+                            <span className="rounded-full bg-black/55 px-3 py-1 text-xs font-medium backdrop-blur">
+                                {detect === 'captured'
+                                    ? 'Captured!'
+                                    : detect === 'hold'
+                                      ? 'Card found — hold steady…'
+                                      : 'Point at a card — it captures automatically'}
+                            </span>
+                        </div>
                     )}
                 </div>
 
@@ -391,7 +441,7 @@ export function LiveScanner({
 
                 <button
                     type="button"
-                    onClick={capture}
+                    onClick={() => capture()}
                     disabled={busy || !ready}
                     aria-label="Capture card"
                     className="flex size-16 items-center justify-center rounded-full bg-white ring-4 ring-white/30 transition-transform active:scale-95 disabled:opacity-50"
