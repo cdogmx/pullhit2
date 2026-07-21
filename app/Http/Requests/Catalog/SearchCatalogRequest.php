@@ -40,6 +40,9 @@ class SearchCatalogRequest extends FormRequest
             // Graded state: filter to a grader (slug) and optionally a grade.
             'grading_company' => ['nullable', 'string', 'max:64'],
             'grade' => ['nullable', 'numeric', 'min:1', 'max:10'],
+            // Ownership (logged-in only): every card, or only ones the user does /
+            // doesn't already have in a collection. Ignored for guests.
+            'owned' => ['nullable', Rule::in(['all', 'owned', 'unowned'])],
             'sort' => ['nullable', Rule::in(['number', 'name', 'newest', 'release', 'set', 'price', 'change'])],
             'direction' => ['nullable', Rule::in(['asc', 'desc'])],
             'group' => ['nullable', 'boolean'],
@@ -74,6 +77,7 @@ class SearchCatalogRequest extends FormRequest
             'edition' => $v['edition'] ?? null,
             'grading_company' => $v['grading_company'] ?? null,
             'grade' => isset($v['grade']) ? (float) $v['grade'] : null,
+            'owned' => $v['owned'] ?? null,
             'sort' => $v['sort'] ?? 'number',
             'direction' => $v['direction'] ?? 'asc',
             'group' => $this->boolean('group'),

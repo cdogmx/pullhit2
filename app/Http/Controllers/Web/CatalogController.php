@@ -173,6 +173,10 @@ class CatalogController extends Controller
             ]);
         }
 
+        // The ownership filter needs the viewer's id — injected only for the query,
+        // never echoed into the page's `filters` prop above.
+        $filters['user_id'] = auth()->id();
+
         $paginator = $search($filters);
 
         // On a zero-result search (usually a typo), find the closest card/set/brand
@@ -234,6 +238,9 @@ class CatalogController extends Controller
     {
         return match (true) {
             ! empty($filters['all']) || ! empty($filters['q']) || ! empty($filters['subset']) => 'cards',
+            // An ownership filter is per-user, not per-set, so skip the tile
+            // drill-down and go straight to the flat card grid.
+            in_array($filters['owned'] ?? null, ['owned', 'unowned'], true) => 'cards',
             ! empty($filters['set']) => 'subsets',
             ! empty($filters['series']) => 'sets',
             ! empty($filters['product_line']) => 'series',

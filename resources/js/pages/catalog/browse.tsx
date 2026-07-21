@@ -143,6 +143,11 @@ function buildQuery(filters: CatalogFilters): Record<string, string | number> {
         out.grade = filters.grade;
     }
 
+    // Ownership filter (logged-in only); 'all' is the default, so omit it.
+    if (filters.owned === 'owned' || filters.owned === 'unowned') {
+        out.owned = filters.owned;
+    }
+
     if (filters.sort && filters.sort !== 'number') {
         out.sort = filters.sort;
     }
@@ -172,6 +177,7 @@ function buildQuery(filters: CatalogFilters): Record<string, string | number> {
 // defaults to Singles, so a permanent "Single" chip would just be noise.
 const ACTIVE_KEYS: (keyof CatalogFilters)[] = [
     'q',
+    'owned',
     'language',
     'rarity',
     'variant',
@@ -179,6 +185,12 @@ const ACTIVE_KEYS: (keyof CatalogFilters)[] = [
     'grading_company',
     'grade',
 ];
+
+/** Labels for the ownership filter values. */
+const OWNED_LABELS: Record<string, string> = {
+    owned: 'In a collection',
+    unowned: 'Not in a collection',
+};
 
 /** Friendlier labels for the catalog's item types. */
 const ITEM_TYPE_LABELS: Record<string, string> = {
@@ -526,6 +538,7 @@ export default function Browse({
                                         options={options}
                                         filters={filters}
                                         onChange={update}
+                                        showOwnership={canAdd}
                                     />
                                 </div>
                             </SheetContent>
@@ -642,6 +655,7 @@ export default function Browse({
                                 options={options}
                                 filters={filters}
                                 onChange={update}
+                                showOwnership={canAdd}
                             />
                         </div>
                     </aside>
@@ -871,10 +885,13 @@ function FilterControls({
     options,
     filters,
     onChange,
+    showOwnership = false,
 }: {
     options: CatalogFilterOptions;
     filters: CatalogFilters;
     onChange: (partial: Partial<CatalogFilters>) => void;
+    /** Show the "In a collection" ownership filter (logged-in users only). */
+    showOwnership?: boolean;
 }) {
     const selects: {
         key: keyof CatalogFilters;
@@ -907,6 +924,20 @@ function FilterControls({
                 label: ITEM_TYPE_LABELS[v] ?? humanize(v),
             })),
         },
+        // Ownership — logged-in only. Clears to null (= all cards).
+        ...(showOwnership
+            ? [
+                  {
+                      key: 'owned' as keyof CatalogFilters,
+                      label: 'Collection',
+                      allLabel: 'All cards',
+                      opts: [
+                          { value: 'owned', label: OWNED_LABELS.owned },
+                          { value: 'unowned', label: OWNED_LABELS.unowned },
+                      ],
+                  },
+              ]
+            : []),
         {
             key: 'set',
             label: 'Set',
@@ -1040,6 +1071,10 @@ function ActiveChips({
 
         if (k === 'grade') {
             return `Grade: ${filters.grade}`;
+        }
+
+        if (k === 'owned') {
+            return OWNED_LABELS[String(filters.owned)] ?? String(filters.owned);
         }
 
         return `${humanize(k)}: ${filters[k]}`;

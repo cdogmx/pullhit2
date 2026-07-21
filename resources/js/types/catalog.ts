@@ -119,6 +119,8 @@ export type CatalogFilters = {
     edition: string | null;
     grading_company: string | null;
     grade: number | null;
+    /** Logged-in ownership filter: 'all' | 'owned' | 'unowned' (null = all). */
+    owned: string | null;
     sort: string;
     direction: string;
     group: boolean;

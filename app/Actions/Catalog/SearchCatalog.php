@@ -257,8 +257,41 @@ class SearchCatalog
             $query->whereHas('marketValues', fn (Builder $mv) => $this->constrainGrading($mv, $grading));
         }
 
+        $this->applyOwnership($query, $filters);
+
         // `subset` (only ever 'main' in URLs) is a UI sentinel that drops a parent
         // set to its own cards; a child gallery is browsed by its own set slug.
+    }
+
+    /**
+     * Restrict to cards the logged-in user does ("owned") or doesn't ("unowned")
+     * already have in a collection. Matches on base_key so owning ANY printing of
+     * a card counts (browse can collapse printings to one row), falling back to
+     * the exact id when a card has no base_key. A no-op without a user id (guests)
+     * or when the filter is "all".
+     *
+     * @param  Builder<CatalogItem>  $query
+     * @param  array<string, mixed>  $filters
+     */
+    protected function applyOwnership(Builder $query, array $filters): void
+    {
+        $owned = $filters['owned'] ?? null;
+        $userId = $filters['user_id'] ?? null;
+
+        if (! in_array($owned, ['owned', 'unowned'], true) || empty($userId)) {
+            return;
+        }
+
+        $has = fn (Builder $q) => $q->whereExists(fn ($sub) => $sub
+            ->from('collection_items as ci')
+            ->join('catalog_items as owned', 'owned.id', '=', 'ci.catalog_item_id')
+            ->where('ci.user_id', (int) $userId)
+            ->where(fn ($w) => $w
+                ->whereColumn('owned.base_key', 'catalog_items.base_key')
+                ->orWhereColumn('owned.id', 'catalog_items.id'))
+            ->selectRaw('1'));
+
+        $owned === 'owned' ? $has($query) : $query->whereNot($has);
     }
 
     /**
