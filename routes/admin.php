@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CardReportController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EbaySweepController;
 use App\Http\Controllers\Admin\GiveawayController;
+use App\Http\Controllers\Admin\GradingGapController;
 use App\Http\Controllers\Admin\ImageController;
 use App\Http\Controllers\Admin\ReconcileController;
 use App\Http\Controllers\Admin\ScanFeedbackController;
@@ -93,6 +94,9 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
 
     // eBay sweep: watch broad sold-comp match quality (applied vs misses), and
     // reject / reassign applied sales (sticky across future re-pulls).
+    // Grading-arbitrage finder: cards worth more in a PSA 10 slab than raw.
+    Route::get('grading-gaps', [GradingGapController::class, 'index'])->name('grading-gaps.index');
+
     Route::get('ebay-sweep', [EbaySweepController::class, 'index'])->name('ebay-sweep.index');
     Route::post('ebay-sweep/applied/{saleObservation}/reject', [EbaySweepController::class, 'reject'])->name('ebay-sweep.reject');
     Route::post('ebay-sweep/applied/{saleObservation}/reassign', [EbaySweepController::class, 'reassign'])->name('ebay-sweep.reassign');

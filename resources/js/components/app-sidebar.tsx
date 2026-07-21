@@ -23,6 +23,7 @@ import {
     Shield,
     Tag,
     Sparkles,
+    TrendingUp,
     Trophy,
     Users,
     Zap,
@@ -130,6 +131,7 @@ const adminNavItems: NavItem[] = [
     { title: 'Scan feedback', href: '/admin/scan-feedback', icon: ScanLine },
 
     // Pricing & availability ops
+    { title: 'Grading gaps', href: '/admin/grading-gaps', icon: TrendingUp },
     { title: 'eBay sweep', href: '/admin/ebay-sweep', icon: Radar },
     { title: 'Stock alerts', href: '/admin/stock-alerts', icon: Bell },
 
