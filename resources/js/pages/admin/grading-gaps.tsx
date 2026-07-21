@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { ArrowDownUp, ExternalLink, ImageOff } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -38,19 +39,38 @@ type Filters = {
     fee: number;
     min_value: number;
     min_graded_sales: number;
+    brand: string;
+    set: string;
+    year: number | null;
     sort: 'profit' | 'multiple';
 };
 
-type Props = { rows: Row[]; pagination: AdminPagination; filters: Filters };
+type Option = { value: string; label: string };
 
-export default function AdminGradingGaps({ rows, pagination, filters }: Props) {
+type Options = { brands: Option[]; years: number[]; sets: Option[] };
+
+type Props = {
+    rows: Row[];
+    pagination: AdminPagination;
+    filters: Filters;
+    options: Options;
+};
+
+const ALL = '__all__';
+
+export default function AdminGradingGaps({
+    rows,
+    pagination,
+    filters,
+    options,
+}: Props) {
     const [fee, setFee] = useState(String(filters.fee));
     const [minValue, setMinValue] = useState(String(filters.min_value));
 
-    const apply = (changes: Record<string, string | number> = {}) =>
+    const apply = (changes: Record<string, string | number | null> = {}) =>
         router.get(
             '/admin/grading-gaps',
-            { ...filters, page: 1, ...changes },
+            { ...filters, year: filters.year ?? '', page: 1, ...changes },
             { preserveState: true, preserveScroll: true, replace: true },
         );
 
@@ -73,6 +93,63 @@ export default function AdminGradingGaps({ rows, pagination, filters }: Props) {
 
                 {/* Controls */}
                 <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border p-3">
+                    <div className="grid gap-1">
+                        <Label className="text-xs">Brand</Label>
+                        <Select
+                            value={filters.brand || ALL}
+                            onValueChange={(v) =>
+                                // Sets are scoped to the brand, so reset the set too.
+                                apply({ brand: v === ALL ? '' : v, set: '' })
+                            }
+                        >
+                            <SelectTrigger className="h-9 w-40">
+                                <SelectValue placeholder="All brands" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={ALL}>All brands</SelectItem>
+                                {options.brands.map((b) => (
+                                    <SelectItem key={b.value} value={b.value}>
+                                        {b.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-1">
+                        <Label className="text-xs">Set</Label>
+                        <Combobox
+                            options={[
+                                { value: '', label: 'All sets' },
+                                ...options.sets,
+                            ]}
+                            value={filters.set}
+                            onChange={(v) => apply({ set: v })}
+                            placeholder="All sets"
+                            searchPlaceholder="Search sets…"
+                            triggerClassName="h-9 w-56"
+                        />
+                    </div>
+                    <div className="grid gap-1">
+                        <Label className="text-xs">Year</Label>
+                        <Select
+                            value={filters.year ? String(filters.year) : ALL}
+                            onValueChange={(v) =>
+                                apply({ year: v === ALL ? '' : v })
+                            }
+                        >
+                            <SelectTrigger className="h-9 w-28">
+                                <SelectValue placeholder="Any" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={ALL}>Any year</SelectItem>
+                                {options.years.map((y) => (
+                                    <SelectItem key={y} value={String(y)}>
+                                        {y}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <div className="grid gap-1">
                         <Label htmlFor="fee" className="text-xs">
                             Grading fee ($)

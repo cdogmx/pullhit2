@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CatalogItem;
+use App\Models\ProductLine;
+use App\Models\Set;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,6 +29,9 @@ class GradingGapController extends Controller
             'fee' => max(0, (int) round((float) $request->query('fee', 25) * 100)),
             'min_value' => max(0, (int) round((float) $request->query('min_value', 3) * 100)),
             'min_graded_sales' => max(1, (int) $request->query('min_graded_sales', 2)),
+            'brand' => trim((string) $request->query('brand', '')),
+            'set' => trim((string) $request->query('set', '')),
+            'year' => (int) $request->query('year', 0),
             'sort' => in_array($request->query('sort'), ['profit', 'multiple'], true)
                 ? (string) $request->query('sort')
                 : 'profit',
@@ -50,6 +56,12 @@ class GradingGapController extends Controller
             // opportunity. Written as addition (not g.median - nm.median) so the
             // subtraction can't underflow the UNSIGNED columns for NM > PSA-10 rows.
             ->whereRaw('g.median > nm.median + ?', [$filters['fee']])
+            ->when($filters['brand'] !== '', fn (Builder $q) => $q
+                ->whereHas('productLine', fn (Builder $p) => $p->where('slug', $filters['brand'])))
+            ->when($filters['set'] !== '', fn (Builder $q) => $q
+                ->whereHas('set', fn (Builder $s) => $s->where('slug', $filters['set'])))
+            ->when($filters['year'] > 0, fn (Builder $q) => $q
+                ->whereHas('set', fn (Builder $s) => $s->whereYear('released_at', $filters['year'])))
             ->with('set:id,name,slug')
             ->select([
                 'catalog_items.*',
@@ -76,9 +88,47 @@ class GradingGapController extends Controller
                 'fee' => $filters['fee'] / 100,
                 'min_value' => $filters['min_value'] / 100,
                 'min_graded_sales' => $filters['min_graded_sales'],
+                'brand' => $filters['brand'],
+                'set' => $filters['set'],
+                'year' => $filters['year'] ?: null,
                 'sort' => $filters['sort'],
             ],
+            'options' => $this->options($filters['brand']),
         ]);
+    }
+
+    /**
+     * Filter dropdown options. Sets scope to the chosen brand (there are hundreds)
+     * so the picker stays usable; brands and years are the full small lists.
+     *
+     * @return array<string, mixed>
+     */
+    protected function options(string $brand): array
+    {
+        $years = Set::query()
+            ->whereNotNull('released_at')
+            ->pluck('released_at')
+            ->map(fn ($d) => (int) $d->year)
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $sets = Set::query()
+            ->when($brand !== '', fn (Builder $q) => $q
+                ->whereHas('productLine', fn (Builder $p) => $p->where('slug', $brand)))
+            ->orderByDesc('released_at')
+            ->get(['slug', 'name', 'released_at'])
+            ->map(fn (Set $s) => [
+                'value' => $s->slug,
+                'label' => $s->released_at ? "{$s->name} ({$s->released_at->year})" : $s->name,
+            ]);
+
+        return [
+            'brands' => ProductLine::orderBy('name')->get(['slug', 'name'])
+                ->map(fn (ProductLine $p) => ['value' => $p->slug, 'label' => $p->name]),
+            'years' => $years,
+            'sets' => $sets,
+        ];
     }
 
     /** @return array<string, mixed> */

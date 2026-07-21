@@ -3,6 +3,8 @@
 use App\Models\CatalogItem;
 use App\Models\GradingCompany;
 use App\Models\MarketValue;
+use App\Models\ProductLine;
+use App\Models\Set;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -80,4 +82,33 @@ test('the min NM value floor drops bulk cards', function () {
     $this->actingAs($this->admin)
         ->get('/admin/grading-gaps?min_value=5') // $5 floor
         ->assertInertia(fn (Assert $p) => $p->has('rows', 0));
+});
+
+test('brand, set and year filters narrow the list', function () {
+    // A card in Pokémon / Base Set (1999) and one in Lorcana / First Chapter (2023).
+    $pokemon = ProductLine::factory()->create(['slug' => 'pokemon', 'name' => 'Pokémon']);
+    $lorcana = ProductLine::factory()->create(['slug' => 'lorcana', 'name' => 'Disney Lorcana']);
+    $base = Set::factory()->for($pokemon)->create(['slug' => 'base-set', 'released_at' => '1999-01-09']);
+    $tfc = Set::factory()->for($lorcana)->create(['slug' => 'first-chapter', 'released_at' => '2023-08-18']);
+
+    $inBase = gapCard(nm: 1000, psa10: 8000);
+    $inBase->update(['product_line_id' => $pokemon->id, 'set_id' => $base->id]);
+    $inTfc = gapCard(nm: 1000, psa10: 8000);
+    $inTfc->update(['product_line_id' => $lorcana->id, 'set_id' => $tfc->id]);
+
+    // Brand.
+    $this->actingAs($this->admin)->get('/admin/grading-gaps?brand=pokemon')
+        ->assertInertia(fn (Assert $p) => $p->has('rows', 1)->where('rows.0.id', $inBase->id));
+    // Set.
+    $this->actingAs($this->admin)->get('/admin/grading-gaps?set=first-chapter')
+        ->assertInertia(fn (Assert $p) => $p->has('rows', 1)->where('rows.0.id', $inTfc->id));
+    // Year.
+    $this->actingAs($this->admin)->get('/admin/grading-gaps?year=1999')
+        ->assertInertia(fn (Assert $p) => $p->has('rows', 1)->where('rows.0.id', $inBase->id));
+
+    // Options carry the brands + years for the dropdowns.
+    $this->actingAs($this->admin)->get('/admin/grading-gaps')
+        ->assertInertia(fn (Assert $p) => $p
+            ->where('options.years', fn ($years) => collect($years)->contains(1999) && collect($years)->contains(2023))
+            ->has('options.brands'));
 });
