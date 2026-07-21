@@ -66,6 +66,14 @@ class SenseiChat
     /** @param  array<string, mixed>  $dossier */
     private function system(array $dossier): string
     {
+        return ($dossier['kind'] ?? 'sealed') === 'grade'
+            ? $this->gradeSystem($dossier)
+            : $this->sealedSystem($dossier);
+    }
+
+    /** @param  array<string, mixed> $dossier */
+    private function sealedSystem(array $dossier): string
+    {
         return <<<PROMPT
         You are the Sensei of the CardFoo dojo — a wise, playful martial-arts master who
         helps trading-card collectors decide whether to RIP (open) a sealed product or
@@ -138,6 +146,86 @@ class SenseiChat
                 .' average across many opens; any single pack usually misses.';
         } else {
             $lines[] = 'MODELED RIP EV: not available — no researched pull rates for this set, so ripping is a gamble.';
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /** @param  array<string, mixed> $dossier */
+    private function gradeSystem(array $dossier): string
+    {
+        return <<<PROMPT
+        You are the Sensei of the CardFoo dojo — a wise, playful martial-arts master who
+        helps trading-card collectors decide whether to GRADE a raw single (send it to PSA)
+        or SELL IT RAW as-is. CardFoo's slogan is "Wax on." Stay in character: dojo/ninja
+        flavor, warm humor, light teasing. Keep replies SHORT (2–5 sentences).
+
+        Reason from the DOSSIER below — it is real CardFoo market data, not a guess:
+        - Compare the raw (Near Mint) value with the graded values (PSA 10/9/8) and the
+          grading cost. The BREAK-EVEN is the key honest anchor: it's the PSA-10 chance
+          needed for grading to beat selling raw. Frame your verdict around it — e.g.
+          "you'd need at least a 1-in-3 shot at a 10."
+        - You do NOT know this specific copy's condition. The break-even and EV in the
+          dossier use a NEUTRAL prior. To sharpen the call, ask ONE short question about
+          the card's condition — centering, corners, edges, surface, whitening — then
+          reason: crisp corners + dead-centered = higher 10 odds (lean GRADE); any obvious
+          flaw = lower odds (lean SELL RAW). Never claim to know the grade; reason in odds.
+        - Note when a graded value is ESTIMATED (modeled, not real comps) or the raw value
+          is thin/low-confidence — temper your conviction accordingly.
+        - A falling raw price slightly favors grading sooner; a rising one is fine either way.
+
+        ALWAYS lead your verdict with one bold line in this exact shape (pick your conviction):
+        "🥋 GRADE IT (68%)" or "🥋 SELL IT RAW (61%)" or "🥋 TOO CLOSE TO CALL (51%)".
+        The percentage is YOUR conviction, not a market stat. Then 1–3 short sentences citing
+        the data (break-even, the premium, the cost). End with a nudge, not financial advice.
+        Grading also carries risk you should mention lightly: fees are sunk, turnaround is
+        weeks, and a low grade can be worth LESS than the raw card.
+
+        DOSSIER:
+        {$this->gradeDossierText($dossier)}
+        PROMPT;
+    }
+
+    /** @param  array<string, mixed> $d */
+    private function gradeDossierText(array $d): string
+    {
+        $money = fn (?int $c) => $c === null ? 'unknown' : '$'.number_format($c / 100, 2);
+        $pct = fn (?float $p) => $p === null ? 'n/a' : round($p * 100).'%';
+        $card = $d['card'] ?? [];
+        $raw = $d['raw'] ?? null;
+        $graded = $d['graded'] ?? [];
+        $costs = $d['costs'] ?? [];
+        $advice = $d['advice'] ?? null;
+
+        $lines = [];
+        $lines[] = 'Card: '.($card['name'] ?? 'Unknown')
+            .($card['number'] ? " #{$card['number']}" : '')
+            .($card['set'] ? " — {$card['set']}" : '')
+            .($card['rarity'] ? " ({$card['rarity']})" : '');
+
+        $trend = $raw && $raw['trend_30d'] !== null ? ", 30-day trend {$raw['trend_30d']}%" : '';
+        $lines[] = 'Raw (Near Mint) value: '.$money($raw['value'] ?? null)
+            .($raw ? ' from '.($raw['n_sales'] ?? 0).' sales'.($raw['is_estimated'] ? ' (estimated)' : '').$trend : '');
+
+        foreach (['10', '9', '8'] as $g) {
+            $row = $graded[$g] ?? null;
+            if ($row && $row['value'] !== null) {
+                $tag = $row['estimated'] ? ' (estimated)' : ' from '.($row['n_sales'] ?? 0).' sales';
+                $lines[] = "PSA {$g} value: ".$money($row['value']).$tag;
+            }
+        }
+
+        $lines[] = 'Grading cost: '.$money(($costs['fee'] ?? 0) + ($costs['shipping'] ?? 0))
+            .' (fee + shipping), plus ~'.round((float) ($costs['sale_fee_pct'] ?? 0) * 100).'% marketplace fee on the sale.';
+
+        if ($advice) {
+            $lines[] = 'BREAK-EVEN: you need at least a '.$pct($advice['breakeven_p10'] ?? null)
+                .' chance at a PSA 10 for grading to beat selling raw.';
+            $lines[] = 'At a neutral prior, expected value of grading is '.$money($advice['ev_grade'] ?? null)
+                .' vs selling raw '.$money($advice['ev_raw'] ?? null)
+                .' (edge '.$money($advice['advantage'] ?? null).'). Model verdict: '.($advice['verdict'] ?? 'unknown').'.';
+        } else {
+            $lines[] = 'BREAK-EVEN: not computable — we lack a raw value and/or a PSA 10 comp for this card. Say so honestly.';
         }
 
         return implode("\n", $lines);

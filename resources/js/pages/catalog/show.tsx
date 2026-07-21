@@ -8,6 +8,7 @@ import {
     Pencil,
     RefreshCw,
     Search,
+    Swords,
     TrendingDown,
     TrendingUp,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ import { CompPreviewDialog } from '@/components/admin/comp-preview-dialog';
 import { EditCardImageDialog } from '@/components/admin/edit-card-image-dialog';
 import { EbayListings } from '@/components/catalog/ebay-listings';
 import { EbayShopButton } from '@/components/catalog/ebay-shop-button';
+import { GradeSenseiDialog } from '@/components/catalog/grade-sensei-dialog';
 import { PriceBreakdownDrawer } from '@/components/catalog/price-breakdown-drawer';
 import { PriceHistoryChart } from '@/components/catalog/price-history-chart';
 import { PriceTag } from '@/components/catalog/price-tag';
@@ -324,6 +326,14 @@ export default function Show({
     const [zoomed, setZoomed] = useState(false);
     const [editingImage, setEditingImage] = useState(false);
     const isSealed = item.item_type === 'sealed';
+    // The grade-or-sell Sensei needs a raw + a PSA 10 anchor; offer it only then.
+    const [gradeOpen, setGradeOpen] = useState(false);
+    const canGrade =
+        !isSealed &&
+        values.some(
+            (v) => v.state_key === 'psa-10' && v.median != null,
+        ) &&
+        values.some((v) => v.state_key === 'NM' && v.median != null);
 
     // Buy links + live listings (lazy — drives the prominent "Shop on eBay" CTA).
     const [listings, setListings] = useState<CardListings | null>(null);
@@ -714,6 +724,17 @@ export default function Show({
                                             : `See ${headline.n_sales} sold comps`}
                                     </Button>
                                 </div>
+
+                                {canGrade && (
+                                    <Button
+                                        variant="outline"
+                                        className="mt-2 w-full"
+                                        onClick={() => setGradeOpen(true)}
+                                    >
+                                        <Swords className="size-4" />
+                                        Grade or sell? — Ask the Sensei
+                                    </Button>
+                                )}
 
                                 {listings && listings.listings.length > 0 && (
                                     <div className="mt-4 border-t border-border pt-3">
@@ -1236,6 +1257,14 @@ export default function Show({
                     languages={languages}
                     open={editingSealed}
                     onOpenChange={setEditingSealed}
+                />
+            )}
+
+            {canGrade && (
+                <GradeSenseiDialog
+                    itemId={item.id}
+                    open={gradeOpen}
+                    onOpenChange={setGradeOpen}
                 />
             )}
         </>

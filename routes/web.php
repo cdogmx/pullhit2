@@ -11,6 +11,7 @@ use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\DealsController;
 use App\Http\Controllers\Web\FeedController;
 use App\Http\Controllers\Web\FollowController;
+use App\Http\Controllers\Web\GradeController;
 use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\MoversController;
 use App\Http\Controllers\Web\NotificationController;
@@ -94,6 +95,11 @@ Route::get('rip-or-keep/search', [RipOrKeepController::class, 'search'])->name('
 Route::get('rip-or-keep/{catalogItem}/dossier', [RipOrKeepController::class, 'dossier'])->name('rip-or-keep.dossier');
 Route::post('rip-or-keep/{catalogItem}/chat', [RipOrKeepController::class, 'chat'])
     ->middleware('throttle:20,1')->name('rip-or-keep.chat');
+
+// "Grade or Sell?" — the Sensei rules on grading a raw single vs selling it raw.
+Route::get('grade/{catalogItem}/dossier', [GradeController::class, 'dossier'])->name('grade.dossier');
+Route::post('grade/{catalogItem}/chat', [GradeController::class, 'chat'])
+    ->middleware('throttle:20,1')->name('grade.chat');
 
 // Public user profile (community face of an account) + follow graph.
 Route::get('u/{username}', [UserProfileController::class, 'show'])->name('profile.show');
