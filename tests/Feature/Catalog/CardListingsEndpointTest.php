@@ -41,3 +41,29 @@ test('the listings endpoint works (affiliate links only) when Browse is unconfig
         ->assertJsonCount(0, 'listings')
         ->assertJsonPath('ebay_options.0.url', fn ($u) => str_contains($u, 'campid=5338'));
 });
+
+test('the listings endpoint accepts a condition/grade option', function () {
+    config([
+        'services.ebay.client_id' => 'id',
+        'services.ebay.client_secret' => 'secret',
+        'services.ebay.campaign_id' => '5338',
+        'services.ebay.base_url' => 'https://api.ebay.com',
+    ]);
+    Http::fake([
+        'api.ebay.com/identity/v1/oauth2/token' => Http::response(['access_token' => 'tok', 'expires_in' => 7200]),
+        'api.ebay.com/buy/browse/v1/item_summary/search*' => Http::response(['itemSummaries' => [
+            ['title' => 'PSA 10', 'price' => ['value' => '50.00', 'currency' => 'USD'], 'itemWebUrl' => 'https://ebay.com/itm/2'],
+        ]]),
+    ]);
+    $item = CatalogItem::factory()->create();
+
+    $this->getJson("/api/v1/catalog/{$item->id}/listings?option=PSA%2010")
+        ->assertOk()
+        ->assertJsonPath('selected', 'PSA 10')
+        ->assertJsonCount(1, 'listings');
+
+    Http::assertSent(function ($request) {
+        return str_contains($request->url(), 'item_summary/search')
+            && str_contains(urldecode($request->url()), 'PSA 10');
+    });
+});

@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Cache;
 class GetCardListings
 {
     /** Condition + graded search refinements appended to the card query. */
-    private const EBAY_OPTIONS = [
+    public const OPTIONS = [
         ['label' => 'Near Mint', 'group' => 'Condition', 'suffix' => 'Near Mint'],
         ['label' => 'Lightly Played', 'group' => 'Condition', 'suffix' => 'Lightly Played'],
         ['label' => 'Moderately Played', 'group' => 'Condition', 'suffix' => 'Moderately Played'],
@@ -38,9 +38,14 @@ class GetCardListings
     ) {}
 
     /**
-     * @return array{listings: array<int, mixed>, ebay_options: array<int, array{label: string, group: string, url: string}>, configured: bool}
+     * @return array{
+     *   listings: array<int, mixed>,
+     *   ebay_options: array<int, array{label: string, group: string, url: string, suffix: string}>,
+     *   selected: string,
+     *   configured: bool
+     * }
      */
-    public function __invoke(CatalogItem $item): array
+    public function __invoke(CatalogItem $item, ?string $optionLabel = null): array
     {
         $query = trim(implode(' ', array_filter(array_merge([
             $item->name,
@@ -48,18 +53,22 @@ class GetCardListings
             $item->set?->name,
         ], CardSearchTerms::qualifiers($item)))));
 
-        // Default tile list: Near Mint buy-it-now asks (Browse API, affiliate-tagged).
+        $selected = $this->resolveOption($optionLabel);
+        $suffix = $selected['suffix'];
+
+        // Browse API buy-it-now asks for the chosen condition/grade (affiliate-tagged).
         // Short-cache empty results so missing keys / blips recover quickly.
         $listings = [];
         if ($this->browse->configured()) {
-            $cacheKey = "ebay:listings:{$item->id}:v2";
+            $cacheKey = 'ebay:listings:'.$item->id.':v3:'.md5($suffix);
             $cached = Cache::get($cacheKey);
 
             if (is_array($cached)) {
                 $listings = $cached;
             } else {
-                $found = $this->browse->search(trim($query.' Near Mint'), 8);
-                $listings = $found !== [] ? $found : $this->browse->search($query, 8);
+                $found = $this->browse->search(trim($query.' '.$suffix), 12);
+                // Bare query only when the selected refinement returns nothing.
+                $listings = $found !== [] ? $found : $this->browse->search($query, 12);
                 Cache::put(
                     $cacheKey,
                     $listings,
@@ -71,13 +80,29 @@ class GetCardListings
         $options = array_map(fn (array $o) => [
             'label' => $o['label'],
             'group' => $o['group'],
+            'suffix' => $o['suffix'],
             'url' => $this->ebay->searchUrl(trim($query.' '.$o['suffix'])),
-        ], self::EBAY_OPTIONS);
+        ], self::OPTIONS);
 
         return [
             'listings' => $listings,
             'ebay_options' => $options,
+            'selected' => $selected['label'],
             'configured' => $this->browse->configured(),
         ];
+    }
+
+    /** @return array{label: string, group: string, suffix: string} */
+    protected function resolveOption(?string $label): array
+    {
+        if ($label !== null && $label !== '') {
+            foreach (self::OPTIONS as $o) {
+                if (strcasecmp($o['label'], $label) === 0) {
+                    return $o;
+                }
+            }
+        }
+
+        return self::OPTIONS[0]; // Near Mint
     }
 }

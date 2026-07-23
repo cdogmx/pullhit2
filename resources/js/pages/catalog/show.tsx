@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
 import { CompPreviewDialog } from '@/components/admin/comp-preview-dialog';
 import { EditCardImageDialog } from '@/components/admin/edit-card-image-dialog';
-import { EbayListings } from '@/components/catalog/ebay-listings';
+import { EbayListingsPanel } from '@/components/catalog/ebay-listings';
 import { EbayShopButton } from '@/components/catalog/ebay-shop-button';
 import { GradeSenseiDialog } from '@/components/catalog/grade-sensei-dialog';
 import { PriceBreakdownDrawer } from '@/components/catalog/price-breakdown-drawer';
@@ -736,15 +736,6 @@ export default function Show({
                                     </Button>
                                 )}
 
-                                {listings && listings.listings.length > 0 && (
-                                    <div className="mt-4 border-t border-border pt-3">
-                                        <p className={cn(SECTION_LABEL, 'mb-2')}>
-                                            Available on eBay
-                                        </p>
-                                        <EbayListings listings={listings.listings} />
-                                    </div>
-                                )}
-
                                 <div className="mt-3 flex items-center justify-between gap-2">
                                     <p className="text-[11px] text-muted-foreground">
                                         As an eBay Partner, we may be compensated
@@ -1151,6 +1142,13 @@ export default function Show({
                         </div>
                     </section>
                 )}
+
+                {/* Live eBay buy-it-now listings (condition/grade selectable) */}
+                <EbayListingsPanel
+                    catalogItemId={item.id}
+                    initial={listings}
+                    className="mt-8"
+                />
 
                 {/* More cards in this set */}
                 {moreInSet.length > 0 && (

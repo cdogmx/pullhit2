@@ -7,11 +7,19 @@ export type EbayListing = {
     url: string;
 };
 
-export type EbayOption = { label: string; group: string; url: string };
+export type EbayOption = {
+    label: string;
+    group: string;
+    url: string;
+    /** Browse search refinement (e.g. "Near Mint", "PSA 10"). */
+    suffix?: string;
+};
 
 export type CardListings = {
     listings: EbayListing[];
     ebay_options: EbayOption[];
+    /** Currently selected condition/grade label. */
+    selected?: string;
     configured: boolean;
 };
 

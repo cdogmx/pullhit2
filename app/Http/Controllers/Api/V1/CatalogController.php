@@ -74,10 +74,13 @@ class CatalogController extends Controller
 
     /**
      * Active "buy it now" listings + affiliate shop links (lazy-loaded, cached).
+     * Optional `option` query = condition/grade label (e.g. "Near Mint", "PSA 10").
      */
-    public function listings(CatalogItem $catalogItem, GetCardListings $listings): JsonResponse
+    public function listings(Request $request, CatalogItem $catalogItem, GetCardListings $listings): JsonResponse
     {
-        return response()->json($listings($catalogItem->load('set')));
+        $option = trim((string) $request->query('option', '')) ?: null;
+
+        return response()->json($listings($catalogItem->load('set'), $option));
     }
 
     /**
