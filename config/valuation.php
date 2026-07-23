@@ -70,6 +70,11 @@ return [
         // On-view refresh cadence for active asks (eBay Browse is free; TCGCSV is
         // cached per group), separate from the sold-comp TTL.
         'view_refresh_hours' => 6,
+
+        // A run that found no asks at all is usually a blip (missing keys, an eBay
+        // 5xx, a rate limit) rather than a card nobody lists — retry it this soon
+        // instead of hiding the for-sale + combined figures for the full TTL.
+        'empty_retry_minutes' => 20,
     ],
 
     // Confidence score knobs.

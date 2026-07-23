@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Valuation\IngestForSaleListings;
+use App\Actions\Valuation\MaybeRefreshForSale;
 use App\Models\CatalogItem;
 use App\Models\ListingObservation;
 use App\Models\MarketValue;
@@ -44,7 +45,9 @@ beforeEach(function () {
         }
     });
 
-    $this->item = CatalogItem::factory()->create(['name' => 'Mega Darkrai ex', 'number' => '116']);
+    $this->item = CatalogItem::factory()->create([
+        'name' => 'Mega Darkrai ex', 'number' => '116', 'attributes' => ['language' => 'en'],
+    ]);
     $this->nm = MarketValue::factory()->for($this->item)->create([
         'state_key' => 'NM', 'condition' => 'NM', 'grading_company_id' => null,
         'median' => 32000, 'n_sales' => 200,
@@ -142,4 +145,41 @@ test('a stale refresh timestamp is written even when no asks are found', functio
     expect($this->item->fresh()->for_sale_refreshed_at)->not->toBeNull()
         ->and($this->nm->fresh()->for_sale)->toBeNull()
         ->and($this->nm->fresh()->combined)->toBe($this->nm->median); // combined falls back to sold
+});
+
+test('a run that finds nothing retries in minutes, not the full TTL', function () {
+    config(['valuation.for_sale.view_refresh_hours' => 6, 'valuation.for_sale.empty_retry_minutes' => 20]);
+    fakeBrowse([]); // an eBay blip / unset credentials looks exactly like this
+
+    app(IngestForSaleListings::class)($this->item);
+
+    // Back-dated so the next view is due in ~20 minutes rather than 6 hours.
+    $stamp = $this->item->fresh()->for_sale_refreshed_at;
+    expect($stamp->diffInMinutes(now()->subHours(6)->addMinutes(20), absolute: true))->toBeLessThan(2)
+        ->and(app(MaybeRefreshForSale::class)->__invoke($this->item->fresh()))->toBeFalse(); // not due yet
+});
+
+test('a productive run keeps the full TTL', function () {
+    config(['valuation.for_sale.view_refresh_hours' => 6]);
+    fakeBrowse(['Near Mint' => [
+        listing(30500, 'Mega Darkrai ex 116 Near Mint'),
+        listing(31000, 'Mega Darkrai ex 116 NM'),
+    ]]);
+
+    app(IngestForSaleListings::class)($this->item);
+
+    expect($this->item->fresh()->for_sale_refreshed_at->diffInMinutes(now(), absolute: true))->toBeLessThan(2);
+});
+
+test('asks in another language are not this card language', function () {
+    fakeBrowse(['Near Mint' => [
+        listing(30000, 'Mega Darkrai ex 116 Near Mint'),
+        listing(31000, 'Mega Darkrai ex 116 NM'),
+        listing(9000, 'Japanese Mega Darkrai ex 116 Near Mint'), // JP printing — a different market
+    ]]);
+
+    app(IngestForSaleListings::class)($this->item);
+
+    expect($this->nm->fresh()->for_sale_n)->toBe(2)
+        ->and(ListingObservation::where('catalog_item_id', $this->item->id)->count())->toBe(2);
 });

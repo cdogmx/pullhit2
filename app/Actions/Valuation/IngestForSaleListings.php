@@ -53,6 +53,7 @@ class IngestForSaleListings
 
         $limit = (int) config('valuation.for_sale.ebay_limit', 20);
         $baseQuery = $this->baseQuery($item);
+        $found = 0;
 
         foreach (self::STATES as $stateKey => $rules) {
             $mv = $states->get($stateKey);
@@ -61,6 +62,7 @@ class IngestForSaleListings
             }
 
             [$asks, $tcgLow] = $this->ingestAsks($item, $stateKey, $rules, $baseQuery, $limit);
+            $found += count($asks);
 
             // The engine needs a distribution (>= min_asks) to filter junk. When
             // it can't run but TCGplayer gave us its lowest listing — already the
@@ -76,6 +78,30 @@ class IngestForSaleListings
                 'combined' => CombinedValue::blend($mv->median, $forSale),
             ]);
         }
+
+        if ($found === 0) {
+            $this->scheduleRetry($item);
+        }
+    }
+
+    /**
+     * Not one ask across any state — treat it as a blip, not an answer, and
+     * back-date the stamp so the next view retries in minutes rather than hours.
+     * (The stamp is still set up front, so a card that really has no listings
+     * only re-checks on the short cadence, never on every view.)
+     */
+    protected function scheduleRetry(CatalogItem $item): void
+    {
+        $hours = (int) config('valuation.for_sale.view_refresh_hours', 6);
+        $retry = (int) config('valuation.for_sale.empty_retry_minutes', 20);
+
+        if ($retry >= $hours * 60) {
+            return; // short window isn't shorter — nothing to back-date
+        }
+
+        $item->forceFill([
+            'for_sale_refreshed_at' => Carbon::now()->subHours($hours)->addMinutes($retry),
+        ])->save();
     }
 
     /**
