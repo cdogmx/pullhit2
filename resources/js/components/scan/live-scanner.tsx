@@ -1,24 +1,40 @@
 import { ArrowRight, ImageIcon, Loader2, ScanLine, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { detectCardBox, toGray  } from '@/lib/card-detect';
-import type {NormBox} from '@/lib/card-detect';
+import {
+    averageBoxes,
+    boxIoU,
+    detectCardBox,
+    toGray,
+} from '@/lib/card-detect';
+import type { NormBox } from '@/lib/card-detect';
 import { formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CatalogItem, ScanDetected } from '@/types';
 
 const MAX_PX = 1568;
 
-// Auto-capture tuning. Each tick we sample the WHOLE frame at low res and run a
-// bounding-box detector to find where a card actually is — anywhere in view, not
-// just filling a fixed central box. When a card is locked AND the frame is steady
-// for a short hold, we capture (cropped to the detected card). Values are 0–255.
-const PROXY_LONG = 120; // long edge of the detection proxy canvas
-const DETECT_MS = 120;
-const STABLE_MOTION = 8; // mean per-pixel frame delta under which we call it steady
-const STABLE_TICKS = 4; // ~500ms locked + steady before auto-firing
-const COOLDOWN_MS = 1500;
+// Auto-capture tuning. Each tick we sample the whole frame at moderate res and
+// run a bounding-box detector. Capture only when the box is *stable* (IoU), the
+// frame is steady (pixel motion), and the score stays above the floor.
+const PROXY_LONG = 280; // long edge of the detection proxy canvas
+const DETECT_MS = 100;
+const STABLE_MOTION = 10; // mean per-pixel frame delta (0–255) for "steady"
+const STABLE_IOU = 0.82; // box must overlap previous stable lock this much
+const STABLE_TICKS = 5; // ~500ms of good ticks before auto-fire
+const MIN_HOLD_SCORE = 1.2; // sustained score floor while holding
+const COOLDOWN_MS = 1600;
+// After a shot, re-arm when the box moves this much (or card leaves) so users
+// can scan the next card without removing the previous one from view forever.
+const REARM_IOU = 0.45;
+const BOX_HISTORY = 5;
 
-type DetectState = 'off' | 'search' | 'hold' | 'captured';
+type DetectState =
+    | 'off'
+    | 'search'
+    | 'locked' // card found but not yet steady
+    | 'hold' // steady lock — about to fire
+    | 'captured'
+    | 'cooldown';
 
 /**
  * Map a video-frame-normalized box to pixels over the (object-cover) video
@@ -33,7 +49,10 @@ function coverRect(
         return null;
     }
 
-    const cover = Math.max(v.clientWidth / v.videoWidth, v.clientHeight / v.videoHeight);
+    const cover = Math.max(
+        v.clientWidth / v.videoWidth,
+        v.clientHeight / v.videoHeight,
+    );
     const dispW = v.videoWidth * cover;
     const dispH = v.videoHeight * cover;
     const cropX = (dispW - v.clientWidth) / 2;
@@ -97,7 +116,7 @@ export function LiveScanner({
         busyRef.current = busy;
         autoRef.current = auto;
     });
-    // Latest detected box (normalized), read by capture() to crop to the card.
+    // Latest stable-ish box (normalized), read by capture() to crop to the card.
     const boxRef = useRef<NormBox | null>(null);
 
     useEffect(() => {
@@ -105,7 +124,12 @@ export function LiveScanner({
 
         navigator.mediaDevices
             ?.getUserMedia({
-                video: { facingMode: { ideal: 'environment' } },
+                video: {
+                    facingMode: { ideal: 'environment' },
+                    // Prefer a usable still-ish stream; browsers may ignore.
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                },
                 audio: false,
             })
             .then((stream) => {
@@ -150,10 +174,19 @@ export function LiveScanner({
         const vh = video.videoHeight;
 
         // Source rect: the locked card (in pixels) or the whole frame.
-        const sx = cropBox ? cropBox.x * vw : 0;
-        const sy = cropBox ? cropBox.y * vh : 0;
-        const sw = cropBox ? cropBox.width * vw : vw;
-        const sh = cropBox ? cropBox.height * vh : vh;
+        // Slight extra pad so we don't clip borders that the detector trimmed.
+        let sx = 0;
+        let sy = 0;
+        let sw = vw;
+        let sh = vh;
+
+        if (cropBox) {
+            const pad = 0.03;
+            sx = Math.max(0, (cropBox.x - pad) * vw);
+            sy = Math.max(0, (cropBox.y - pad) * vh);
+            sw = Math.min(vw - sx, (cropBox.width + pad * 2) * vw);
+            sh = Math.min(vh - sy, (cropBox.height + pad * 2) * vh);
+        }
 
         const scale = Math.min(1, MAX_PX / Math.max(sw, sh));
         const canvas = document.createElement('canvas');
@@ -176,9 +209,9 @@ export function LiveScanner({
         captureRef.current = capture;
     });
 
-    // Auto-capture: each tick, sample the whole frame at low res, locate the card
-    // (anywhere in view), and fire once a card is locked AND the frame holds
-    // steady. After a capture, wait for the card to leave before re-arming.
+    // Auto-capture: locate the card, require IoU-stable box + low motion +
+    // sustained score, then fire with an averaged box. Re-arm after cooldown when
+    // the card leaves OR the lock moves enough to look like a new card.
     useEffect(() => {
         if (!ready || error) {
             return;
@@ -188,8 +221,11 @@ export function LiveScanner({
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         let prev: Uint8ClampedArray | null = null;
         let stable = 0;
-        let phase: 'search' | 'captured' = 'search';
+        let phase: 'search' | 'cooldown' = 'search';
         let cooldownUntil = 0;
+        let lastFiredBox: NormBox | null = null;
+        const recentBoxes: NormBox[] = [];
+        let lockedBox: NormBox | null = null; // EMA-smoothed lock for overlay + IoU
 
         const id = window.setInterval(() => {
             const v = videoRef.current;
@@ -216,58 +252,142 @@ export function LiveScanner({
             const gray = toGray(data, pw, ph);
 
             // Motion = mean per-pixel change vs the previous tick (steadiness).
-            let motion = 0;
+            let motion = Infinity;
 
             if (prev) {
+                let sum = 0;
+
                 for (let k = 0; k < gray.length; k++) {
-                    motion += Math.abs(gray[k] - prev[k]);
+                    sum += Math.abs(gray[k] - prev[k]);
                 }
 
-                motion /= gray.length;
+                motion = sum / gray.length;
             }
 
             prev = gray;
 
             if (!autoRef.current) {
                 setDetect('off');
+                setLockRect(null);
+                boxRef.current = null;
+                stable = 0;
+                recentBoxes.length = 0;
+                lockedBox = null;
 
                 return;
             }
 
-            // Locate the card. Keep the box live for the overlay even while busy
-            // or cooling down, so the lock indicator tracks the card.
+            // Locate the card. Keep the overlay live even while busy/cooling down.
             const found = detectCardBox(gray, pw, ph);
-            boxRef.current = found?.box ?? null;
-            setLockRect(found ? coverRect(found.box, v) : null);
 
-            if (busyRef.current || Date.now() < cooldownUntil) {
+            if (found) {
+                // Smooth the lock so the overlay doesn't thrash every tick.
+                if (lockedBox) {
+                    const a = 0.35;
+                    lockedBox = {
+                        x: lockedBox.x * (1 - a) + found.box.x * a,
+                        y: lockedBox.y * (1 - a) + found.box.y * a,
+                        width:
+                            lockedBox.width * (1 - a) + found.box.width * a,
+                        height:
+                            lockedBox.height * (1 - a) + found.box.height * a,
+                    };
+                } else {
+                    lockedBox = { ...found.box };
+                }
+
+                boxRef.current = lockedBox;
+                setLockRect(coverRect(lockedBox, v));
+            } else {
+                lockedBox = null;
+                boxRef.current = null;
+                setLockRect(null);
+            }
+
+            if (busyRef.current) {
                 return;
             }
 
-            // After a capture, wait for the card to leave before re-arming.
-            if (phase === 'captured') {
-                if (!found) {
+            // Cooldown / re-arm: either the card left, or the lock moved enough
+            // that it looks like a different card in frame.
+            if (phase === 'cooldown') {
+                const now = Date.now();
+
+                if (now < cooldownUntil) {
+                    setDetect('cooldown');
+
+                    return;
+                }
+
+                const left = !found;
+                const moved =
+                    found &&
+                    lastFiredBox != null &&
+                    boxIoU(found.box, lastFiredBox) < REARM_IOU;
+
+                if (left || moved) {
                     phase = 'search';
-                    setDetect('search');
+                    stable = 0;
+                    recentBoxes.length = 0;
+                    lastFiredBox = null;
+                    setDetect(found ? 'locked' : 'search');
+                } else {
+                    setDetect('cooldown');
                 }
 
                 return;
             }
 
-            if (found && motion <= STABLE_MOTION) {
+            // Searching / locking.
+            if (!found || !lockedBox) {
+                stable = 0;
+                recentBoxes.length = 0;
+                setDetect('search');
+
+                return;
+            }
+
+            // Box stability: compare this detection to the last accepted hold box
+            // (or the smoothed lock if we have history).
+            const prevBox =
+                recentBoxes.length > 0
+                    ? recentBoxes[recentBoxes.length - 1]
+                    : lockedBox;
+            const iou = boxIoU(found.box, prevBox);
+            const steady =
+                motion <= STABLE_MOTION &&
+                iou >= STABLE_IOU &&
+                found.score >= MIN_HOLD_SCORE;
+
+            if (steady) {
+                recentBoxes.push({ ...found.box });
+
+                if (recentBoxes.length > BOX_HISTORY) {
+                    recentBoxes.shift();
+                }
+
                 stable += 1;
-                setDetect('hold');
+                setDetect(stable >= STABLE_TICKS - 1 ? 'hold' : 'locked');
 
                 if (stable >= STABLE_TICKS) {
+                    const crop =
+                        averageBoxes(recentBoxes) ?? found.box;
+                    boxRef.current = crop;
+                    lastFiredBox = { ...crop };
                     stable = 0;
-                    phase = 'captured';
+                    recentBoxes.length = 0;
+                    phase = 'cooldown';
                     cooldownUntil = Date.now() + COOLDOWN_MS;
                     setDetect('captured');
-                    captureRef.current(found.box);
+                    captureRef.current(crop);
                 }
             } else {
+                // Keep a weak lock for the overlay, but reset the hold counter.
                 stable = 0;
-                setDetect(found ? 'hold' : 'search');
+                recentBoxes.length = 0;
+                setDetect(
+                    found.score >= MIN_HOLD_SCORE ? 'locked' : 'search',
+                );
             }
         }, DETECT_MS);
 
@@ -279,7 +399,28 @@ export function LiveScanner({
             ? 'border-green-400'
             : detect === 'hold'
               ? 'border-amber-400'
-              : 'border-emerald-400/60';
+              : detect === 'locked'
+                ? 'border-emerald-400'
+                : detect === 'cooldown'
+                  ? 'border-white/40'
+                  : 'border-emerald-400/60';
+
+    const statusCopy = (() => {
+        switch (detect) {
+            case 'captured':
+                return 'Captured!';
+            case 'hold':
+                return 'Steady — capturing…';
+            case 'locked':
+                return 'Card found — hold steady…';
+            case 'cooldown':
+                return 'Move to the next card…';
+            case 'search':
+                return 'Point at a card — it captures automatically';
+            default:
+                return null;
+        }
+    })();
 
     return (
         <div className="relative overflow-hidden rounded-2xl border border-border bg-black text-white">
@@ -316,14 +457,10 @@ export function LiveScanner({
                         </div>
                     )}
 
-                    {auto && !busy && (
+                    {auto && !busy && statusCopy && (
                         <div className="absolute inset-x-0 bottom-3 flex justify-center">
                             <span className="rounded-full bg-black/55 px-3 py-1 text-xs font-medium backdrop-blur">
-                                {detect === 'captured'
-                                    ? 'Captured!'
-                                    : detect === 'hold'
-                                      ? 'Card found — hold steady…'
-                                      : 'Point at a card — it captures automatically'}
+                                {statusCopy}
                             </span>
                         </div>
                     )}

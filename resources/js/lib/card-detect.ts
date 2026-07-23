@@ -37,18 +37,77 @@ export type DetectOptions = {
     aspect?: [number, number];
     /** Reject when inside/outside detail ratio is below this (not card-like). */
     minScore?: number;
+    /**
+     * When true (default), outside energy near the box is down-weighted so a
+     * patterned playmat under the card doesn't kill the score as hard as a
+     * competing detailed object elsewhere in frame.
+     */
+    centerWeight?: boolean;
 };
 
 const DEFAULTS: Required<DetectOptions> = {
-    trim: 0.06,
-    pad: 0.04,
-    minArea: 0.1,
-    maxArea: 0.97,
-    // Portrait cards are ~5:7 (0.71); allow slack for perspective, a bit of hand,
-    // or a graded slab, but stay portrait-ish so a wide detailed background loses.
-    aspect: [0.4, 1.15],
-    minScore: 1.5,
+    trim: 0.07,
+    pad: 0.05,
+    minArea: 0.08,
+    maxArea: 0.98,
+    // Portrait cards are ~5:7 (0.71). Allow more slack for tilt, hand, slab
+    // labels, and mild landscape holds — still reject very wide scenes.
+    aspect: [0.38, 1.35],
+    // Slightly softer than 1.5 so real tables still lock; IoU hold gates false fires.
+    minScore: 1.25,
+    centerWeight: true,
 };
+
+/**
+ * Intersection-over-union of two normalized boxes. 0 = no overlap, 1 = identical.
+ * Used by the live scanner to require a *stable* lock before auto-capture.
+ */
+export function boxIoU(a: NormBox, b: NormBox): number {
+    const ax1 = a.x + a.width;
+    const ay1 = a.y + a.height;
+    const bx1 = b.x + b.width;
+    const by1 = b.y + b.height;
+
+    const ix0 = Math.max(a.x, b.x);
+    const iy0 = Math.max(a.y, b.y);
+    const ix1 = Math.min(ax1, bx1);
+    const iy1 = Math.min(ay1, by1);
+
+    const iw = Math.max(0, ix1 - ix0);
+    const ih = Math.max(0, iy1 - iy0);
+    const inter = iw * ih;
+
+    if (inter <= 0) {
+        return 0;
+    }
+
+    const union = a.width * a.height + b.width * b.height - inter;
+
+    return union > 0 ? inter / union : 0;
+}
+
+/** Average of normalized boxes (for a less jittery crop at capture time). */
+export function averageBoxes(boxes: NormBox[]): NormBox | null {
+    if (boxes.length === 0) {
+        return null;
+    }
+
+    let x = 0;
+    let y = 0;
+    let w = 0;
+    let h = 0;
+
+    for (const b of boxes) {
+        x += b.x;
+        y += b.y;
+        w += b.width;
+        h += b.height;
+    }
+
+    const n = boxes.length;
+
+    return { x: x / n, y: y / n, width: w / n, height: h / n };
+}
 
 /**
  * Find the tightest [lo, hi] index span containing all but `trim` of the energy
@@ -106,6 +165,7 @@ export function detectCardBox(
     // Per-pixel gradient magnitude, accumulated into column and row profiles.
     const colE = new Float64Array(w);
     const rowE = new Float64Array(h);
+    const grad = new Float64Array(w * h);
 
     for (let y = 1; y < h - 1; y++) {
         for (let x = 1; x < w - 1; x++) {
@@ -113,6 +173,7 @@ export function detectCardBox(
             const g =
                 Math.abs(gray[o + 1] - gray[o - 1]) +
                 Math.abs(gray[o + w] - gray[o - w]);
+            grad[o] = g;
             colE[x] += g;
             rowE[y] += g;
         }
@@ -149,6 +210,13 @@ export function detectCardBox(
     }
 
     // How much the boxed region stands out: mean gradient inside vs. outside.
+    // Optional center-weight: far outside pixels count less so mats under the
+    // card don't dominate, while a second object far away still pulls score down.
+    const cx = (x0 + x1) / 2;
+    const cy = (y0 + y1) / 2;
+    // Distance scale: ~half the diagonal of the box.
+    const distScale = Math.max(1, Math.hypot(bw, bh) * 0.55);
+
     let inSum = 0;
     let inN = 0;
     let outSum = 0;
@@ -159,13 +227,17 @@ export function detectCardBox(
 
         for (let x = 1; x < w - 1; x++) {
             const o = y * w + x;
-            const g =
-                Math.abs(gray[o + 1] - gray[o - 1]) +
-                Math.abs(gray[o + w] - gray[o - w]);
+            const g = grad[o];
 
             if (inRow && x >= x0 && x <= x1) {
                 inSum += g;
                 inN++;
+            } else if (opt.centerWeight) {
+                const d = Math.hypot(x - cx, y - cy) / distScale;
+                // Near the box (d~1): weight ~0.55; far (d~3+): weight ~1.
+                const weight = 0.45 + 0.55 * Math.min(1, Math.max(0, d - 0.6));
+                outSum += g * weight;
+                outN += weight;
             } else {
                 outSum += g;
                 outN++;
