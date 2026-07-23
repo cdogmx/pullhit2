@@ -10,6 +10,17 @@ use Illuminate\Support\Facades\Route;
 // Provider webhooks — stateless, signature-verified (no CSRF/session/auth).
 Route::post('webhooks/dodo', [WebhookController::class, 'dodo'])->name('webhooks.dodo');
 
+// eBay Marketplace Account Deletion (required for production keys compliance).
+// GET = portal challenge verification; POST = deletion notification delivery.
+Route::get(
+    'webhooks/ebay/marketplace-account-deletion',
+    [WebhookController::class, 'ebayMarketplaceDeletionChallenge'],
+)->name('webhooks.ebay.marketplace-deletion.challenge');
+Route::post(
+    'webhooks/ebay/marketplace-account-deletion',
+    [WebhookController::class, 'ebayMarketplaceDeletionNotify'],
+)->name('webhooks.ebay.marketplace-deletion.notify');
+
 /*
 |--------------------------------------------------------------------------
 | API Routes (v1)

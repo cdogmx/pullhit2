@@ -122,6 +122,14 @@ return [
         'base_url' => env('EBAY_BASE_URL', 'https://api.ebay.com'),
         // EPN rotation id for the eBay US marketplace (affiliate search links).
         'rover_id' => env('EBAY_ROVER_ID', '711-53200-19255-0'),
+        // Marketplace Account Deletion notifications (required for production keys).
+        // Token: 32–80 chars; must match the value saved in the eBay developer portal.
+        // Endpoint: public HTTPS URL registered there (no trailing slash).
+        'marketplace_deletion_token' => env('EBAY_MARKETPLACE_DELETION_TOKEN'),
+        'marketplace_deletion_endpoint' => env(
+            'EBAY_MARKETPLACE_DELETION_ENDPOINT',
+            rtrim((string) env('APP_URL', 'http://localhost'), '/').'/api/webhooks/ebay/marketplace-account-deletion',
+        ),
     ],
 
     // TCGplayer affiliate (search links). Partner id is optional — without it
