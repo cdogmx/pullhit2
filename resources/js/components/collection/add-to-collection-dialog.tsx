@@ -44,10 +44,10 @@ const CONDITIONS: { value: string; label: string }[] = [
 ];
 
 /**
- * "Add to collection" — opened from the catalog detail page. Records a holding
- * at a chosen priced state (raw condition OR graded company+grade) plus an
- * acquisition lot (quantity + unit cost). Money is entered in dollars and
- * converted to cents on submit.
+ * "Add to collection" — opened from the catalog. Adds copies (delta) of a
+ * priced state, matching the scan flow: quantity defaults to 1, and we show how
+ * many you already own of the selected collection + state so totals are clear.
+ * Money is entered in dollars and converted to cents on submit.
  */
 export function AddToCollectionDialog({
     catalogItemId,
@@ -60,7 +60,7 @@ export function AddToCollectionDialog({
     gradingCompanies: GradingCompanyOption[];
     /** Custom trigger element; defaults to a labelled "Add to collection" button. */
     trigger?: ReactNode;
-    /** Quantity the viewer already owns — flips the default trigger to "N in collection". */
+    /** Quantity the viewer already owns (all states) — flips the default trigger label. */
     ownedQty?: number;
     /**
      * Extra Inertia visit options merged into the submit (e.g. `reset: ['items']`
@@ -75,8 +75,7 @@ export function AddToCollectionDialog({
 }) {
     const [open, setOpen] = useState(false);
     const [mode, setMode] = useState<'raw' | 'graded'>('raw');
-    // The viewer's existing holdings of this card, so the quantity field can
-    // pre-fill with how many they already own of the selected collection + state.
+    // Per collection + state holdings so we can show "you already own N".
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
     const [defaultCollectionId, setDefaultCollectionId] = useState<number | null>(
         null,
@@ -89,18 +88,21 @@ export function AddToCollectionDialog({
         condition: 'NM',
         grading_company_id: '' as number | '',
         grade: '',
-        quantity: ownedQty,
+        quantity: 1,
         unit_cost: '',
         acquired_at: '',
         source: '',
         folder: '',
     });
 
-    // Load current holdings whenever the dialog opens.
+    // Load current holdings whenever the dialog opens; reset add-qty to 1.
     useEffect(() => {
         if (!open) {
             return;
         }
+
+        form.setData('quantity', 1);
+        form.setData('catalog_item_id', catalogItemId);
 
         let active = true;
         fetch(`/collection/holdings/${catalogItemId}`, {
@@ -119,9 +121,10 @@ export function AddToCollectionDialog({
         return () => {
             active = false;
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, catalogItemId]);
 
-    // How many the viewer owns of the currently-selected collection + state.
+    // How many the viewer already owns of the currently-selected collection + state.
     const ownedForSelection = useMemo(() => {
         if (!holdings || form.data.new_collection_name) {
             return form.data.new_collection_name ? 0 : null;
@@ -141,7 +144,6 @@ export function AddToCollectionDialog({
         });
 
         return match?.quantity ?? 0;
-         
     }, [
         holdings,
         defaultCollectionId,
@@ -153,23 +155,23 @@ export function AddToCollectionDialog({
         form.data.grade,
     ]);
 
-    // Pre-fill the quantity with what's already owned for the current selection.
-    useEffect(() => {
-        if (ownedForSelection !== null) {
-            form.setData('quantity', ownedForSelection);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ownedForSelection]);
+    const addQty = Math.max(1, Number(form.data.quantity) || 1);
+    const newTotal =
+        ownedForSelection != null ? ownedForSelection + addQty : null;
 
-    const setQty = (n: number) => form.setData('quantity', Math.max(0, n));
+    const setQty = (n: number) => form.setData('quantity', Math.max(1, n));
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         form.transform((d) => ({
+            catalog_item_id: catalogItemId,
             collection_id: d.collection_id || null,
             new_collection_name: d.new_collection_name || null,
-            quantity: Math.max(0, Number(d.quantity) || 0),
-            unit_cost: d.unit_cost ? Math.round(parseFloat(d.unit_cost) * 100) : 0,
+            // Add-delta (same as scan) — never set absolute totals here.
+            quantity: Math.max(1, Number(d.quantity) || 1),
+            unit_cost: d.unit_cost
+                ? Math.round(parseFloat(String(d.unit_cost)) * 100)
+                : 0,
             acquired_at: d.acquired_at || null,
             source: d.source || null,
             folder: d.folder.trim() || null,
@@ -179,15 +181,27 @@ export function AddToCollectionDialog({
                       grade: d.grade ? Number(d.grade) : null,
                       condition: null,
                   }
-                : { condition: d.condition, grading_company_id: null, grade: null }),
+                : {
+                      condition: d.condition,
+                      grading_company_id: null,
+                      grade: null,
+                  }),
         }));
 
-        form.post(`/collection/${catalogItemId}/quantity`, {
+        form.post('/collection', {
             preserveScroll: true,
             ...postOptions,
             onSuccess: () => {
                 setOpen(false);
-                toast.success('Collection updated.');
+                const totalMsg =
+                    newTotal != null
+                        ? ` You now own ${newTotal}.`
+                        : '';
+                toast.success(
+                    addQty === 1
+                        ? `Added to your collection.${totalMsg}`
+                        : `Added ${addQty} to your collection.${totalMsg}`,
+                );
             },
         });
     };
@@ -211,16 +225,14 @@ export function AddToCollectionDialog({
             <DialogContent>
                 <form onSubmit={submit}>
                     <DialogHeader>
-                        <DialogTitle>Your collection</DialogTitle>
+                        <DialogTitle>Add to collection</DialogTitle>
                         <DialogDescription>
-                            Set how many copies you own of this state. Value is read
-                            from market data for the state you pick.
+                            Choose the state and how many copies to add. Value is
+                            read from market data for the state you pick.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
-                        {/* Which collection + folder (dropdowns, each with a + to
-                            create). The folder is always scoped to the collection. */}
                         <CollectionFolderPicker
                             open={open}
                             onChange={(choice) => {
@@ -236,7 +248,6 @@ export function AddToCollectionDialog({
                             }}
                         />
 
-                        {/* Raw vs graded */}
                         <div className="inline-flex rounded-md border border-border p-0.5 text-sm">
                             {(['raw', 'graded'] as const).map((m) => (
                                 <button
@@ -260,14 +271,19 @@ export function AddToCollectionDialog({
                                 <Label htmlFor="condition">Condition</Label>
                                 <Select
                                     value={form.data.condition}
-                                    onValueChange={(v) => form.setData('condition', v)}
+                                    onValueChange={(v) =>
+                                        form.setData('condition', v)
+                                    }
                                 >
                                     <SelectTrigger id="condition">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {CONDITIONS.map((c) => (
-                                            <SelectItem key={c.value} value={c.value}>
+                                            <SelectItem
+                                                key={c.value}
+                                                value={c.value}
+                                            >
                                                 {c.label}
                                             </SelectItem>
                                         ))}
@@ -281,11 +297,17 @@ export function AddToCollectionDialog({
                                     <Select
                                         value={
                                             form.data.grading_company_id
-                                                ? String(form.data.grading_company_id)
+                                                ? String(
+                                                      form.data
+                                                          .grading_company_id,
+                                                  )
                                                 : ''
                                         }
                                         onValueChange={(v) =>
-                                            form.setData('grading_company_id', Number(v))
+                                            form.setData(
+                                                'grading_company_id',
+                                                Number(v),
+                                            )
                                         }
                                     >
                                         <SelectTrigger id="company">
@@ -293,7 +315,10 @@ export function AddToCollectionDialog({
                                         </SelectTrigger>
                                         <SelectContent>
                                             {gradingCompanies.map((g) => (
-                                                <SelectItem key={g.id} value={String(g.id)}>
+                                                <SelectItem
+                                                    key={g.id}
+                                                    value={String(g.id)}
+                                                >
                                                     {g.name}
                                                 </SelectItem>
                                             ))}
@@ -309,7 +334,12 @@ export function AddToCollectionDialog({
                                         max={10}
                                         step={0.5}
                                         value={form.data.grade}
-                                        onChange={(e) => form.setData('grade', e.target.value)}
+                                        onChange={(e) =>
+                                            form.setData(
+                                                'grade',
+                                                e.target.value,
+                                            )
+                                        }
                                         placeholder="10"
                                     />
                                 </div>
@@ -318,7 +348,7 @@ export function AddToCollectionDialog({
 
                         <div className="grid grid-cols-2 gap-3">
                             <div className="grid gap-2">
-                                <Label htmlFor="quantity">Quantity owned</Label>
+                                <Label htmlFor="quantity">Quantity to add</Label>
                                 <div className="flex items-center gap-1">
                                     <Button
                                         type="button"
@@ -327,7 +357,9 @@ export function AddToCollectionDialog({
                                         className="size-9 shrink-0"
                                         aria-label="Decrease quantity"
                                         onClick={() =>
-                                            setQty(Number(form.data.quantity) - 1)
+                                            setQty(
+                                                Number(form.data.quantity) - 1,
+                                            )
                                         }
                                     >
                                         <Minus className="size-4" />
@@ -335,7 +367,7 @@ export function AddToCollectionDialog({
                                     <Input
                                         id="quantity"
                                         type="number"
-                                        min={0}
+                                        min={1}
                                         value={form.data.quantity}
                                         onChange={(e) =>
                                             setQty(Number(e.target.value))
@@ -349,22 +381,52 @@ export function AddToCollectionDialog({
                                         className="size-9 shrink-0"
                                         aria-label="Increase quantity"
                                         onClick={() =>
-                                            setQty(Number(form.data.quantity) + 1)
+                                            setQty(
+                                                Number(form.data.quantity) + 1,
+                                            )
                                         }
                                     >
                                         <Plus className="size-4" />
                                     </Button>
                                 </div>
+                                {ownedForSelection != null &&
+                                    ownedForSelection > 0 && (
+                                        <p className="text-xs text-muted-foreground">
+                                            You already own {ownedForSelection}{' '}
+                                            of this state
+                                            {newTotal != null && (
+                                                <>
+                                                    {' '}
+                                                    · will be{' '}
+                                                    <span className="font-medium text-foreground">
+                                                        {newTotal}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </p>
+                                    )}
+                                {ownedForSelection === 0 && (
+                                    <p className="text-xs text-muted-foreground">
+                                        You don&apos;t own this state yet
+                                    </p>
+                                )}
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="unit_cost">Cost per card ($)</Label>
+                                <Label htmlFor="unit_cost">
+                                    Cost per card ($)
+                                </Label>
                                 <Input
                                     id="unit_cost"
                                     type="number"
                                     min={0}
                                     step="0.01"
                                     value={form.data.unit_cost}
-                                    onChange={(e) => form.setData('unit_cost', e.target.value)}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'unit_cost',
+                                            e.target.value,
+                                        )
+                                    }
                                     placeholder="0.00"
                                 />
                             </div>
@@ -378,7 +440,10 @@ export function AddToCollectionDialog({
                                     type="date"
                                     value={form.data.acquired_at}
                                     onChange={(e) =>
-                                        form.setData('acquired_at', e.target.value)
+                                        form.setData(
+                                            'acquired_at',
+                                            e.target.value,
+                                        )
                                     }
                                 />
                             </div>
@@ -387,7 +452,9 @@ export function AddToCollectionDialog({
                                 <Input
                                     id="source"
                                     value={form.data.source}
-                                    onChange={(e) => form.setData('source', e.target.value)}
+                                    onChange={(e) =>
+                                        form.setData('source', e.target.value)
+                                    }
                                     placeholder="eBay, LGS…"
                                 />
                             </div>
@@ -396,7 +463,9 @@ export function AddToCollectionDialog({
 
                     <DialogFooter>
                         <Button type="submit" disabled={form.processing}>
-                            Save
+                            {addQty === 1
+                                ? 'Add to collection'
+                                : `Add ${addQty} to collection`}
                         </Button>
                     </DialogFooter>
                 </form>

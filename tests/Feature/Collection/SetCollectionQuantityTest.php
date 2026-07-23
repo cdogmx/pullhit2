@@ -62,3 +62,14 @@ test('the endpoint sets the quantity and reports current holdings', function () 
         ->assertJsonPath('holdings.0.quantity', 4)
         ->assertJsonPath('holdings.0.condition', 'NM');
 });
+
+test('patching a holding quantity to zero removes it', function () {
+    ($this->set)($this->user, $this->item, ['condition' => 'NM'], 3);
+    $holding = $this->user->collectionItems()->where('catalog_item_id', $this->item->id)->first();
+
+    $this->actingAs($this->user)
+        ->patch("/collection/{$holding->id}", ['quantity' => 0])
+        ->assertRedirect();
+
+    expect($this->user->collectionItems()->where('catalog_item_id', $this->item->id)->exists())->toBeFalse();
+});

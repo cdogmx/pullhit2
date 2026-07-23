@@ -17,6 +17,7 @@ import { ImageUploadField } from '@/components/admin/image-upload-field';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
     Dialog,
     DialogContent,
@@ -286,6 +287,9 @@ function AddLink({
 }
 
 function LinkRow({ link }: { link: Link }) {
+    const [confirmRemove, setConfirmRemove] = useState(false);
+    const [busy, setBusy] = useState(false);
+
     const check = () =>
         router.post(
             `/admin/stock-alerts/links/${link.id}/check`,
@@ -305,13 +309,14 @@ function LinkRow({ link }: { link: Link }) {
         );
 
     const remove = () => {
-        if (!confirm(`Remove the ${link.retailer_label} link?`)) {
-            return;
-        }
-
+        setBusy(true);
         router.delete(`/admin/stock-alerts/links/${link.id}`, {
             preserveScroll: true,
-            onSuccess: () => toast.success('Removed.'),
+            onSuccess: () => {
+                toast.success('Removed.');
+                setConfirmRemove(false);
+            },
+            onFinish: () => setBusy(false),
         });
     };
 
@@ -386,11 +391,22 @@ function LinkRow({ link }: { link: Link }) {
                     size="sm"
                     variant="ghost"
                     className="text-red-600 hover:text-red-600"
-                    onClick={remove}
+                    onClick={() => setConfirmRemove(true)}
                 >
                     <Trash2 className="size-4" />
                 </Button>
             </div>
+
+            <ConfirmDialog
+                open={confirmRemove}
+                onOpenChange={setConfirmRemove}
+                title={`Remove the ${link.retailer_label} link?`}
+                description="This stops checking that retailer URL for this product."
+                confirmLabel="Remove link"
+                destructive
+                busy={busy}
+                onConfirm={remove}
+            />
         </div>
     );
 }
@@ -529,6 +545,9 @@ function ProductCard({
     product: Product;
     retailers: RetailerOption[];
 }) {
+    const [confirmRemove, setConfirmRemove] = useState(false);
+    const [busy, setBusy] = useState(false);
+
     const toggle = () =>
         router.post(
             `/admin/stock-alerts/${product.id}/toggle`,
@@ -537,13 +556,14 @@ function ProductCard({
         );
 
     const remove = () => {
-        if (!confirm('Delete this product and all its retailer links?')) {
-            return;
-        }
-
+        setBusy(true);
         router.delete(`/admin/stock-alerts/${product.id}`, {
             preserveScroll: true,
-            onSuccess: () => toast.success('Deleted.'),
+            onSuccess: () => {
+                toast.success('Deleted.');
+                setConfirmRemove(false);
+            },
+            onFinish: () => setBusy(false),
         });
     };
 
@@ -602,7 +622,7 @@ function ProductCard({
                             size="sm"
                             variant="ghost"
                             className="text-red-600 hover:text-red-600"
-                            onClick={remove}
+                            onClick={() => setConfirmRemove(true)}
                         >
                             <Trash2 className="size-4" />
                         </Button>
@@ -621,6 +641,17 @@ function ProductCard({
                 </div>
 
                 <AddLink productId={product.id} retailers={retailers} />
+
+                <ConfirmDialog
+                    open={confirmRemove}
+                    onOpenChange={setConfirmRemove}
+                    title="Delete this product?"
+                    description="Removes the product and all of its retailer links. This cannot be undone."
+                    confirmLabel="Delete product"
+                    destructive
+                    busy={busy}
+                    onConfirm={remove}
+                />
             </CardContent>
         </Card>
     );

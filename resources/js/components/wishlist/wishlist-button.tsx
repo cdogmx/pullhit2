@@ -86,10 +86,12 @@ export function WishlistButton({
         e.stopPropagation();
 
         if (wishlisted) {
-            setWishlisted(false); // optimistic remove
+            // Heart means "on any wishlist" — clear every list that has this card.
+            setWishlisted(false);
             router.delete(`/wishlist/${catalogItemId}`, {
                 preserveScroll: true,
                 preserveState: true,
+                onSuccess: () => toast.success('Removed from wishlist.'),
                 onError: () => setWishlisted(true),
             });
 

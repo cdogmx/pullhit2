@@ -791,7 +791,14 @@ function InlineQty({ id, value }: { id: number; value: number }) {
             router.patch(
                 `/collection/${id}`,
                 { quantity: next },
-                { preserveScroll: true },
+                {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        if (next === 0) {
+                            toast.success('Removed from your collection.');
+                        }
+                    },
+                },
             );
         }
     };

@@ -155,12 +155,32 @@ class WishlistController extends Controller
         return back()->with('success', 'Wishlist updated.');
     }
 
-    /** Remove the card from the user's default wishlist (the heart toggle-off). */
+    /**
+     * Remove a card from the user's wishlist(s).
+     *
+     * - With `wishlist_id`: remove only from that list (wishlist page X button).
+     * - Without: remove from every list that has the card (heart toggle-off —
+     *   the filled heart means "on any of my wishlists").
+     */
     public function destroy(Request $request, CatalogItem $catalogItem): RedirectResponse
     {
-        $request->user()->defaultWishlist()->items()
-            ->where('catalog_item_id', $catalogItem->id)
-            ->delete();
+        $data = $request->validate([
+            'wishlist_id' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                Rule::exists('wishlists', 'id')->where('user_id', $request->user()->id),
+            ],
+        ]);
+
+        $query = $request->user()->wishlistItems()
+            ->where('catalog_item_id', $catalogItem->id);
+
+        if (! empty($data['wishlist_id'])) {
+            $query->where('wishlist_id', $data['wishlist_id']);
+        }
+
+        $query->delete();
 
         return back()->with('success', 'Removed from your wishlist.');
     }

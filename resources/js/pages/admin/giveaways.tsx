@@ -1,10 +1,12 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { Gift, Sparkles, Trophy } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { ImageUploadField } from '@/components/admin/image-upload-field';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -45,6 +47,9 @@ export default function AdminGiveaways({
         image_path: '',
         description: '',
     });
+    const [confirmDraw, setConfirmDraw] = useState<Giveaway | null>(null);
+    const [confirmDelete, setConfirmDelete] = useState<Giveaway | null>(null);
+    const [busy, setBusy] = useState(false);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -58,32 +63,30 @@ export default function AdminGiveaways({
     };
 
     const draw = (g: Giveaway) => {
-        if (
-            !confirm(
-                `Draw a winner for ${g.period_label}? This notifies the winner and can't be undone.`,
-            )
-        ) {
-            return;
-        }
-
+        setBusy(true);
         router.post(
             `/admin/giveaways/${g.id}/draw`,
             {},
             {
                 preserveScroll: true,
-                onSuccess: () => toast.success('Winner drawn.'),
+                onSuccess: () => {
+                    toast.success('Winner drawn.');
+                    setConfirmDraw(null);
+                },
+                onFinish: () => setBusy(false),
             },
         );
     };
 
     const remove = (g: Giveaway) => {
-        if (!confirm(`Delete the ${g.period_label} giveaway?`)) {
-            return;
-        }
-
+        setBusy(true);
         router.delete(`/admin/giveaways/${g.id}`, {
             preserveScroll: true,
-            onSuccess: () => toast.success('Deleted.'),
+            onSuccess: () => {
+                toast.success('Deleted.');
+                setConfirmDelete(null);
+            },
+            onFinish: () => setBusy(false),
         });
     };
 
@@ -270,7 +273,7 @@ export default function AdminGiveaways({
                                     {g.status === 'open' && (
                                         <Button
                                             size="sm"
-                                            onClick={() => draw(g)}
+                                            onClick={() => setConfirmDraw(g)}
                                         >
                                             Draw winner
                                         </Button>
@@ -279,7 +282,7 @@ export default function AdminGiveaways({
                                         size="sm"
                                         variant="outline"
                                         className="text-red-600 hover:text-red-600"
-                                        onClick={() => remove(g)}
+                                        onClick={() => setConfirmDelete(g)}
                                     >
                                         Delete
                                     </Button>
@@ -289,6 +292,35 @@ export default function AdminGiveaways({
                     ))}
                 </div>
             </div>
+
+            <ConfirmDialog
+                open={confirmDraw !== null}
+                onOpenChange={(o) => !o && setConfirmDraw(null)}
+                title={
+                    confirmDraw
+                        ? `Draw a winner for ${confirmDraw.period_label}?`
+                        : 'Draw winner?'
+                }
+                description="This notifies the winner and can't be undone."
+                confirmLabel="Draw winner"
+                busy={busy}
+                onConfirm={() => confirmDraw && draw(confirmDraw)}
+            />
+
+            <ConfirmDialog
+                open={confirmDelete !== null}
+                onOpenChange={(o) => !o && setConfirmDelete(null)}
+                title={
+                    confirmDelete
+                        ? `Delete the ${confirmDelete.period_label} giveaway?`
+                        : 'Delete giveaway?'
+                }
+                description="This cannot be undone."
+                confirmLabel="Delete"
+                destructive
+                busy={busy}
+                onConfirm={() => confirmDelete && remove(confirmDelete)}
+            />
         </>
     );
 }

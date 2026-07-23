@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Combobox } from '@/components/ui/combobox';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
     Dialog,
     DialogContent,
@@ -73,6 +74,12 @@ export default function AdminSets({
     const [creatingSet, setCreatingSet] = useState(false);
     const [lang, setLang] = useState('');
     const [brand, setBrand] = useState('');
+    const [confirmDeleteSet, setConfirmDeleteSet] = useState<AdminSet | null>(
+        null,
+    );
+    const [confirmDeleteSealed, setConfirmDeleteSealed] =
+        useState<CatalogItem | null>(null);
+    const [busy, setBusy] = useState(false);
 
     // Languages actually present, for the table's language filter.
     const setLanguages = useMemo(
@@ -100,29 +107,26 @@ export default function AdminSets({
             : null;
 
     const deleteSealed = (item: CatalogItem) => {
-        if (!confirm(`Delete "${item.name}"? This removes the product and its values.`)) {
-            return;
-        }
-
+        setBusy(true);
         router.delete(`/admin/cards/${item.id}`, {
             preserveScroll: true,
-            onSuccess: () => toast.success('Sealed product deleted.'),
+            onSuccess: () => {
+                toast.success('Sealed product deleted.');
+                setConfirmDeleteSealed(null);
+            },
+            onFinish: () => setBusy(false),
         });
     };
 
     const removeSet = (set: AdminSet) => {
-        const tail =
-            set.items > 0
-                ? ` This permanently deletes ${set.items} card(s), and removes them from every user's collection and wishlist.`
-                : '';
-
-        if (!confirm(`Delete ${set.name}?${tail}`)) {
-            return;
-        }
-
+        setBusy(true);
         router.delete(`/admin/sets/${set.id}`, {
             preserveScroll: true,
-            onSuccess: () => toast.success(`Deleted ${set.name}.`),
+            onSuccess: () => {
+                toast.success(`Deleted ${set.name}.`);
+                setConfirmDeleteSet(null);
+            },
+            onFinish: () => setBusy(false),
         });
     };
 
@@ -278,7 +282,7 @@ export default function AdminSets({
                     <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => removeSet(s)}
+                        onClick={() => setConfirmDeleteSet(s)}
                         className="text-muted-foreground hover:text-red-600"
                     >
                         <Trash2 className="size-4" />
@@ -446,7 +450,7 @@ export default function AdminSets({
                     setManagingSetId(null);
                     setEditingSealed(item);
                 }}
-                onDelete={deleteSealed}
+                onDelete={(item) => setConfirmDeleteSealed(item)}
             />
 
             {/* Create (from a set) */}
@@ -478,6 +482,44 @@ export default function AdminSets({
                         setCreatingSet(false);
                     }
                 }}
+            />
+
+            <ConfirmDialog
+                open={confirmDeleteSet !== null}
+                onOpenChange={(o) => !o && setConfirmDeleteSet(null)}
+                title={
+                    confirmDeleteSet
+                        ? `Delete ${confirmDeleteSet.name}?`
+                        : 'Delete set?'
+                }
+                description={
+                    confirmDeleteSet && confirmDeleteSet.items > 0
+                        ? `This permanently deletes ${confirmDeleteSet.items} card(s), and removes them from every user's collection and wishlist.`
+                        : 'This cannot be undone.'
+                }
+                confirmLabel="Delete set"
+                destructive
+                busy={busy}
+                onConfirm={() =>
+                    confirmDeleteSet && removeSet(confirmDeleteSet)
+                }
+            />
+
+            <ConfirmDialog
+                open={confirmDeleteSealed !== null}
+                onOpenChange={(o) => !o && setConfirmDeleteSealed(null)}
+                title={
+                    confirmDeleteSealed
+                        ? `Delete “${confirmDeleteSealed.name}”?`
+                        : 'Delete sealed product?'
+                }
+                description="This removes the product and its market values."
+                confirmLabel="Delete product"
+                destructive
+                busy={busy}
+                onConfirm={() =>
+                    confirmDeleteSealed && deleteSealed(confirmDeleteSealed)
+                }
             />
 
             <Dialog

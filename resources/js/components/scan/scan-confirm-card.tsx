@@ -603,13 +603,27 @@ export function ScanConfirmCard({
                                         </>
                                     )}
                                     <div className="grid gap-1">
-                                        <Label className="text-xs">Qty</Label>
+                                        <Label className="text-xs">Qty to add</Label>
                                         <Input
                                             type="number"
                                             min={1}
                                             value={quantity}
-                                            onChange={(e) => setQuantity(Number(e.target.value))}
+                                            onChange={(e) =>
+                                                setQuantity(
+                                                    Math.max(
+                                                        1,
+                                                        Number(e.target.value) || 1,
+                                                    ),
+                                                )
+                                            }
                                         />
+                                        {ownedQty != null && ownedQty > 0 && (
+                                            <p className="text-[10px] text-muted-foreground">
+                                                Own {ownedQty} · will be{' '}
+                                                {ownedQty +
+                                                    Math.max(1, quantity || 1)}
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="grid gap-1">
                                         <Label className="text-xs">Cost ($)</Label>

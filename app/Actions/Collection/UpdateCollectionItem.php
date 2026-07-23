@@ -32,7 +32,17 @@ class UpdateCollectionItem
             }
 
             if (array_key_exists('quantity', $attrs)) {
-                $item->quantity = max(0, (int) $attrs['quantity']);
+                $qty = max(0, (int) $attrs['quantity']);
+
+                // Zero means "remove this holding" — same outcome as set-quantity
+                // to 0. Lots cascade-delete with the row.
+                if ($qty === 0) {
+                    $item->delete();
+
+                    return $item;
+                }
+
+                $item->quantity = $qty;
             }
             if (array_key_exists('is_for_sale', $attrs)) {
                 $item->is_for_sale = (bool) $attrs['is_for_sale'];

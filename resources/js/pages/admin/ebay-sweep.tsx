@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { CatalogSearchSelect } from '@/components/scan/catalog-search-select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
     Dialog,
     DialogContent,
@@ -140,18 +141,25 @@ export default function AdminEbaySweep({
 }: Props) {
     const totalMisses = Object.values(counts).reduce((a, b) => a + b, 0);
     const [reassign, setReassign] = useState<Applied | null>(null);
+    const [confirmRejectApplied, setConfirmRejectApplied] =
+        useState<Applied | null>(null);
+    const [confirmRejectMiss, setConfirmRejectMiss] = useState<Miss | null>(
+        null,
+    );
+    const [busy, setBusy] = useState(false);
 
     const reject = (a: Applied) => {
-        if (!confirm('Reject this sale and stop it re-applying in future sweeps?')) {
-            return;
-        }
-
+        setBusy(true);
         router.post(
             `/admin/ebay-sweep/applied/${a.id}/reject`,
             {},
             {
                 preserveScroll: true,
-                onSuccess: () => toast.success('Rejected and suppressed.'),
+                onSuccess: () => {
+                    toast.success('Rejected and suppressed.');
+                    setConfirmRejectApplied(null);
+                },
+                onFinish: () => setBusy(false),
             },
         );
     };
@@ -202,16 +210,17 @@ export default function AdminEbaySweep({
     };
 
     const rejectMiss = (m: Miss) => {
-        if (!confirm('Reject this listing and stop future sweeps re-logging it?')) {
-            return;
-        }
-
+        setBusy(true);
         router.post(
             `/admin/ebay-sweep/misses/${m.id}/reject`,
             {},
             {
                 preserveScroll: true,
-                onSuccess: () => toast.success('Rejected and suppressed.'),
+                onSuccess: () => {
+                    toast.success('Rejected and suppressed.');
+                    setConfirmRejectMiss(null);
+                },
+                onFinish: () => setBusy(false),
             },
         );
     };
@@ -311,7 +320,11 @@ export default function AdminEbaySweep({
                                                     size="sm"
                                                     variant="ghost"
                                                     className="text-red-600 hover:text-red-600"
-                                                    onClick={() => reject(a)}
+                                                    onClick={() =>
+                                                        setConfirmRejectApplied(
+                                                            a,
+                                                        )
+                                                    }
                                                 >
                                                     Reject
                                                 </Button>
@@ -444,7 +457,9 @@ export default function AdminEbaySweep({
                                                     size="sm"
                                                     variant="ghost"
                                                     className="text-red-600 hover:text-red-600"
-                                                    onClick={() => rejectMiss(m)}
+                                                    onClick={() =>
+                                                        setConfirmRejectMiss(m)
+                                                    }
                                                 >
                                                     Reject
                                                 </Button>
@@ -542,6 +557,32 @@ export default function AdminEbaySweep({
                     )}
                 </DialogContent>
             </Dialog>
+
+            <ConfirmDialog
+                open={confirmRejectApplied !== null}
+                onOpenChange={(o) => !o && setConfirmRejectApplied(null)}
+                title="Reject this sale?"
+                description="Stops it re-applying in future sweeps."
+                confirmLabel="Reject"
+                destructive
+                busy={busy}
+                onConfirm={() =>
+                    confirmRejectApplied && reject(confirmRejectApplied)
+                }
+            />
+
+            <ConfirmDialog
+                open={confirmRejectMiss !== null}
+                onOpenChange={(o) => !o && setConfirmRejectMiss(null)}
+                title="Reject this listing?"
+                description="Stops future sweeps re-logging it."
+                confirmLabel="Reject"
+                destructive
+                busy={busy}
+                onConfirm={() =>
+                    confirmRejectMiss && rejectMiss(confirmRejectMiss)
+                }
+            />
 
             <Dialog
                 open={!!assignMiss}

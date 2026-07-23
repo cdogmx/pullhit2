@@ -10,6 +10,7 @@ import { EditCardDialog } from '@/components/admin/edit-card-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -54,6 +55,8 @@ export default function AdminCards({
     const [q, setQ] = useState(filters.q);
     const [editing, setEditing] = useState<AdminCard | null>(null);
     const [creating, setCreating] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState<AdminCard | null>(null);
+    const [busy, setBusy] = useState(false);
 
     const apply = (changes: Record<string, string | number> = {}) =>
         router.get(
@@ -77,13 +80,14 @@ export default function AdminCards({
     );
 
     const remove = (card: AdminCard) => {
-        if (!confirm(`Delete ${card.name} ${card.number ?? ''}?`)) {
-            return;
-        }
-
+        setBusy(true);
         router.delete(`/admin/cards/${card.id}`, {
             preserveScroll: true,
-            onSuccess: () => toast.success('Card deleted.'),
+            onSuccess: () => {
+                toast.success('Card deleted.');
+                setConfirmDelete(null);
+            },
+            onFinish: () => setBusy(false),
         });
     };
 
@@ -278,7 +282,9 @@ export default function AdminCards({
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
-                                                onClick={() => remove(c)}
+                                                onClick={() =>
+                                                    setConfirmDelete(c)
+                                                }
                                                 className="text-muted-foreground hover:text-red-600"
                                             >
                                                 <Trash2 className="size-4" />
@@ -333,6 +339,21 @@ export default function AdminCards({
                 options={createOptions}
                 open={creating}
                 onOpenChange={setCreating}
+            />
+
+            <ConfirmDialog
+                open={confirmDelete !== null}
+                onOpenChange={(o) => !o && setConfirmDelete(null)}
+                title={
+                    confirmDelete
+                        ? `Delete ${confirmDelete.name}${confirmDelete.number ? ` ${confirmDelete.number}` : ''}?`
+                        : 'Delete card?'
+                }
+                description="This permanently removes the card and its market data."
+                confirmLabel="Delete card"
+                destructive
+                busy={busy}
+                onConfirm={() => confirmDelete && remove(confirmDelete)}
             />
         </>
     );

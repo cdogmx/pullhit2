@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
     Dialog,
     DialogContent,
@@ -67,6 +68,8 @@ function ManageUserForm({
     const [isAdmin, setIsAdmin] = useState(user.is_admin);
     const [creditDelta, setCreditDelta] = useState('');
     const [banReason, setBanReason] = useState('');
+    const [confirmBan, setConfirmBan] = useState(false);
+    const [busy, setBusy] = useState(false);
 
     const opts = { preserveScroll: true };
 
@@ -108,10 +111,7 @@ function ManageUserForm({
         );
 
     const ban = () => {
-        if (!confirm(`Ban ${user.name}? They will be locked out immediately.`)) {
-            return;
-        }
-
+        setBusy(true);
         router.post(
             `/admin/users/${user.id}/ban`,
             { reason: banReason },
@@ -119,8 +119,10 @@ function ManageUserForm({
                 ...opts,
                 onSuccess: () => {
                     toast.success('User banned.');
+                    setConfirmBan(false);
                     onOpenChange(false);
                 },
+                onFinish: () => setBusy(false),
             },
         );
     };
@@ -257,7 +259,7 @@ function ManageUserForm({
                             <Button
                                 variant="destructive"
                                 size="sm"
-                                onClick={ban}
+                                onClick={() => setConfirmBan(true)}
                             >
                                 Ban user
                             </Button>
@@ -265,6 +267,17 @@ function ManageUserForm({
                     )}
                 </div>
             </div>
+
+            <ConfirmDialog
+                open={confirmBan}
+                onOpenChange={setConfirmBan}
+                title={`Ban ${user.name}?`}
+                description="They will be locked out immediately."
+                confirmLabel="Ban user"
+                destructive
+                busy={busy}
+                onConfirm={ban}
+            />
         </>
     );
 }

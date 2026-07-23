@@ -1,10 +1,12 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Heart, Pencil, Tag, X } from 'lucide-react';
 import { useState } from 'react';
-import { ListTabs  } from '@/components/shared/list-tabs';
-import type {ListSummary} from '@/components/shared/list-tabs';
+import { toast } from 'sonner';
+import { ListTabs } from '@/components/shared/list-tabs';
+import type { ListSummary } from '@/components/shared/list-tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { EditWishlistItemDialog } from '@/components/wishlist/edit-wishlist-item-dialog';
 import { cardHref, formatMoney } from '@/lib/format';
@@ -27,8 +29,31 @@ export default function WishlistIndex({
     summary,
     publicUrl,
 }: Props) {
+    const active = wishlists.find((w) => w.slug === activeWishlist);
     const otherWishlists = wishlists.filter((w) => w.slug !== activeWishlist);
     const [editing, setEditing] = useState<WishlistRow | null>(null);
+    const [confirmRemove, setConfirmRemove] = useState<WishlistRow | null>(
+        null,
+    );
+    const [busy, setBusy] = useState(false);
+
+    const remove = (row: WishlistRow) => {
+        const cardId = row.catalog_item?.id;
+        if (!cardId || !active) {
+            return;
+        }
+
+        setBusy(true);
+        router.delete(`/wishlist/${cardId}`, {
+            data: { wishlist_id: active.id },
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Removed from wishlist.');
+                setConfirmRemove(null);
+            },
+            onFinish: () => setBusy(false),
+        });
+    };
 
     return (
         <>
@@ -90,7 +115,12 @@ export default function WishlistIndex({
                             <Heart className="inline size-3.5" /> on any card to
                             add it.
                         </p>
-                        <Button asChild variant="outline" size="sm" className="mt-4">
+                        <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className="mt-4"
+                        >
                             <Link href="/browse">Browse cards</Link>
                         </Button>
                     </div>
@@ -102,6 +132,7 @@ export default function WishlistIndex({
                                 row={row}
                                 otherWishlists={otherWishlists}
                                 onEdit={() => setEditing(row)}
+                                onRemove={() => setConfirmRemove(row)}
                             />
                         ))}
                     </div>
@@ -129,6 +160,21 @@ export default function WishlistIndex({
                 open={editing !== null}
                 onOpenChange={(o) => !o && setEditing(null)}
             />
+
+            <ConfirmDialog
+                open={confirmRemove !== null}
+                onOpenChange={(o) => !o && setConfirmRemove(null)}
+                title="Remove from wishlist?"
+                description={
+                    confirmRemove
+                        ? `"${confirmRemove.catalog_item?.display_name ?? confirmRemove.catalog_item?.name ?? 'This card'}" will be removed from ${active?.name ?? 'this wishlist'}.`
+                        : undefined
+                }
+                confirmLabel="Remove"
+                destructive
+                busy={busy}
+                onConfirm={() => confirmRemove && remove(confirmRemove)}
+            />
         </>
     );
 }
@@ -137,10 +183,12 @@ function WishRow({
     row,
     otherWishlists,
     onEdit,
+    onRemove,
 }: {
     row: WishlistRow;
     otherWishlists: ListSummary[];
     onEdit: () => void;
+    onRemove: () => void;
 }) {
     const card = row.catalog_item;
     const [target, setTarget] = useState(
@@ -162,10 +210,6 @@ function WishRow({
             { preserveScroll: true, preserveState: true },
         );
     };
-
-    const remove = () =>
-        card &&
-        router.delete(`/wishlist/${card.id}`, { preserveScroll: true });
 
     return (
         <div className="flex items-center gap-3 bg-card p-3 hover:bg-accent/40">
@@ -239,7 +283,9 @@ function WishRow({
                     value={target}
                     onChange={(e) => setTarget(e.target.value)}
                     onBlur={saveTarget}
-                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                    onKeyDown={(e) =>
+                        e.key === 'Enter' && e.currentTarget.blur()
+                    }
                     inputMode="decimal"
                     placeholder="Target $"
                     className="h-8 w-24"
@@ -259,7 +305,7 @@ function WishRow({
                     size="icon"
                     variant="ghost"
                     className="size-8"
-                    onClick={remove}
+                    onClick={onRemove}
                     aria-label="Remove from wishlist"
                 >
                     <X className="size-4" />

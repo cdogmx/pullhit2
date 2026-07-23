@@ -7,6 +7,7 @@ import type { DataTableColumn } from '@/components/admin/data-table';
 import { EditBrandDialog } from '@/components/admin/edit-brand-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
     Select,
     SelectContent,
@@ -24,6 +25,8 @@ export default function AdminBrands({ brands, verticals }: Props) {
     const [editing, setEditing] = useState<AdminBrand | null>(null);
     const [creating, setCreating] = useState(false);
     const [vertical, setVertical] = useState('');
+    const [confirmDelete, setConfirmDelete] = useState<AdminBrand | null>(null);
+    const [busy, setBusy] = useState(false);
 
     const shown = useMemo(
         () =>
@@ -32,18 +35,14 @@ export default function AdminBrands({ brands, verticals }: Props) {
     );
 
     const remove = (brand: AdminBrand) => {
-        const tail =
-            brand.sets > 0 || brand.items > 0
-                ? ` This permanently deletes ${brand.sets} set(s) and ${brand.items.toLocaleString()} card(s), and removes them from every user's collection and wishlist.`
-                : '';
-
-        if (!confirm(`Delete ${brand.name}?${tail}`)) {
-            return;
-        }
-
+        setBusy(true);
         router.delete(`/admin/brands/${brand.id}`, {
             preserveScroll: true,
-            onSuccess: () => toast.success(`Deleted ${brand.name}.`),
+            onSuccess: () => {
+                toast.success(`Deleted ${brand.name}.`);
+                setConfirmDelete(null);
+            },
+            onFinish: () => setBusy(false),
         });
     };
 
@@ -118,7 +117,7 @@ export default function AdminBrands({ brands, verticals }: Props) {
                     <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => remove(b)}
+                        onClick={() => setConfirmDelete(b)}
                         className="text-muted-foreground hover:text-red-600"
                     >
                         <Trash2 className="size-4" />
@@ -193,6 +192,26 @@ export default function AdminBrands({ brands, verticals }: Props) {
                         setCreating(false);
                     }
                 }}
+            />
+
+            <ConfirmDialog
+                open={confirmDelete !== null}
+                onOpenChange={(o) => !o && setConfirmDelete(null)}
+                title={
+                    confirmDelete
+                        ? `Delete ${confirmDelete.name}?`
+                        : 'Delete brand?'
+                }
+                description={
+                    confirmDelete &&
+                    (confirmDelete.sets > 0 || confirmDelete.items > 0)
+                        ? `This permanently deletes ${confirmDelete.sets} set(s) and ${confirmDelete.items.toLocaleString()} card(s), and removes them from every user's collection and wishlist.`
+                        : 'This cannot be undone.'
+                }
+                confirmLabel="Delete brand"
+                destructive
+                busy={busy}
+                onConfirm={() => confirmDelete && remove(confirmDelete)}
             />
         </>
     );

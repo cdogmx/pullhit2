@@ -21,9 +21,48 @@ test('a user can add a card to their wishlist (idempotent) and remove it', funct
     expect(WishlistItem::count())->toBe(1)
         ->and(WishlistItem::where('user_id', $this->user->id)->where('catalog_item_id', $this->item->id)->exists())->toBeTrue();
 
-    // Remove toggles off by catalog item id (works from anywhere).
+    // Heart toggle-off clears every list that has the card.
     $this->actingAs($this->user)->delete("/wishlist/{$this->item->id}")->assertRedirect();
     expect(WishlistItem::count())->toBe(0);
+});
+
+test('removing without wishlist_id clears the card from every wishlist', function () {
+    $default = $this->user->defaultWishlist();
+    $other = $this->user->wishlists()->create(['name' => 'Grails', 'slug' => 'grails', 'sort' => 1]);
+
+    WishlistItem::create([
+        'user_id' => $this->user->id, 'wishlist_id' => $default->id, 'catalog_item_id' => $this->item->id,
+    ]);
+    WishlistItem::create([
+        'user_id' => $this->user->id, 'wishlist_id' => $other->id, 'catalog_item_id' => $this->item->id,
+    ]);
+
+    $this->actingAs($this->user)->delete("/wishlist/{$this->item->id}")->assertRedirect();
+
+    expect(WishlistItem::where('user_id', $this->user->id)->where('catalog_item_id', $this->item->id)->count())->toBe(0);
+});
+
+test('removing with wishlist_id only clears that list', function () {
+    $default = $this->user->defaultWishlist();
+    $other = $this->user->wishlists()->create(['name' => 'Grails', 'slug' => 'grails', 'sort' => 1]);
+
+    WishlistItem::create([
+        'user_id' => $this->user->id, 'wishlist_id' => $default->id, 'catalog_item_id' => $this->item->id,
+    ]);
+    WishlistItem::create([
+        'user_id' => $this->user->id, 'wishlist_id' => $other->id, 'catalog_item_id' => $this->item->id,
+    ]);
+
+    $this->actingAs($this->user)
+        ->delete("/wishlist/{$this->item->id}", ['wishlist_id' => $other->id])
+        ->assertRedirect();
+
+    expect(
+        WishlistItem::where('user_id', $this->user->id)
+            ->where('catalog_item_id', $this->item->id)
+            ->pluck('wishlist_id')
+            ->all(),
+    )->toBe([$default->id]);
 });
 
 test('the wishlist page shows current value + at-target flag', function () {

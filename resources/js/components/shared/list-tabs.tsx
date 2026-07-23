@@ -4,12 +4,21 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 export type ListSummary = {
@@ -53,6 +62,9 @@ export function ListTabs({
     const [creating, setCreating] = useState(false);
     const [name, setName] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const [renaming, setRenaming] = useState(false);
+    const [renameValue, setRenameValue] = useState('');
+    const [busy, setBusy] = useState(false);
     const atLimit = limit !== null && lists.length >= limit;
     const current = lists.find((x) => x.slug === active);
 
@@ -74,20 +86,38 @@ export function ListTabs({
         );
     };
 
-    const rename = () => {
+    const openRename = () => {
         if (!current) {
             return;
         }
 
-        const next = window.prompt(`Rename ${noun}`, current.name);
+        setRenameValue(current.name);
+        setRenaming(true);
+    };
 
-        if (next && next.trim() && next.trim() !== current.name) {
-            router.patch(
-                `${entityBase}/${current.id}`,
-                { name: next.trim() },
-                { preserveScroll: true },
-            );
+    const submitRename = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!current) {
+            return;
         }
+
+        const next = renameValue.trim();
+        if (!next || next === current.name) {
+            setRenaming(false);
+
+            return;
+        }
+
+        setBusy(true);
+        router.patch(
+            `${entityBase}/${current.id}`,
+            { name: next },
+            {
+                preserveScroll: true,
+                onSuccess: () => setRenaming(false),
+                onFinish: () => setBusy(false),
+            },
+        );
     };
 
     const togglePublic = () => {
@@ -107,9 +137,11 @@ export function ListTabs({
             return;
         }
 
+        setBusy(true);
         router.delete(`${entityBase}/${current.id}`, {
             preserveScroll: true,
             onSuccess: () => setConfirmDelete(false),
+            onFinish: () => setBusy(false),
         });
     };
 
@@ -143,7 +175,7 @@ export function ListTabs({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
-                        <DropdownMenuItem onClick={rename}>
+                        <DropdownMenuItem onClick={openRename}>
                             Rename
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={togglePublic}>
@@ -192,23 +224,82 @@ export function ListTabs({
                 </span>
             ) : atLimit ? (
                 <Button asChild variant="outline" size="sm">
-                    <Link href="/settings/billing" title={`Your plan allows ${limit} ${noun}s`}>
+                    <Link
+                        href="/settings/billing"
+                        title={`Your plan allows ${limit} ${noun}s`}
+                    >
                         <Plus className="size-4" /> Upgrade for more
                     </Link>
                 </Button>
             ) : (
-                <Button variant="outline" size="sm" onClick={() => setCreating(true)}>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCreating(true)}
+                >
                     <Plus className="size-4" /> New
                 </Button>
             )}
 
+            <Dialog open={renaming} onOpenChange={setRenaming}>
+                <DialogContent className="sm:max-w-md">
+                    <form onSubmit={submitRename}>
+                        <DialogHeader>
+                            <DialogTitle>
+                                Rename {noun}
+                                {current ? ` “${current.name}”` : ''}
+                            </DialogTitle>
+                            <DialogDescription>
+                                Choose a new name for this {noun}.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-2 py-4">
+                            <Label htmlFor="list-rename">Name</Label>
+                            <Input
+                                id="list-rename"
+                                autoFocus
+                                value={renameValue}
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                maxLength={60}
+                                placeholder={`${noun} name`}
+                            />
+                        </div>
+                        <DialogFooter className="gap-2 sm:gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setRenaming(false)}
+                                disabled={busy}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={
+                                    busy ||
+                                    !renameValue.trim() ||
+                                    renameValue.trim() === current?.name
+                                }
+                            >
+                                Save
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
             <ConfirmDialog
                 open={confirmDelete}
                 onOpenChange={setConfirmDelete}
-                title={current ? `Delete “${current.name}”?` : `Delete ${noun}?`}
+                title={
+                    current
+                        ? `Delete “${current.name}”?`
+                        : `Delete ${noun}?`
+                }
                 description={`Its cards aren't lost — they move to your default ${noun}.`}
                 confirmLabel={`Delete ${noun}`}
                 destructive
+                busy={busy}
                 onConfirm={remove}
             />
         </div>
