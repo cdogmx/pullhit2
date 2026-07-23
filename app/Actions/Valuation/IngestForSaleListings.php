@@ -96,6 +96,11 @@ class IngestForSaleListings
         foreach ($this->browse->search($query, $limit) as $listing) {
             $title = (string) ($listing['title'] ?? '');
 
+            // Another language's printing is a different market — never an ask.
+            if (! CardSearchTerms::matchesLanguage($item, $title)) {
+                continue;
+            }
+
             // Keep eBay honest: raw states drop graded titles; PSA 10 keeps only
             // titles that actually say PSA 10 (the query alone is fuzzy).
             if (isset($rules['exclude']) && preg_match($rules['exclude'], $title)) {
@@ -151,6 +156,6 @@ class IngestForSaleListings
             $item->name,
             $item->number,
             $item->set?->name,
-        ], CardSearchTerms::qualifiers($item)))));
+        ], CardSearchTerms::qualifiers($item), [CardSearchTerms::languageKeyword($item)]))));
     }
 }

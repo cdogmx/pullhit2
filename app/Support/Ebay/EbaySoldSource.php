@@ -112,20 +112,7 @@ class EbaySoldSource
     /** The eBay "Language" aspect value for a card's language, or null if unknown. */
     private function ebayLanguage(CatalogItem $item): ?string
     {
-        $language = $item->language ?? ($item->getAttribute('attributes')['language'] ?? null);
-
-        return match ($language) {
-            'en' => 'English',
-            'ja' => 'Japanese',
-            'ko' => 'Korean',
-            'zh-CN', 'zh-TW' => 'Chinese',
-            'fr' => 'French',
-            'de' => 'German',
-            'it' => 'Italian',
-            'es' => 'Spanish',
-            'pt' => 'Portuguese',
-            default => null,
-        };
+        return CardSearchTerms::language($item);
     }
 
     /**

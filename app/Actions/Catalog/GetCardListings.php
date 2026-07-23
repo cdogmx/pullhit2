@@ -47,11 +47,13 @@ class GetCardListings
      */
     public function __invoke(CatalogItem $item, ?string $optionLabel = null): array
     {
+        // The language keyword is part of the query (and of every shop link) — a
+        // Japanese card's asks come from Japanese listings, not English ones.
         $query = trim(implode(' ', array_filter(array_merge([
             $item->name,
             $item->number,
             $item->set?->name,
-        ], CardSearchTerms::qualifiers($item)))));
+        ], CardSearchTerms::qualifiers($item), [CardSearchTerms::languageKeyword($item)]))));
 
         $selected = $this->resolveOption($optionLabel);
         $suffix = $selected['suffix'];
@@ -60,15 +62,15 @@ class GetCardListings
         // Short-cache empty results so missing keys / blips recover quickly.
         $listings = [];
         if ($this->browse->configured()) {
-            $cacheKey = 'ebay:listings:'.$item->id.':v3:'.md5($suffix);
+            $cacheKey = 'ebay:listings:'.$item->id.':v4:'.md5($suffix);
             $cached = Cache::get($cacheKey);
 
             if (is_array($cached)) {
                 $listings = $cached;
             } else {
-                $found = $this->browse->search(trim($query.' '.$suffix), 12);
+                $found = $this->inLanguage($item, $this->browse->search(trim($query.' '.$suffix), 12));
                 // Bare query only when the selected refinement returns nothing.
-                $listings = $found !== [] ? $found : $this->browse->search($query, 12);
+                $listings = $found !== [] ? $found : $this->inLanguage($item, $this->browse->search($query, 12));
                 Cache::put(
                     $cacheKey,
                     $listings,
@@ -90,6 +92,21 @@ class GetCardListings
             'selected' => $selected['label'],
             'configured' => $this->browse->configured(),
         ];
+    }
+
+    /**
+     * Drop listings whose title belongs to another language's printing — the
+     * keyword search alone still leaks them.
+     *
+     * @param  array<int, array<string, mixed>>  $listings
+     * @return array<int, array<string, mixed>>
+     */
+    protected function inLanguage(CatalogItem $item, array $listings): array
+    {
+        return array_values(array_filter(
+            $listings,
+            fn (array $l) => CardSearchTerms::matchesLanguage($item, (string) ($l['title'] ?? '')),
+        ));
     }
 
     /** @return array{label: string, group: string, suffix: string} */

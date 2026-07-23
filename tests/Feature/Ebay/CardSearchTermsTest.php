@@ -30,6 +30,34 @@ test('qualifiers pin the search to a printing', function () {
     expect(CardSearchTerms::qualifiers($make(['variant' => 'holo'])))->toBe([]);
 });
 
+test('the language keyword pins non-English printings only', function () {
+    $make = fn (?string $lang) => CatalogItem::factory()->make(['attributes' => array_filter(['language' => $lang])]);
+
+    expect(CardSearchTerms::languageKeyword($make('ja')))->toBe('Japanese');
+    expect(CardSearchTerms::languageKeyword($make('zh-TW')))->toBe('Chinese');
+    // English is never written in titles, and unknown must not over-restrict.
+    expect(CardSearchTerms::languageKeyword($make('en')))->toBeNull();
+    expect(CardSearchTerms::languageKeyword($make(null)))->toBeNull();
+});
+
+test('listing titles are matched against the card language', function () {
+    $make = fn (?string $lang) => CatalogItem::factory()->make(['attributes' => array_filter(['language' => $lang])]);
+    $en = $make('en');
+    $ja = $make('ja');
+
+    expect(CardSearchTerms::matchesLanguage($en, 'Charizard 006/165 151 Holo NM'))->toBeTrue();
+    expect(CardSearchTerms::matchesLanguage($en, 'Japanese Charizard 006 SV2a'))->toBeFalse();
+    expect(CardSearchTerms::matchesLanguage($en, 'Charizard JP 006 NM'))->toBeFalse();
+    expect(CardSearchTerms::matchesLanguage($en, 'Korean Charizard 006'))->toBeFalse();
+
+    expect(CardSearchTerms::matchesLanguage($ja, 'Japanese Charizard 006 SV2a NM'))->toBeTrue();
+    expect(CardSearchTerms::matchesLanguage($ja, 'Charizard 006 日本語'))->toBeTrue();
+    expect(CardSearchTerms::matchesLanguage($ja, 'Charizard 006/165 151 Holo NM'))->toBeFalse();
+
+    // Unknown language stays unfiltered.
+    expect(CardSearchTerms::matchesLanguage($make(null), 'Japanese Charizard'))->toBeTrue();
+});
+
 test('a single query is game - name - variant - number (no set/code)', function () {
     $item = CatalogItem::factory()->make([
         'name' => 'Snivy', 'number' => '1',

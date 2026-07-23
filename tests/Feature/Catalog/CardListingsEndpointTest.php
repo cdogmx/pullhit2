@@ -42,6 +42,33 @@ test('the listings endpoint works (affiliate links only) when Browse is unconfig
         ->assertJsonPath('ebay_options.0.url', fn ($u) => str_contains($u, 'campid=5338'));
 });
 
+test('the listings endpoint searches and filters by the card language', function () {
+    config([
+        'services.ebay.client_id' => 'id',
+        'services.ebay.client_secret' => 'secret',
+        'services.ebay.campaign_id' => '5338',
+        'services.ebay.base_url' => 'https://api.ebay.com',
+    ]);
+    Http::fake([
+        'api.ebay.com/identity/v1/oauth2/token' => Http::response(['access_token' => 'tok', 'expires_in' => 7200]),
+        'api.ebay.com/buy/browse/v1/item_summary/search*' => Http::response(['itemSummaries' => [
+            ['title' => 'Japanese Charizard 006 NM', 'price' => ['value' => '20.00', 'currency' => 'USD'], 'itemWebUrl' => 'https://ebay.com/itm/1'],
+            ['title' => 'Charizard 006 English NM', 'price' => ['value' => '9.00', 'currency' => 'USD'], 'itemWebUrl' => 'https://ebay.com/itm/2'],
+        ]]),
+    ]);
+    $item = CatalogItem::factory()->create(['attributes' => ['language' => 'ja']]);
+
+    $this->getJson("/api/v1/catalog/{$item->id}/listings")
+        ->assertOk()
+        // The English printing is a different market — it never shows up here.
+        ->assertJsonCount(1, 'listings')
+        ->assertJsonPath('listings.0.title', 'Japanese Charizard 006 NM')
+        ->assertJsonPath('ebay_options.0.url', fn ($u) => str_contains(urldecode($u), 'Japanese'));
+
+    Http::assertSent(fn ($request) => ! str_contains($request->url(), 'item_summary/search')
+        || str_contains(urldecode($request->url()), 'Japanese'));
+});
+
 test('the listings endpoint accepts a condition/grade option', function () {
     config([
         'services.ebay.client_id' => 'id',
