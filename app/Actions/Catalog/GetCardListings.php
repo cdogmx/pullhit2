@@ -48,11 +48,25 @@ class GetCardListings
             $item->set?->name,
         ], CardSearchTerms::qualifiers($item)))));
 
-        $listings = Cache::remember(
-            "ebay:listings:{$item->id}",
-            now()->addHours(6),
-            fn () => $this->browse->search($query),
-        );
+        // Default tile list: Near Mint buy-it-now asks (Browse API, affiliate-tagged).
+        // Short-cache empty results so missing keys / blips recover quickly.
+        $listings = [];
+        if ($this->browse->configured()) {
+            $cacheKey = "ebay:listings:{$item->id}:v2";
+            $cached = Cache::get($cacheKey);
+
+            if (is_array($cached)) {
+                $listings = $cached;
+            } else {
+                $found = $this->browse->search(trim($query.' Near Mint'), 8);
+                $listings = $found !== [] ? $found : $this->browse->search($query, 8);
+                Cache::put(
+                    $cacheKey,
+                    $listings,
+                    $listings === [] ? now()->addMinutes(15) : now()->addHours(6),
+                );
+            }
+        }
 
         $options = array_map(fn (array $o) => [
             'label' => $o['label'],

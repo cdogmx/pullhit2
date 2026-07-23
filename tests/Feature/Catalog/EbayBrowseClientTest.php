@@ -18,6 +18,7 @@ test('search parses listings and prefers the affiliate url', function () {
         'services.ebay.campaign_id' => '5338',
         'services.ebay.base_url' => 'https://api.ebay.com',
         'services.ebay.marketplace_id' => 'EBAY_US',
+        'services.ebay.rover_id' => '711-53200-19255-0',
     ]);
     Http::fake([
         'api.ebay.com/identity/v1/oauth2/token' => Http::response(['access_token' => 'tok', 'expires_in' => 7200]),
@@ -35,5 +36,31 @@ test('search parses listings and prefers the affiliate url', function () {
 
     expect($out)->toHaveCount(1)
         ->and($out[0]['price_cents'])->toBe(1250)
-        ->and($out[0]['url'])->toBe('https://ebay.com/itm/1?campid=5338');
+        ->and($out[0]['url'])->toContain('campid=5338');
+});
+
+test('plain item urls are tagged with the campaign id', function () {
+    config([
+        'services.ebay.client_id' => 'id',
+        'services.ebay.client_secret' => 'secret',
+        'services.ebay.campaign_id' => '5339145466',
+        'services.ebay.base_url' => 'https://api.ebay.com',
+        'services.ebay.marketplace_id' => 'EBAY_US',
+        'services.ebay.rover_id' => '711-53200-19255-0',
+    ]);
+    Http::fake([
+        'api.ebay.com/identity/v1/oauth2/token' => Http::response(['access_token' => 'tok', 'expires_in' => 7200]),
+        'api.ebay.com/buy/browse/v1/item_summary/search*' => Http::response(['itemSummaries' => [
+            [
+                'title' => 'Charizard', 'price' => ['value' => '40.00', 'currency' => 'USD'],
+                'itemWebUrl' => 'https://www.ebay.com/itm/12345',
+            ],
+        ]]),
+    ]);
+
+    $out = app(EbayBrowseClient::class)->search('Charizard');
+
+    expect($out)->toHaveCount(1)
+        ->and($out[0]['url'])->toContain('campid=5339145466')
+        ->and($out[0]['url'])->toContain('mkevt=1');
 });

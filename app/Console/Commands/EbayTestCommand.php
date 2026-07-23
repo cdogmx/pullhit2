@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 /**
  * Verifies the eBay Browse API credentials by running a live listings search.
- * Run after setting EBAY_CLIENT_ID/SECRET (+ EBAY_CAMPAIGN_ID for affiliate links).
+ * Run after setting production (or sandbox) keys + EBAY_CAMPAIGN_ID for affiliate links.
  */
 class EbayTestCommand extends Command
 {
@@ -19,10 +19,12 @@ class EbayTestCommand extends Command
     public function handle(EbayBrowseClient $client): int
     {
         if (! $client->configured()) {
-            $this->error('EBAY_CLIENT_ID / EBAY_CLIENT_SECRET are not set — add them to .env, then `config:clear`.');
+            $this->error('eBay Browse keys not set — add EBAY_PRODUCTION_CLIENT_ID/SECRET (or EBAY_CLIENT_ID/SECRET), then `config:clear`.');
 
             return self::FAILURE;
         }
+
+        $this->line('Env: '.config('services.ebay.env').' · campaign: '.(config('services.ebay.campaign_id') ?: 'NOT SET'));
 
         $query = (string) $this->argument('query');
         $this->info("Searching eBay Browse for: {$query}");

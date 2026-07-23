@@ -111,15 +111,43 @@ return [
         'base_url' => env('LORCANA_BASE_URL', 'https://api.lorcana-api.com'),
     ],
 
-    // eBay Browse API (live active listings) + eBay Partner Network affiliate.
-    // The affiliate "Shop on eBay" link needs only campaign_id; inline live
-    // listings additionally need client_id/secret (OAuth). Degrades gracefully.
+    // eBay Browse API (live active / buy-it-now listings) + Partner Network.
+    // Used for card-page listings (GetCardListings) and for-sale valuation
+    // (IngestForSaleListings). Prefer EBAY_CLIENT_ID/SECRET when both set;
+    // otherwise EBAY_PRODUCTION_* or EBAY_SANDBOX_* based on EBAY_ENV.
+    // Affiliate: EBAY_CAMPAIGN_ID tags Browse item URLs + "Shop on eBay" links.
     'ebay' => [
-        'client_id' => env('EBAY_CLIENT_ID'),
-        'client_secret' => env('EBAY_CLIENT_SECRET'),
+        'env' => env('EBAY_ENV', 'production'),
+        'client_id' => (static function () {
+            $id = env('EBAY_CLIENT_ID');
+            $secret = env('EBAY_CLIENT_SECRET');
+            if (! empty($id) && ! empty($secret)) {
+                return $id;
+            }
+
+            return env('EBAY_ENV', 'production') === 'sandbox'
+                ? env('EBAY_SANDBOX_CLIENT_ID')
+                : env('EBAY_PRODUCTION_CLIENT_ID');
+        })(),
+        'client_secret' => (static function () {
+            $id = env('EBAY_CLIENT_ID');
+            $secret = env('EBAY_CLIENT_SECRET');
+            if (! empty($id) && ! empty($secret)) {
+                return $secret;
+            }
+
+            return env('EBAY_ENV', 'production') === 'sandbox'
+                ? env('EBAY_SANDBOX_CLIENT_SECRET')
+                : env('EBAY_PRODUCTION_CLIENT_SECRET');
+        })(),
         'campaign_id' => env('EBAY_CAMPAIGN_ID'),
         'marketplace_id' => env('EBAY_MARKETPLACE_ID', 'EBAY_US'),
-        'base_url' => env('EBAY_BASE_URL', 'https://api.ebay.com'),
+        'base_url' => env(
+            'EBAY_BASE_URL',
+            env('EBAY_ENV', 'production') === 'sandbox'
+                ? 'https://api.sandbox.ebay.com'
+                : 'https://api.ebay.com',
+        ),
         // EPN rotation id for the eBay US marketplace (affiliate search links).
         'rover_id' => env('EBAY_ROVER_ID', '711-53200-19255-0'),
         // Marketplace Account Deletion notifications (required for production keys).
