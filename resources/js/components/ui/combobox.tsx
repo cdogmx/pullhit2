@@ -19,6 +19,7 @@ export function Combobox({
     emptyText = 'No matches.',
     className,
     triggerClassName,
+    disabled = false,
 }: {
     options: ComboboxOption[];
     value: string;
@@ -28,6 +29,8 @@ export function Combobox({
     emptyText?: string;
     className?: string;
     triggerClassName?: string;
+    /** Greys out the trigger — e.g. a series picker before a brand is chosen. */
+    disabled?: boolean;
 }) {
     const [open, setOpen] = useState(false);
     const [q, setQ] = useState('');
@@ -94,6 +97,7 @@ export function Combobox({
         <div ref={ref} className={cn('relative', className)}>
             <button
                 type="button"
+                disabled={disabled}
                 onClick={() => (open ? setOpen(false) : openMenu())}
                 className={cn(
                     'flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30 dark:hover:bg-input/50',
@@ -111,7 +115,7 @@ export function Combobox({
                 <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
             </button>
 
-            {open && (
+            {open && !disabled && (
                 <div className="absolute left-0 z-50 mt-1 w-max max-w-[20rem] min-w-full overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md">
                     <div className="relative border-b border-border p-2">
                         <Search className="absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />

@@ -46,9 +46,11 @@ class SearchCatalog
             $this->collapseToBaseCards($query);
         }
 
-        // A search with no explicit sort ranks by relevance; otherwise sort as asked.
+        // A search with no explicit sort ranks by relevance; otherwise sort as
+        // asked. Inside a single set `q` is a filter over that set's list rather
+        // than a search across the catalog, so the binder (number) order stands.
         $sort = $filters['sort'] ?? 'number';
-        if (! empty($filters['q']) && $sort === 'number' && empty($filters['group'])) {
+        if (! empty($filters['q']) && empty($filters['set']) && $sort === 'number' && empty($filters['group'])) {
             $this->applyRelevance($query, (string) $filters['q']);
         } else {
             $this->applySort($query, $sort, $filters['direction'] ?? 'asc', $grading);

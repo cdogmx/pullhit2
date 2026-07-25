@@ -49,9 +49,11 @@ class SuggestSearch
     private const CARD_LIMIT = 8;
 
     /**
+     * @param  array{product_line?: ?string, series?: ?string}  $scope  browse scope
+     *                                                                  the suggestions stay inside (the brand/series the user is in)
      * @return array{brands: array<int, array<string, mixed>>, sets: array<int, array<string, mixed>>, cards: array<int, array<string, mixed>>}
      */
-    public function __invoke(string $q): array
+    public function __invoke(string $q, array $scope = []): array
     {
         $q = trim($q);
 
@@ -59,13 +61,18 @@ class SuggestSearch
             return ['brands' => [], 'sets' => [], 'cards' => []];
         }
 
+        $line = $scope['product_line'] ?? null;
+        $series = $scope['series'] ?? null;
+
         return Cache::remember(
-            'suggest:v1:'.mb_strtolower($q),
+            'suggest:v2:'.mb_strtolower($q).':'.$line.':'.$series,
             self::CACHE_TTL,
             fn () => [
-                'brands' => $this->brands($q),
-                'sets' => $this->sets($q),
-                'cards' => $this->cards($q),
+                // Inside a brand there's nothing to suggest jumping to — the user
+                // is already there, and every hit below belongs to it.
+                'brands' => $line ? [] : $this->brands($q),
+                'sets' => $this->sets($q, $scope),
+                'cards' => $this->cards($q, $scope),
             ],
         );
     }
@@ -129,11 +136,16 @@ class SuggestSearch
         return $exact;
     }
 
-    /** @return array<int, array<string, mixed>> */
-    private function sets(string $q): array
+    /**
+     * @param  array{product_line?: ?string, series?: ?string}  $scope
+     * @return array<int, array<string, mixed>>
+     */
+    private function sets(string $q, array $scope = []): array
     {
         $base = fn () => Set::query()
             ->with('productLine:id,slug,name')
+            ->when($scope['product_line'] ?? null, fn (Builder $s, $slug) => $s->whereHas('productLine', fn (Builder $p) => $p->where('slug', $slug)))
+            ->when($scope['series'] ?? null, fn (Builder $s, $series) => $s->where('series', $series))
             ->addSelect(['thumb' => $this->cardThumb('set_id', 'sets.id')]);
 
         $like = LikeTerm::clean($q);
@@ -159,11 +171,16 @@ class SuggestSearch
         return $exact;
     }
 
-    /** @return array<int, array<string, mixed>> */
-    private function cards(string $q): array
+    /**
+     * @param  array{product_line?: ?string, series?: ?string}  $scope
+     * @return array<int, array<string, mixed>>
+     */
+    private function cards(string $q, array $scope = []): array
     {
         $base = fn () => CatalogItem::query()
-            ->with(['productLine:id,slug', 'set:id,slug,name']);
+            ->with(['productLine:id,slug', 'set:id,slug,name'])
+            ->when($scope['product_line'] ?? null, fn (Builder $c, $slug) => $c->whereHas('productLine', fn (Builder $p) => $p->where('slug', $slug)))
+            ->when($scope['series'] ?? null, fn (Builder $c, $series) => $c->whereHas('set', fn (Builder $s) => $s->where('series', $series)));
 
         // Token-AND across name OR set name OR number, so a "card + set" query
         // like "pikachu ascended heroes" matches (the set words live on `sets`,

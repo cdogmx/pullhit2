@@ -49,10 +49,14 @@ class CatalogFilterOptions
                 ->when($filters['vertical'] ?? null, fn (Builder $q, $slug) => $q->whereHas('vertical', fn (Builder $v) => $v->where('slug', $slug)))
                 ->orderBy('name')
                 ->get(['slug', 'name']),
+            // The brand's series (eras), newest first — the middle rung of the
+            // brand → series → set scope pickers. Only meaningful inside a brand.
+            'series' => $this->series($filters),
             'sets' => Set::query()
                 ->when($filters['product_line'] ?? null, fn (Builder $q, $slug) => $q->whereHas('productLine', fn (Builder $p) => $p->where('slug', $slug)))
+                ->when($filters['series'] ?? null, fn (Builder $q, $series) => $q->where('series', $series))
                 ->orderByDesc('released_at')
-                ->get(['slug', 'name', 'code']),
+                ->get(['slug', 'name', 'code', 'language']),
             'item_types' => array_map(fn (ItemType $t) => $t->value, ItemType::cases()),
             'languages' => $this->applyScope(
                 CatalogItem::query()->whereNotNull('language'), $filters,
@@ -65,6 +69,30 @@ class CatalogFilterOptions
             'grading_companies' => $this->gradingCompanies($filters),
             'grades' => $this->grades($filters),
         ];
+    }
+
+    /**
+     * The distinct series (eras) of a brand's sets, newest first — mirroring the
+     * order of the series browse tiles. Empty outside a brand: series names are
+     * only unique within one, so a cross-brand list would be ambiguous.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<int, string>
+     */
+    protected function series(array $filters): array
+    {
+        if (empty($filters['product_line'])) {
+            return [];
+        }
+
+        return Set::query()
+            ->whereHas('productLine', fn (Builder $p) => $p->where('slug', $filters['product_line']))
+            ->whereNotNull('series')
+            ->groupBy('series')
+            ->selectRaw('series, max(released_at) as newest')
+            ->orderByRaw('max(released_at) desc')
+            ->pluck('series')
+            ->all();
     }
 
     /**
@@ -112,8 +140,8 @@ class CatalogFilterOptions
     }
 
     /**
-     * Narrow a catalog query to the current vertical / product line / set
-     * selection — the scope every value facet's options are drawn from.
+     * Narrow a catalog query to the current vertical / product line / series /
+     * set selection — the scope every value facet's options are drawn from.
      *
      * @param  array<string, mixed>  $filters
      */
@@ -122,6 +150,7 @@ class CatalogFilterOptions
         return $query
             ->when($filters['vertical'] ?? null, fn (Builder $q, $slug) => $q->whereHas('vertical', fn (Builder $v) => $v->where('slug', $slug)))
             ->when($filters['product_line'] ?? null, fn (Builder $q, $slug) => $q->whereHas('productLine', fn (Builder $p) => $p->where('slug', $slug)))
+            ->when($filters['series'] ?? null, fn (Builder $q, $series) => $q->whereHas('set', fn (Builder $s) => $s->where('series', $series)))
             ->when($filters['set'] ?? null, fn (Builder $q, $slug) => $q->whereHas('set', fn (Builder $s) => $s->where('slug', $slug)));
     }
 

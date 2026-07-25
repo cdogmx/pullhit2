@@ -63,6 +63,7 @@ export function SearchSuggest({
     className,
     ariaLabel = 'Search the catalog',
     clearOnNavigate = true,
+    scope,
 }: {
     value: string;
     onChange: (value: string) => void;
@@ -74,6 +75,11 @@ export function SearchSuggest({
     ariaLabel?: string;
     /** Clear the input after navigating to a suggestion / submitting. */
     clearOnNavigate?: boolean;
+    /**
+     * Confine suggestions to a brand (and optionally one of its series) — what
+     * browse passes so the dropdown never leaves the section being browsed.
+     */
+    scope?: { product_line?: string | null; series?: string | null };
 }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -90,6 +96,10 @@ export function SearchSuggest({
     const panelRef = useRef<HTMLDivElement>(null);
 
     const q = value;
+    // Read off the object so the fetch effect can depend on the values, not on
+    // a prop identity that changes every render.
+    const scopeLine = scope?.product_line ?? '';
+    const scopeSeries = scope?.series ?? '';
 
     // Flattened, in render order — drives keyboard navigation.
     const flat = useMemo<Flat[]>(
@@ -139,7 +149,17 @@ export function SearchSuggest({
 
             setLoading(true);
 
-            fetch(`/search/suggest?q=${encodeURIComponent(term)}`, {
+            const params = new URLSearchParams({ q: term });
+
+            if (scopeLine) {
+                params.set('product_line', scopeLine);
+            }
+
+            if (scopeSeries) {
+                params.set('series', scopeSeries);
+            }
+
+            fetch(`/search/suggest?${params.toString()}`, {
                 headers: { Accept: 'application/json' },
                 signal: controller.signal,
             })
@@ -158,7 +178,7 @@ export function SearchSuggest({
             clearTimeout(t);
             controller.abort();
         };
-    }, [q]);
+    }, [q, scopeLine, scopeSeries]);
 
     // Anchor the portal panel under the input; keep it pinned on scroll/resize.
     useEffect(() => {
@@ -348,8 +368,12 @@ export function SearchSuggest({
                                                         title={b.name}
                                                         subtitle="Brand"
                                                         rounded
-                                                        active={index === active}
-                                                        onSelect={() => go(b.url)}
+                                                        active={
+                                                            index === active
+                                                        }
+                                                        onSelect={() =>
+                                                            go(b.url)
+                                                        }
                                                     />
                                                 );
                                             })}
@@ -365,10 +389,16 @@ export function SearchSuggest({
                                                         key={`s-${s.url}`}
                                                         thumb={s.thumb}
                                                         title={s.name}
-                                                        subtitle={setSubtitle(s)}
+                                                        subtitle={setSubtitle(
+                                                            s,
+                                                        )}
                                                         rounded
-                                                        active={index === active}
-                                                        onSelect={() => go(s.url)}
+                                                        active={
+                                                            index === active
+                                                        }
+                                                        onSelect={() =>
+                                                            go(s.url)
+                                                        }
                                                     />
                                                 );
                                             })}
@@ -385,8 +415,12 @@ export function SearchSuggest({
                                                         thumb={c.thumb}
                                                         title={c.name}
                                                         subtitle={c.set}
-                                                        active={index === active}
-                                                        onSelect={() => go(c.url)}
+                                                        active={
+                                                            index === active
+                                                        }
+                                                        onSelect={() =>
+                                                            go(c.url)
+                                                        }
                                                     />
                                                 );
                                             })}

@@ -90,6 +90,57 @@ test('grades narrow to the selected grader', function () {
     expect($opts['grades'])->toBe([9.5]);
 });
 
+test('series options list the brand eras newest first', function () {
+    $poke = ProductLine::factory()->create(['slug' => 'pokemon']);
+    $cyber = ProductLine::factory()->create(['slug' => 'cyberpunk']);
+
+    Set::factory()->create(['product_line_id' => $poke->id, 'slug' => 'base', 'series' => 'Original', 'released_at' => '1999-01-09']);
+    Set::factory()->create(['product_line_id' => $poke->id, 'slug' => 'surging', 'series' => 'Scarlet & Violet', 'released_at' => '2024-11-08']);
+    Set::factory()->create(['product_line_id' => $poke->id, 'slug' => 'paldea', 'series' => 'Scarlet & Violet', 'released_at' => '2023-03-31']);
+    Set::factory()->create(['product_line_id' => $cyber->id, 'slug' => 'wnc', 'series' => 'World North', 'released_at' => '2025-01-01']);
+
+    $opts = app(CatalogFilterOptions::class)(['product_line' => 'pokemon']);
+
+    // Deduped, newest-first, and the other brand's series stays out.
+    expect($opts['series'])->toBe(['Scarlet & Violet', 'Original']);
+});
+
+test('series options are empty until a brand is chosen', function () {
+    $poke = ProductLine::factory()->create(['slug' => 'pokemon']);
+    Set::factory()->create(['product_line_id' => $poke->id, 'series' => 'Original']);
+
+    expect(app(CatalogFilterOptions::class)([])['series'])->toBe([]);
+});
+
+test('the set list narrows to the selected series', function () {
+    $poke = ProductLine::factory()->create(['slug' => 'pokemon']);
+    Set::factory()->create(['product_line_id' => $poke->id, 'slug' => 'base', 'series' => 'Original']);
+    Set::factory()->create(['product_line_id' => $poke->id, 'slug' => 'surging', 'series' => 'Scarlet & Violet']);
+
+    $opts = app(CatalogFilterOptions::class)([
+        'product_line' => 'pokemon',
+        'series' => 'Scarlet & Violet',
+    ]);
+
+    expect(collect($opts['sets'])->pluck('slug')->all())->toBe(['surging']);
+});
+
+test('value facets narrow to the selected series', function () {
+    $poke = ProductLine::factory()->create(['slug' => 'pokemon']);
+    $old = Set::factory()->create(['product_line_id' => $poke->id, 'slug' => 'base', 'series' => 'Original']);
+    $new = Set::factory()->create(['product_line_id' => $poke->id, 'slug' => 'surging', 'series' => 'Scarlet & Violet']);
+
+    makeCard($poke, $old, ['rarity' => 'Rare Holo']);
+    makeCard($poke, $new, ['rarity' => 'Illustration Rare']);
+
+    $opts = app(CatalogFilterOptions::class)([
+        'product_line' => 'pokemon',
+        'series' => 'Scarlet & Violet',
+    ]);
+
+    expect($opts['rarities'])->toBe(['Illustration Rare']);
+});
+
 test('languages narrow to the selected product line', function () {
     $poke = ProductLine::factory()->create(['slug' => 'pokemon']);
     $jp = ProductLine::factory()->create(['slug' => 'pokemon-jp']);

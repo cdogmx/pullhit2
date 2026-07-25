@@ -5,6 +5,7 @@ import {
     Layers,
     List,
     Plus,
+    Search,
     SlidersHorizontal,
     X,
 } from 'lucide-react';
@@ -110,6 +111,12 @@ const subsetLabel = (key: string): string =>
 
 const humanize = (value: string): string =>
     value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+/** Sets repeat across languages, so tag the non-English ones in a flat list. */
+const setOptionLabel = (s: CatalogFilterOptions['sets'][number]): string =>
+    s.language && s.language !== 'en'
+        ? `${s.name} (${s.language.toUpperCase()})`
+        : s.name;
 
 function buildQuery(filters: CatalogFilters): Record<string, string | number> {
     const out: Record<string, string | number> = {};
@@ -218,6 +225,8 @@ export default function Browse({
 }: Props) {
     const { auth } = usePage().props;
     const canAdd = Boolean(auth.user);
+    // A set is selected → the search box filters that set instead of searching.
+    const inSet = Boolean(filters.set);
     const [q, setQ] = useState(filters.q ?? '');
     const [view, setView] = useState<'grid' | 'list'>(filters.view ?? 'grid');
 
@@ -326,11 +335,39 @@ export default function Browse({
         );
     }
 
+    // Inside a set the box stops being a catalog search and becomes a filter over
+    // that set's cards: it narrows as you type instead of waiting on Enter, and
+    // each keystroke replaces the history entry rather than stacking one. The
+    // request still goes to the server (scoped to the set), so it matches every
+    // card in the set — not just the page that happens to be loaded.
+    useEffect(() => {
+        if (!inSet) {
+            return;
+        }
+
+        const term = q.trim();
+
+        if (term === (filters.q ?? '')) {
+            return;
+        }
+
+        const t = setTimeout(
+            () => update({ q: term || null }, { replace: true }),
+            250,
+        );
+
+        return () => clearTimeout(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [q, inSet, filters.q]);
+
     // Re-run the original query with auto-correct off (pins the exact term).
     function searchExact() {
         router.get(
             '/browse',
-            { ...buildQuery({ ...filters, q: searchedQuery ?? null }), exact: 1 },
+            {
+                ...buildQuery({ ...filters, q: searchedQuery ?? null }),
+                exact: 1,
+            },
             {
                 preserveState: true,
                 preserveScroll: true,
@@ -368,13 +405,11 @@ export default function Browse({
                 ? (seriesName ?? brandName ?? 'Browse')
                 : mode === 'subsets'
                   ? (setName ?? 'Browse')
-                  : (subsetName
+                  : subsetName
                     ? `${setName ?? ''}${setName ? ' · ' : ''}${subsetName}`
                     : (setName ??
                       brandName ??
-                      (filters.q
-                          ? `“${filters.q}”`
-                          : 'Browse the catalog'))));
+                      (filters.q ? `“${filters.q}”` : 'Browse the catalog')));
 
     const countNoun =
         mode === 'series'
@@ -492,133 +527,189 @@ export default function Browse({
                     )}
                 </div>
 
-                {/* Top bar: search + controls. Typing shows suggestions; the
-                    full catalog search runs only on Enter / a suggestion click
-                    (SearchSuggest), so we no longer reload the grid per keystroke. */}
-                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <SearchSuggest
-                        value={q}
-                        onChange={setQ}
-                        onSubmit={(term) => update({ q: term || null })}
-                        variant="browse"
-                        placeholder="Search by name or number…"
-                        ariaLabel="Search catalog"
-                        clearOnNavigate={false}
-                        className="flex-1"
-                    />
+                {/* Top bar: search + controls, with the brand → series → set
+                    scope pickers beneath. Outside a set, typing shows suggestions
+                    and the search runs on Enter / a suggestion click — bounded by
+                    whatever scope is selected. Inside a set the box filters that
+                    set's cards live (see the debounce effect above). */}
+                <div className="mb-6 space-y-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        {inSet ? (
+                            <div className="relative flex-1">
+                                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                <input
+                                    value={q}
+                                    onChange={(e) => setQ(e.target.value)}
+                                    placeholder={`Filter ${setName ?? 'this set'}…`}
+                                    aria-label="Filter cards in this set"
+                                    className="h-10 w-full rounded-md border border-input bg-background/60 pr-9 pl-9 text-sm transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                />
+                                {q !== '' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setQ('')}
+                                        aria-label="Clear filter"
+                                        className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                    >
+                                        <X className="size-4" />
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            <SearchSuggest
+                                value={q}
+                                onChange={setQ}
+                                onSubmit={(term) => update({ q: term || null })}
+                                variant="browse"
+                                placeholder={
+                                    seriesName
+                                        ? `Search ${seriesName}…`
+                                        : brandName
+                                          ? `Search ${brandName}…`
+                                          : 'Search by name or number…'
+                                }
+                                ariaLabel="Search catalog"
+                                clearOnNavigate={false}
+                                scope={{
+                                    product_line: filters.product_line,
+                                    series: filters.series,
+                                }}
+                                className="flex-1"
+                            />
+                        )}
 
-                    {isCards && (
-                    <div className="flex items-center gap-2">
-                        {/* Mobile filter sheet */}
-                        <Sheet>
-                            <SheetTrigger asChild>
+                        {isCards && (
+                            <div className="flex items-center gap-2">
+                                {/* Mobile filter sheet */}
+                                <Sheet>
+                                    <SheetTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="lg:hidden"
+                                            size="sm"
+                                        >
+                                            <SlidersHorizontal className="size-4" />
+                                            Filters
+                                            {activeCount > 0 && (
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="ml-1"
+                                                >
+                                                    {activeCount}
+                                                </Badge>
+                                            )}
+                                        </Button>
+                                    </SheetTrigger>
+                                    <SheetContent side="left" className="w-80">
+                                        <SheetHeader>
+                                            <SheetTitle>Filters</SheetTitle>
+                                        </SheetHeader>
+                                        <div className="space-y-4 overflow-y-auto px-4 pb-6">
+                                            <FilterControls
+                                                options={options}
+                                                filters={filters}
+                                                onChange={update}
+                                                showOwnership={canAdd}
+                                            />
+                                        </div>
+                                    </SheetContent>
+                                </Sheet>
+
+                                {/* Sort */}
+                                <Select
+                                    value={filters.sort}
+                                    onValueChange={(value) =>
+                                        update({
+                                            sort: value,
+                                            direction:
+                                                DESC_BY_DEFAULT[value] ?? 'asc',
+                                        })
+                                    }
+                                >
+                                    <SelectTrigger
+                                        size="sm"
+                                        className="w-[8.5rem]"
+                                    >
+                                        <ArrowDownUp className="size-4" />
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {SORTS.map((s) => (
+                                            <SelectItem
+                                                key={s.value}
+                                                value={s.value}
+                                            >
+                                                {s.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
                                 <Button
                                     variant="outline"
-                                    className="lg:hidden"
+                                    size="sm"
+                                    aria-label="Toggle sort direction"
+                                    onClick={() =>
+                                        update({
+                                            direction:
+                                                filters.direction === 'asc'
+                                                    ? 'desc'
+                                                    : 'asc',
+                                        })
+                                    }
+                                >
+                                    {filters.direction === 'asc' ? '↑' : '↓'}
+                                </Button>
+
+                                {/* Group by base */}
+                                <Button
+                                    variant={
+                                        filters.group ? 'default' : 'outline'
+                                    }
+                                    size="sm"
+                                    aria-pressed={filters.group}
+                                    onClick={() =>
+                                        update({ group: !filters.group })
+                                    }
+                                >
+                                    <Layers className="size-4" />
+                                    <span className="hidden sm:inline">
+                                        Group
+                                    </span>
+                                </Button>
+
+                                {/* Grid / list view */}
+                                <ToggleGroup
+                                    type="single"
+                                    value={view}
+                                    onValueChange={(v) =>
+                                        v && setView(v as 'grid' | 'list')
+                                    }
+                                    variant="outline"
                                     size="sm"
                                 >
-                                    <SlidersHorizontal className="size-4" />
-                                    Filters
-                                    {activeCount > 0 && (
-                                        <Badge
-                                            variant="secondary"
-                                            className="ml-1"
-                                        >
-                                            {activeCount}
-                                        </Badge>
-                                    )}
-                                </Button>
-                            </SheetTrigger>
-                            <SheetContent side="left" className="w-80">
-                                <SheetHeader>
-                                    <SheetTitle>Filters</SheetTitle>
-                                </SheetHeader>
-                                <div className="space-y-4 overflow-y-auto px-4 pb-6">
-                                    <FilterControls
-                                        options={options}
-                                        filters={filters}
-                                        onChange={update}
-                                        showOwnership={canAdd}
-                                    />
-                                </div>
-                            </SheetContent>
-                        </Sheet>
-
-                        {/* Sort */}
-                        <Select
-                            value={filters.sort}
-                            onValueChange={(value) =>
-                                update({
-                                    sort: value,
-                                    direction: DESC_BY_DEFAULT[value] ?? 'asc',
-                                })
-                            }
-                        >
-                            <SelectTrigger size="sm" className="w-[8.5rem]">
-                                <ArrowDownUp className="size-4" />
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {SORTS.map((s) => (
-                                    <SelectItem key={s.value} value={s.value}>
-                                        {s.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            aria-label="Toggle sort direction"
-                            onClick={() =>
-                                update({
-                                    direction:
-                                        filters.direction === 'asc'
-                                            ? 'desc'
-                                            : 'asc',
-                                })
-                            }
-                        >
-                            {filters.direction === 'asc' ? '↑' : '↓'}
-                        </Button>
-
-                        {/* Group by base */}
-                        <Button
-                            variant={filters.group ? 'default' : 'outline'}
-                            size="sm"
-                            aria-pressed={filters.group}
-                            onClick={() => update({ group: !filters.group })}
-                        >
-                            <Layers className="size-4" />
-                            <span className="hidden sm:inline">Group</span>
-                        </Button>
-
-                        {/* Grid / list view */}
-                        <ToggleGroup
-                            type="single"
-                            value={view}
-                            onValueChange={(v) =>
-                                v && setView(v as 'grid' | 'list')
-                            }
-                            variant="outline"
-                            size="sm"
-                        >
-                            <ToggleGroupItem
-                                value="grid"
-                                aria-label="Grid view"
-                            >
-                                <LayoutGrid className="size-4" />
-                            </ToggleGroupItem>
-                            <ToggleGroupItem
-                                value="list"
-                                aria-label="List view"
-                            >
-                                <List className="size-4" />
-                            </ToggleGroupItem>
-                        </ToggleGroup>
+                                    <ToggleGroupItem
+                                        value="grid"
+                                        aria-label="Grid view"
+                                    >
+                                        <LayoutGrid className="size-4" />
+                                    </ToggleGroupItem>
+                                    <ToggleGroupItem
+                                        value="list"
+                                        aria-label="List view"
+                                    >
+                                        <List className="size-4" />
+                                    </ToggleGroupItem>
+                                </ToggleGroup>
+                            </div>
+                        )}
                     </div>
-                    )}
+
+                    <ScopeBar
+                        options={options}
+                        filters={filters}
+                        onChange={update}
+                    />
                 </div>
 
                 {!isCards && (
@@ -632,133 +723,145 @@ export default function Browse({
                 )}
 
                 {isCards && (
-                <div className="flex gap-8">
-                    {/* Desktop filter rail */}
-                    <aside className="hidden w-60 shrink-0 lg:block">
-                        <div className="sticky top-20 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-sm font-semibold">
-                                    Filters
-                                </h2>
-                                {activeCount > 0 && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={reset}
-                                        className="h-auto p-1 text-xs"
-                                    >
-                                        Clear
-                                    </Button>
-                                )}
+                    <div className="flex gap-8">
+                        {/* Desktop filter rail */}
+                        <aside className="hidden w-60 shrink-0 lg:block">
+                            <div className="sticky top-20 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-sm font-semibold">
+                                        Filters
+                                    </h2>
+                                    {activeCount > 0 && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={reset}
+                                            className="h-auto p-1 text-xs"
+                                        >
+                                            Clear
+                                        </Button>
+                                    )}
+                                </div>
+                                <FilterControls
+                                    options={options}
+                                    filters={filters}
+                                    onChange={update}
+                                    showOwnership={canAdd}
+                                />
                             </div>
-                            <FilterControls
-                                options={options}
+                        </aside>
+
+                        {/* Results */}
+                        <div className="min-w-0 flex-1">
+                            {activeCount > 0 && (
+                                <ActiveChips
+                                    filters={filters}
+                                    inSet={inSet}
+                                    onClear={(key) =>
+                                        key === 'q'
+                                            ? (setQ(''), update({ q: null }))
+                                            : update({ [key]: null })
+                                    }
+                                    onReset={reset}
+                                />
+                            )}
+
+                            {autoCorrectedTo && searchedQuery && (
+                                <p className="mb-3 text-sm text-muted-foreground">
+                                    Showing results for{' '}
+                                    <span className="font-semibold text-foreground">
+                                        {autoCorrectedTo}
+                                    </span>
+                                    . Search instead for{' '}
+                                    <button
+                                        type="button"
+                                        onClick={searchExact}
+                                        className="font-semibold text-primary hover:underline"
+                                    >
+                                        {searchedQuery}
+                                    </button>
+                                    .
+                                </p>
+                            )}
+
+                            {items.length === 0 ? (
+                                <div className="rounded-lg border border-dashed border-border py-20 text-center">
+                                    <p className="text-sm text-muted-foreground">
+                                        {searchedQuery
+                                            ? inSet
+                                                ? `No cards in ${setName ?? 'this set'} match “${searchedQuery}”.`
+                                                : `No results for “${searchedQuery}”.`
+                                            : 'No items match your filters.'}
+                                    </p>
+                                    {didYouMean && (
+                                        <p className="mt-2 text-sm">
+                                            Did you mean{' '}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setQ(didYouMean);
+                                                    update({ q: didYouMean });
+                                                }}
+                                                className="font-semibold text-primary hover:underline"
+                                            >
+                                                {didYouMean}
+                                            </button>
+                                            ?
+                                        </p>
+                                    )}
+                                    {/* Inside a set, clear the filter term and stay
+                                        put — a full reset would eject the user
+                                        from the set they're looking at. */}
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="mt-4"
+                                        onClick={inSet ? () => setQ('') : reset}
+                                    >
+                                        {inSet
+                                            ? 'Clear filter'
+                                            : 'Clear filters'}
+                                    </Button>
+                                </div>
+                            ) : view === 'grid' ? (
+                                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                                    {items.map((item) => (
+                                        <CardTile
+                                            key={item.id}
+                                            item={item}
+                                            returnTo={returnTo}
+                                            canAdd={canAdd}
+                                            gradingCompanies={gradingCompanies}
+                                            wishlisted={wishlistedIds.includes(
+                                                item.id,
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+                                    {items.map((item) => (
+                                        <ListRow
+                                            key={item.id}
+                                            item={item}
+                                            returnTo={returnTo}
+                                            canAdd={canAdd}
+                                            gradingCompanies={gradingCompanies}
+                                            wishlisted={wishlistedIds.includes(
+                                                item.id,
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+
+                            <InfiniteFooter
+                                pagination={pagination}
                                 filters={filters}
-                                onChange={update}
-                                showOwnership={canAdd}
+                                hasItems={items.length > 0}
                             />
                         </div>
-                    </aside>
-
-                    {/* Results */}
-                    <div className="min-w-0 flex-1">
-                        {activeCount > 0 && (
-                            <ActiveChips
-                                filters={filters}
-                                onClear={(key) =>
-                                    key === 'q'
-                                        ? (setQ(''), update({ q: null }))
-                                        : update({ [key]: null })
-                                }
-                                onReset={reset}
-                            />
-                        )}
-
-                        {autoCorrectedTo && searchedQuery && (
-                            <p className="mb-3 text-sm text-muted-foreground">
-                                Showing results for{' '}
-                                <span className="font-semibold text-foreground">
-                                    {autoCorrectedTo}
-                                </span>
-                                . Search instead for{' '}
-                                <button
-                                    type="button"
-                                    onClick={searchExact}
-                                    className="font-semibold text-primary hover:underline"
-                                >
-                                    {searchedQuery}
-                                </button>
-                                .
-                            </p>
-                        )}
-
-                        {items.length === 0 ? (
-                            <div className="rounded-lg border border-dashed border-border py-20 text-center">
-                                <p className="text-sm text-muted-foreground">
-                                    {searchedQuery
-                                        ? `No results for “${searchedQuery}”.`
-                                        : 'No items match your filters.'}
-                                </p>
-                                {didYouMean && (
-                                    <p className="mt-2 text-sm">
-                                        Did you mean{' '}
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setQ(didYouMean);
-                                                update({ q: didYouMean });
-                                            }}
-                                            className="font-semibold text-primary hover:underline"
-                                        >
-                                            {didYouMean}
-                                        </button>
-                                        ?
-                                    </p>
-                                )}
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="mt-4"
-                                    onClick={reset}
-                                >
-                                    Clear filters
-                                </Button>
-                            </div>
-                        ) : view === 'grid' ? (
-                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                                {items.map((item) => (
-                                    <CardTile
-                                        key={item.id}
-                                        item={item}
-                                        returnTo={returnTo}
-                                        canAdd={canAdd}
-                                        gradingCompanies={gradingCompanies}
-                                        wishlisted={wishlistedIds.includes(item.id)}
-                                    />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-                                {items.map((item) => (
-                                    <ListRow
-                                        key={item.id}
-                                        item={item}
-                                        returnTo={returnTo}
-                                        canAdd={canAdd}
-                                        gradingCompanies={gradingCompanies}
-                                        wishlisted={wishlistedIds.includes(item.id)}
-                                    />
-                                ))}
-                            </div>
-                        )}
-
-                        <InfiniteFooter
-                            pagination={pagination}
-                            filters={filters}
-                            hasItems={items.length > 0}
-                        />
                     </div>
-                </div>
                 )}
             </div>
         </>
@@ -782,30 +885,32 @@ function TilesView({
         <div>
             {(mode === 'series' || mode === 'sets') &&
                 tileLanguages.length > 1 && (
-                <div className="mb-6 flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                        Language
-                    </span>
-                    <Select
-                        value={filters.language ?? ALL}
-                        onValueChange={(v) =>
-                            onChange({ language: v === ALL ? null : v })
-                        }
-                    >
-                        <SelectTrigger size="sm" className="w-44">
-                            <SelectValue placeholder="All languages" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value={ALL}>All languages</SelectItem>
-                            {tileLanguages.map((l) => (
-                                <SelectItem key={l} value={l}>
-                                    {languageLabel(l)}
+                    <div className="mb-6 flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">
+                            Language
+                        </span>
+                        <Select
+                            value={filters.language ?? ALL}
+                            onValueChange={(v) =>
+                                onChange({ language: v === ALL ? null : v })
+                            }
+                        >
+                            <SelectTrigger size="sm" className="w-44">
+                                <SelectValue placeholder="All languages" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={ALL}>
+                                    All languages
                                 </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-            )}
+                                {tileLanguages.map((l) => (
+                                    <SelectItem key={l} value={l}>
+                                        {languageLabel(l)}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
 
             {tiles.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-border py-20 text-center text-sm text-muted-foreground">
@@ -881,6 +986,96 @@ function TileCard({ tile, onOpen }: { tile: BrowseTile; onOpen: () => void }) {
     );
 }
 
+/**
+ * Brand → series → set, the scope the search box works inside. Each rung is
+ * narrowed by the one above it (the server sends only the chosen brand's series
+ * and only that series' sets), and choosing one clears everything below it so a
+ * stale set can't survive a brand change.
+ *
+ * These live next to the search box rather than in the filter rail because they
+ * change what a search means, not just which of its results are shown.
+ */
+function ScopeBar({
+    options,
+    filters,
+    onChange,
+}: {
+    options: CatalogFilterOptions;
+    filters: CatalogFilters;
+    onChange: (partial: Partial<CatalogFilters>) => void;
+}) {
+    const hasBrand = Boolean(filters.product_line);
+
+    const rungs: {
+        key: 'product_line' | 'series' | 'set';
+        label: string;
+        allLabel: string;
+        opts: { value: string; label: string }[];
+        disabled: boolean;
+        clears: Partial<CatalogFilters>;
+    }[] = [
+        {
+            key: 'product_line',
+            label: 'Brand',
+            allLabel: 'All brands',
+            opts: options.product_lines.map((p) => ({
+                value: p.slug,
+                label: p.name,
+            })),
+            disabled: false,
+            clears: { series: null, set: null, subset: null },
+        },
+        {
+            key: 'series',
+            label: 'Series',
+            allLabel: hasBrand ? 'All series' : 'Pick a brand first',
+            opts: options.series.map((s) => ({ value: s, label: s })),
+            disabled: !hasBrand || options.series.length === 0,
+            clears: { set: null, subset: null },
+        },
+        {
+            key: 'set',
+            label: 'Set',
+            allLabel: hasBrand ? 'All sets' : 'Pick a brand first',
+            opts: options.sets.map((s) => ({
+                value: s.slug,
+                label: setOptionLabel(s),
+            })),
+            disabled: !hasBrand || options.sets.length === 0,
+            clears: { subset: null },
+        },
+    ];
+
+    return (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {rungs.map((rung) => (
+                <div key={rung.key} className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">
+                        {rung.label}
+                    </label>
+                    <Combobox
+                        options={[
+                            { value: '', label: rung.allLabel },
+                            ...rung.opts,
+                        ]}
+                        value={filters[rung.key] ?? ''}
+                        onChange={(value) =>
+                            onChange({
+                                [rung.key]: value === '' ? null : value,
+                                ...rung.clears,
+                            })
+                        }
+                        placeholder={rung.allLabel}
+                        searchPlaceholder={`Search ${rung.label.toLowerCase()}…`}
+                        disabled={rung.disabled}
+                        triggerClassName="h-10"
+                    />
+                </div>
+            ))}
+        </div>
+    );
+}
+
 function FilterControls({
     options,
     filters,
@@ -901,19 +1096,12 @@ function FilterControls({
         // every type with an explicit 'all' rather than the null sentinel).
         allValue?: string;
         allLabel?: string;
-        // Other filter keys to reset when this one changes (a set belongs to a
-        // brand, so switching brand must drop a now-invalid set/series).
+        // Other filter keys to reset when this one changes (switching grader
+        // invalidates a grade picked for the old one).
         clears?: (keyof CatalogFilters)[];
+        // Brand / series / set aren't here — they're the search scope, and live
+        // in the ScopeBar next to the search box.
     }[] = [
-        {
-            key: 'product_line',
-            label: 'Brand',
-            opts: options.product_lines.map((p) => ({
-                value: p.slug,
-                label: p.name,
-            })),
-            clears: ['series', 'set', 'subset'],
-        },
         {
             key: 'item_type',
             label: 'Type',
@@ -939,11 +1127,6 @@ function FilterControls({
               ]
             : []),
         {
-            key: 'set',
-            label: 'Set',
-            opts: options.sets.map((s) => ({ value: s.slug, label: s.name })),
-        },
-        {
             key: 'rarity',
             label: 'Rarity',
             opts: options.rarities.map((v) => ({ value: v, label: v })),
@@ -961,10 +1144,7 @@ function FilterControls({
             label: 'Edition',
             opts: options.editions.map((v) => ({
                 value: v,
-                label:
-                    v === 'first_edition'
-                        ? '1st Edition'
-                        : humanize(v),
+                label: v === 'first_edition' ? '1st Edition' : humanize(v),
             })),
         },
         {
@@ -995,7 +1175,8 @@ function FilterControls({
                     // The "clear" entry: item_type opts back into every type with
                     // an explicit 'all'; every other filter clears to null via ''.
                     const clearVal = s.allValue ?? '';
-                    const allLabel = s.allLabel ?? `All ${s.label.toLowerCase()}`;
+                    const allLabel =
+                        s.allLabel ?? `All ${s.label.toLowerCase()}`;
                     const clears = Object.fromEntries(
                         (s.clears ?? []).map((k) => [k, null]),
                     );
@@ -1038,9 +1219,13 @@ function FilterControls({
                                 label: String(g),
                             })),
                         ]}
-                        value={filters.grade != null ? String(filters.grade) : ''}
+                        value={
+                            filters.grade != null ? String(filters.grade) : ''
+                        }
                         onChange={(value) =>
-                            onChange({ grade: value === '' ? null : Number(value) })
+                            onChange({
+                                grade: value === '' ? null : Number(value),
+                            })
                         }
                         placeholder="All grades"
                         searchPlaceholder="Search grade…"
@@ -1053,16 +1238,19 @@ function FilterControls({
 
 function ActiveChips({
     filters,
+    inSet,
     onClear,
     onReset,
 }: {
     filters: CatalogFilters;
+    /** Inside a set `q` filters the set's list rather than searching. */
+    inSet?: boolean;
     onClear: (key: keyof CatalogFilters) => void;
     onReset: () => void;
 }) {
     const chipLabel = (k: keyof CatalogFilters): string => {
         if (k === 'q') {
-            return `Search: ${filters.q}`;
+            return `${inSet ? 'Filter' : 'Search'}: ${filters.q}`;
         }
 
         if (k === 'grading_company') {
@@ -1247,7 +1435,10 @@ function CardTile({
                         catalogItemId={item.id}
                         wishlisted={wishlisted}
                     />
-                    <AddButton item={item} gradingCompanies={gradingCompanies} />
+                    <AddButton
+                        item={item}
+                        gradingCompanies={gradingCompanies}
+                    />
                 </div>
             )}
         </div>
@@ -1304,7 +1495,10 @@ function ListRow({
                         catalogItemId={item.id}
                         wishlisted={wishlisted}
                     />
-                    <AddButton item={item} gradingCompanies={gradingCompanies} />
+                    <AddButton
+                        item={item}
+                        gradingCompanies={gradingCompanies}
+                    />
                 </div>
             )}
         </div>

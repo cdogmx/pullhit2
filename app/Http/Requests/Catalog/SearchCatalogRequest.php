@@ -27,7 +27,8 @@ class SearchCatalogRequest extends FormRequest
             'q' => ['nullable', 'string', 'max:100'],
             'vertical' => ['nullable', 'string', 'max:64'],
             'product_line' => ['nullable', 'string', 'max:64'],
-            'series' => ['nullable', 'string', 'max:64'],
+            // A series is matched by its name (not a slug), so allow a real one.
+            'series' => ['nullable', 'string', 'max:128'],
             'set' => ['nullable', 'string', 'max:64'],
             'subset' => ['nullable', 'string', 'max:32'],
             // 'all' is an explicit "every type" sentinel (the web browse defaults

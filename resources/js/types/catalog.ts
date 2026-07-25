@@ -103,7 +103,14 @@ export type MarketValue = {
 export type CatalogFilterOptions = {
     verticals: { slug: string; name: string }[];
     product_lines: { slug: string; name: string }[];
-    sets: { slug: string; name: string; code: string | null }[];
+    /** The selected brand's series (eras), newest first; empty outside a brand. */
+    series: string[];
+    sets: {
+        slug: string;
+        name: string;
+        code: string | null;
+        language: string | null;
+    }[];
     item_types: string[];
     languages: string[];
     rarities: string[];

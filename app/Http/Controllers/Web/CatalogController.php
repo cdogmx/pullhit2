@@ -70,10 +70,13 @@ class CatalogController extends Controller
         $line = ProductLine::where('slug', $productLine)->firstOrFail();
         $setModel = Set::where('slug', $set)->where('product_line_id', $line->id)->firstOrFail();
 
-        $filters = array_merge($request->filters(), [
+        $filters = array_merge($request->filters(), array_filter([
             'product_line' => $line->slug,
+            // Seed the set's series so the brand → series → set scope pickers (and
+            // the breadcrumb) show the full path a direct set link landed on.
+            'series' => $setModel->series,
             'set' => $setModel->slug,
-        ]);
+        ]));
 
         return $this->renderBrowse($filters, $search, $options, seo: [
             'title' => "{$setModel->name} — {$line->name} cards & prices",
@@ -183,11 +186,13 @@ class CatalogController extends Controller
         // name by edit distance. If searching THAT returns results, auto-correct
         // and show them ("Showing results for X") — unless ?exact pins the query;
         // otherwise fall back to a "did you mean" suggestion on the empty page.
+        // Skipped inside a set: there `q` filters the set's card list as the user
+        // types, and rewriting a half-typed filter term would fight the typing.
         $q = trim((string) ($filters['q'] ?? ''));
         $didYouMean = null;
         $autoCorrectedTo = null;
 
-        if ($q !== '' && $paginator->total() === 0) {
+        if ($q !== '' && $paginator->total() === 0 && empty($filters['set'])) {
             $correction = app(SuggestSearch::class)->didYouMean($q);
 
             if ($correction !== null && ! request()->boolean('exact')) {
