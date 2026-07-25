@@ -15,6 +15,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { cardHref, formatMoney } from '@/lib/format';
+import { summarizeValue } from '@/lib/portfolio';
 import type { GradingCompanyOption } from '@/types';
 
 type Holding = {
@@ -166,6 +167,15 @@ export default function PublicCollection({
         return sorted;
     }, [holdings, q, set, sort]);
 
+    // Narrowing the list should narrow the headline with it — otherwise
+    // "$4,182 total value" sits above six cards and reads as their worth.
+    // Sorting isn't a filter: same cards, different order.
+    const isFiltered = q.trim() !== '' || set !== ALL;
+    const shown = useMemo(
+        () => (isFiltered ? summarizeValue(visible) : summary),
+        [isFiltered, visible, summary],
+    );
+
     return (
         <>
             <Head title={title} />
@@ -200,12 +210,26 @@ export default function PublicCollection({
                         {title}
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        {summary.card_count.toLocaleString()} cards ·{' '}
-                        {summary.item_count.toLocaleString()} holdings ·{' '}
+                        {shown.card_count.toLocaleString()} cards ·{' '}
+                        {shown.item_count.toLocaleString()} holdings ·{' '}
                         <span className="font-medium text-foreground">
-                            {formatMoney(summary.total_value, summary.currency)}
+                            {formatMoney(shown.total_value, summary.currency)}
                         </span>{' '}
-                        total value
+                        {isFiltered ? 'shown' : 'total value'}
+                        {isFiltered && (
+                            <>
+                                {' '}
+                                <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                                    Filtered
+                                </span>{' '}
+                                of{' '}
+                                {formatMoney(
+                                    summary.total_value,
+                                    summary.currency,
+                                )}{' '}
+                                total
+                            </>
+                        )}
                     </p>
                 </div>
 
