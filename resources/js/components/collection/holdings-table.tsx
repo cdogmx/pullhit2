@@ -1,6 +1,13 @@
 import { Link, router } from '@inertiajs/react';
-import { FolderInput, Pencil, Search, StickyNote, Tag, Trash2 } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import {
+    FolderInput,
+    Pencil,
+    Search,
+    StickyNote,
+    Tag,
+    Trash2,
+} from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { CollectionFolderPicker } from '@/components/collection/collection-folder-picker';
 import type { CollectionFolderChoice } from '@/components/collection/collection-folder-picker';
@@ -54,7 +61,11 @@ const SORTS = [
 ];
 
 /** Compare nullable numbers, always sorting nulls last. */
-function nullableCompare(a: number | null, b: number | null, dir: 1 | -1): number {
+function nullableCompare(
+    a: number | null,
+    b: number | null,
+    dir: 1 | -1,
+): number {
     if (a == null && b == null) {
         return 0;
     }
@@ -102,12 +113,19 @@ export function HoldingsTable({
     gradingCompanies,
     otherCollections,
     folders,
+    onFilteredChange,
 }: {
     holdings: Holding[];
     gradingCompanies: GradingCompanyOption[];
     otherCollections: { id: number; name: string }[];
     /** When set, renders a folder filter; omit on an already-folder-scoped page. */
     folders?: FolderRow[];
+    /**
+     * Reports the currently-visible rows (null when no filter is on) so the page
+     * above can total them. The filters live here, so the summary has to be
+     * pushed up rather than pulled.
+     */
+    onFilteredChange?: (visible: Holding[] | null) => void;
 }) {
     const [editing, setEditing] = useState<Holding | null>(null);
     // Bulk selection + the actions it enables.
@@ -182,9 +200,17 @@ export function HoldingsTable({
                 case 'value_asc':
                     return nullableCompare(a.market_value, b.market_value, 1);
                 case 'pl_desc':
-                    return nullableCompare(a.unrealized_gain, b.unrealized_gain, -1);
+                    return nullableCompare(
+                        a.unrealized_gain,
+                        b.unrealized_gain,
+                        -1,
+                    );
                 case 'pl_asc':
-                    return nullableCompare(a.unrealized_gain, b.unrealized_gain, 1);
+                    return nullableCompare(
+                        a.unrealized_gain,
+                        b.unrealized_gain,
+                        1,
+                    );
                 case 'name':
                     return (a.catalog_item?.name ?? '').localeCompare(
                         b.catalog_item?.name ?? '',
@@ -201,13 +227,29 @@ export function HoldingsTable({
         });
 
         return sorted;
-    }, [holdings, q, setFilter, folderFilter, forSaleOnly, sort, showFolderFilter]);
+    }, [
+        holdings,
+        q,
+        setFilter,
+        folderFilter,
+        forSaleOnly,
+        sort,
+        showFolderFilter,
+    ]);
 
     const filtersActive =
         q.trim() !== '' ||
         setFilter !== ALL ||
         folderFilter !== ALL ||
         forSaleOnly;
+
+    // Push the filtered view up so the page's totals can follow it. Sort order
+    // doesn't change the set, so an unfiltered table reports null and the page
+    // keeps the server's own figures.
+    useEffect(() => {
+        onFilteredChange?.(filtersActive ? visible : null);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [visible, filtersActive]);
 
     const clearSelection = () => setSelected(new Set());
 
@@ -348,12 +390,17 @@ export function HoldingsTable({
                         </div>
 
                         {sets.length > 1 && (
-                            <Select value={setFilter} onValueChange={setSetFilter}>
+                            <Select
+                                value={setFilter}
+                                onValueChange={setSetFilter}
+                            >
                                 <SelectTrigger className="h-8 w-40">
                                     <SelectValue placeholder="All sets" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value={ALL}>All sets</SelectItem>
+                                    <SelectItem value={ALL}>
+                                        All sets
+                                    </SelectItem>
                                     {sets.map((s) => (
                                         <SelectItem key={s} value={s}>
                                             {s}
@@ -372,7 +419,9 @@ export function HoldingsTable({
                                     <SelectValue placeholder="All folders" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value={ALL}>All folders</SelectItem>
+                                    <SelectItem value={ALL}>
+                                        All folders
+                                    </SelectItem>
                                     {folders!.map((f) => (
                                         <SelectItem key={f.id} value={f.name}>
                                             {f.name} ({f.items_count})
@@ -437,7 +486,9 @@ export function HoldingsTable({
                                 </th>
                                 <th className="py-2 pr-3 font-medium">Card</th>
                                 <th className="py-2 pr-3 font-medium">State</th>
-                                <th className="py-2 pr-3 text-right font-medium">Qty</th>
+                                <th className="py-2 pr-3 text-right font-medium">
+                                    Qty
+                                </th>
                                 <th className="py-2 pr-3 text-right font-medium">
                                     Avg cost
                                 </th>
@@ -475,7 +526,9 @@ export function HoldingsTable({
                                     <td className="py-2 pr-2 align-middle">
                                         <Checkbox
                                             checked={selected.has(h.id)}
-                                            onCheckedChange={() => toggleOne(h.id)}
+                                            onCheckedChange={() =>
+                                                toggleOne(h.id)
+                                            }
                                             aria-label={`Select ${h.catalog_item?.name ?? 'card'}`}
                                         />
                                     </td>
@@ -483,7 +536,9 @@ export function HoldingsTable({
                                         <div className="flex items-center gap-2">
                                             {h.catalog_item?.image_url && (
                                                 <img
-                                                    src={h.catalog_item.image_url}
+                                                    src={
+                                                        h.catalog_item.image_url
+                                                    }
                                                     alt=""
                                                     className="h-10 w-auto rounded"
                                                     loading="lazy"
@@ -500,7 +555,8 @@ export function HoldingsTable({
                                                         >
                                                             {h.catalog_item
                                                                 .display_name ??
-                                                                h.catalog_item.name}
+                                                                h.catalog_item
+                                                                    .name}
                                                         </Link>
                                                     ) : (
                                                         <span className="font-medium">
@@ -518,7 +574,9 @@ export function HoldingsTable({
                                                     {h.catalog_item?.set
                                                         ? ` · ${h.catalog_item.set.name}`
                                                         : ''}
-                                                    {h.folder ? ` · 📁 ${h.folder}` : ''}
+                                                    {h.folder
+                                                        ? ` · 📁 ${h.folder}`
+                                                        : ''}
                                                 </p>
                                                 <InlineNotes
                                                     id={h.id}
@@ -533,12 +591,17 @@ export function HoldingsTable({
                                         </Badge>
                                     </td>
                                     <td className="py-2 pr-3 text-right">
-                                        <InlineQty id={h.id} value={h.quantity} />
+                                        <InlineQty
+                                            id={h.id}
+                                            value={h.quantity}
+                                        />
                                     </td>
                                     <td className="py-2 pr-3 text-right text-muted-foreground">
                                         {formatMoney(
                                             h.quantity > 0
-                                                ? Math.round(h.cost_basis / h.quantity)
+                                                ? Math.round(
+                                                      h.cost_basis / h.quantity,
+                                                  )
                                                 : 0,
                                             h.currency,
                                         )}
@@ -547,7 +610,10 @@ export function HoldingsTable({
                                         {formatMoney(h.cost_basis, h.currency)}
                                     </td>
                                     <td className="py-2 pr-3 text-right font-medium">
-                                        {formatMoney(h.market_value, h.currency)}
+                                        {formatMoney(
+                                            h.market_value,
+                                            h.currency,
+                                        )}
                                     </td>
                                     <td
                                         className={cn(
@@ -555,7 +621,10 @@ export function HoldingsTable({
                                             gainClass(h.unrealized_gain),
                                         )}
                                     >
-                                        {formatGain(h.unrealized_gain, h.currency)}
+                                        {formatGain(
+                                            h.unrealized_gain,
+                                            h.currency,
+                                        )}
                                     </td>
                                     <td className="py-2 text-right">
                                         <div className="flex items-center justify-end gap-2">
@@ -623,25 +692,33 @@ export function HoldingsTable({
                                                                             .value,
                                                                     ),
                                                             },
-                                                            { preserveScroll: true },
+                                                            {
+                                                                preserveScroll: true,
+                                                            },
                                                         )
                                                     }
                                                     className="h-7 rounded border border-border bg-background px-1 text-xs text-muted-foreground"
                                                 >
-                                                    <option value="">Move…</option>
-                                                    {otherCollections.map((col) => (
-                                                        <option
-                                                            key={col.id}
-                                                            value={col.id}
-                                                        >
-                                                            {col.name}
-                                                        </option>
-                                                    ))}
+                                                    <option value="">
+                                                        Move…
+                                                    </option>
+                                                    {otherCollections.map(
+                                                        (col) => (
+                                                            <option
+                                                                key={col.id}
+                                                                value={col.id}
+                                                            >
+                                                                {col.name}
+                                                            </option>
+                                                        ),
+                                                    )}
                                                 </select>
                                             )}
                                             <button
                                                 type="button"
-                                                onClick={() => setConfirmRemove(h)}
+                                                onClick={() =>
+                                                    setConfirmRemove(h)
+                                                }
                                                 className="text-muted-foreground hover:text-red-600"
                                                 aria-label="Remove holding"
                                             >

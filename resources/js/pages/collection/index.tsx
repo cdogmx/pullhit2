@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Download, Globe, Lock, Upload } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { CollectionFolders } from '@/components/collection/collection-folders';
 import { HoldingsTable } from '@/components/collection/holdings-table';
@@ -7,13 +8,9 @@ import type { FolderRow } from '@/components/collection/holdings-table';
 import { ListTabs } from '@/components/shared/list-tabs';
 import type { ListSummary } from '@/components/shared/list-tabs';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatMoney } from '@/lib/format';
+import { summarize } from '@/lib/portfolio';
 import { cn } from '@/lib/utils';
 import type {
     Allocation,
@@ -78,6 +75,16 @@ export default function CollectionIndex({
         (x) => x.slug !== activeCollection,
     );
 
+    // The holdings table owns the filters and reports what's visible; totalling
+    // that here means the tiles answer "what am I looking at" rather than always
+    // "what do I own". Null = unfiltered, so the server's own figures stand.
+    const [filtered, setFiltered] = useState<Holding[] | null>(null);
+    const isFiltered = filtered !== null;
+    const shown = useMemo(
+        () => (filtered ? summarize(filtered, c) : summary),
+        [filtered, summary, c],
+    );
+
     const toggleActivePublic = () => {
         if (!active) {
             return;
@@ -121,7 +128,8 @@ export default function CollectionIndex({
                                         className="inline-flex items-center gap-1 underline-offset-4 hover:text-foreground hover:underline"
                                     >
                                         <Globe className="size-3" />
-                                        Public · {publicUrl.replace(/^https?:\/\//, '')}
+                                        Public ·{' '}
+                                        {publicUrl.replace(/^https?:\/\//, '')}
                                     </a>
                                     <span aria-hidden>·</span>
                                     <button
@@ -179,33 +187,45 @@ export default function CollectionIndex({
                     </p>
                 </div>
 
-                {/* Summary */}
+                {/* Summary — follows the holdings table's filters when any are on. */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <SummaryCard label="Portfolio value">
-                        {formatMoney(summary.total_value, c)}
+                    <SummaryCard label="Portfolio value" filtered={isFiltered}>
+                        {formatMoney(shown.total_value, c)}
                     </SummaryCard>
-                    <SummaryCard label="Cost basis">
-                        {formatMoney(summary.total_cost, c)}
+                    <SummaryCard label="Cost basis" filtered={isFiltered}>
+                        {formatMoney(shown.total_cost, c)}
                     </SummaryCard>
-                    <SummaryCard label="Unrealized P&L">
-                        <span className={gainClass(summary.unrealized_gain)}>
-                            {formatGain(summary.unrealized_gain, c)}
-                            {summary.unrealized_pct != null && (
+                    <SummaryCard label="Unrealized P&L" filtered={isFiltered}>
+                        <span className={gainClass(shown.unrealized_gain)}>
+                            {formatGain(shown.unrealized_gain, c)}
+                            {shown.unrealized_pct != null && (
                                 <span className="ml-1 text-sm font-normal">
-                                    ({summary.unrealized_pct > 0 ? '+' : ''}
-                                    {summary.unrealized_pct}%)
+                                    ({shown.unrealized_pct > 0 ? '+' : ''}
+                                    {shown.unrealized_pct}%)
                                 </span>
                             )}
                         </span>
                     </SummaryCard>
-                    <SummaryCard label="Cards">
-                        {summary.card_count}
+                    <SummaryCard label="Cards" filtered={isFiltered}>
+                        {shown.card_count}
                         <span className="ml-1 text-sm font-normal text-muted-foreground">
-                            in {summary.item_count}{' '}
-                            {summary.item_count === 1 ? 'holding' : 'holdings'}
+                            in {shown.item_count}{' '}
+                            {shown.item_count === 1 ? 'holding' : 'holdings'}
                         </span>
                     </SummaryCard>
                 </div>
+
+                {isFiltered && (
+                    <p className="-mt-2 text-xs text-muted-foreground">
+                        Totals cover the {shown.item_count.toLocaleString()}{' '}
+                        filtered{' '}
+                        {shown.item_count === 1 ? 'holding' : 'holdings'} —{' '}
+                        <span className="font-medium text-foreground">
+                            {formatMoney(summary.total_value, c)}
+                        </span>{' '}
+                        across the whole collection.
+                    </p>
+                )}
 
                 {holdings.length === 0 && folders.length === 0 ? (
                     <Card>
@@ -250,13 +270,16 @@ export default function CollectionIndex({
                                                     {a.label}
                                                 </span>
                                                 <span className="shrink-0 text-muted-foreground">
-                                                    {formatMoney(a.value, c)} · {a.pct}%
+                                                    {formatMoney(a.value, c)} ·{' '}
+                                                    {a.pct}%
                                                 </span>
                                             </div>
                                             <div className="mt-1 h-1.5 rounded-full bg-muted">
                                                 <div
                                                     className="h-1.5 rounded-full bg-primary"
-                                                    style={{ width: `${a.pct}%` }}
+                                                    style={{
+                                                        width: `${a.pct}%`,
+                                                    }}
                                                 />
                                             </div>
                                         </div>
@@ -290,6 +313,7 @@ export default function CollectionIndex({
                                 name: col.name,
                             }))}
                             folders={folders}
+                            onFilteredChange={setFiltered}
                         />
                     </>
                 )}
@@ -300,16 +324,28 @@ export default function CollectionIndex({
 
 function SummaryCard({
     label,
+    filtered = false,
     children,
 }: {
     label: string;
+    /** Marks the tile as a subtotal, so a filtered figure can't read as the whole. */
+    filtered?: boolean;
     children: React.ReactNode;
 }) {
     return (
-        <Card>
+        <Card className={cn(filtered && 'border-primary/40 bg-primary/[0.03]')}>
             <CardContent className="pt-6">
-                <p className="text-xs text-muted-foreground">{label}</p>
-                <p className="mt-1 text-2xl font-bold tracking-tight">{children}</p>
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    {label}
+                    {filtered && (
+                        <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                            Filtered
+                        </span>
+                    )}
+                </p>
+                <p className="mt-1 text-2xl font-bold tracking-tight">
+                    {children}
+                </p>
             </CardContent>
         </Card>
     );
@@ -331,7 +367,9 @@ function MoversCard({
             </CardHeader>
             <CardContent className="max-h-72 flex-1 space-y-2 overflow-y-auto">
                 {movers.length === 0 && (
-                    <p className="text-sm text-muted-foreground">Nothing yet.</p>
+                    <p className="text-sm text-muted-foreground">
+                        Nothing yet.
+                    </p>
                 )}
                 {movers.map((m) => (
                     <div

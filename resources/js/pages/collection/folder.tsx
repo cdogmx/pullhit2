@@ -1,11 +1,13 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { ChevronRight, Copy, Folder, Globe, Lock } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { HoldingsTable } from '@/components/collection/holdings-table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatMoney } from '@/lib/format';
+import { summarize } from '@/lib/portfolio';
+import { cn } from '@/lib/utils';
 import type { GradingCompanyOption, Holding, PortfolioSummary } from '@/types';
 
 type Props = {
@@ -46,6 +48,15 @@ function formatGain(cents: number | null, currency = 'USD'): string {
     return `${sign}${formatMoney(Math.abs(cents), currency)}`;
 }
 
+/** Tints a tile so a filtered subtotal can't be read as the whole folder. */
+const filteredCard = 'border-primary/40 bg-primary/[0.03]';
+
+const FilteredBadge = () => (
+    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+        Filtered
+    </span>
+);
+
 export default function CollectionFolderPage({
     collection,
     folder,
@@ -59,6 +70,15 @@ export default function CollectionFolderPage({
         : `/collection?collection=${collection.slug}`;
 
     const [copied, setCopied] = useState(false);
+
+    // Same deal as the collection page: the table owns the filters, so it hands
+    // up what's visible and the tiles total that instead of the whole folder.
+    const [filtered, setFiltered] = useState<Holding[] | null>(null);
+    const isFiltered = filtered !== null;
+    const shown = useMemo(
+        () => (filtered ? summarize(filtered, c) : summary),
+        [filtered, summary, c],
+    );
 
     const togglerPublic = () =>
         router.patch(
@@ -98,7 +118,10 @@ export default function CollectionFolderPage({
                         Collections
                     </Link>
                     <ChevronRight className="size-3" />
-                    <Link href={collectionHref} className="hover:text-foreground">
+                    <Link
+                        href={collectionHref}
+                        className="hover:text-foreground"
+                    >
                         {collection.name}
                     </Link>
                     <ChevronRight className="size-3" />
@@ -155,38 +178,43 @@ export default function CollectionFolderPage({
                     </div>
                 </div>
 
-                {/* Folder-scoped summary */}
+                {/* Folder-scoped summary — follows the table's filters. */}
                 <div className="grid gap-4 sm:grid-cols-3">
-                    <Card>
+                    <Card className={cn(isFiltered && filteredCard)}>
                         <CardContent className="pt-6">
-                            <p className="text-xs text-muted-foreground">
+                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                 Folder value
+                                {isFiltered && <FilteredBadge />}
                             </p>
                             <p className="mt-1 text-2xl font-bold tracking-tight">
-                                {formatMoney(summary.total_value, c)}
+                                {formatMoney(shown.total_value, c)}
                             </p>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className={cn(isFiltered && filteredCard)}>
                         <CardContent className="pt-6">
-                            <p className="text-xs text-muted-foreground">
+                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                 Unrealized P&L
+                                {isFiltered && <FilteredBadge />}
                             </p>
                             <p
-                                className={`mt-1 text-2xl font-bold tracking-tight ${gainClass(summary.unrealized_gain)}`}
+                                className={`mt-1 text-2xl font-bold tracking-tight ${gainClass(shown.unrealized_gain)}`}
                             >
-                                {formatGain(summary.unrealized_gain, c)}
+                                {formatGain(shown.unrealized_gain, c)}
                             </p>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className={cn(isFiltered && filteredCard)}>
                         <CardContent className="pt-6">
-                            <p className="text-xs text-muted-foreground">Cards</p>
+                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                Cards
+                                {isFiltered && <FilteredBadge />}
+                            </p>
                             <p className="mt-1 text-2xl font-bold tracking-tight">
-                                {summary.card_count}
+                                {shown.card_count}
                                 <span className="ml-1 text-sm font-normal text-muted-foreground">
-                                    in {summary.item_count}{' '}
-                                    {summary.item_count === 1
+                                    in {shown.item_count}{' '}
+                                    {shown.item_count === 1
                                         ? 'holding'
                                         : 'holdings'}
                                 </span>
@@ -195,13 +223,25 @@ export default function CollectionFolderPage({
                     </Card>
                 </div>
 
+                {isFiltered && (
+                    <p className="-mt-2 text-xs text-muted-foreground">
+                        Totals cover the {shown.item_count.toLocaleString()}{' '}
+                        filtered{' '}
+                        {shown.item_count === 1 ? 'holding' : 'holdings'} —{' '}
+                        <span className="font-medium text-foreground">
+                            {formatMoney(summary.total_value, c)}
+                        </span>{' '}
+                        across the whole folder.
+                    </p>
+                )}
+
                 {holdings.length === 0 ? (
                     <Card>
                         <CardContent className="py-12 text-center text-muted-foreground">
                             <p>This folder is empty.</p>
                             <p className="mt-1 text-sm">
-                                File a card into “{folder.name}” from its page or the
-                                edit menu to add it here.
+                                File a card into “{folder.name}” from its page
+                                or the edit menu to add it here.
                             </p>
                         </CardContent>
                     </Card>
@@ -210,6 +250,7 @@ export default function CollectionFolderPage({
                         holdings={holdings}
                         gradingCompanies={gradingCompanies}
                         otherCollections={[]}
+                        onFilteredChange={setFiltered}
                     />
                 )}
             </div>
