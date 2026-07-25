@@ -80,10 +80,12 @@ function EditWishlistForm({
         e.preventDefault();
 
         const dollars = target.trim();
-        const cents = dollars === '' ? null : Math.round(parseFloat(dollars) * 100);
+        const cents =
+            dollars === '' ? null : Math.round(parseFloat(dollars) * 100);
 
         const payload: Record<string, string | number | boolean | null> = {
-            target_price: cents != null && Number.isFinite(cents) ? cents : null,
+            target_price:
+                cents != null && Number.isFinite(cents) ? cents : null,
             notes: notes.trim() === '' ? null : notes.trim().slice(0, 1000),
         };
 

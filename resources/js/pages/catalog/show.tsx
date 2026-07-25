@@ -820,7 +820,7 @@ export default function Show({
                             {user && (
                                 <>
                                     <AddToCollectionDialog
-                                        catalogItemId={item.id}
+                                        catalogItemIds={[item.id]}
                                         gradingCompanies={gradingCompanies}
                                         ownedQty={ownedQty}
                                     />

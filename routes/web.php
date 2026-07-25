@@ -134,6 +134,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('collection/folders/{collectionFolder}', [CollectionController::class, 'updateFolder'])->name('collection.folders.update');
     Route::delete('collection/folders/{collectionFolder}', [CollectionController::class, 'destroyFolder'])->name('collection.folders.destroy');
     // Bulk actions must precede the {collectionItem} routes, or "bulk" binds as an id.
+    Route::post('collection/bulk', [CollectionController::class, 'bulkStore'])->name('collection.bulk.store');
     Route::patch('collection/bulk', [CollectionController::class, 'bulkUpdate'])->name('collection.bulk.update');
     Route::delete('collection/bulk', [CollectionController::class, 'bulkDestroy'])->name('collection.bulk.destroy');
     Route::patch('collection/{collectionItem}', [CollectionController::class, 'update'])->name('collection.update');
@@ -153,6 +154,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
     Route::get('wishlist/targets', [WishlistController::class, 'targets'])->name('wishlist.targets');
     Route::post('wishlist', [WishlistController::class, 'store'])->name('wishlist.store');
+    // Before {wishlistItem}/{catalogItem}, or "bulk" binds as an id.
+    Route::post('wishlist/bulk', [WishlistController::class, 'bulkStore'])->name('wishlist.bulk.store');
     Route::patch('wishlist/{wishlistItem}', [WishlistController::class, 'update'])->name('wishlist.update');
     Route::delete('wishlist/{catalogItem}', [WishlistController::class, 'destroy'])->name('wishlist.destroy');
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Actions\Collection\AddToCollection;
 use App\Actions\Collection\BuildCollectionTree;
 use App\Actions\Collection\BuildPortfolio;
+use App\Actions\Collection\BulkAddToCollection;
 use App\Actions\Collection\CreateCollection;
 use App\Actions\Collection\ExportCollectionCsv;
 use App\Actions\Collection\PublicCollection;
@@ -15,6 +16,7 @@ use App\Actions\Import\BuildImportPreview;
 use App\Actions\Import\ImportCollection;
 use App\Enums\Condition;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Collection\BulkStoreCollectionItemsRequest;
 use App\Http\Requests\Collection\StoreCollectionItemRequest;
 use App\Http\Resources\CollectionItemResource;
 use App\Models\CatalogItem;
@@ -329,6 +331,29 @@ class CollectionController extends Controller
         $add($user, $item, $data);
 
         return back()->with('success', 'Added to your collection.');
+    }
+
+    /**
+     * Bulk add: many cards into one collection, all sharing the state/quantity/
+     * cost from the dialog. Ids that don't resolve to a card are skipped rather
+     * than failing the batch — a stale browse selection shouldn't lose the rest.
+     */
+    public function bulkStore(BulkStoreCollectionItemsRequest $request, BulkAddToCollection $add, CreateCollection $create): RedirectResponse
+    {
+        $user = $request->user();
+        $data = $request->validated();
+
+        // "New collection…" from the picker — create it (tier-gated) and add there.
+        if (! empty($data['new_collection_name'])) {
+            $data['collection_id'] = $create($user, $data['new_collection_name'])->id;
+        }
+
+        $n = $add($user, $data['catalog_item_ids'], $data);
+
+        return back()->with(
+            'success',
+            $n === 1 ? 'Added 1 card to your collection.' : "Added {$n} cards to your collection.",
+        );
     }
 
     /**

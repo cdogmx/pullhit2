@@ -48,20 +48,34 @@ const CONDITIONS: { value: string; label: string }[] = [
  * priced state, matching the scan flow: quantity defaults to 1, and we show how
  * many you already own of the selected collection + state so totals are clear.
  * Money is entered in dollars and converted to cents on submit.
+ *
+ * Pass several ids (a browse multi-select) and it becomes a batch add: the same
+ * state, quantity, and cost applied to every card via /collection/bulk. The
+ * "you already own N" hint is dropped there — it's per-card, and a batch has no
+ * single answer.
  */
 export function AddToCollectionDialog({
-    catalogItemId,
+    catalogItemIds,
     gradingCompanies,
     trigger,
     ownedQty = 0,
+    open: controlledOpen,
+    onOpenChange,
+    onAdded,
     postOptions,
 }: {
-    catalogItemId: number;
+    /** The cards to add. One id is the normal per-card dialog; many is a batch. */
+    catalogItemIds: number[];
     gradingCompanies: GradingCompanyOption[];
     /** Custom trigger element; defaults to a labelled "Add to collection" button. */
     trigger?: ReactNode;
     /** Quantity the viewer already owns (all states) — flips the default trigger label. */
     ownedQty?: number;
+    /** Drive the dialog from outside (a bulk action bar) instead of a trigger. */
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    /** Fired after a successful add — e.g. to clear a selection. */
+    onAdded?: () => void;
     /**
      * Extra Inertia visit options merged into the submit (e.g. `reset: ['items']`
      * so the browse infinite-scroll list doesn't re-append on the redirect).
@@ -73,16 +87,22 @@ export function AddToCollectionDialog({
         replace?: boolean;
     };
 }) {
-    const [open, setOpen] = useState(false);
+    const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+    const open = controlledOpen ?? uncontrolledOpen;
+    const setOpen = onOpenChange ?? setUncontrolledOpen;
+
+    const cardCount = catalogItemIds.length;
+    const bulk = cardCount > 1;
+    const singleId = catalogItemIds[0] ?? 0;
+
     const [mode, setMode] = useState<'raw' | 'graded'>('raw');
     // Per collection + state holdings so we can show "you already own N".
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
-    const [defaultCollectionId, setDefaultCollectionId] = useState<number | null>(
-        null,
-    );
+    const [defaultCollectionId, setDefaultCollectionId] = useState<
+        number | null
+    >(null);
 
     const form = useForm({
-        catalog_item_id: catalogItemId,
         collection_id: null as number | null,
         new_collection_name: '',
         condition: 'NM',
@@ -96,36 +116,46 @@ export function AddToCollectionDialog({
     });
 
     // Load current holdings whenever the dialog opens; reset add-qty to 1.
+    // A batch has no single "you already own N", so it skips the fetch.
     useEffect(() => {
         if (!open) {
             return;
         }
 
         form.setData('quantity', 1);
-        form.setData('catalog_item_id', catalogItemId);
+
+        if (bulk) {
+            return;
+        }
 
         let active = true;
-        fetch(`/collection/holdings/${catalogItemId}`, {
+        fetch(`/collection/holdings/${singleId}`, {
             headers: { Accept: 'application/json' },
             credentials: 'same-origin',
         })
             .then((r) => r.json())
-            .then((d: { default_collection_id: number; holdings: Holding[] }) => {
-                if (active) {
-                    setHoldings(d.holdings);
-                    setDefaultCollectionId(d.default_collection_id);
-                }
-            })
+            .then(
+                (d: { default_collection_id: number; holdings: Holding[] }) => {
+                    if (active) {
+                        setHoldings(d.holdings);
+                        setDefaultCollectionId(d.default_collection_id);
+                    }
+                },
+            )
             .catch(() => active && setHoldings([]));
 
         return () => {
             active = false;
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, catalogItemId]);
+    }, [open, singleId, bulk]);
 
     // How many the viewer already owns of the currently-selected collection + state.
     const ownedForSelection = useMemo(() => {
+        if (bulk) {
+            return null;
+        }
+
         if (!holdings || form.data.new_collection_name) {
             return form.data.new_collection_name ? 0 : null;
         }
@@ -137,7 +167,8 @@ export function AddToCollectionDialog({
             }
 
             return mode === 'graded'
-                ? h.grading_company_id === Number(form.data.grading_company_id) &&
+                ? h.grading_company_id ===
+                      Number(form.data.grading_company_id) &&
                       h.grade === Number(form.data.grade)
                 : h.grading_company_id === null &&
                       h.condition === form.data.condition;
@@ -145,6 +176,7 @@ export function AddToCollectionDialog({
 
         return match?.quantity ?? 0;
     }, [
+        bulk,
         holdings,
         defaultCollectionId,
         mode,
@@ -164,7 +196,9 @@ export function AddToCollectionDialog({
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         form.transform((d) => ({
-            catalog_item_id: catalogItemId,
+            ...(bulk
+                ? { catalog_item_ids: catalogItemIds }
+                : { catalog_item_id: singleId }),
             collection_id: d.collection_id || null,
             new_collection_name: d.new_collection_name || null,
             // Add-delta (same as scan) — never set absolute totals here.
@@ -188,15 +222,25 @@ export function AddToCollectionDialog({
                   }),
         }));
 
-        form.post('/collection', {
+        form.post(bulk ? '/collection/bulk' : '/collection', {
             preserveScroll: true,
             ...postOptions,
             onSuccess: () => {
                 setOpen(false);
+                onAdded?.();
+
+                if (bulk) {
+                    toast.success(
+                        addQty === 1
+                            ? `Added ${cardCount} cards to your collection.`
+                            : `Added ${cardCount} cards × ${addQty} to your collection.`,
+                    );
+
+                    return;
+                }
+
                 const totalMsg =
-                    newTotal != null
-                        ? ` You now own ${newTotal}.`
-                        : '';
+                    newTotal != null ? ` You now own ${newTotal}.` : '';
                 toast.success(
                     addQty === 1
                         ? `Added to your collection.${totalMsg}`
@@ -208,27 +252,35 @@ export function AddToCollectionDialog({
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                {trigger ??
-                    (ownedQty > 0 ? (
-                        <Button variant="secondary" size="sm">
-                            <LibraryBig className="size-4" />
-                            {ownedQty} in collection
-                        </Button>
-                    ) : (
-                        <Button variant="default" size="sm">
-                            <Plus className="size-4" />
-                            Add to collection
-                        </Button>
-                    ))}
-            </DialogTrigger>
+            {/* Externally driven (a bulk action bar) — no trigger of its own. */}
+            {controlledOpen === undefined && (
+                <DialogTrigger asChild>
+                    {trigger ??
+                        (ownedQty > 0 ? (
+                            <Button variant="secondary" size="sm">
+                                <LibraryBig className="size-4" />
+                                {ownedQty} in collection
+                            </Button>
+                        ) : (
+                            <Button variant="default" size="sm">
+                                <Plus className="size-4" />
+                                Add to collection
+                            </Button>
+                        ))}
+                </DialogTrigger>
+            )}
             <DialogContent>
                 <form onSubmit={submit}>
                     <DialogHeader>
-                        <DialogTitle>Add to collection</DialogTitle>
+                        <DialogTitle>
+                            {bulk
+                                ? `Add ${cardCount} cards to collection`
+                                : 'Add to collection'}
+                        </DialogTitle>
                         <DialogDescription>
-                            Choose the state and how many copies to add. Value is
-                            read from market data for the state you pick.
+                            {bulk
+                                ? 'The state, quantity, and cost below apply to every selected card.'
+                                : 'Choose the state and how many copies to add. Value is read from market data for the state you pick.'}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -348,7 +400,11 @@ export function AddToCollectionDialog({
 
                         <div className="grid grid-cols-2 gap-3">
                             <div className="grid gap-2">
-                                <Label htmlFor="quantity">Quantity to add</Label>
+                                <Label htmlFor="quantity">
+                                    {bulk
+                                        ? 'Quantity of each'
+                                        : 'Quantity to add'}
+                                </Label>
                                 <div className="flex items-center gap-1">
                                     <Button
                                         type="button"
@@ -463,9 +519,11 @@ export function AddToCollectionDialog({
 
                     <DialogFooter>
                         <Button type="submit" disabled={form.processing}>
-                            {addQty === 1
-                                ? 'Add to collection'
-                                : `Add ${addQty} to collection`}
+                            {bulk
+                                ? `Add ${cardCount} cards`
+                                : addQty === 1
+                                  ? 'Add to collection'
+                                  : `Add ${addQty} to collection`}
                         </Button>
                     </DialogFooter>
                 </form>

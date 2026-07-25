@@ -13,34 +13,11 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    clearWishlistTargets,
+    loadWishlistTargets,
+} from '@/components/wishlist/wishlist-targets';
 import { cn } from '@/lib/utils';
-
-// The user's wishlist options, loaded once and shared across every heart on the
-// page (so a browse grid doesn't fetch per-tile). Cleared after a new wishlist
-// is created so later hearts see it.
-let cache: TargetsResponse | null = null;
-let pending: Promise<TargetsResponse> | null = null;
-
-function loadTargets(): Promise<TargetsResponse> {
-    if (cache) {
-        return Promise.resolve(cache);
-    }
-
-    if (!pending) {
-        pending = fetch('/wishlist/targets', {
-            headers: { Accept: 'application/json' },
-            credentials: 'same-origin',
-        })
-            .then((r) => r.json())
-            .then((d: TargetsResponse) => {
-                cache = d;
-
-                return d;
-            });
-    }
-
-    return pending;
-}
 
 /**
  * Heart toggle for the wishlist. Removing is instant. Adding quick-adds to the
@@ -98,7 +75,7 @@ export function WishlistButton({
             return;
         }
 
-        const t = await loadTargets();
+        const t = await loadWishlistTargets();
 
         if (t.targets.length > 1 || t.can_create) {
             setPicker(t);
@@ -126,7 +103,7 @@ export function WishlistButton({
                     setPicker(null);
 
                     if (creatingNew) {
-                        cache = null; // a new wishlist exists now
+                        clearWishlistTargets(); // a new wishlist exists now
                     }
 
                     toast.success('Added to your wishlist.');
@@ -174,10 +151,7 @@ export function WishlistButton({
                 </button>
             )}
 
-            <Dialog
-                open={!!picker}
-                onOpenChange={(o) => !o && setPicker(null)}
-            >
+            <Dialog open={!!picker} onOpenChange={(o) => !o && setPicker(null)}>
                 <DialogContent>
                     <form onSubmit={submitPicker}>
                         <DialogHeader>

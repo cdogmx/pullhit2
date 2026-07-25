@@ -1,6 +1,7 @@
 import { Head, Link, router, usePage, WhenVisible } from '@inertiajs/react';
 import {
     ArrowDownUp,
+    CheckSquare,
     LayoutGrid,
     Layers,
     List,
@@ -15,6 +16,7 @@ import { AddToCollectionDialog } from '@/components/collection/add-to-collection
 import { SearchSuggest } from '@/components/search-suggest';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Combobox } from '@/components/ui/combobox';
 import {
     Select,
@@ -32,6 +34,7 @@ import {
 } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { BulkWishlistButton } from '@/components/wishlist/bulk-wishlist-button';
 import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import { cardHref, languageLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -230,6 +233,36 @@ export default function Browse({
     const [q, setQ] = useState(filters.q ?? '');
     const [view, setView] = useState<'grid' | 'list'>(filters.view ?? 'grid');
 
+    // Multi-select for the bulk add actions. Off by default so a normal browse
+    // still opens cards on click; the "Select" toggle turns the grid into
+    // checkboxes. Ids only — the bulk endpoints take catalog item ids.
+    const [selecting, setSelecting] = useState(false);
+    const [selected, setSelected] = useState<Set<number>>(new Set());
+    const [bulkAdding, setBulkAdding] = useState(false);
+
+    const clearSelection = () => setSelected(new Set());
+
+    const toggleSelected = (id: number) =>
+        setSelected((prev) => {
+            const next = new Set(prev);
+
+            if (!next.delete(id)) {
+                next.add(id);
+            }
+
+            return next;
+        });
+
+    // The header checkbox covers what's loaded, which for infinite scroll is
+    // what the user can actually see — not the whole result set.
+    const allLoadedSelected =
+        items.length > 0 && items.every((i) => selected.has(i.id));
+
+    const toggleAllLoaded = () =>
+        setSelected(
+            allLoadedSelected ? new Set() : new Set(items.map((i) => i.id)),
+        );
+
     // Keep the box in sync when the active query changes underneath us (a "did
     // you mean" jump, a suggestion click landing back here, Back/Forward). Done
     // during render (not in an effect) per React's "adjust state on prop change"
@@ -311,6 +344,10 @@ export default function Browse({
         partial: Partial<CatalogFilters>,
         { replace = false }: { replace?: boolean } = {},
     ) {
+        // The list is about to change under the selection — drop it rather than
+        // keep ids the user can no longer see.
+        clearSelection();
+
         const next = buildQuery({ ...filters, ...partial });
         router.get('/browse', next, {
             preserveState: true,
@@ -323,6 +360,7 @@ export default function Browse({
 
     function reset() {
         setQ('');
+        clearSelection();
         router.get(
             '/browse',
             {},
@@ -661,6 +699,26 @@ export default function Browse({
                                     {filters.direction === 'asc' ? '↑' : '↓'}
                                 </Button>
 
+                                {/* Multi-select, for the bulk add actions */}
+                                {canAdd && (
+                                    <Button
+                                        variant={
+                                            selecting ? 'default' : 'outline'
+                                        }
+                                        size="sm"
+                                        aria-pressed={selecting}
+                                        onClick={() => {
+                                            setSelecting(!selecting);
+                                            clearSelection();
+                                        }}
+                                    >
+                                        <CheckSquare className="size-4" />
+                                        <span className="hidden sm:inline">
+                                            Select
+                                        </span>
+                                    </Button>
+                                )}
+
                                 {/* Group by base */}
                                 <Button
                                     variant={
@@ -753,6 +811,66 @@ export default function Browse({
 
                         {/* Results */}
                         <div className="min-w-0 flex-1">
+                            {/* Bulk action bar — sticky so it stays reachable
+                                as the infinite list grows under it. */}
+                            {selecting && (
+                                <div className="sticky top-20 z-30 mb-4 flex flex-wrap items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 backdrop-blur">
+                                    <Checkbox
+                                        checked={allLoadedSelected}
+                                        onCheckedChange={toggleAllLoaded}
+                                        aria-label="Select all loaded cards"
+                                    />
+                                    <span className="text-sm font-medium">
+                                        {selected.size > 0
+                                            ? `${selected.size} selected`
+                                            : 'Pick cards to add'}
+                                    </span>
+                                    <div className="ml-auto flex items-center gap-2">
+                                        <Button
+                                            size="sm"
+                                            className="h-8"
+                                            disabled={selected.size === 0}
+                                            onClick={() => setBulkAdding(true)}
+                                        >
+                                            <Plus className="size-4" />
+                                            Collection
+                                        </Button>
+                                        <BulkWishlistButton
+                                            catalogItemIds={[...selected]}
+                                            onAdded={clearSelection}
+                                        />
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-8"
+                                            onClick={() => {
+                                                setSelecting(false);
+                                                clearSelection();
+                                            }}
+                                        >
+                                            Done
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {canAdd && (
+                                <AddToCollectionDialog
+                                    catalogItemIds={[...selected]}
+                                    gradingCompanies={gradingCompanies}
+                                    open={bulkAdding}
+                                    onOpenChange={setBulkAdding}
+                                    onAdded={clearSelection}
+                                    // Keep the page mounted so selection mode
+                                    // survives the add and onAdded can clear it.
+                                    postOptions={{
+                                        preserveScroll: true,
+                                        preserveState: true,
+                                        reset: ['items'],
+                                    }}
+                                />
+                            )}
+
                             {activeCount > 0 && (
                                 <ActiveChips
                                     filters={filters}
@@ -835,6 +953,11 @@ export default function Browse({
                                             wishlisted={wishlistedIds.includes(
                                                 item.id,
                                             )}
+                                            selecting={selecting}
+                                            selected={selected.has(item.id)}
+                                            onToggle={() =>
+                                                toggleSelected(item.id)
+                                            }
                                         />
                                     ))}
                                 </div>
@@ -850,6 +973,11 @@ export default function Browse({
                                             wishlisted={wishlistedIds.includes(
                                                 item.id,
                                             )}
+                                            selecting={selecting}
+                                            selected={selected.has(item.id)}
+                                            onToggle={() =>
+                                                toggleSelected(item.id)
+                                            }
                                         />
                                     ))}
                                 </div>
@@ -1367,7 +1495,7 @@ function AddButton({
 }) {
     return (
         <AddToCollectionDialog
-            catalogItemId={item.id}
+            catalogItemIds={[item.id]}
             gradingCompanies={gradingCompanies}
             postOptions={{ preserveScroll: true, reset: ['items'] }}
             trigger={
@@ -1387,59 +1515,101 @@ function AddButton({
     );
 }
 
+/**
+ * Selection state shared by the grid tile and the list row. While selecting,
+ * the card body toggles instead of opening the card, and the per-card add/heart
+ * buttons step aside for a checkbox — the bulk bar owns those actions.
+ */
+type Selectable = {
+    selecting: boolean;
+    selected: boolean;
+    onToggle: () => void;
+};
+
 function CardTile({
     item,
     returnTo,
     canAdd,
     gradingCompanies,
     wishlisted,
+    selecting,
+    selected,
+    onToggle,
 }: {
     item: CatalogItem;
     returnTo: string;
     canAdd: boolean;
     gradingCompanies: GradingCompanyOption[];
     wishlisted: boolean;
-}) {
+} & Selectable) {
+    const body = (
+        <>
+            <div className="aspect-[3/4] overflow-hidden bg-muted">
+                <ItemImage
+                    item={item}
+                    className="size-full object-contain transition-transform group-hover:scale-105"
+                />
+            </div>
+            <div className="space-y-1.5 p-3">
+                <p
+                    className="truncate text-sm font-medium"
+                    title={item.display_name ?? item.name}
+                >
+                    {item.display_name ?? item.name}
+                </p>
+                <p
+                    className="truncate text-xs text-muted-foreground"
+                    title={item.set?.name ?? undefined}
+                >
+                    {item.set?.name}
+                    {item.number ? ` · ${item.number}` : ''}
+                </p>
+                {item.market_value && <PriceTag value={item.market_value} />}
+                <VariantBadges item={item} />
+            </div>
+        </>
+    );
+
     return (
-        <div className="group relative overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring">
-            <Link href={`${cardHref(item)}${returnTo}`} className="block">
-                <div className="aspect-[3/4] overflow-hidden bg-muted">
-                    <ItemImage
-                        item={item}
-                        className="size-full object-contain transition-transform group-hover:scale-105"
-                    />
+        <div
+            className={cn(
+                'group relative overflow-hidden rounded-lg border bg-card transition-colors',
+                selected
+                    ? 'border-primary ring-2 ring-primary/40'
+                    : 'border-border hover:border-ring',
+            )}
+        >
+            {selecting ? (
+                // Click anywhere on the card to toggle it. The checkbox below is
+                // the labelled control — this is the mouse convenience.
+                <div onClick={onToggle} className="block cursor-pointer">
+                    {body}
                 </div>
-                <div className="space-y-1.5 p-3">
-                    <p
-                        className="truncate text-sm font-medium"
-                        title={item.display_name ?? item.name}
-                    >
-                        {item.display_name ?? item.name}
-                    </p>
-                    <p
-                        className="truncate text-xs text-muted-foreground"
-                        title={item.set?.name ?? undefined}
-                    >
-                        {item.set?.name}
-                        {item.number ? ` · ${item.number}` : ''}
-                    </p>
-                    {item.market_value && (
-                        <PriceTag value={item.market_value} />
-                    )}
-                    <VariantBadges item={item} />
-                </div>
-            </Link>
-            {canAdd && (
-                <div className="absolute top-2 right-2 flex gap-1.5">
-                    <WishlistButton
-                        catalogItemId={item.id}
-                        wishlisted={wishlisted}
-                    />
-                    <AddButton
-                        item={item}
-                        gradingCompanies={gradingCompanies}
-                    />
-                </div>
+            ) : (
+                <Link href={`${cardHref(item)}${returnTo}`} className="block">
+                    {body}
+                </Link>
+            )}
+            {selecting ? (
+                <Checkbox
+                    checked={selected}
+                    onCheckedChange={onToggle}
+                    aria-label={`Select ${item.display_name ?? item.name}`}
+                    className="absolute top-2 left-2 size-5 bg-background/85 backdrop-blur"
+                />
+            ) : (
+                canAdd && (
+                    <div className="absolute top-2 right-2 flex gap-1.5">
+                        <WishlistButton
+                            catalogItemId={item.id}
+                            wishlisted={wishlisted}
+                        />
+                        <AddButton
+                            item={item}
+                            gradingCompanies={gradingCompanies}
+                        />
+                    </div>
+                )
             )}
         </div>
     );
@@ -1451,45 +1621,71 @@ function ListRow({
     canAdd,
     gradingCompanies,
     wishlisted,
+    selecting,
+    selected,
+    onToggle,
 }: {
     item: CatalogItem;
     returnTo: string;
     canAdd: boolean;
     gradingCompanies: GradingCompanyOption[];
     wishlisted: boolean;
-}) {
+} & Selectable) {
+    const body = (
+        <>
+            <div className="h-16 w-12 shrink-0 overflow-hidden rounded bg-muted">
+                <ItemImage item={item} className="size-full object-contain" />
+            </div>
+            <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">
+                    {item.display_name ?? item.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                    {item.set?.name}
+                    {item.number ? ` · ${item.number}` : ''}
+                    {item.language ? ` · ${languageLabel(item.language)}` : ''}
+                </p>
+                <div className="mt-1">
+                    <VariantBadges item={item} />
+                </div>
+            </div>
+            {item.market_value && (
+                <PriceTag value={item.market_value} className="shrink-0" />
+            )}
+        </>
+    );
+
     return (
-        <div className="flex items-center bg-card hover:bg-accent/40">
-            <Link
-                href={`${cardHref(item)}${returnTo}`}
-                className="flex min-w-0 flex-1 items-center gap-3 p-3"
-            >
-                <div className="h-16 w-12 shrink-0 overflow-hidden rounded bg-muted">
-                    <ItemImage
-                        item={item}
-                        className="size-full object-contain"
-                    />
+        <div
+            className={cn(
+                'flex items-center bg-card hover:bg-accent/40',
+                selected && 'bg-primary/5',
+            )}
+        >
+            {selecting && (
+                <Checkbox
+                    checked={selected}
+                    onCheckedChange={onToggle}
+                    aria-label={`Select ${item.display_name ?? item.name}`}
+                    className="ml-3 shrink-0"
+                />
+            )}
+            {selecting ? (
+                <div
+                    onClick={onToggle}
+                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 p-3"
+                >
+                    {body}
                 </div>
-                <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                        {item.display_name ?? item.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                        {item.set?.name}
-                        {item.number ? ` · ${item.number}` : ''}
-                        {item.language
-                            ? ` · ${languageLabel(item.language)}`
-                            : ''}
-                    </p>
-                    <div className="mt-1">
-                        <VariantBadges item={item} />
-                    </div>
-                </div>
-                {item.market_value && (
-                    <PriceTag value={item.market_value} className="shrink-0" />
-                )}
-            </Link>
-            {canAdd && (
+            ) : (
+                <Link
+                    href={`${cardHref(item)}${returnTo}`}
+                    className="flex min-w-0 flex-1 items-center gap-3 p-3"
+                >
+                    {body}
+                </Link>
+            )}
+            {!selecting && canAdd && (
                 <div className="flex items-center gap-1.5 pr-3">
                     <WishlistButton
                         catalogItemId={item.id}

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Web;
 
 use App\Actions\Wishlist\AddToWishlist;
+use App\Actions\Wishlist\BulkAddToWishlist;
 use App\Actions\Wishlist\CreateWishlist;
 use App\Actions\Wishlist\PublicWishlist;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Wishlist\BulkStoreWishlistItemsRequest;
 use App\Http\Requests\Wishlist\StoreWishlistItemRequest;
 use App\Http\Resources\WishlistItemResource;
 use App\Models\CatalogItem;
@@ -122,6 +124,29 @@ class WishlistController extends Controller
         $add($user, $item, $data);
 
         return back()->with('success', 'Added to your wishlist.');
+    }
+
+    /**
+     * Bulk add: many cards onto one wishlist. Ids that don't resolve to a card
+     * are skipped rather than failing the batch, and cards already on the list
+     * are left as they are (the add is idempotent).
+     */
+    public function bulkStore(BulkStoreWishlistItemsRequest $request, BulkAddToWishlist $add, CreateWishlist $create): RedirectResponse
+    {
+        $user = $request->user();
+        $data = $request->validated();
+
+        // "New wishlist…" from the picker — create it (tier-gated) and add there.
+        if (! empty($data['new_wishlist_name'])) {
+            $data['wishlist_id'] = $create($user, $data['new_wishlist_name'])->id;
+        }
+
+        $n = $add($user, $data['catalog_item_ids'], $data);
+
+        return back()->with(
+            'success',
+            $n === 1 ? 'Added 1 card to your wishlist.' : "Added {$n} cards to your wishlist.",
+        );
     }
 
     /**
