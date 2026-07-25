@@ -41,6 +41,18 @@ class IngestForSaleListings
      */
     private const SEALED_STATE = ['suffix' => 'Sealed', 'sealed' => true, 'tcgplayer' => true];
 
+    /**
+     * Sealed asks are pulled relevance-ordered from a wide window rather than as
+     * "the cheapest N". A sealed product has hundreds of keyword matches whose
+     * cheap tail is entirely other SKUs — Troves, loose packs, the other
+     * language's box — so a cheapest-first window filters down to nothing.
+     *
+     * Singles deliberately keep the cheapest-first sampling: their asks feed
+     * ForSaleEngine's low percentile, and re-sampling them would move the
+     * for-sale figure on every card in the catalog at once.
+     */
+    private const SEALED_EBAY_LIMIT = 50;
+
     public function __construct(
         protected EbayBrowseClient $browse,
         protected TcgplayerLowPrice $tcgplayer,
@@ -132,8 +144,16 @@ class IngestForSaleListings
         $asks = [];
         $rows = [];
 
+        $sealed = $rules['sealed'] ?? false;
         $query = trim($baseQuery.' '.$rules['suffix']);
-        foreach ($this->browse->search($query, $limit) as $listing) {
+
+        $results = $this->browse->search(
+            $query,
+            $sealed ? self::SEALED_EBAY_LIMIT : $limit,
+            sort: $sealed ? null : 'price',
+        );
+
+        foreach ($results as $listing) {
             $title = (string) ($listing['title'] ?? '');
 
             // Another language's printing is a different market — never an ask.

@@ -92,6 +92,47 @@ test('it drops listings that are not this sealed product', function () {
         ->toBe(['Disney Lorcana Attack of the Vine Booster Box Factory Sealed']);
 });
 
+test('it pulls a wide relevance window and presents it cheapest-first', function () {
+    // eBay had 247 matches for this box and we asked for the 12 CHEAPEST, which
+    // for a $200 product is by construction other people's singles, loose packs
+    // and Japanese boxes — the real listings could never be in the window.
+    fakeSealedBrowse([
+        'Disney Lorcana Attack of the Vine Booster Box Sealed A',
+        'Disney Lorcana Attack of the Vine Booster Box Sealed B',
+    ]);
+
+    $this->getJson("/api/v1/catalog/{$this->box->id}/listings")->assertOk();
+
+    Http::assertSent(function ($request) {
+        if (! str_contains($request->url(), 'item_summary/search')) {
+            return true;
+        }
+
+        $url = $request->url();
+
+        // Relevance order (no sort param at all), wide window.
+        return str_contains($url, 'limit=50') && ! str_contains($url, 'sort=');
+    });
+});
+
+test('listings come back cheapest-first regardless of the order eBay returned', function () {
+    Http::fake([
+        'api.ebay.com/identity/v1/oauth2/token' => Http::response(['access_token' => 'tok', 'expires_in' => 7200]),
+        'api.ebay.com/buy/browse/v1/item_summary/search*' => Http::response(['itemSummaries' => [
+            ['title' => 'Disney Lorcana Attack of the Vine Booster Box Sealed A', 'price' => ['value' => '225.00', 'currency' => 'USD'], 'itemWebUrl' => 'https://ebay.com/itm/1'],
+            ['title' => 'Disney Lorcana Attack of the Vine Booster Box Sealed B', 'price' => ['value' => '199.95', 'currency' => 'USD'], 'itemWebUrl' => 'https://ebay.com/itm/2'],
+            ['title' => 'Disney Lorcana Attack of the Vine Booster Box Sealed C', 'price' => ['value' => '210.00', 'currency' => 'USD'], 'itemWebUrl' => 'https://ebay.com/itm/3'],
+        ]]),
+    ]);
+
+    $prices = array_column(
+        $this->getJson("/api/v1/catalog/{$this->box->id}/listings")->assertOk()->json('listings'),
+        'price_cents',
+    );
+
+    expect($prices)->toBe([19995, 21000, 22500]);
+});
+
 test('a single still gets the condition ladder and its own query', function () {
     fakeSealedBrowse(['Elrond 145/204 Near Mint']);
 

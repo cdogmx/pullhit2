@@ -23,9 +23,14 @@ class EbayBrowseClient
     }
 
     /**
+     * @param  string|null  $sort  eBay sort order; null = best match (relevance).
+     *                             Ask for relevance whenever the caller filters
+     *                             the results itself — "cheapest N" is a window
+     *                             on the junk, not on the product (a $200 box is
+     *                             never in the 12 cheapest of 247 matches).
      * @return array<int, array{title: string, price_cents: int, currency: string, image: ?string, condition: ?string, url: string, item_id: ?string}>
      */
-    public function search(string $query, int $limit = 6): array
+    public function search(string $query, int $limit = 6, ?string $sort = 'price'): array
     {
         if (! $this->configured() || trim($query) === '') {
             return [];
@@ -49,13 +54,14 @@ class EbayBrowseClient
             ]))
             ->timeout(20)
             ->retry(1, 1000, throw: false)
-            ->get($c['base_url'].'/buy/browse/v1/item_summary/search', [
+            ->get($c['base_url'].'/buy/browse/v1/item_summary/search', array_filter([
                 'q' => $query,
                 // Active Buy It Now only — asking prices for "items for sale".
                 'filter' => 'buyingOptions:{FIXED_PRICE}',
-                'sort' => 'price',
+                // Omitted entirely for best match — eBay rejects sort=null.
+                'sort' => $sort,
                 'limit' => $limit,
-            ]);
+            ], fn ($v) => $v !== null));
 
         if (! $response->successful()) {
             Log::warning('ebay.browse.search_failed', [

@@ -49,6 +49,18 @@ class GetCardListings
         ['label' => 'Any', 'group' => 'Condition', 'suffix' => ''],
     ];
 
+    /**
+     * How many listings to pull from eBay before filtering, and how many survive
+     * to the page. The gap matters: we ask for relevance-ordered results and do
+     * our own identity filtering, so the window has to be wide enough that real
+     * listings are in it. Ordering by price instead would hand us the cheapest N
+     * of hundreds of matches — for a $200 booster box that is, by construction,
+     * entirely other people's singles, loose packs, and wrong-language boxes.
+     */
+    private const FETCH_LIMIT = 50;
+
+    private const DISPLAY_LIMIT = 12;
+
     public function __construct(
         protected EbayBrowseClient $browse,
         protected EbayAffiliate $ebay,
@@ -75,15 +87,15 @@ class GetCardListings
         // Short-cache empty results so missing keys / blips recover quickly.
         $listings = [];
         if ($this->browse->configured()) {
-            $cacheKey = 'ebay:listings:'.$item->id.':v5:'.md5($suffix);
+            $cacheKey = 'ebay:listings:'.$item->id.':v6:'.md5($suffix);
             $cached = Cache::get($cacheKey);
 
             if (is_array($cached)) {
                 $listings = $cached;
             } else {
-                $found = $this->relevant($item, $this->browse->search(trim($query.' '.$suffix), 12));
+                $found = $this->fetch($item, trim($query.' '.$suffix));
                 // Bare query only when the selected refinement returns nothing.
-                $listings = $found !== [] ? $found : $this->relevant($item, $this->browse->search($query, 12));
+                $listings = $found !== [] ? $found : $this->fetch($item, $query);
                 Cache::put(
                     $cacheKey,
                     $listings,
@@ -105,6 +117,26 @@ class GetCardListings
             'selected' => $selected['label'],
             'configured' => $this->browse->configured(),
         ];
+    }
+
+    /**
+     * One Browse pull: a wide relevance-ordered window, narrowed to listings
+     * that really are this product, then presented cheapest-first — which is
+     * what a buyer wants to see, and is a display concern rather than something
+     * to ask eBay for.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function fetch(CatalogItem $item, string $query): array
+    {
+        $listings = $this->relevant(
+            $item,
+            $this->browse->search($query, self::FETCH_LIMIT, sort: null),
+        );
+
+        usort($listings, fn (array $a, array $b) => ($a['price_cents'] ?? 0) <=> ($b['price_cents'] ?? 0));
+
+        return array_slice($listings, 0, self::DISPLAY_LIMIT);
     }
 
     /**
