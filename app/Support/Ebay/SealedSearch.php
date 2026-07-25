@@ -168,10 +168,14 @@ final class SealedSearch
         return false;
     }
 
+    /** "Prerelease" as sellers actually write it — one word, hyphenated, or two. */
+    private const PRERELEASE = '/\bpre[\s-]?release\b/';
+
     /**
      * Whether a sealed listing's variant agrees with the product: Case ⇔ Case,
-     * Pokémon Center ⇔ PC, Plus ⇔ Plus, and the sealed type's keyword is present
-     * (so an ETB listing never matches a Booster Box product, etc.).
+     * Pokémon Center ⇔ PC, Plus ⇔ Plus, Prerelease ⇔ Prerelease, and the sealed
+     * type's keyword is present (so an ETB listing never matches a Booster Box
+     * product, etc.).
      */
     private static function variantMatches(CatalogItem $item, string $lower): bool
     {
@@ -180,6 +184,15 @@ final class SealedSearch
         $itemCase = str_contains($name, 'case');
         $listCase = (bool) preg_match('/\bcase\b/', $lower);
         if ($itemCase !== $listCase) {
+            return false;
+        }
+
+        // A prerelease box/kit is its own SKU — different contents, different
+        // price, often out before the set's regular product exists. It reads as
+        // a booster box to every other gate here, so it needs its own axis.
+        $itemPre = (bool) preg_match(self::PRERELEASE, $name);
+        $listPre = (bool) preg_match(self::PRERELEASE, $lower);
+        if ($itemPre !== $listPre) {
             return false;
         }
 

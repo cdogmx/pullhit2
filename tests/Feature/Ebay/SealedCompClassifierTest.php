@@ -105,3 +105,18 @@ test('a product mis-typed as booster_box still matches by its own name (Collecti
     // Still rejects a multi-box lot.
     expect($this->classifier->classify(cand('5 x First Partner Illustration Collection Series 2', 20000), $item, 0, $this->companies))->toBeNull();
 });
+
+test('a prerelease box and a regular box never match each other', function () {
+    $anchor = 8000;
+
+    // A prerelease box reads as a booster box to every other gate — same set
+    // words, same "booster box" type keyword — so it needs its own axis.
+    $regular = sealed('Disney Lorcana: Attack of the Vine! Booster Box', 'booster_box');
+    expect($this->classifier->classify(cand('Ravensburger Disney Lorcana TCG: Attack of the Vine Prerelease Booster Box 2026', 7699), $regular, $anchor, $this->companies))->toBeNull()
+        ->and($this->classifier->classify(cand('Disney Lorcana Attack of the Vine Booster Box Factory Sealed', 8500), $regular, $anchor, $this->companies))->not->toBeNull();
+
+    // And the reverse: the prerelease product rejects the regular box.
+    $pre = sealed('Disney Lorcana: Attack of the Vine! Prerelease Box', 'other');
+    expect($this->classifier->classify(cand('Disney Lorcana Attack of the Vine Booster Box Factory Sealed', 8500), $pre, $anchor, $this->companies))->toBeNull()
+        ->and($this->classifier->classify(cand('Disney Lorcana Attack of the Vine Pre-Release Box Sealed', 7699), $pre, $anchor, $this->companies))->not->toBeNull();
+});
