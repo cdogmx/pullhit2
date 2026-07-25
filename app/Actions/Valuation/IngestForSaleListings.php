@@ -2,9 +2,11 @@
 
 namespace App\Actions\Valuation;
 
+use App\Enums\ItemType;
 use App\Models\CatalogItem;
 use App\Support\Ebay\CardSearchTerms;
 use App\Support\Ebay\EbayBrowseClient;
+use App\Support\Ebay\SealedSearch;
 use App\Support\Valuation\CombinedValue;
 use App\Support\Valuation\ForSaleEngine;
 use App\Support\Valuation\TcgplayerLowPrice;
@@ -13,9 +15,10 @@ use Illuminate\Support\Carbon;
 /**
  * Refreshes a card's "for sale" valuation from CURRENT asking prices — eBay
  * active "buy it now" listings (Browse API, free) plus the lowest TCGplayer
- * listing (TCGCSV) for ungraded. Asks per headline state (ungraded NM + PSA 10)
- * run through ForSaleEngine to get the lowest realistic ask, which is blended
- * with the sold median into the combined figure. All three live on market_values.
+ * listing (TCGCSV) for ungraded. Asks per headline state — ungraded NM + PSA 10
+ * for a single, the one SEALED state for a sealed product — run through
+ * ForSaleEngine to get the lowest realistic ask, which is blended with the sold
+ * median into the combined figure. All three live on market_values.
  *
  * Asks are ephemeral, so each run replaces the card's listing_observations. Only
  * states that already have a (sold-based) market_values row are enriched — the
@@ -29,6 +32,15 @@ class IngestForSaleListings
         'psa-10' => ['suffix' => 'PSA 10', 'require' => '/\bpsa\s*10\b/i', 'tcgplayer' => false],
     ];
 
+    /**
+     * A sealed product's only state. It needs its own entry because the singles
+     * states above are keyed to card conditions a booster box never has — which
+     * is why, until this existed, no sealed product on the site had a for-sale
+     * or combined figure at all. Junk is rejected by product identity rather
+     * than a graded/raw regex.
+     */
+    private const SEALED_STATE = ['suffix' => 'Sealed', 'sealed' => true, 'tcgplayer' => true];
+
     public function __construct(
         protected EbayBrowseClient $browse,
         protected TcgplayerLowPrice $tcgplayer,
@@ -37,8 +49,10 @@ class IngestForSaleListings
 
     public function __invoke(CatalogItem $item): void
     {
+        $wanted = $this->statesFor($item);
+
         $states = $item->marketValues()
-            ->whereIn('state_key', array_keys(self::STATES))
+            ->whereIn('state_key', array_keys($wanted))
             ->get()
             ->keyBy('state_key');
 
@@ -55,7 +69,7 @@ class IngestForSaleListings
         $baseQuery = $this->baseQuery($item);
         $found = 0;
 
-        foreach (self::STATES as $stateKey => $rules) {
+        foreach ($wanted as $stateKey => $rules) {
             $mv = $states->get($stateKey);
             if ($mv === null) {
                 continue; // no sold-based row for this state — nothing to enrich
@@ -128,7 +142,12 @@ class IngestForSaleListings
             }
 
             // Keep eBay honest: raw states drop graded titles; PSA 10 keeps only
-            // titles that actually say PSA 10 (the query alone is fuzzy).
+            // titles that actually say PSA 10 (the query alone is fuzzy). Sealed
+            // has no graded axis — it's judged on product identity instead, the
+            // same gates the sold comps use (lots, empties, wrong variant).
+            if (($rules['sealed'] ?? false) && ! SealedSearch::matches($item, $title)) {
+                continue;
+            }
             if (isset($rules['exclude']) && preg_match($rules['exclude'], $title)) {
                 continue;
             }
@@ -176,8 +195,27 @@ class IngestForSaleListings
         return [$asks, $tcgLow];
     }
 
+    /**
+     * The priced states to look for asks on — a sealed product's single SEALED
+     * state, or a single's ungraded + PSA 10 pair.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    protected function statesFor(CatalogItem $item): array
+    {
+        return $item->item_type === ItemType::Sealed
+            ? ['SEALED' => self::SEALED_STATE]
+            : self::STATES;
+    }
+
     protected function baseQuery(CatalogItem $item): string
     {
+        // Sealed products sell under retail wording ("Pokemon - Black Bolt -
+        // Booster Box"), not the card shape of name + number + set.
+        if ($item->item_type === ItemType::Sealed) {
+            return SealedSearch::query($item);
+        }
+
         return trim(implode(' ', array_filter(array_merge([
             $item->name,
             $item->number,

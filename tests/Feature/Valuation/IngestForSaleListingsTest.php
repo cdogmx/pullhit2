@@ -5,6 +5,8 @@ use App\Actions\Valuation\MaybeRefreshForSale;
 use App\Models\CatalogItem;
 use App\Models\ListingObservation;
 use App\Models\MarketValue;
+use App\Models\ProductLine;
+use App\Models\Set;
 use App\Support\Ebay\EbayBrowseClient;
 use App\Support\Valuation\TcgplayerLowPrice;
 
@@ -182,4 +184,38 @@ test('asks in another language are not this card language', function () {
 
     expect($this->nm->fresh()->for_sale_n)->toBe(2)
         ->and(ListingObservation::where('catalog_item_id', $this->item->id)->count())->toBe(2);
+});
+
+test('a sealed product gets a for-sale value from its SEALED state', function () {
+    // Until SEALED was a priced state here, every booster box and ETB on the
+    // site had a null for_sale and a combined that was just the sold median.
+    $line = ProductLine::factory()->create(['slug' => 'lorcana', 'name' => 'Disney Lorcana']);
+    $set = Set::factory()->for($line)->create(['name' => 'Attack of the Vine!', 'language' => 'en']);
+    $box = CatalogItem::factory()->for($line)->for($set)->create([
+        'item_type' => 'sealed',
+        'name' => 'Booster Box',
+        'number' => null,
+        'attributes' => ['language' => 'en', 'sealed_type' => 'booster_box'],
+    ]);
+    $mv = MarketValue::factory()->for($box)->create([
+        'state_key' => 'SEALED', 'condition' => 'SEALED', 'grading_company_id' => null,
+        'median' => 14000, 'n_sales' => 12, 'for_sale' => null, 'combined' => null,
+    ]);
+
+    // Keyed on the retail wording — the singles query would never match.
+    fakeBrowse(['Disney Lorcana - Attack of the Vine! - Booster Box' => [
+        listing(13500, 'Disney Lorcana Attack of the Vine Booster Box Sealed'),
+        listing(13900, 'Disney Lorcana Attack of the Vine Booster Box Factory Sealed'),
+        listing(52000, 'Lot of 4 Disney Lorcana Attack of the Vine Booster Box'), // a lot
+        listing(2000, 'Disney Lorcana Attack of the Vine Booster Box EMPTY'),     // an empty
+    ]]);
+
+    app(IngestForSaleListings::class)($box);
+
+    $mv->refresh();
+
+    expect($mv->for_sale)->not->toBeNull()
+        ->and($mv->for_sale_n)->toBe(2)          // the lot and the empty are rejected
+        ->and($mv->combined)->not->toBeNull()
+        ->and(ListingObservation::where('catalog_item_id', $box->id)->count())->toBe(2);
 });

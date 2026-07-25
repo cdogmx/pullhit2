@@ -2,10 +2,12 @@
 
 namespace App\Actions\Catalog;
 
+use App\Enums\ItemType;
 use App\Models\CatalogItem;
 use App\Support\Affiliate\EbayAffiliate;
 use App\Support\Ebay\CardSearchTerms;
 use App\Support\Ebay\EbayBrowseClient;
+use App\Support\Ebay\SealedSearch;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -13,6 +15,10 @@ use Illuminate\Support\Facades\Cache;
  * listings come from the Browse API (cached, free); the "Shop on eBay" links are
  * always present (affiliate-tagged when configured), one per condition/grade so
  * the UI can default to Near Mint and offer the rest in a dropdown.
+ *
+ * Sealed products are a different market and take a different route through
+ * here: retail-wording search, "Sealed" refinements instead of the singles
+ * condition/grade ladder, and a product-identity filter on what comes back.
  */
 class GetCardListings
 {
@@ -32,6 +38,17 @@ class GetCardListings
         ['label' => 'CGC 9.5', 'group' => 'Graded', 'suffix' => 'CGC 9.5'],
     ];
 
+    /**
+     * Refinements for a sealed product. Grades and card conditions are
+     * meaningless here — appending "Near Mint" to a booster box search is what
+     * made the panel return near-mint SINGLES from the same set.
+     */
+    public const SEALED_OPTIONS = [
+        ['label' => 'Sealed', 'group' => 'Condition', 'suffix' => 'Sealed'],
+        ['label' => 'Factory Sealed', 'group' => 'Condition', 'suffix' => 'Factory Sealed'],
+        ['label' => 'Any', 'group' => 'Condition', 'suffix' => ''],
+    ];
+
     public function __construct(
         protected EbayBrowseClient $browse,
         protected EbayAffiliate $ebay,
@@ -47,30 +64,26 @@ class GetCardListings
      */
     public function __invoke(CatalogItem $item, ?string $optionLabel = null): array
     {
-        // The language keyword is part of the query (and of every shop link) — a
-        // Japanese card's asks come from Japanese listings, not English ones.
-        $query = trim(implode(' ', array_filter(array_merge([
-            $item->name,
-            $item->number,
-            $item->set?->name,
-        ], CardSearchTerms::qualifiers($item), [CardSearchTerms::languageKeyword($item)]))));
+        $sealed = $item->item_type === ItemType::Sealed;
+        $query = $sealed ? SealedSearch::query($item) : $this->singleQuery($item);
 
-        $selected = $this->resolveOption($optionLabel);
+        $optionSet = $sealed ? self::SEALED_OPTIONS : self::OPTIONS;
+        $selected = $this->resolveOption($optionLabel, $optionSet);
         $suffix = $selected['suffix'];
 
         // Browse API buy-it-now asks for the chosen condition/grade (affiliate-tagged).
         // Short-cache empty results so missing keys / blips recover quickly.
         $listings = [];
         if ($this->browse->configured()) {
-            $cacheKey = 'ebay:listings:'.$item->id.':v4:'.md5($suffix);
+            $cacheKey = 'ebay:listings:'.$item->id.':v5:'.md5($suffix);
             $cached = Cache::get($cacheKey);
 
             if (is_array($cached)) {
                 $listings = $cached;
             } else {
-                $found = $this->inLanguage($item, $this->browse->search(trim($query.' '.$suffix), 12));
+                $found = $this->relevant($item, $this->browse->search(trim($query.' '.$suffix), 12));
                 // Bare query only when the selected refinement returns nothing.
-                $listings = $found !== [] ? $found : $this->inLanguage($item, $this->browse->search($query, 12));
+                $listings = $found !== [] ? $found : $this->relevant($item, $this->browse->search($query, 12));
                 Cache::put(
                     $cacheKey,
                     $listings,
@@ -84,7 +97,7 @@ class GetCardListings
             'group' => $o['group'],
             'suffix' => $o['suffix'],
             'url' => $this->ebay->searchUrl(trim($query.' '.$o['suffix'])),
-        ], self::OPTIONS);
+        ], $optionSet);
 
         return [
             'listings' => $listings,
@@ -95,31 +108,58 @@ class GetCardListings
     }
 
     /**
-     * Drop listings whose title belongs to another language's printing — the
-     * keyword search alone still leaks them.
+     * The keyword string for a single: name + number + set, pinned to this
+     * printing's qualifiers and language — a Japanese card's asks come from
+     * Japanese listings, not English ones.
+     */
+    protected function singleQuery(CatalogItem $item): string
+    {
+        return trim(implode(' ', array_filter(array_merge([
+            $item->name,
+            $item->number,
+            $item->set?->name,
+        ], CardSearchTerms::qualifiers($item), [CardSearchTerms::languageKeyword($item)]))));
+    }
+
+    /**
+     * Drop listings that aren't this product. Keyword relevance alone is not an
+     * answer: it leaks other languages' printings for a single, and for a sealed
+     * product it happily returns a different set's box, a lot, or an empty one.
      *
      * @param  array<int, array<string, mixed>>  $listings
      * @return array<int, array<string, mixed>>
      */
-    protected function inLanguage(CatalogItem $item, array $listings): array
+    protected function relevant(CatalogItem $item, array $listings): array
     {
-        return array_values(array_filter(
-            $listings,
-            fn (array $l) => CardSearchTerms::matchesLanguage($item, (string) ($l['title'] ?? '')),
-        ));
+        $sealed = $item->item_type === ItemType::Sealed;
+
+        return array_values(array_filter($listings, function (array $l) use ($item, $sealed) {
+            $title = (string) ($l['title'] ?? '');
+
+            if (! CardSearchTerms::matchesLanguage($item, $title)) {
+                return false;
+            }
+
+            // requireSet: this page is about ONE product, so a sibling set's box
+            // is a plain wrong answer here even though it's a fine sold comp.
+            return ! $sealed || SealedSearch::matches($item, $title, requireSet: true);
+        }));
     }
 
-    /** @return array{label: string, group: string, suffix: string} */
-    protected function resolveOption(?string $label): array
+    /**
+     * @param  array<int, array{label: string, group: string, suffix: string}>  $options
+     * @return array{label: string, group: string, suffix: string}
+     */
+    protected function resolveOption(?string $label, array $options): array
     {
         if ($label !== null && $label !== '') {
-            foreach (self::OPTIONS as $o) {
+            foreach ($options as $o) {
                 if (strcasecmp($o['label'], $label) === 0) {
                     return $o;
                 }
             }
         }
 
-        return self::OPTIONS[0]; // Near Mint
+        return $options[0]; // Near Mint for singles, Sealed for sealed products
     }
 }

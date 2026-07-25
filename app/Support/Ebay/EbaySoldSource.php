@@ -75,14 +75,14 @@ class EbaySoldSource
      * The eBay keyword string for a catalog item. Singles use
      * "{Game} - {Name} - {Variant} - {Number}" (e.g. "Pokemon - Snivy - Reverse
      * Holo - 1"); sealed products use the natural retail wording instead (see
-     * {@see sealedSearchQuery()}). The set is left to the Language URL aspect and
-     * the collector number to disambiguate — real listings rarely carry the set
-     * CODE, which only added noise.
+     * {@see SealedSearch::query()}). The set is left to the Language URL aspect
+     * and the collector number to disambiguate — real listings rarely carry the
+     * set CODE, which only added noise.
      */
     public function searchQuery(CatalogItem $item): string
     {
         if ($item->item_type === ItemType::Sealed) {
-            return $this->sealedSearchQuery($item);
+            return SealedSearch::query($item);
         }
 
         $parts = [];
@@ -113,39 +113,5 @@ class EbaySoldSource
     private function ebayLanguage(CatalogItem $item): ?string
     {
         return CardSearchTerms::language($item);
-    }
-
-    /**
-     * Sealed products sell under natural retail wording, so we search that way:
-     * "{Game} - {Set} {Product}", e.g. "Pokemon - Black Bolt Booster Bundle".
-     *  - The game name is prefixed (accent-stripped, so "Pokémon" → "Pokemon")
-     *    to disambiguate generic product names across lines.
-     *  - Both the game and set name are folded in ONLY when the product name
-     *    doesn't already carry them — many sealed SKUs are named "Black Bolt
-     *    Booster Bundle" (or "Disney Lorcana: …") already, and repeating just
-     *    adds noise.
-     *  - The set CODE is dropped: no real sealed listing title contains "(BLK)".
-     */
-    private function sealedSearchQuery(CatalogItem $item): string
-    {
-        $name = $item->name;
-        $haystack = mb_strtolower($name);
-        $parts = [];
-
-        if ($line = $item->productLine) {
-            $game = trim(Str::ascii($line->name));
-            if ($game !== '' && ! str_contains($haystack, mb_strtolower($game))) {
-                $parts[] = $game;
-            }
-        }
-
-        $set = $item->set;
-        if ($set && ! str_contains($haystack, mb_strtolower($set->name))) {
-            $parts[] = $set->name;
-        }
-
-        $parts[] = $name;
-
-        return implode(' - ', array_values(array_filter($parts, fn ($p) => $p !== '')));
     }
 }
