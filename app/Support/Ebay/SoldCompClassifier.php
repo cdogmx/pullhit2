@@ -119,12 +119,23 @@ class SoldCompClassifier
      */
     public function structuralRejectReason(SoldCandidate $candidate, CatalogItem $item): ?string
     {
-        $lower = mb_strtolower($candidate->title);
+        return $this->titleRejectReason($item, $candidate->title);
+    }
+
+    /**
+     * The same gates, judged from a title alone — so the card page's live
+     * listings can hold active asks to the standard sold comps are held to.
+     * Without this the panel filtered on language only, and a "YOU PICK" bulk
+     * lot or a 3-card starter set was shown as an ask for one specific card.
+     */
+    public function titleRejectReason(CatalogItem $item, string $title): ?string
+    {
+        $lower = mb_strtolower($title);
 
         // Sealed products use their own variant-aware gates, shared with the
         // card-page listings and the for-sale ask ingest.
         if ($item->item_type === ItemType::Sealed) {
-            return SealedSearch::rejectReason($item, $candidate->title);
+            return SealedSearch::rejectReason($item, $title);
         }
 
         // Blocklist — mystery boxes, proxies, codes, repacks, etc.

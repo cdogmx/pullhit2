@@ -62,6 +62,9 @@ class CatalogItemResource extends JsonResource
                 'slug' => $this->set->slug,
                 'name' => $this->set->name,
                 'code' => $this->set->code,
+                // The era the set belongs to — the breadcrumb's missing rung
+                // between the brand and the set, matching browse's drill-down.
+                'series' => $this->set->series,
             ]),
             'product_line' => $this->whenLoaded('productLine', fn () => [
                 'slug' => $this->productLine->slug,

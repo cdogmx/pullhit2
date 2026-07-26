@@ -136,7 +136,7 @@ test('listings come back cheapest-first regardless of the order eBay returned', 
 test('a single still gets the condition ladder and its own query', function () {
     fakeSealedBrowse(['Elrond 145/204 Near Mint']);
 
-    $single = CatalogItem::factory()->create(['name' => 'Elrond', 'number' => '145']);
+    $single = CatalogItem::factory()->create(['name' => 'Elrond', 'number' => '145', 'attributes' => ['language' => 'en', 'variant' => 'normal']]);
 
     $this->getJson("/api/v1/catalog/{$single->id}/listings")
         ->assertOk()

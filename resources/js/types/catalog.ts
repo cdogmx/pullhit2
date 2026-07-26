@@ -60,7 +60,13 @@ export type CatalogItem = {
     variants?: CatalogItem[];
     market_value?: MarketValue | null;
     market_values?: MarketValue[];
-    set?: { slug: string; name: string; code: string | null } | null;
+    set?: {
+        slug: string;
+        name: string;
+        code: string | null;
+        /** The set's era, e.g. "Scarlet & Violet" — the breadcrumb's middle rung. */
+        series?: string | null;
+    } | null;
     product_line?: { slug: string; name: string } | null;
     vertical?: { slug: string; name: string } | null;
 };

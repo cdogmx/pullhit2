@@ -37,11 +37,7 @@ import {
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { WishlistButton } from '@/components/wishlist/wishlist-button';
 import {
     cardHref,
@@ -287,9 +283,9 @@ export default function Show({
     const defaultState =
         values.find((v) => v.state_key === 'NM' || v.state_key === 'SEALED') ??
         values[0];
-    const [selectedStateKey, setSelectedStateKey] = useState<string | undefined>(
-        defaultState?.state_key,
-    );
+    const [selectedStateKey, setSelectedStateKey] = useState<
+        string | undefined
+    >(defaultState?.state_key);
     const headline =
         values.find((v) => v.state_key === selectedStateKey) ?? defaultState;
     // "Last sold" tracks the selected state too (null when that state has no sale).
@@ -330,9 +326,7 @@ export default function Show({
     const [gradeOpen, setGradeOpen] = useState(false);
     const canGrade =
         !isSealed &&
-        values.some(
-            (v) => v.state_key === 'psa-10' && v.median != null,
-        ) &&
+        values.some((v) => v.state_key === 'psa-10' && v.median != null) &&
         values.some((v) => v.state_key === 'NM' && v.median != null);
 
     // Buy links + live listings (lazy — drives the prominent "Shop on eBay" CTA).
@@ -451,9 +445,15 @@ export default function Show({
         ? `?return=${encodeURIComponent(returnSearch)}`
         : '';
 
-    // Breadcrumb: Browse → brand → set → card → variant (whatever's available).
+    // Breadcrumb: Browse → brand → series → set → card → variant (whatever's
+    // available). The series rung mirrors browse's own drill-down, so walking
+    // back up from a card lands on the same pages you'd have come down through.
     const line = item.product_line;
     const set = item.set;
+    const seriesHref =
+        line && set?.series
+            ? `/browse?product_line=${encodeURIComponent(line.slug)}&series=${encodeURIComponent(set.series)}`
+            : null;
     const printingLabel = [
         attributes.edition ? humanize(String(attributes.edition)) : null,
         attributes.variant && attributes.variant !== 'normal'
@@ -468,6 +468,9 @@ export default function Show({
         // so Inertia restores that page's loaded list + scroll position.
         { label: 'Browse', href: backHref, back: !!returnSearch },
         ...(line ? [{ label: line.name, href: `/browse/${line.slug}` }] : []),
+        ...(seriesHref && set?.series
+            ? [{ label: set.series, href: seriesHref }]
+            : []),
         ...(line && set
             ? [{ label: set.name, href: `/browse/${line.slug}/${set.slug}` }]
             : []),
@@ -525,7 +528,8 @@ export default function Show({
                                                         ? (e) => {
                                                               if (
                                                                   window.history
-                                                                      .length > 1
+                                                                      .length >
+                                                                  1
                                                               ) {
                                                                   e.preventDefault();
                                                                   window.history.back();
@@ -719,7 +723,8 @@ export default function Show({
                                         }
                                     >
                                         <BarChart3 className="size-4" />
-                                        {headline.is_estimated || !headline.n_sales
+                                        {headline.is_estimated ||
+                                        !headline.n_sales
                                             ? 'View breakdown'
                                             : `See ${headline.n_sales} sold comps`}
                                     </Button>
@@ -738,15 +743,17 @@ export default function Show({
 
                                 <div className="mt-3 flex items-center justify-between gap-2">
                                     <p className="text-[11px] text-muted-foreground">
-                                        As an eBay Partner, we may be compensated
-                                        for qualifying purchases.
+                                        As an eBay Partner, we may be
+                                        compensated for qualifying purchases.
                                     </p>
                                     {isAdmin && (
                                         <div className="flex items-center gap-1">
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => setCompPreviewOpen(true)}
+                                                onClick={() =>
+                                                    setCompPreviewOpen(true)
+                                                }
                                             >
                                                 <Search className="size-4" />
                                                 Preview comps
@@ -760,7 +767,8 @@ export default function Show({
                                                 <RefreshCw
                                                     className={cn(
                                                         'size-4',
-                                                        updating && 'animate-spin',
+                                                        updating &&
+                                                            'animate-spin',
                                                     )}
                                                 />
                                                 Refresh
@@ -780,7 +788,9 @@ export default function Show({
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => setCompPreviewOpen(true)}
+                                                onClick={() =>
+                                                    setCompPreviewOpen(true)
+                                                }
                                             >
                                                 <Search className="size-4" />
                                                 Preview comps
@@ -794,7 +804,8 @@ export default function Show({
                                                 <RefreshCw
                                                     className={cn(
                                                         'size-4',
-                                                        updating && 'animate-spin',
+                                                        updating &&
+                                                            'animate-spin',
                                                     )}
                                                 />
                                                 Get values
@@ -845,7 +856,10 @@ export default function Show({
                                     href="/collection"
                                     className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-medium transition-colors hover:bg-muted"
                                     title={ownership
-                                        .map((o) => `${o.state_label} ×${o.quantity}`)
+                                        .map(
+                                            (o) =>
+                                                `${o.state_label} ×${o.quantity}`,
+                                        )
                                         .join(', ')}
                                 >
                                     Unrealized
@@ -943,7 +957,8 @@ export default function Show({
                                                     </Badge>
                                                 </span>
                                                 <span className="flex items-center gap-2 text-muted-foreground">
-                                                    {offer.price_cents != null && (
+                                                    {offer.price_cents !=
+                                                        null && (
                                                         <span className="font-semibold text-foreground">
                                                             {formatMoney(
                                                                 offer.price_cents,
@@ -955,8 +970,8 @@ export default function Show({
                                             </a>
                                         ))}
                                         <p className="text-[11px] text-muted-foreground">
-                                            Live prices tracked across retailers —
-                                            see all on the{' '}
+                                            Live prices tracked across retailers
+                                            — see all on the{' '}
                                             <Link
                                                 href="/deals"
                                                 className="underline underline-offset-2 hover:text-foreground"
@@ -968,8 +983,8 @@ export default function Show({
                                     </div>
                                 ) : isAdmin ? (
                                     <p className="mt-3 text-sm text-muted-foreground">
-                                        No retailer offers tracked yet — add store
-                                        links for this card in the{' '}
+                                        No retailer offers tracked yet — add
+                                        store links for this card in the{' '}
                                         <Link
                                             href="/admin/stock-alerts"
                                             className="underline underline-offset-2 hover:text-foreground"
@@ -1087,7 +1102,9 @@ export default function Show({
                             {printings.map((printing) => {
                                 const isCurrent = printing.id === item.id;
                                 const variant = printing.attributes?.variant
-                                    ? humanize(String(printing.attributes.variant))
+                                    ? humanize(
+                                          String(printing.attributes.variant),
+                                      )
                                     : (printing.variant ?? '—');
 
                                 return (
@@ -1123,8 +1140,10 @@ export default function Show({
                                         {printing.market_value && (
                                             <span className="text-sm font-medium">
                                                 {formatMoney(
-                                                    printing.market_value.median,
-                                                    printing.market_value.currency,
+                                                    printing.market_value
+                                                        .median,
+                                                    printing.market_value
+                                                        .currency,
                                                 )}
                                             </span>
                                         )}
@@ -1180,7 +1199,10 @@ export default function Show({
                                         {card.image_url ? (
                                             <img
                                                 src={card.image_url}
-                                                alt={card.display_name ?? card.name}
+                                                alt={
+                                                    card.display_name ??
+                                                    card.name
+                                                }
                                                 loading="lazy"
                                                 className="size-full object-contain transition-transform group-hover:scale-105"
                                             />
@@ -1208,7 +1230,7 @@ export default function Show({
 
             {item.image_url && (
                 <Dialog open={zoomed} onOpenChange={setZoomed}>
-                    <DialogContent className="border-0 bg-transparent p-0 shadow-none sm:max-w-2xl [&>button]:bg-background/80 [&>button]:rounded-full [&>button]:p-1.5">
+                    <DialogContent className="border-0 bg-transparent p-0 shadow-none sm:max-w-2xl [&>button]:rounded-full [&>button]:bg-background/80 [&>button]:p-1.5">
                         <DialogTitle className="sr-only">
                             {item.display_name ?? item.name}
                         </DialogTitle>
