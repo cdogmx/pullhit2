@@ -29,20 +29,23 @@ class ResweepMissesCommand extends Command
         $minScore = (float) config('valuation.ebay.sweep.min_score', 0.75);
         $companyIds = GradingCompany::pluck('id', 'slug')->all();
 
-        // Each configured search declares its language; map label => language so a
-        // re-resolve filters to the right catalog language (avoids cross-language ties).
-        $langByLabel = collect(config('valuation.ebay.sweep.searches', []))
-            ->keyBy('label')->map(fn ($s) => $s['language'] ?? null);
+        // Each configured search declares its language and game; map label => both
+        // so a re-resolve filters to the right catalog language AND product line
+        // (avoids cross-language ties and cross-game number collisions).
+        $searches = collect(config('valuation.ebay.sweep.searches', []))->keyBy('label');
+        $langByLabel = $searches->map(fn ($s) => $s['language'] ?? null);
+        $lineByLabel = $searches->map(fn ($s) => $s['line'] ?? null);
 
         $counts = ['applied' => 0, 'reclassified' => 0, 'rematched' => 0, 'unchanged' => 0, 'skipped' => 0];
 
         EbaySweepMiss::query()
             ->when($this->option('label'), fn (Builder $q, $l) => $q->where('search_label', $l))
             ->when($this->option('reason'), fn (Builder $q, $r) => $q->where('reason', $r))
-            ->chunkById(200, function ($misses) use ($sweep, $langByLabel, $minScore, $companyIds, $apply, &$counts) {
+            ->chunkById(200, function ($misses) use ($sweep, $langByLabel, $lineByLabel, $minScore, $companyIds, $apply, &$counts) {
                 foreach ($misses as $miss) {
                     $language = $langByLabel[$miss->search_label] ?? null;
-                    $outcome = $sweep->reprocessMiss($miss, $language, $minScore, $companyIds, $apply);
+                    $line = $lineByLabel[$miss->search_label] ?? null;
+                    $outcome = $sweep->reprocessMiss($miss, $language, $minScore, $companyIds, $apply, $line);
                     $counts[$outcome] = ($counts[$outcome] ?? 0) + 1;
                 }
             });

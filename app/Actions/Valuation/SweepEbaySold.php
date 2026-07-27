@@ -40,6 +40,7 @@ class SweepEbaySold
     {
         $label = $search['label'];
         $language = $search['language'] ?? null;
+        $line = $search['line'] ?? null;
         $minScore = (float) config('valuation.ebay.sweep.min_score', 0.75);
 
         $candidates = EbayHtmlParser::parse(
@@ -81,7 +82,7 @@ class SweepEbaySold
                 continue;
             }
 
-            $resolution = $this->resolver->resolve($candidate->title, $language, $minScore);
+            $resolution = $this->resolver->resolve($candidate->title, $language, $minScore, $line);
             $item = $resolution['item'];
 
             if (! $item) {
@@ -95,7 +96,7 @@ class SweepEbaySold
 
             // Final guardrail: the same classifier the per-card pull trusts —
             // confirms it's a single-card sale of THIS printing and reads grade.
-            $comp = $this->classifier->classify($candidate, $item, $this->anchorCents($item), $companyIds);
+            [$item, $comp] = $this->classifyVariant($candidate, $resolution, $companyIds);
 
             if (! $comp) {
                 $missed++;
@@ -183,6 +184,36 @@ class SweepEbaySold
         );
     }
 
+    /**
+     * Classify a candidate against the resolved card, falling back through that
+     * card's other printings. The resolver ranks on name/number/set, which can't
+     * separate a reverse holo from a regular one — so its top pick is often the
+     * wrong printing and the classifier's printing gate then kills the sale
+     * outright. Trying the siblings turns that rejection into the right comp;
+     * "wrong printing / variant" was 70% of all classifier rejections.
+     *
+     * @param  array{item: ?CatalogItem, variants: array<int, CatalogItem>}  $resolution
+     * @param  array<string, int>  $companyIds
+     * @return array{0: CatalogItem, 1: ?SoldComp}
+     */
+    protected function classifyVariant(SoldCandidate $candidate, array $resolution, array $companyIds): array
+    {
+        $best = $resolution['item'];
+        $variants = $resolution['variants'] ?: [$best];
+
+        foreach ($variants as $variant) {
+            $comp = $this->classifier->classify($candidate, $variant, $this->anchorCents($variant), $companyIds);
+
+            if ($comp) {
+                return [$variant, $comp];
+            }
+        }
+
+        // Nothing fit — report against the resolver's pick, so the logged miss
+        // still points at the most likely card for review.
+        return [$best, null];
+    }
+
     protected function anchorCents(CatalogItem $item): int
     {
         return (int) ($item->marketValues()
@@ -201,8 +232,14 @@ class SweepEbaySold
      * @param  array<string, int>  $companyIds  grading company slug => id
      * @return string applied | reclassified | rematched | unchanged | skipped
      */
-    public function reprocessMiss(EbaySweepMiss $miss, ?string $language, float $minScore, array $companyIds, bool $apply = true): string
-    {
+    public function reprocessMiss(
+        EbaySweepMiss $miss,
+        ?string $language,
+        float $minScore,
+        array $companyIds,
+        bool $apply = true,
+        ?string $productLine = null,
+    ): string {
         if ($miss->source_listing_id === null || (int) $miss->price <= 0) {
             return 'skipped';
         }
@@ -225,11 +262,11 @@ class SweepEbaySold
             return 'applied';
         }
 
-        $resolution = $this->resolver->resolve($miss->title, $language, $minScore);
+        $resolution = $this->resolver->resolve($miss->title, $language, $minScore, $productLine);
         $item = $resolution['item'];
 
         if ($item) {
-            $comp = $this->classifier->classify($candidate, $item, $this->anchorCents($item), $companyIds);
+            [$item, $comp] = $this->classifyVariant($candidate, $resolution, $companyIds);
             if ($comp) {
                 if ($apply) {
                     $this->store($item, $comp, $miss->search_label);

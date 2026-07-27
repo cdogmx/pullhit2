@@ -210,18 +210,21 @@ return [
                 [
                     'label' => 'pokemon-psa10',
                     'language' => 'en',
+                    'line' => 'pokemon',
                     'interval_minutes' => 20,
                     'url' => 'https://www.ebay.com/sch/i.html?_nkw=pokemon+psa+10&_sacat=0&LH_Sold=1&LH_Complete=1&Language=English&_dcat=183454&_ipg=240',
                 ],
                 [
                     'label' => 'onepiece-psa10',
                     'language' => 'en',
+                    'line' => 'one-piece',
                     'interval_minutes' => 60,
                     'url' => 'https://www.ebay.com/sch/i.html?_nkw=one+piece+card+psa+10&_sacat=0&LH_Sold=1&LH_Complete=1&Language=English&_dcat=183454&_ipg=240',
                 ],
                 [
                     'label' => 'lorcana-psa10',
                     'language' => 'en',
+                    'line' => 'lorcana',
                     'interval_minutes' => 120,
                     'url' => 'https://www.ebay.com/sch/i.html?_nkw=disney+lorcana+psa+10&_sacat=0&LH_Sold=1&LH_Complete=1&Language=English&_dcat=183454&_ipg=240',
                 ],

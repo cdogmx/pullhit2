@@ -88,6 +88,36 @@ class SoldCompClassifier
         return ['verdict' => 'ingest', 'reason' => null, 'state' => $state];
     }
 
+    /**
+     * The blocklisted term this title trips on, or null. Two rules keep genuine
+     * cards out of the junk bucket:
+     *
+     *  1) Whole words only. A bare str_contains rejected "BREAKthrough" on
+     *     "break" and "CheSPIN" on "spin" — 69 of a 2,000-miss sample.
+     *  2) A term that is part of THIS card's own identity isn't a junk signal:
+     *     the card "Mystery Garden", the set "I Choose You", a "Tech Sticker"
+     *     printing. Those are the product, not a bulk-lot tell.
+     */
+    private function blocklistHit(string $lower, CatalogItem $item): ?string
+    {
+        $identity = mb_strtolower($item->name.' '.($item->set?->name ?? ''));
+
+        foreach ((array) config('valuation.ebay.blocklist', []) as $bad) {
+            $term = trim((string) $bad);
+            if ($term === '') {
+                continue;
+            }
+
+            $pattern = '/\b'.preg_quote($term, '/').'\b/u';
+
+            if (preg_match($pattern, $lower) && ! preg_match($pattern, $identity)) {
+                return $bad;
+            }
+        }
+
+        return null;
+    }
+
     /** Price within [min, max] × anchor — true when there's no anchor to judge. */
     private function bandOk(int $priceCents, int $anchorCents): bool
     {
@@ -139,10 +169,8 @@ class SoldCompClassifier
         }
 
         // Blocklist — mystery boxes, proxies, codes, repacks, etc.
-        foreach ((array) config('valuation.ebay.blocklist', []) as $bad) {
-            if (str_contains($lower, $bad)) {
-                return "blocklisted term “{$bad}”";
-            }
+        if ($bad = $this->blocklistHit($lower, $item)) {
+            return "blocklisted term “{$bad}”";
         }
 
         // Multi-quantity / lots. Note "sets" (plural) only — singular "Set" is
