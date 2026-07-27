@@ -38,17 +38,47 @@ class ResweepMissesCommand extends Command
 
         $counts = ['applied' => 0, 'reclassified' => 0, 'rematched' => 0, 'unchanged' => 0, 'skipped' => 0];
 
-        EbaySweepMiss::query()
+        // Two batch wins over a corpus this size: the override table is a few
+        // hundred rows against tens of thousands of misses, so load it once
+        // instead of per row; and thousands of recovered sales land on far fewer
+        // cards, so derive each card's value once at the end.
+        $sweep->primeOverrides();
+        $sweep->deferRecomputes();
+
+        $query = EbaySweepMiss::query()
             ->when($this->option('label'), fn (Builder $q, $l) => $q->where('search_label', $l))
-            ->when($this->option('reason'), fn (Builder $q, $r) => $q->where('reason', $r))
-            ->chunkById(200, function ($misses) use ($sweep, $langByLabel, $lineByLabel, $minScore, $companyIds, $apply, &$counts) {
-                foreach ($misses as $miss) {
-                    $language = $langByLabel[$miss->search_label] ?? null;
-                    $line = $lineByLabel[$miss->search_label] ?? null;
-                    $outcome = $sweep->reprocessMiss($miss, $language, $minScore, $companyIds, $apply, $line);
-                    $counts[$outcome] = ($counts[$outcome] ?? 0) + 1;
-                }
-            });
+            ->when($this->option('reason'), fn (Builder $q, $r) => $q->where('reason', $r));
+
+        $total = (clone $query)->count();
+        $this->info("Re-evaluating {$total} miss(es)".($apply ? '' : ' (dry run)').'…');
+
+        $bar = $this->output->createProgressBar($total);
+        $bar->start();
+
+        $query->chunkById(200, function ($misses) use ($sweep, $langByLabel, $lineByLabel, $minScore, $companyIds, $apply, &$counts, $bar) {
+            foreach ($misses as $miss) {
+                $language = $langByLabel[$miss->search_label] ?? null;
+                $line = $lineByLabel[$miss->search_label] ?? null;
+                $outcome = $sweep->reprocessMiss($miss, $language, $minScore, $companyIds, $apply, $line);
+                $counts[$outcome] = ($counts[$outcome] ?? 0) + 1;
+                $bar->advance();
+            }
+        });
+
+        $bar->finish();
+        $this->newLine(2);
+
+        $cards = $sweep->pendingRecomputes();
+        $recomputed = 0;
+
+        if ($apply && $cards > 0) {
+            $this->info("Recomputing {$cards} affected card(s)…");
+            $valueBar = $this->output->createProgressBar($cards);
+            $valueBar->start();
+            $recomputed = $sweep->flushRecomputes(fn () => $valueBar->advance());
+            $valueBar->finish();
+            $this->newLine(2);
+        }
 
         $this->table(
             ['outcome', 'count'],
@@ -57,8 +87,8 @@ class ResweepMissesCommand extends Command
 
         $verb = $apply ? 'applied' : 'would apply';
         $this->info("{$verb} {$counts['applied']} sale(s); refreshed ".
-            ($counts['reclassified'] + $counts['rematched']).' miss(es).'.
-            ($apply ? '' : ' (dry run — nothing written)'));
+            ($counts['reclassified'] + $counts['rematched']).' miss(es)'.
+            ($apply ? "; recomputed {$recomputed} card(s)." : '. (dry run — nothing written)'));
 
         return self::SUCCESS;
     }

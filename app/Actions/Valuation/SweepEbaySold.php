@@ -32,6 +32,17 @@ class SweepEbaySold
         protected RecomputeCatalogItem $recompute,
     ) {}
 
+    /** Card ids awaiting a value recompute while deferral is on. */
+    protected array $deferred = [];
+
+    protected bool $deferRecompute = false;
+
+    /** @var ?array<string, EbaySweepOverride> preloaded overrides, or null to query per row */
+    protected ?array $overrides = null;
+
+    /** @var array<int, int> card id => anchor cents, only while deferring */
+    protected array $anchorCache = [];
+
     /**
      * @param  array{label:string, url:string, language?:string, interval_minutes?:int}  $search
      * @return array{label:string, fetched:int, matched:int, stored:int, missed:int, recomputed:int}
@@ -185,6 +196,86 @@ class SweepEbaySold
     }
 
     /**
+     * Batch mode for backlog replays (see ResweepMissesCommand).
+     *
+     * Recomputing per applied miss is the wrong unit of work when thousands of
+     * sales land on the same few thousand cards — the value only needs deriving
+     * once all of them are stored. Deferring collects the ids instead; the
+     * caller flushes at the end. The only cost is that a later miss for the same
+     * card judges its price band against a slightly stale anchor, which is true
+     * of a live sweep anyway.
+     */
+    public function deferRecomputes(bool $defer = true): void
+    {
+        $this->deferRecompute = $defer;
+    }
+
+    /**
+     * Recompute every card touched since deferral began, once each.
+     *
+     * @param  ?callable(int, int): void  $progress  called with (done, total)
+     * @return int cards recomputed
+     */
+    public function flushRecomputes(?callable $progress = null): int
+    {
+        $ids = array_keys($this->deferred);
+        $this->deferred = [];
+        $this->anchorCache = []; // values are about to change; drop the memo
+        $done = 0;
+        $total = count($ids);
+
+        foreach (array_chunk($ids, 200) as $chunk) {
+            foreach (CatalogItem::whereIn('id', $chunk)->get() as $item) {
+                ($this->recompute)($item);
+                $done++;
+                $progress && $progress($done, $total);
+            }
+        }
+
+        return $done;
+    }
+
+    /** Cardinality of the pending recompute set (cards, not sales). */
+    public function pendingRecomputes(): int
+    {
+        return count($this->deferred);
+    }
+
+    /**
+     * Load every admin override up front. A replay looks one up per miss, and
+     * the table is tiny (hundreds) against a corpus of tens of thousands — so
+     * one query replaces one per row.
+     */
+    public function primeOverrides(): void
+    {
+        $this->overrides = EbaySweepOverride::all()->keyBy('source_listing_id')->all();
+    }
+
+    protected function overrideFor(?string $listingId): ?EbaySweepOverride
+    {
+        if ($listingId === null) {
+            return null;
+        }
+
+        if ($this->overrides !== null) {
+            return $this->overrides[$listingId] ?? null;
+        }
+
+        return EbaySweepOverride::where('source_listing_id', $listingId)->first();
+    }
+
+    protected function recomputeOrDefer(CatalogItem $item): void
+    {
+        if ($this->deferRecompute) {
+            $this->deferred[$item->id] = true;
+
+            return;
+        }
+
+        ($this->recompute)($item);
+    }
+
+    /**
      * Classify a candidate against the resolved card, falling back through that
      * card's other printings. The resolver ranks on name/number/set, which can't
      * separate a reverse holo from a regular one — so its top pick is often the
@@ -216,10 +307,24 @@ class SweepEbaySold
 
     protected function anchorCents(CatalogItem $item): int
     {
-        return (int) ($item->marketValues()
+        // Memoized while recomputes are deferred. In that mode values aren't
+        // being rewritten mid-run, so a card's anchor is fixed for the duration
+        // — and a backlog replay asks the same few thousand cards for it over
+        // and over, once per printing tried.
+        if ($this->deferRecompute && isset($this->anchorCache[$item->id])) {
+            return $this->anchorCache[$item->id];
+        }
+
+        $anchor = (int) ($item->marketValues()
             ->whereNull('grading_company_id')
             ->orderByRaw("CASE WHEN state_key IN ('NM', 'SEALED') THEN 0 ELSE 1 END")
             ->value('median') ?? 0);
+
+        if ($this->deferRecompute) {
+            $this->anchorCache[$item->id] = $anchor;
+        }
+
+        return $anchor;
     }
 
     /**
@@ -247,7 +352,7 @@ class SweepEbaySold
         $candidate = $this->missCandidate($miss);
 
         // A sticky admin decision still wins.
-        $override = EbaySweepOverride::where('source_listing_id', $miss->source_listing_id)->first();
+        $override = $this->overrideFor($miss->source_listing_id);
         if ($override?->action === EbaySweepOverride::REJECT) {
             return 'skipped';
         }
@@ -255,7 +360,7 @@ class SweepEbaySold
         if ($forced) {
             if ($apply) {
                 $this->store($forced, $this->classifier->pricedState($candidate, $companyIds), $miss->search_label);
-                ($this->recompute)($forced);
+                $this->recomputeOrDefer($forced);
                 $miss->delete();
             }
 
@@ -270,7 +375,7 @@ class SweepEbaySold
             if ($comp) {
                 if ($apply) {
                     $this->store($item, $comp, $miss->search_label);
-                    ($this->recompute)($item);
+                    $this->recomputeOrDefer($item);
                     $miss->delete();
                 }
 
