@@ -198,3 +198,31 @@ test('a young market with under two 7-day windows has a null 7d trend', function
 
     expect(engine()->value($obs)->trend7d)->toBeNull();
 });
+
+test('a runaway trend is clamped to what the column can store', function () {
+    // A near-worthless prior window against a pricey recent one yields a
+    // percentage in the tens of thousands. market_values.trend_* is
+    // decimal(6,2), so persisting that raw threw SQLSTATE[22003] and killed a
+    // whole backlog replay mid-run. It must saturate, not overflow.
+    $result = engine()->value([
+        obs(88, 'tcgplayer', 40, 1),
+        obs(92, 'tcgplayer', 45, 2),
+        obs(25608, 'tcgplayer', 3, 3),
+        obs(25100, 'tcgplayer', 5, 4),
+    ]);
+
+    expect($result->trend30d)->not->toBeNull()
+        ->and($result->trend30d)->toBeLessThanOrEqual(9999.99)
+        ->and($result->trend30d)->toBeGreaterThanOrEqual(-9999.99);
+});
+
+test('an ordinary trend is left alone by the clamp', function () {
+    $result = engine()->value([
+        obs(1000, 'tcgplayer', 40, 5),
+        obs(1000, 'tcgplayer', 45, 6),
+        obs(1500, 'tcgplayer', 3, 7),
+        obs(1500, 'tcgplayer', 5, 8),
+    ]);
+
+    expect($result->trend30d)->toEqual(50.0);
+});

@@ -14,6 +14,9 @@ use Carbon\CarbonInterface;
  */
 class ValuationEngine
 {
+    /** Largest percentage market_values.trend_* — decimal(6,2) — can hold. */
+    private const TREND_LIMIT = 9999.99;
+
     /** @var array<string, mixed> */
     protected array $config;
 
@@ -208,8 +211,18 @@ class ValuationEngine
 
         $priorMedian = Stats::median($prior);
 
-        return $priorMedian > 0
-            ? round((Stats::median($recent) / $priorMedian - 1) * 100, 2)
-            : null;
+        if ($priorMedian <= 0) {
+            return null;
+        }
+
+        $pct = round((Stats::median($recent) / $priorMedian - 1) * 100, 2);
+
+        // market_values.trend_* is decimal(6,2), so anything past ±9999.99 is
+        // unstorable and throws on write. A change that large is a thin-prior
+        // artifact anyway — a single cheap comp in the prior window against a
+        // pricier recent one — and every consumer already caps far below this
+        // (movers at +300/-60, the surge flag at surge_max_pct). Clamp rather
+        // than fail: the row is still worth writing, the trend just saturates.
+        return max(-self::TREND_LIMIT, min(self::TREND_LIMIT, $pct));
     }
 }
