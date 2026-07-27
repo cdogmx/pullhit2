@@ -18,14 +18,14 @@ use App\Models\Set;
 use App\Support\Catalog\StampMatcher;
 use App\Support\Ebay\EbayBlockedException;
 use App\Support\Ebay\EbaySoldSource;
+use App\Support\Ebay\OxylabsBudgetException;
+use App\Support\Ebay\OxylabsClient;
 use App\Support\Ebay\SoldCompClassifier;
 use App\Support\Verticals\Definitions\TcgVertical;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -157,26 +157,30 @@ class CardController extends Controller
      * inline so the result is immediate (no queue worker needed); still honours
      * the shared daily Oxylabs cap. Returns the number of comps ingested.
      */
-    public function refresh(CatalogItem $catalogItem, IngestEbaySoldComps $ingest, IngestPricechartingComps $pcIngest): JsonResponse
-    {
+    public function refresh(
+        CatalogItem $catalogItem,
+        IngestEbaySoldComps $ingest,
+        IngestPricechartingComps $pcIngest,
+        OxylabsClient $oxylabs,
+    ): JsonResponse {
         if (! config('valuation.ebay.enabled')) {
             return response()->json(['ok' => false, 'message' => 'eBay refresh is disabled.'], 422);
         }
 
-        $key = 'ebay:daily:'.Carbon::now()->toDateString();
-        Cache::add($key, 0, Carbon::now()->endOfDay());
-
-        if ((int) Cache::get($key, 0) >= (int) config('valuation.ebay.daily_cap')) {
+        if (! $oxylabs->hasBudget(OxylabsClient::BUDGET_EBAY)) {
             return response()->json(['ok' => false, 'message' => 'Daily eBay request cap reached.'], 429);
         }
 
-        Cache::increment($key);
-        $ingested = $ingest($catalogItem);
+        try {
+            $ingested = $ingest($catalogItem);
+        } catch (OxylabsBudgetException) {
+            return response()->json(['ok' => false, 'message' => 'Daily eBay request cap reached.'], 429);
+        }
 
         // Cards also refresh PriceCharting — it's the source of the completed-sales
         // blend AND the long-term monthly history line (per grade tier for
         // singles). Force it (bypass the on-view TTL) under PC's own daily cap.
-        $this->refreshPricecharting($catalogItem, $pcIngest);
+        $this->refreshPricecharting($catalogItem, $pcIngest, $oxylabs);
 
         return response()->json([
             'ok' => true,
@@ -198,19 +202,15 @@ class CardController extends Controller
         CatalogItem $catalogItem,
         EbaySoldSource $source,
         SoldCompClassifier $classifier,
+        OxylabsClient $oxylabs,
     ): JsonResponse {
         if (! config('valuation.ebay.enabled')) {
             return response()->json(['ok' => false, 'message' => 'eBay lookups are disabled.'], 422);
         }
 
-        $key = 'ebay:daily:'.Carbon::now()->toDateString();
-        Cache::add($key, 0, Carbon::now()->endOfDay());
-
-        if ((int) Cache::get($key, 0) >= (int) config('valuation.ebay.daily_cap')) {
+        if (! $oxylabs->hasBudget(OxylabsClient::BUDGET_EBAY)) {
             return response()->json(['ok' => false, 'message' => 'Daily eBay request cap reached.'], 429);
         }
-
-        Cache::increment($key);
 
         // Same anchor the ingest uses: the raw NM (or SEALED) median.
         $anchor = (int) ($catalogItem->marketValues()
@@ -226,6 +226,8 @@ class CardController extends Controller
                 'ok' => false,
                 'message' => 'eBay blocked this lookup (anti-bot). Try again in a moment.',
             ], 502);
+        } catch (OxylabsBudgetException) {
+            return response()->json(['ok' => false, 'message' => 'Daily eBay request cap reached.'], 429);
         }
 
         $candidates = array_map(function ($c) use ($catalogItem, $anchor, $companyIds, $classifier) {
@@ -250,21 +252,19 @@ class CardController extends Controller
         ]);
     }
 
-    private function refreshPricecharting(CatalogItem $catalogItem, IngestPricechartingComps $pcIngest): void
-    {
+    private function refreshPricecharting(
+        CatalogItem $catalogItem,
+        IngestPricechartingComps $pcIngest,
+        OxylabsClient $oxylabs,
+    ): void {
         if (! in_array($catalogItem->item_type, [ItemType::Single, ItemType::Sealed], true)
             || ! config('valuation.pricecharting.enabled', true)) {
             return;
         }
 
-        $key = 'pricecharting:daily:'.Carbon::now()->toDateString();
-        Cache::add($key, 0, Carbon::now()->endOfDay());
-
-        if ((int) Cache::get($key, 0) >= (int) config('valuation.pricecharting.daily_cap')) {
+        if (! $oxylabs->hasBudget(OxylabsClient::BUDGET_PRICECHARTING)) {
             return;
         }
-
-        Cache::increment($key);
 
         try {
             $pcIngest($catalogItem);

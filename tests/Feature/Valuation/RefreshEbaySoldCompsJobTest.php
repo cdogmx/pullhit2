@@ -3,6 +3,7 @@
 use App\Actions\Valuation\IngestEbaySoldComps;
 use App\Jobs\RefreshEbaySoldComps;
 use App\Models\CatalogItem;
+use App\Support\Ebay\OxylabsClient;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(fn () => config(['valuation.ebay.enabled' => true, 'valuation.ebay.view_refresh_hours' => 12]));
@@ -11,7 +12,7 @@ test('the job skips (no Oxylabs call) when the card was refreshed within the win
     Http::fake();
     $item = CatalogItem::factory()->create(['ebay_refreshed_at' => now()->subHours(2)]);
 
-    (new RefreshEbaySoldComps($item->id))->handle(app(IngestEbaySoldComps::class));
+    (new RefreshEbaySoldComps($item->id))->handle(app(IngestEbaySoldComps::class), app(OxylabsClient::class));
 
     Http::assertNothingSent();
 });
@@ -22,7 +23,7 @@ test('force bypasses the freshness window (admin override)', function () {
     ]);
     $item = CatalogItem::factory()->create(['ebay_refreshed_at' => now()->subHours(2)]);
 
-    (new RefreshEbaySoldComps($item->id, force: true))->handle(app(IngestEbaySoldComps::class));
+    (new RefreshEbaySoldComps($item->id, force: true))->handle(app(IngestEbaySoldComps::class), app(OxylabsClient::class));
 
     Http::assertSent(fn ($request) => str_contains($request->url(), 'oxylabs.io'));
 });
@@ -33,7 +34,7 @@ test('the job fetches when the card is stale beyond the window', function () {
     ]);
     $item = CatalogItem::factory()->create(['ebay_refreshed_at' => now()->subHours(13)]);
 
-    (new RefreshEbaySoldComps($item->id))->handle(app(IngestEbaySoldComps::class));
+    (new RefreshEbaySoldComps($item->id))->handle(app(IngestEbaySoldComps::class), app(OxylabsClient::class));
 
     Http::assertSent(fn ($request) => str_contains($request->url(), 'oxylabs.io'));
     expect($item->fresh()->ebay_refreshed_at->isToday())->toBeTrue();

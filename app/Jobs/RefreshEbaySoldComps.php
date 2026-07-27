@@ -4,6 +4,8 @@ namespace App\Jobs;
 
 use App\Actions\Valuation\IngestEbaySoldComps;
 use App\Models\CatalogItem;
+use App\Support\Ebay\OxylabsBudgetException;
+use App\Support\Ebay\OxylabsClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Carbon;
@@ -16,7 +18,8 @@ use Throwable;
  *  - skip if the item was already refreshed within the freshness window
  *    (so a burst of views can't fire duplicate paid fetches),
  *  - per-item cache lock so concurrent views don't double-fetch,
- *  - a global daily request cap (Oxylabs bills per call),
+ *  - a daily request budget enforced inside OxylabsClient, which bills per
+ *    delivered result (a retried fetch spends more than one),
  *  - failures are logged, never fatal — the cached value stands.
  */
 class RefreshEbaySoldComps implements ShouldQueue
@@ -28,7 +31,7 @@ class RefreshEbaySoldComps implements ShouldQueue
         public bool $force = false,
     ) {}
 
-    public function handle(IngestEbaySoldComps $ingest): void
+    public function handle(IngestEbaySoldComps $ingest, OxylabsClient $oxylabs): void
     {
         if (! config('valuation.ebay.enabled')) {
             return;
@@ -57,17 +60,18 @@ class RefreshEbaySoldComps implements ShouldQueue
                 return;
             }
 
-            $key = 'ebay:daily:'.Carbon::now()->toDateString();
-            Cache::add($key, 0, Carbon::now()->endOfDay());
-
-            if ((int) Cache::get($key, 0) >= (int) config('valuation.ebay.daily_cap')) {
+            // Advisory pre-check only — OxylabsClient bills and enforces per
+            // request, so a fetch that retries can't quietly overspend the cap.
+            if (! $oxylabs->hasBudget(OxylabsClient::BUDGET_EBAY)) {
                 Log::info('eBay daily request cap reached; skipping refresh.', ['item' => $item->id]);
 
                 return;
             }
 
-            Cache::increment($key);
             $ingest($item);
+        } catch (OxylabsBudgetException $e) {
+            // Ran out mid-fetch (another worker spent the rest). Expected, not a bug.
+            Log::info('eBay daily request cap reached mid-fetch.', ['item' => $item->id]);
         } catch (Throwable $e) {
             report($e); // keep the existing value; try again next time
         } finally {

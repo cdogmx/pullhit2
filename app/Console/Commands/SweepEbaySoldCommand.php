@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Actions\Valuation\SweepEbaySold;
+use App\Support\Ebay\OxylabsClient;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -23,7 +24,7 @@ class SweepEbaySoldCommand extends Command
 
     protected $description = 'Sweep eBay sold listings and apply matched sales to card values';
 
-    public function handle(SweepEbaySold $sweep): int
+    public function handle(SweepEbaySold $sweep, OxylabsClient $oxylabs): int
     {
         if (! config('valuation.ebay.enabled') || ! config('valuation.ebay.sweep.enabled')) {
             $this->warn('eBay sweep is disabled.');
@@ -44,13 +45,10 @@ class SweepEbaySoldCommand extends Command
                 continue; // not due yet
             }
 
-            if (! $dryRun && ! $this->underDailyCap()) {
+            // Advisory: OxylabsClient bills and enforces per delivered result.
+            if (! $dryRun && ! $oxylabs->hasBudget(OxylabsClient::BUDGET_EBAY)) {
                 $this->warn('eBay daily request cap reached; stopping.');
                 break;
-            }
-
-            if (! $dryRun) {
-                $this->spendDailyCap();
             }
 
             try {
@@ -79,23 +77,5 @@ class SweepEbaySoldCommand extends Command
     private function cooldownKey(string $label): string
     {
         return "ebay:sweep:cooldown:{$label}";
-    }
-
-    private function dailyKey(): string
-    {
-        return 'ebay:daily:'.Carbon::now()->toDateString();
-    }
-
-    private function underDailyCap(): bool
-    {
-        Cache::add($this->dailyKey(), 0, Carbon::now()->endOfDay());
-
-        return (int) Cache::get($this->dailyKey(), 0) < (int) config('valuation.ebay.daily_cap');
-    }
-
-    private function spendDailyCap(): void
-    {
-        Cache::add($this->dailyKey(), 0, Carbon::now()->endOfDay());
-        Cache::increment($this->dailyKey());
     }
 }

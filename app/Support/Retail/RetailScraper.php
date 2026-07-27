@@ -136,7 +136,7 @@ class RetailScraper
     /** Universal render + schema.org JSON-LD (retailers without a dedicated source). */
     private function universal(string $url): array
     {
-        $html = $this->oxylabs->fetchHtml($url);
+        $html = $this->oxylabs->fetchHtml($url, budget: OxylabsClient::BUDGET_RETAIL);
         $product = $this->jsonLdProduct($html);
 
         if ($product === null) {

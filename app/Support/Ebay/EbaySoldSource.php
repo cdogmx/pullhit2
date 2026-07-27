@@ -31,7 +31,7 @@ class EbaySoldSource
         // identical to a real zero, so re-fetch until we get listings — trusting
         // only an EXPLICIT "no matches" page as a genuine zero.
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
-            $html = $this->client->fetchHtml($url, $geo);
+            $html = $this->client->fetchHtml($url, $geo, budget: OxylabsClient::BUDGET_EBAY);
             $candidates = EbayHtmlParser::parse($html);
 
             if ($candidates !== [] || EbayHtmlParser::isEmptyResults($html)) {

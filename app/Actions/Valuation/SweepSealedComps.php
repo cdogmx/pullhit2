@@ -4,11 +4,10 @@ namespace App\Actions\Valuation;
 
 use App\Enums\ItemType;
 use App\Models\CatalogItem;
+use App\Support\Ebay\OxylabsClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
@@ -22,6 +21,7 @@ class SweepSealedComps
 {
     public function __construct(
         protected IngestEbaySoldComps $ingest,
+        protected OxylabsClient $oxylabs,
     ) {}
 
     /**
@@ -36,7 +36,8 @@ class SweepSealedComps
         $capped = false;
 
         foreach ($due as $item) {
-            if (! $dryRun && ! $this->underCap()) {
+            // Advisory: OxylabsClient bills and enforces per delivered result.
+            if (! $dryRun && ! $this->oxylabs->hasBudget(OxylabsClient::BUDGET_EBAY)) {
                 $capped = true;
                 break;
             }
@@ -46,8 +47,6 @@ class SweepSealedComps
 
                 continue;
             }
-
-            $this->spendCap();
 
             try {
                 $ingested += ($this->ingest)($item);
@@ -93,23 +92,5 @@ class SweepSealedComps
             ->orderByDesc('sweep_value')
             ->limit($limit)
             ->get();
-    }
-
-    private function dailyKey(): string
-    {
-        return 'ebay:daily:'.Carbon::now()->toDateString();
-    }
-
-    private function underCap(): bool
-    {
-        Cache::add($this->dailyKey(), 0, Carbon::now()->endOfDay());
-
-        return (int) Cache::get($this->dailyKey(), 0) < (int) config('valuation.ebay.daily_cap');
-    }
-
-    private function spendCap(): void
-    {
-        Cache::add($this->dailyKey(), 0, Carbon::now()->endOfDay());
-        Cache::increment($this->dailyKey());
     }
 }

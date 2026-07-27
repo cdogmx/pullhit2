@@ -68,6 +68,11 @@ test('it keeps the synthetic placeholder when no genuine comps are found', funct
 });
 
 test('it retries a degraded render (results shell, no cards) and then ingests', function () {
+    // Retries are opt-in now — the default is a single attempt, because eBay's
+    // sold view answers with a sign-in wall that a retry only re-buys. The
+    // mechanism still works when a target is worth paying to re-fetch.
+    config(['valuation.ebay.fetch_attempts' => 3]);
+
     // First fetch: a valid SRP shell with no rendered listings and no
     // "no matches" message (a degraded render). Second: the real page.
     Http::fake([

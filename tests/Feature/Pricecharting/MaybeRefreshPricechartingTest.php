@@ -7,6 +7,7 @@ use App\Jobs\RefreshPricechartingData;
 use App\Models\CatalogItem;
 use App\Models\MarketValue;
 use App\Models\Set;
+use App\Support\Ebay\OxylabsClient;
 use Illuminate\Support\Facades\Queue;
 
 beforeEach(fn () => Queue::fake());
@@ -86,5 +87,5 @@ test('the job itself skips an already-synced item unless forced', function () {
     $ingest = Mockery::mock(IngestPricechartingComps::class);
     $ingest->shouldNotReceive('__invoke');
 
-    (new RefreshPricechartingData($box->id))->handle($ingest);
+    (new RefreshPricechartingData($box->id))->handle($ingest, app(OxylabsClient::class));
 });

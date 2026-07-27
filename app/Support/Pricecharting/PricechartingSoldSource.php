@@ -35,7 +35,12 @@ class PricechartingSoldSource
             return new PricechartingData([], []);
         }
 
-        $html = $this->client->fetchHtml($url, config('valuation.ebay.geo', 'United States'), render: false);
+        $html = $this->client->fetchHtml(
+            $url,
+            config('valuation.ebay.geo', 'United States'),
+            render: false,
+            budget: OxylabsClient::BUDGET_PRICECHARTING,
+        );
 
         $histories = $this->chartParser->parseAll($html);
 

@@ -3,6 +3,7 @@
 use App\Actions\Valuation\IngestPricechartingComps;
 use App\Jobs\RefreshPricechartingData;
 use App\Models\CatalogItem;
+use App\Support\Ebay\OxylabsClient;
 use Illuminate\Support\Facades\Cache;
 
 function pcDailyKey(): string
@@ -17,18 +18,17 @@ test('the job skips the fetch when PriceCharting\'s own daily cap is reached', f
     $ingest = Mockery::mock(IngestPricechartingComps::class);
     $ingest->shouldNotReceive('__invoke');
 
-    (new RefreshPricechartingData($box->id))->handle($ingest);
+    (new RefreshPricechartingData($box->id))->handle($ingest, app(OxylabsClient::class));
 });
 
-test('the job spends its own cap (not the eBay counter) on a real fetch', function () {
+test('the job proceeds to the ingest while its own budget has room', function () {
     $box = CatalogItem::factory()->sealed()->create(['pc_synced_at' => null]);
 
     $ingest = Mockery::mock(IngestPricechartingComps::class);
     $ingest->shouldReceive('__invoke')->once()->andReturn(5);
 
-    (new RefreshPricechartingData($box->id))->handle($ingest);
+    (new RefreshPricechartingData($box->id))->handle($ingest, app(OxylabsClient::class));
+})->throwsNoExceptions();
 
-    // The PriceCharting counter advanced; the eBay budget is untouched.
-    expect((int) Cache::get(pcDailyKey(), 0))->toBe(1)
-        ->and((int) Cache::get('ebay:daily:'.now()->toDateString(), 0))->toBe(0);
-});
+// Spending itself is OxylabsClient's job now — it's the only layer that knows how
+// many requests a fetch actually billed. See OxylabsBudgetTest.

@@ -106,6 +106,14 @@ return [
         )),
     ],
 
+    // Retailer product-page scrapes (stock alerts) also go through Oxylabs and
+    // bill against the same plan, so they get a counted budget too. This one used
+    // to be unmetered entirely — RetailScraper called Oxylabs with no cap at all,
+    // on a five-minute schedule. Small by design: it's a handful of watched ASINs.
+    'retail' => [
+        'daily_cap' => (int) env('RETAIL_DAILY_CAP', 500),
+    ],
+
     // PriceCharting completed-sales + long-term history via Oxylabs. Fetched
     // once per card on view (its OWN daily counter, separate from eBay), then
     // only again after the refresh window — its monthly series changes slowly.
@@ -150,7 +158,13 @@ return [
         // rendered listing cards (a degraded render / soft anti-bot). Re-fetch up
         // to this many times before giving up; an explicit "no matches" page is
         // trusted immediately. Kept small — each attempt is a paid Oxylabs call.
-        'fetch_attempts' => (int) env('EBAY_FETCH_ATTEMPTS', 3),
+        //
+        // Now 1, not 3. As of 2026-07-23 eBay redirects scraped SOLD searches to
+        // signin.ebay.com (active-listing searches still render fine), so a retry
+        // re-buys the same sign-in wall. Three attempts × ~3.5k cards/day billed
+        // ~10k requests for zero comps while the daily counter moved by one per
+        // card. Raise this again only if the sold view starts rendering.
+        'fetch_attempts' => (int) env('EBAY_FETCH_ATTEMPTS', 1),
 
         // On a card view, refresh its eBay comps if they're older than this. The
         // detail page shows an "updating" indicator and live-swaps the new values.

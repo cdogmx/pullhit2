@@ -43,7 +43,11 @@ class SweepEbaySold
         $minScore = (float) config('valuation.ebay.sweep.min_score', 0.75);
 
         $candidates = EbayHtmlParser::parse(
-            $this->client->fetchHtml($search['url'], config('valuation.ebay.geo', 'United States')),
+            $this->client->fetchHtml(
+                $search['url'],
+                config('valuation.ebay.geo', 'United States'),
+                budget: OxylabsClient::BUDGET_EBAY,
+            ),
         );
 
         $companyIds = GradingCompany::pluck('id', 'slug')->all();

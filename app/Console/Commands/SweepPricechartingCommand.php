@@ -5,12 +5,11 @@ namespace App\Console\Commands;
 use App\Actions\Valuation\IngestPricechartingComps;
 use App\Enums\ItemType;
 use App\Models\CatalogItem;
+use App\Support\Ebay\OxylabsClient;
 use App\Support\Pricecharting\PricechartingSoldSource;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
@@ -35,8 +34,11 @@ class SweepPricechartingCommand extends Command
         'booster_box', 'booster_box_case', 'elite_trainer_box', 'booster_bundle', 'build_and_battle',
     ];
 
-    public function handle(IngestPricechartingComps $ingest, PricechartingSoldSource $source): int
-    {
+    public function handle(
+        IngestPricechartingComps $ingest,
+        PricechartingSoldSource $source,
+        OxylabsClient $oxylabs,
+    ): int {
         $items = $this->targets();
 
         if ($items->isEmpty()) {
@@ -73,13 +75,13 @@ class SweepPricechartingCommand extends Command
 
             // Each ingest is one Oxylabs fetch — respect PriceCharting's own
             // daily budget so a sweep can't starve the eBay on-view refresh.
-            if (! $this->underCap()) {
+            // Advisory; OxylabsClient bills and enforces per delivered result.
+            if (! $oxylabs->hasBudget(OxylabsClient::BUDGET_PRICECHARTING)) {
                 $capped = true;
                 break;
             }
 
             try {
-                $this->spendCap();
                 $n = $ingest($item);
                 $ingested += $n; // the ingest stamps pc_synced_at + stores history
                 $this->info(sprintf('  ✓ %s: %d comp(s) blended', $item->name, $n));
@@ -93,24 +95,6 @@ class SweepPricechartingCommand extends Command
             .($capped ? ' (stopped: daily cap reached)' : '').($dryRun ? ' (dry run)' : ''));
 
         return self::SUCCESS;
-    }
-
-    private function dailyKey(): string
-    {
-        return 'pricecharting:daily:'.Carbon::now()->toDateString();
-    }
-
-    private function underCap(): bool
-    {
-        Cache::add($this->dailyKey(), 0, Carbon::now()->endOfDay());
-
-        return (int) Cache::get($this->dailyKey(), 0) < (int) config('valuation.pricecharting.daily_cap');
-    }
-
-    private function spendCap(): void
-    {
-        Cache::add($this->dailyKey(), 0, Carbon::now()->endOfDay());
-        Cache::increment($this->dailyKey());
     }
 
     /**
