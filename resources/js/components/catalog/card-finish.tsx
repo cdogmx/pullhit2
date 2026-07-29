@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import type { CatalogItem } from '@/types';
 
@@ -38,13 +38,21 @@ export function finishOf(
  * Normal from Holo from Reverse Holo when they sit side by side. It is a
  * rendered treatment rather than a photograph of the foil, and the tooltip
  * says so; the CSS lives in resources/css/app.css.
+ *
+ * The overlay sizes itself to the rect `object-contain` paints — a card's 5:7
+ * inside the wrapper's box — not to the wrapper. Drawn on the wrapper it
+ * striped the empty slivers left down each side of the art. Override
+ * `--finish-ar` for a child whose aspect is not a standard card.
  */
 export function CardFinish({
     variant,
+    aspect,
     className,
     children,
 }: {
     variant: string | null | undefined;
+    /** CSS aspect-ratio of the wrapped art; defaults to a card's 5/7. */
+    aspect?: string;
     className?: string;
     children: ReactNode;
 }) {
@@ -54,6 +62,11 @@ export function CardFinish({
     return (
         <span
             className={cn('relative block', finish, className)}
+            style={
+                finish && aspect
+                    ? ({ '--finish-ar': aspect } as CSSProperties)
+                    : undefined
+            }
             title={
                 finish
                     ? `${FINISH_LABEL[key]} printing. Card catalogs publish one scan per card, so the finish is rendered here rather than photographed.`

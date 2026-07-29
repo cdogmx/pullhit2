@@ -204,26 +204,40 @@
 .finish-reverse-holo::after,
 .finish-foil::after {
     content: '';
-    position: absolute;
-    inset: 0;
     pointer-events: none;
     border-radius: inherit;
+    /* Match the rect `object-contain` actually paints, rather than the box
+       around it. The wrappers are all taller-per-width than a card, so height
+       is the binding constraint: fill it, then take the width from the card's
+       own 5:7 ratio and centre. Sizing the overlay to the full box instead
+       striped the empty slivers down each side of the art.
+       (Masking with the image itself would be exact, but the scans are served
+       cross-origin and Chromium refuses cross-origin mask images — the mask
+       resolves empty and the whole overlay disappears.) */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    height: 100%;
+    width: auto;
+    max-width: 100%;
+    aspect-ratio: var(--finish-ar, 5 / 7);
     /* A fine stripe over a rainbow band: the stripe supplies the texture that
        keeps the sheen from reading as a flat colour wash. */
     background-image:
         repeating-linear-gradient(
             105deg,
-            rgb(255 255 255 / 0.1) 0 1px,
+            rgb(255 255 255 / 0.07) 0 1px,
             transparent 1px 4px
         ),
         linear-gradient(
             105deg,
             transparent 18%,
-            oklch(0.78 0.16 25 / 0.55) 30%,
-            oklch(0.82 0.15 95 / 0.55) 39%,
-            oklch(0.8 0.14 155 / 0.55) 48%,
-            oklch(0.76 0.15 250 / 0.55) 57%,
-            oklch(0.75 0.16 320 / 0.55) 66%,
+            oklch(0.7 0.13 25 / 0.4) 30%,
+            oklch(0.75 0.12 95 / 0.4) 39%,
+            oklch(0.72 0.11 155 / 0.4) 48%,
+            oklch(0.68 0.12 250 / 0.4) 57%,
+            oklch(0.67 0.13 320 / 0.4) 66%,
             transparent 78%
         );
     background-size:
@@ -232,8 +246,12 @@
     background-position:
         0 0,
         72% 0;
-    mix-blend-mode: screen;
-    opacity: 0.5;
+    /* `overlay`, not `screen`: screen only ever adds light, so on the pale
+       border of a card it clipped straight to a blown-out yellow glow that read
+       as something floating above the art. Overlay keeps the scan's own lights
+       and darks and tints them instead. */
+    mix-blend-mode: overlay;
+    opacity: 0.75;
     transition: background-position 0.7s ease-out;
 }
 
@@ -247,19 +265,52 @@
         22% 0;
 }
 
-/* Reverse holo foils the frame, not the art window. Two masks clipped to the
-   border box and the content box, composited to exclude, leave the sheen on
-   the padding band only — so the artwork stays flat, as it does on the card. */
+/* Reverse holo is told apart by its texture, not by where the sheen sits: a
+   fine sparkle field over the whole card, against holo's smooth sweep. An
+   earlier version masked the sheen to a frame band instead, which needed three
+   mask layers composited with `intersect` — Chromium did not honour that
+   reliably and the sheen leaked past the artwork into the empty box beside it.
+   One mask layer, inherited from the rule above, cannot leak. */
 .finish-reverse-holo::after {
-    padding: 13% 10%;
-    opacity: 0.62;
-    -webkit-mask-image:
-        linear-gradient(#000, #000), linear-gradient(#000, #000);
-    mask-image: linear-gradient(#000, #000), linear-gradient(#000, #000);
-    -webkit-mask-clip: border-box, content-box;
-    mask-clip: border-box, content-box;
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+    background-image:
+        radial-gradient(
+            circle,
+            rgb(255 255 255 / 0.55) 0 0.9px,
+            transparent 1.7px
+        ),
+        radial-gradient(
+            circle,
+            rgb(255 255 255 / 0.3) 0 0.9px,
+            transparent 2.1px
+        ),
+        linear-gradient(
+            105deg,
+            transparent 14%,
+            oklch(0.72 0.11 25 / 0.34) 30%,
+            oklch(0.77 0.1 95 / 0.34) 40%,
+            oklch(0.74 0.1 155 / 0.34) 50%,
+            oklch(0.7 0.11 250 / 0.34) 60%,
+            oklch(0.69 0.11 320 / 0.34) 70%,
+            transparent 84%
+        );
+    /* Two offset sparkle fields at different pitches so the texture reads as a
+       scattered foil rather than a regular grid. */
+    background-size:
+        11px 11px,
+        17px 17px,
+        230% 100%;
+    background-position:
+        0 0,
+        5px 8px,
+        72% 0;
+    opacity: 0.85;
+}
+
+.finish-reverse-holo:hover::after {
+    background-position:
+        0 0,
+        5px 8px,
+        22% 0;
 }
 
 /* Foil (One Piece / Lorcana) reads warmer and tighter than a Pokémon holo. */
@@ -267,18 +318,18 @@
     background-image:
         repeating-linear-gradient(
             105deg,
-            rgb(255 255 255 / 0.12) 0 1px,
+            rgb(255 255 255 / 0.08) 0 1px,
             transparent 1px 3px
         ),
         linear-gradient(
             105deg,
             transparent 26%,
-            oklch(0.85 0.13 85 / 0.6) 40%,
-            oklch(0.92 0.09 100 / 0.6) 50%,
-            oklch(0.83 0.14 60 / 0.6) 60%,
+            oklch(0.74 0.1 85 / 0.42) 40%,
+            oklch(0.8 0.07 100 / 0.42) 50%,
+            oklch(0.72 0.11 60 / 0.42) 60%,
             transparent 74%
         );
-    opacity: 0.45;
+    opacity: 0.7;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -289,10 +340,18 @@
     }
 
     .finish-holo:hover::after,
-    .finish-reverse-holo:hover::after,
     .finish-foil:hover::after {
         background-position:
             0 0,
+            72% 0;
+    }
+
+    /* Reverse holo carries a third background layer, so it needs its own
+       reset — a two-value list would cycle and shift the sparkle fields. */
+    .finish-reverse-holo:hover::after {
+        background-position:
+            0 0,
+            5px 8px,
             72% 0;
     }
 }
