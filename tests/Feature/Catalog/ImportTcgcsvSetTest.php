@@ -4,7 +4,9 @@ use App\Actions\Catalog\ImportLorcana;
 use App\Actions\Catalog\ImportTcgcsvSet;
 use App\Models\CatalogItem;
 use App\Models\MarketValue;
+use App\Models\ProductLine;
 use App\Models\Set;
+use App\Models\Vertical;
 use App\Support\Catalog\TcgcsvGame;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -15,6 +17,7 @@ beforeEach(function () {
     Http::fake([
         'tcgcsv.com/tcgplayer/3/groups' => Http::response(['results' => [
             ['groupId' => 24688, 'name' => 'ME05: Pitch Black', 'publishedOn' => '2026-07-17T00:00:00', 'categoryId' => 3],
+            ['groupId' => 24326, 'name' => 'SV: White Flare', 'publishedOn' => '2025-07-18T00:00:00', 'categoryId' => 3],
         ]]),
         'tcgcsv.com/tcgplayer/3/24688/products' => Http::response(['results' => [
             // TCGCSV appends the number to some EN names — must be cleaned off.
@@ -70,6 +73,54 @@ test('it is idempotent on re-run (no duplicate set or items)', function () {
     $set = Set::where('slug', 'pitch-black')->first();
     expect(Set::where('slug', 'pitch-black')->count())->toBe(1)
         ->and(CatalogItem::where('set_id', $set->id)->count())->toBe(2);
+});
+
+test('it keeps the printed code when the group name carries a series prefix', function () {
+    // The English ball-pattern printings live only on TCGplayer, so these sets
+    // get a TCGCSV pass on top of a pokemontcg.io import. TCGplayer names that
+    // group "SV: White Flare", which parses to the code "SV" — that must not
+    // relabel the real printed code the game's own importer already stored.
+    Http::fake([
+        'tcgcsv.com/tcgplayer/3/24326/products' => Http::response(['results' => [
+            [
+                'productId' => 642290, 'name' => 'Sewaddle (Master Ball Pattern)',
+                'extendedData' => [
+                    ['name' => 'Rarity', 'value' => 'Common'],
+                    ['name' => 'Number', 'value' => '001/086'],
+                ],
+            ],
+        ]]),
+        'tcgcsv.com/tcgplayer/3/24326/prices' => Http::response(['results' => [
+            ['productId' => 642290, 'subTypeName' => 'Holofoil', 'marketPrice' => 1.25],
+        ]]),
+    ]);
+
+    // Stand in for what pokemontcg.io already imported: the set must sit under
+    // the product line the importer resolves, or it matches nothing and forks.
+    $vertical = Vertical::updateOrCreate(['slug' => 'tcg'], ['name' => 'Trading Card Games']);
+    $productLine = ProductLine::updateOrCreate(
+        ['vertical_id' => $vertical->id, 'slug' => 'pokemon'],
+        ['name' => 'Pokémon'],
+    );
+    $existing = Set::factory()->create([
+        'product_line_id' => $productLine->id,
+        'slug' => 'white-flare',
+        'name' => 'White Flare',
+        'code' => 'WHT',
+        'language' => 'en',
+    ]);
+
+    app(ImportTcgcsvSet::class)(24326, withImages: false);
+
+    expect(Set::where('slug', 'white-flare')->count())->toBe(1)
+        ->and($existing->fresh()->code)->toBe('WHT');
+
+    // ...and the pattern printing itself lands, keeping its parenthetical so it
+    // is a distinct row from the plain card of the same number.
+    $item = CatalogItem::where('set_id', $existing->id)->first();
+    expect($item->name)->toBe('Sewaddle (Master Ball Pattern)')
+        ->and($item->number)->toBe('1')
+        ->and($item->getAttribute('attributes')['variant'])->toBe('holo');
 });
 
 /** Lorcana lives under TCGplayer category 71 and has no finish axis. */

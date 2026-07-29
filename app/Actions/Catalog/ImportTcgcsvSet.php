@@ -207,9 +207,12 @@ class ImportTcgcsvSet
             'product_line_id' => $productLineId,
             'slug' => $slug,
             'name' => $name,
-            // Never clear a code the game's own importer already set — it knows the
-            // real printed code ("WUN"), where TCGplayer often carries none.
-            'code' => $code ?: $set->code,
+            // Never touch a code the game's own importer already set — it knows the
+            // real printed code ("WHT"), where TCGplayer often carries none or a
+            // series prefix. Guarding only against a null $code was not enough:
+            // "SV: White Flare" parses to "SV", which is truthy, so importing the
+            // English group would have relabelled WHT/PRE/BLK as "SV".
+            'code' => $set->code ?: $code,
             'language' => 'en',
             // Clean name links this set to a same-named set in another language.
             'set_family' => $name,
