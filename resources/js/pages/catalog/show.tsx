@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { AddSealedDialog } from '@/components/admin/add-sealed-dialog';
 import { CompPreviewDialog } from '@/components/admin/comp-preview-dialog';
 import { EditCardImageDialog } from '@/components/admin/edit-card-image-dialog';
+import { CardFinish, finishOf } from '@/components/catalog/card-finish';
 import { EbayListingsPanel } from '@/components/catalog/ebay-listings';
 import { EbayShopButton } from '@/components/catalog/ebay-shop-button';
 import { GradeSenseiDialog } from '@/components/catalog/grade-sensei-dialog';
@@ -564,11 +565,13 @@ export default function Show({
                                     className="group/img relative block w-full cursor-zoom-in"
                                     aria-label="Enlarge image"
                                 >
-                                    <img
-                                        src={item.image_url}
-                                        alt={item.name}
-                                        className="aspect-[3/4] w-full object-contain"
-                                    />
+                                    <CardFinish variant={finishOf(item)}>
+                                        <img
+                                            src={item.image_url}
+                                            alt={item.name}
+                                            className="aspect-[3/4] w-full object-contain"
+                                        />
+                                    </CardFinish>
                                     <span className="pointer-events-none absolute right-2 bottom-2 flex size-8 items-center justify-center rounded-full bg-background/80 text-foreground opacity-0 shadow backdrop-blur transition-opacity group-hover/img:opacity-100">
                                         <Maximize2 className="size-4" />
                                     </span>
@@ -1119,11 +1122,16 @@ export default function Show({
                                     >
                                         <div className="h-14 w-10 shrink-0 overflow-hidden rounded bg-muted">
                                             {printing.image_url && (
-                                                <img
-                                                    src={printing.image_url}
-                                                    alt={printing.name}
-                                                    className="size-full object-contain"
-                                                />
+                                                <CardFinish
+                                                    variant={finishOf(printing)}
+                                                    className="size-full"
+                                                >
+                                                    <img
+                                                        src={printing.image_url}
+                                                        alt={printing.name}
+                                                        className="size-full object-contain"
+                                                    />
+                                                </CardFinish>
                                             )}
                                         </div>
                                         <div className="min-w-0 flex-1">
@@ -1234,11 +1242,16 @@ export default function Show({
                         <DialogTitle className="sr-only">
                             {item.display_name ?? item.name}
                         </DialogTitle>
-                        <img
-                            src={item.image_url}
-                            alt={item.display_name ?? item.name}
-                            className="mx-auto max-h-[88vh] w-auto rounded-xl object-contain"
-                        />
+                        <CardFinish
+                            variant={finishOf(item)}
+                            className="mx-auto w-fit rounded-xl"
+                        >
+                            <img
+                                src={item.image_url}
+                                alt={item.display_name ?? item.name}
+                                className="max-h-[88vh] w-auto rounded-xl object-contain"
+                            />
+                        </CardFinish>
                     </DialogContent>
                 </Dialog>
             )}

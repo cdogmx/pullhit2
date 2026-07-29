@@ -1,3 +1,4 @@
+import { CardFinish, finishOf } from '@/components/catalog/card-finish';
 import { formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CatalogItem } from '@/types';
@@ -37,18 +38,23 @@ export function CardPickTile({
             )}
         >
             {card.image_url ? (
-                <img
-                    src={card.image_url}
-                    alt=""
-                    loading="lazy"
-                    className="h-36 w-full rounded object-contain"
-                />
+                <CardFinish
+                    variant={finishOf(card)}
+                    className="h-36 w-full rounded"
+                >
+                    <img
+                        src={card.image_url}
+                        alt=""
+                        loading="lazy"
+                        className="size-full rounded object-contain"
+                    />
+                </CardFinish>
             ) : (
                 <div className="flex h-36 w-full items-center justify-center rounded bg-muted px-1 text-center text-[10px] text-muted-foreground">
                     No image
                 </div>
             )}
-            <span className="truncate text-xs font-medium leading-tight">
+            <span className="truncate text-xs leading-tight font-medium">
                 {card.display_name ?? card.name}
             </span>
             {meta && (

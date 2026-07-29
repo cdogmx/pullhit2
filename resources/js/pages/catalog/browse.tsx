@@ -11,6 +11,7 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { CardFinish, finishOf } from '@/components/catalog/card-finish';
 import { PriceTag } from '@/components/catalog/price-tag';
 import { AddToCollectionDialog } from '@/components/collection/add-to-collection-dialog';
 import { SearchSuggest } from '@/components/search-suggest';
@@ -1453,12 +1454,14 @@ function ItemImage({
     }
 
     return (
-        <img
-            src={item.image_url}
-            alt={item.name}
-            loading="lazy"
-            className={className}
-        />
+        <CardFinish variant={finishOf(item)} className={className}>
+            <img
+                src={item.image_url}
+                alt={item.name}
+                loading="lazy"
+                className="size-full object-contain"
+            />
+        </CardFinish>
     );
 }
 
