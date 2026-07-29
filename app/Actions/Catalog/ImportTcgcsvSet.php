@@ -226,14 +226,25 @@ class ImportTcgcsvSet
     }
 
     /**
-     * Strip a trailing " - 003/084" collector-number suffix TCGCSV appends to some
-     * card names, so they match the clean names the per-game APIs publish. Anchored
-     * on the slashed number, so a name that legitimately ends in " - Version"
-     * (every Lorcana character) is left alone.
+     * Strip the " - 003/084" collector-number TCGCSV appends to some card names, so
+     * they match the clean names the per-game APIs publish. Matched on the slashed
+     * number, so a name that legitimately ends in " - Version" (every Lorcana
+     * character) is left alone.
+     *
+     * The number is not always last: sets whose printings are distinguished by a
+     * parenthetical put it in the middle — "Team Rocket's Dugtrio - 101/217 (Team
+     * Rocket)" — so an end-anchored match missed those and stored the number as
+     * part of the name. Accept either position.
      */
     protected function cleanName(string $name): string
     {
-        return trim((string) preg_replace('/\s*-\s*[0-9A-Za-z]+\/[0-9A-Za-z]+\s*$/', '', $name)) ?: $name;
+        $stripped = preg_replace(
+            '/\s*-\s*[0-9A-Za-z]+\/[0-9A-Za-z]+(?=\s*\(|\s*$)/',
+            '',
+            $name,
+        );
+
+        return trim((string) $stripped) ?: $name;
     }
 
     /** "003/084" → "3" (leading number, zero-stripped, matching EN storage). */

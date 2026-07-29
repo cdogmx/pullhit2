@@ -89,9 +89,18 @@ test('it keeps the printed code when the group name carries a series prefix', fu
                     ['name' => 'Number', 'value' => '001/086'],
                 ],
             ],
+            // Same shape, but TCGCSV puts the number BEFORE the parenthetical.
+            [
+                'productId' => 642291, 'name' => "Team Rocket's Dugtrio - 101/217 (Team Rocket)",
+                'extendedData' => [
+                    ['name' => 'Rarity', 'value' => 'Common'],
+                    ['name' => 'Number', 'value' => '101/217'],
+                ],
+            ],
         ]]),
         'tcgcsv.com/tcgplayer/3/24326/prices' => Http::response(['results' => [
             ['productId' => 642290, 'subTypeName' => 'Holofoil', 'marketPrice' => 1.25],
+            ['productId' => 642291, 'subTypeName' => 'Holofoil', 'marketPrice' => 0.75],
         ]]),
     ]);
 
@@ -117,10 +126,14 @@ test('it keeps the printed code when the group name carries a series prefix', fu
 
     // ...and the pattern printing itself lands, keeping its parenthetical so it
     // is a distinct row from the plain card of the same number.
-    $item = CatalogItem::where('set_id', $existing->id)->first();
+    $item = CatalogItem::where('set_id', $existing->id)->where('number', '1')->first();
     expect($item->name)->toBe('Sewaddle (Master Ball Pattern)')
-        ->and($item->number)->toBe('1')
         ->and($item->getAttribute('attributes')['variant'])->toBe('holo');
+
+    // The collector number is stripped even when it sits before the
+    // parenthetical, not only at the end of the name.
+    expect(CatalogItem::where('set_id', $existing->id)->where('number', '101')->value('name'))
+        ->toBe("Team Rocket's Dugtrio (Team Rocket)");
 });
 
 /** Lorcana lives under TCGplayer category 71 and has no finish axis. */
