@@ -194,10 +194,13 @@ class RehashCatalogCommand extends Command
         }
 
         // Pass 3: write names and keys. Collisions are resolved, so each remaining
-        // row owns its hash outright.
-        $bar = $this->output->createProgressBar(count($groups));
+        // row owns its hash outright. Batched into multi-row CASE updates — a
+        // statement per row is ~3/sec against a hosted database, which is hours
+        // for a catalog this size.
+        $bar = $this->output->createProgressBar($dirty);
+        $pending = [];
+
         foreach ($groups as $hash => $rows) {
-            $bar->advance();
             $row = $this->survivingRow($rows);
 
             if ($row['was']['identity_hash'] === $hash
@@ -206,12 +209,23 @@ class RehashCatalogCommand extends Command
                 continue;
             }
 
-            DB::table('catalog_items')->where('id', $row['id'])->update([
+            $pending[] = [
+                'id' => $row['id'],
                 'name' => $row['name'],
                 'identity_hash' => $hash,
                 'base_key' => $row['base_key'],
-            ]);
-            $rehashed++;
+            ];
+
+            if (count($pending) >= 500) {
+                $rehashed += $this->flush($pending);
+                $bar->advance(count($pending));
+                $pending = [];
+            }
+        }
+
+        if ($pending !== []) {
+            $rehashed += $this->flush($pending);
+            $bar->advance(count($pending));
         }
         $bar->finish();
 
@@ -219,6 +233,40 @@ class RehashCatalogCommand extends Command
         $this->info("merged {$merged} rows, rehashed {$rehashed}, renamed {$renamed}");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Write a batch as one multi-row CASE update.
+     *
+     * @param  array<int, array{id: int, name: string, identity_hash: string, base_key: string}>  $rows
+     * @return int rows written
+     */
+    protected function flush(array $rows): int
+    {
+        $bindings = [];
+        $assignments = [];
+
+        foreach (['name', 'identity_hash', 'base_key'] as $column) {
+            $case = "`{$column}` = CASE `id`";
+            foreach ($rows as $row) {
+                $case .= ' WHEN ? THEN ?';
+                $bindings[] = $row['id'];
+                $bindings[] = $row[$column];
+            }
+            $assignments[] = $case.' END';
+        }
+
+        $ids = array_column($rows, 'id');
+        $bindings = array_merge($bindings, $ids);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        DB::update(
+            'UPDATE `catalog_items` SET '.implode(', ', $assignments)
+                ." WHERE `id` IN ({$placeholders})",
+            $bindings,
+        );
+
+        return count($rows);
     }
 
     /**
