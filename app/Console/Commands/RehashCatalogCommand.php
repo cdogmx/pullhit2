@@ -83,6 +83,34 @@ class RehashCatalogCommand extends Command
                 }
             });
 
+        // Cleaning a name can make two rows look identical that never were.
+        // "Torkoal - 058/414" and "Torkoal - 059/414" are different cards filed
+        // under the same (wrong) number column; strip the numbers and they merge,
+        // silently destroying one. Where a collision group's ORIGINAL names differ,
+        // keep those names and flag the rows — the number column needs a human.
+        $suspect = [];
+        foreach ($groups as $hash => $rows) {
+            if (count($rows) < 2) {
+                continue;
+            }
+            if (count(array_unique(array_column(array_column($rows, 'was'), 'name'))) === 1) {
+                continue;
+            }
+            $suspect[$hash] = $rows;
+        }
+
+        foreach ($suspect as $hash => $rows) {
+            unset($groups[$hash]);
+            foreach ($rows as $row) {
+                $item = CatalogItem::find($row['id']);
+                $keys = $identity->forItem($item, $item->name);
+                $row['name'] = $item->name;
+                $row['base_key'] = $keys['base_key'];
+                $groups[$keys['identity_hash']][] = $row;
+                $renamed--;
+            }
+        }
+
         $collisions = array_filter($groups, fn ($rows) => count($rows) > 1);
         $absorbed = array_sum(array_map(fn ($rows) => count($rows) - 1, $collisions));
 
@@ -102,6 +130,17 @@ class RehashCatalogCommand extends Command
         $this->line('names to clean        '.$renamed);
         $this->line('rows needing new keys '.$dirty);
         $this->line('identity collisions   '.count($collisions).' groups, '.$absorbed.' rows absorbed');
+
+        if ($suspect !== []) {
+            $this->newLine();
+            $this->warn('names left alone — cleaning them would merge rows that are not the same card:');
+            foreach ($suspect as $rows) {
+                foreach ($rows as $row) {
+                    $this->line("   {$row['id']}  {$row['was']['name']}");
+                }
+            }
+            $this->line('   (their `number` column disagrees with the number in the name)');
+        }
 
         if ($collisions !== []) {
             $this->newLine();

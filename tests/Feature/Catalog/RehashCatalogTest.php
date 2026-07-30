@@ -142,3 +142,21 @@ test('a dry run writes nothing', function () {
     expect(CatalogItem::orderBy('id')->get(['id', 'name', 'identity_hash', 'base_key'])->toArray())
         ->toBe($before);
 });
+
+test('it refuses to merge cards whose names carry different collector numbers', function () {
+    // Two different cards filed under the same (wrong) number. Stripping the
+    // collector number from both names would make them look like one row and
+    // silently destroy one of them.
+    $a = legacyRow('Torkoal - 058/414', '058', ['language' => 'ja', 'variant' => 'normal']);
+    $b = legacyRow('Torkoal - 059/414', '058', ['language' => 'ja', 'variant' => 'normal']);
+
+    $this->artisan('catalog:rehash', ['--execute' => true])
+        ->expectsOutputToContain('names left alone')
+        ->assertSuccessful();
+
+    // Both survive, with their names untouched so the mismatch stays visible.
+    expect(CatalogItem::count())->toBe(2)
+        ->and($a->fresh()->name)->toBe('Torkoal - 058/414')
+        ->and($b->fresh()->name)->toBe('Torkoal - 059/414')
+        ->and($a->fresh()->identity_hash)->not->toBe($b->fresh()->identity_hash);
+});
