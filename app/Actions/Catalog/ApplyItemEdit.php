@@ -8,7 +8,7 @@ use App\Models\CatalogItem;
 use App\Models\ItemEditSuggestion;
 use App\Models\User;
 use App\Notifications\ItemEditReviewed;
-use App\Support\Catalog\IdentityHash;
+use App\Support\Catalog\ItemIdentity;
 use App\Support\Verticals\VerticalRegistry;
 use Illuminate\Support\Carbon;
 
@@ -22,6 +22,7 @@ class ApplyItemEdit
     public function __construct(
         protected VerticalRegistry $registry,
         protected AwardPoints $award,
+        protected ItemIdentity $identity,
     ) {}
 
     public function apply(ItemEditSuggestion $suggestion, User $reviewer): CatalogItem
@@ -87,20 +88,6 @@ class ApplyItemEdit
 
     private function rehash(CatalogItem $item): void
     {
-        $args = [
-            'verticalSlug' => $item->vertical->slug,
-            'productLineSlug' => $item->productLine->slug,
-            'setKey' => $item->set?->slug,
-            'itemType' => $item->item_type->value,
-            'name' => $item->name,
-            'number' => $item->number,
-        ];
-        $attributes = $item->getAttribute('attributes') ?? [];
-        $variantKeys = $this->registry->get($item->vertical->slug)->variantDefiningKeys($item->item_type->value);
-
-        $item->forceFill([
-            'identity_hash' => IdentityHash::compute(...$args, attributes: $attributes),
-            'base_key' => IdentityHash::compute(...$args, attributes: array_diff_key($attributes, array_flip($variantKeys))),
-        ]);
+        $item->forceFill($this->identity->forItem($item));
     }
 }

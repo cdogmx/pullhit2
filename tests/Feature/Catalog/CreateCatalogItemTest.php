@@ -169,3 +169,70 @@ test('re-import without an image preserves the existing image path', function ()
     expect($again->id)->toBe($created->id)
         ->and($again->primary_image_path)->toBe('https://s3/phb/pokemon/mew/1.png');
 });
+
+test('descriptive facets do not fork identity, but printing facets do', function () {
+    $args = [
+        'vertical' => $this->vertical,
+        'productLine' => $this->pokemon,
+        'set' => $this->set,
+        'itemType' => ItemType::Single,
+        'name' => 'Sewaddle',
+        'number' => '1',
+    ];
+
+    // A rich source (pokemontcg.io fills hp/type/illustrator, and spells rarity
+    // its own way) and a lean one (TCGCSV fills none) describing ONE printing.
+    $rich = ($this->action)(...$args, attributes: [
+        'language' => 'en', 'rarity' => 'Common', 'variant' => 'reverse_holo',
+        'hp' => 50, 'type' => 'Grass', 'illustrator' => 'Oswaldo KATO',
+    ]);
+    $lean = ($this->action)(...$args, attributes: [
+        'language' => 'en', 'variant' => 'reverse_holo',
+    ]);
+
+    // Same row. Hashing hp/type/illustrator/rarity made the hash a function of
+    // how much the source knew, and duplicated the card once per source.
+    expect($lean->id)->toBe($rich->id)
+        ->and(CatalogItem::count())->toBe(1);
+
+    // The printing axis still separates rows...
+    $holo = ($this->action)(...$args, attributes: [
+        'language' => 'en', 'variant' => 'holo',
+    ]);
+    expect($holo->id)->not->toBe($rich->id)
+        ->and(CatalogItem::count())->toBe(2)
+        // ...while grouping them under one card.
+        ->and($holo->base_key)->toBe($rich->base_key);
+
+    // ...as does every other variant-defining facet, and language.
+    $ball = ($this->action)(...$args, attributes: [
+        'language' => 'en', 'variant' => 'reverse_holo', 'finish' => 'ball',
+    ]);
+    $japanese = ($this->action)(...$args, attributes: [
+        'language' => 'ja', 'variant' => 'reverse_holo',
+    ]);
+    expect(CatalogItem::count())->toBe(4)
+        ->and($ball->base_key)->toBe($rich->base_key)
+        ->and($japanese->base_key)->not->toBe($rich->base_key);
+});
+
+test('a facet set to null hashes the same as one left out', function () {
+    $args = [
+        'vertical' => $this->vertical,
+        'productLine' => $this->pokemon,
+        'set' => $this->set,
+        'itemType' => ItemType::Single,
+        'name' => 'Sewaddle',
+        'number' => '1',
+    ];
+
+    $absent = ($this->action)(...$args, attributes: [
+        'language' => 'en', 'variant' => 'normal',
+    ]);
+    $explicitNull = ($this->action)(...$args, attributes: [
+        'language' => 'en', 'variant' => 'normal', 'edition' => null, 'finish' => null,
+    ]);
+
+    expect($explicitNull->id)->toBe($absent->id)
+        ->and(CatalogItem::count())->toBe(1);
+});

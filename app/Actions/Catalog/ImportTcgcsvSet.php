@@ -11,6 +11,7 @@ use App\Support\Catalog\CardImageStore;
 use App\Support\Catalog\TcgcsvClient;
 use App\Support\Catalog\TcgcsvGame;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -159,11 +160,28 @@ class ImportTcgcsvSet
 
         $out = [];
         foreach ($prices as $price) {
-            $variant = self::SUBTYPE_VARIANT[$price['subTypeName'] ?? ''] ?? 'normal';
+            $subType = (string) ($price['subTypeName'] ?? '');
+            $variant = self::SUBTYPE_VARIANT[$subType] ?? null;
+
+            // An unmapped subtype used to fall back to 'normal', and since $out is
+            // keyed by variant that silently overwrote the real Normal price with
+            // whatever the unknown finish cost. Skip it and say so instead — a new
+            // TCGplayer finish should be added to SUBTYPE_VARIANT deliberately.
+            if ($variant === null) {
+                Log::warning('TCGCSV: unmapped price subtype, row skipped', [
+                    'subTypeName' => $subType,
+                    'productId' => $price['productId'] ?? null,
+                ]);
+
+                continue;
+            }
+
             $out[$variant] = $this->anchorCents($price);
         }
 
-        return $out;
+        // Every subtype was unknown — still produce the card, just unvalued, rather
+        // than dropping it from the catalog.
+        return $out === [] ? ['normal' => 0] : $out;
     }
 
     /** @param  array<string, mixed>  $price */

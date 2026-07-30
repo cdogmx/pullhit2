@@ -5,7 +5,7 @@ namespace App\Actions\Catalog;
 use App\Actions\Valuation\SeedSyntheticValuation;
 use App\Enums\ItemType;
 use App\Models\CatalogItem;
-use App\Support\Catalog\IdentityHash;
+use App\Support\Catalog\ItemIdentity;
 use App\Support\Verticals\VerticalRegistry;
 use Illuminate\Validation\ValidationException;
 
@@ -20,6 +20,7 @@ class UpdateSealedProduct
     public function __construct(
         protected VerticalRegistry $registry,
         protected SeedSyntheticValuation $seed,
+        protected ItemIdentity $identity,
     ) {}
 
     /**
@@ -36,16 +37,15 @@ class UpdateSealedProduct
             'pack_count' => $data['pack_count'] ?? null,
         ], fn ($v) => $v !== null && $v !== ''));
 
-        $hashArgs = [
-            'verticalSlug' => $item->vertical->slug,
-            'productLineSlug' => $item->productLine->slug,
-            'setKey' => $item->set?->slug,
-            'itemType' => ItemType::Sealed->value,
-            'name' => $name,
-            'number' => null,
-        ];
-
-        $identityHash = IdentityHash::compute(...$hashArgs, attributes: $attributes);
+        ['identity_hash' => $identityHash, 'base_key' => $baseKey] = $this->identity->for(
+            verticalSlug: $item->vertical->slug,
+            productLineSlug: $item->productLine->slug,
+            setKey: $item->set?->slug,
+            itemType: ItemType::Sealed->value,
+            name: $name,
+            number: null,
+            attributes: $attributes,
+        );
 
         $collision = CatalogItem::where('identity_hash', $identityHash)
             ->whereKeyNot($item->id)
@@ -53,9 +53,6 @@ class UpdateSealedProduct
         if ($collision) {
             throw ValidationException::withMessages(['name' => 'A sealed product with those identifiers already exists.']);
         }
-
-        $variantKeys = $this->registry->get($item->vertical->slug)->variantDefiningKeys(ItemType::Sealed->value);
-        $baseKey = IdentityHash::compute(...$hashArgs, attributes: array_diff_key($attributes, array_flip($variantKeys)));
 
         $item->forceFill([
             'name' => $name,

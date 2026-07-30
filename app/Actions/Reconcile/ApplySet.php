@@ -9,7 +9,7 @@ use App\Enums\ItemType;
 use App\Models\CatalogItem;
 use App\Models\ReconciliationChange as ChangeRecord;
 use App\Models\Set;
-use App\Support\Catalog\IdentityHash;
+use App\Support\Catalog\ItemIdentity;
 use App\Support\Reconcile\ReconcileChange;
 use App\Support\Verticals\VerticalRegistry;
 use Illuminate\Support\Carbon;
@@ -33,6 +33,7 @@ class ApplySet
         protected SeedSyntheticValuation $seed,
         protected AddSealedProduct $addSealed,
         protected VerticalRegistry $registry,
+        protected ItemIdentity $identity,
     ) {}
 
     /** Approve a single queued change (admin review). Returns the affected item id. */
@@ -244,21 +245,7 @@ class ApplySet
     /** Recompute identity_hash/base_key after an attribute change. */
     private function rehash(CatalogItem $item): void
     {
-        $args = [
-            'verticalSlug' => $item->vertical->slug,
-            'productLineSlug' => $item->productLine->slug,
-            'setKey' => $item->set?->slug,
-            'itemType' => $item->item_type->value,
-            'name' => $item->name,
-            'number' => $item->number,
-        ];
-        $attributes = $item->attributes ?? [];
-        $variantKeys = $this->registry->get($item->vertical->slug)->variantDefiningKeys($item->item_type->value);
-
-        $item->forceFill([
-            'identity_hash' => IdentityHash::compute(...$args, attributes: $attributes),
-            'base_key' => IdentityHash::compute(...$args, attributes: array_diff_key($attributes, array_flip($variantKeys))),
-        ]);
+        $item->forceFill($this->identity->forItem($item));
     }
 
     private function record(ReconcileChange $change, Set $set, string $status, ?int $itemId): void

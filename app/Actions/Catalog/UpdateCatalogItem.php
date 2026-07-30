@@ -3,7 +3,7 @@
 namespace App\Actions\Catalog;
 
 use App\Models\CatalogItem;
-use App\Support\Catalog\IdentityHash;
+use App\Support\Catalog\ItemIdentity;
 use App\Support\Catalog\StampMatcher;
 use App\Support\Verticals\VerticalRegistry;
 use Illuminate\Validation\ValidationException;
@@ -17,6 +17,7 @@ class UpdateCatalogItem
 {
     public function __construct(
         protected VerticalRegistry $registry,
+        protected ItemIdentity $identity,
     ) {}
 
     /**
@@ -43,16 +44,15 @@ class UpdateCatalogItem
 
         $validated = $this->registry->validate($item->vertical->slug, $item->item_type->value, $attributes);
 
-        $hashArgs = [
-            'verticalSlug' => $item->vertical->slug,
-            'productLineSlug' => $item->productLine->slug,
-            'setKey' => $item->set?->slug, // stable slug, never mutable `code` (see CreateCatalogItem)
-            'itemType' => $item->item_type->value,
-            'name' => $name,
-            'number' => $number,
-        ];
-
-        $identityHash = IdentityHash::compute(...$hashArgs, attributes: $validated);
+        ['identity_hash' => $identityHash, 'base_key' => $baseKey] = $this->identity->for(
+            verticalSlug: $item->vertical->slug,
+            productLineSlug: $item->productLine->slug,
+            setKey: $item->set?->slug, // stable slug, never mutable `code` (see CreateCatalogItem)
+            itemType: $item->item_type->value,
+            name: $name,
+            number: $number,
+            attributes: $validated,
+        );
 
         $collision = CatalogItem::where('identity_hash', $identityHash)
             ->whereKeyNot($item->id)
@@ -60,9 +60,6 @@ class UpdateCatalogItem
         if ($collision) {
             throw ValidationException::withMessages(['name' => 'A card with those identifiers already exists.']);
         }
-
-        $variantKeys = $this->registry->get($item->vertical->slug)->variantDefiningKeys($item->item_type->value);
-        $baseKey = IdentityHash::compute(...$hashArgs, attributes: array_diff_key($validated, array_flip($variantKeys)));
 
         $item->forceFill([
             'name' => $name,

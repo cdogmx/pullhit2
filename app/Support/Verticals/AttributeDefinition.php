@@ -14,6 +14,12 @@ readonly class AttributeDefinition
      * @param  array<int, string>|null  $options  allowed values when type is Enum
      * @param  bool  $variantDefining  whether this facet distinguishes printings of the
      *                                 same card (e.g. variant/finish). Excluded from base_key.
+     * @param  bool  $identityDefining  whether this facet is part of WHICH item this is,
+     *                                  rather than a description of it. Only these reach
+     *                                  identity_hash — a descriptive facet (hp, illustrator)
+     *                                  must never fork identity, or two sources that
+     *                                  populate different fields duplicate the card.
+     *                                  $variantDefining implies this.
      */
     public function __construct(
         public string $key,
@@ -24,7 +30,14 @@ readonly class AttributeDefinition
         public bool $indexed = false,
         public ?array $options = null,
         public bool $variantDefining = false,
+        public bool $identityDefining = false,
     ) {}
+
+    /** A printing-defining facet is by definition part of the item's identity. */
+    public function definesIdentity(): bool
+    {
+        return $this->identityDefining || $this->variantDefining;
+    }
 
     /**
      * Convenience factory keeping definition lists terse and readable.
@@ -40,8 +53,9 @@ readonly class AttributeDefinition
         bool $indexed = false,
         ?array $options = null,
         bool $variantDefining = false,
+        bool $identityDefining = false,
     ): self {
-        return new self($key, $label, $type, $required, $searchable, $indexed, $options, $variantDefining);
+        return new self($key, $label, $type, $required, $searchable, $indexed, $options, $variantDefining, $identityDefining);
     }
 
     /**

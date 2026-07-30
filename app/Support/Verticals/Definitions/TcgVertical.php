@@ -32,10 +32,13 @@ final class TcgVertical
             name: 'Trading Card Games',
             attributes: [
                 ItemType::Single->value => [
-                    Attr::make('language', 'Language', Type::Enum, required: true, searchable: true, indexed: true, options: self::LANGUAGES),
+                    Attr::make('language', 'Language', Type::Enum, required: true, searchable: true, indexed: true, options: self::LANGUAGES, identityDefining: true),
                     // Optional at the vertical level: Pokémon/Lorcana always carry a
                     // rarity, but PriceCharting-sourced lines (One Piece, Magic, …)
                     // don't expose one, so it stays null rather than being faked.
+                    // Descriptive, NOT identity-defining: sources disagree on the
+                    // wording ("Rare Holo" vs "Holo Rare") and one card+number in a
+                    // set has one rarity, so letting it fork identity only duplicates.
                     Attr::make('rarity', 'Rarity', Type::String, searchable: true, indexed: true),
                     // variant (holo-ness), edition (print run), and finish (error/
                     // promo tag) each distinguish printings of the same card.
@@ -81,8 +84,10 @@ final class TcgVertical
                     Attr::make('ram', 'RAM', Type::Integer),
                 ],
                 ItemType::Sealed->value => [
-                    Attr::make('sealed_type', 'Sealed Type', Type::Enum, required: true, searchable: true, indexed: true, options: self::SEALED_TYPES),
-                    Attr::make('language', 'Language', Type::Enum, required: true, searchable: true, indexed: true, options: self::LANGUAGES),
+                    Attr::make('sealed_type', 'Sealed Type', Type::Enum, required: true, searchable: true, indexed: true, options: self::SEALED_TYPES, identityDefining: true),
+                    Attr::make('language', 'Language', Type::Enum, required: true, searchable: true, indexed: true, options: self::LANGUAGES, identityDefining: true),
+                    // Descriptive — a box is the same box whether or not we know
+                    // how many packs are in it.
                     Attr::make('pack_count', 'Pack Count', Type::Integer),
                 ],
             ],

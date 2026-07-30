@@ -180,7 +180,11 @@ test('it imports a Lorcana set as one row per card, not one per finish', functio
         ->and($items->first()->number)->toBe('21')
         ->and($items->first()->getAttribute('attributes')['variant'])->toBe('normal');
 
-    expect(MarketValue::where('catalog_item_id', $items->first()->id)->value('median'))->toBe(25);
+    // Anchored on the 25c Normal price, not the 350c Cold Foil. The synthetic
+    // spread is seeded from identity_hash, so assert the band rather than an exact
+    // cent — otherwise this test fails whenever the hash inputs legitimately change.
+    $median = MarketValue::where('catalog_item_id', $items->first()->id)->value('median');
+    expect($median)->toBeGreaterThan(15)->toBeLessThan(40);
 });
 
 test('a set TCGCSV seeded on release day is refined, not duplicated, when lorcana-api catches up', function () {

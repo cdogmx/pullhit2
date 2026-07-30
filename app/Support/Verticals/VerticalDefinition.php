@@ -66,4 +66,24 @@ readonly class VerticalDefinition
             ),
         ));
     }
+
+    /**
+     * Facet keys that say WHICH item this is, as opposed to describing it. Only
+     * these belong in identity_hash: hashing descriptive facets means two sources
+     * that populate different fields for the same card (pokemontcg.io fills hp,
+     * type and illustrator where TCGCSV fills none) hash differently and duplicate
+     * it.
+     *
+     * @return array<int, string>
+     */
+    public function identityDefiningKeys(string $itemType): array
+    {
+        return array_values(array_map(
+            fn (AttributeDefinition $definition): string => $definition->key,
+            array_filter(
+                $this->attributesFor($itemType),
+                fn (AttributeDefinition $definition): bool => $definition->definesIdentity(),
+            ),
+        ));
+    }
 }
