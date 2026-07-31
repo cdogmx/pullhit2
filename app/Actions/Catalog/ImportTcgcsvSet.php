@@ -8,6 +8,7 @@ use App\Models\ProductLine;
 use App\Models\Set;
 use App\Models\Vertical;
 use App\Support\Catalog\CardImageStore;
+use App\Support\Catalog\CardName;
 use App\Support\Catalog\TcgcsvClient;
 use App\Support\Catalog\TcgcsvGame;
 use Illuminate\Support\Arr;
@@ -243,26 +244,10 @@ class ImportTcgcsvSet
         return $set;
     }
 
-    /**
-     * Strip the " - 003/084" collector-number TCGCSV appends to some card names, so
-     * they match the clean names the per-game APIs publish. Matched on the slashed
-     * number, so a name that legitimately ends in " - Version" (every Lorcana
-     * character) is left alone.
-     *
-     * The number is not always last: sets whose printings are distinguished by a
-     * parenthetical put it in the middle — "Team Rocket's Dugtrio - 101/217 (Team
-     * Rocket)" — so an end-anchored match missed those and stored the number as
-     * part of the name. Accept either position.
-     */
+    /** @see CardName::clean() */
     protected function cleanName(string $name): string
     {
-        $stripped = preg_replace(
-            '/\s*-\s*[0-9A-Za-z]+\/[0-9A-Za-z]+(?=\s*\(|\s*$)/',
-            '',
-            $name,
-        );
-
-        return trim((string) $stripped) ?: $name;
+        return CardName::clean($name);
     }
 
     /** "003/084" → "3" (leading number, zero-stripped, matching EN storage). */

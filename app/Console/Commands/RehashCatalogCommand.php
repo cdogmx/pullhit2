@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\CatalogItem;
+use App\Support\Catalog\CardName;
 use App\Support\Catalog\ItemIdentity;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -340,19 +341,9 @@ class RehashCatalogCommand extends Command
         }
     }
 
-    /**
-     * Strip the " - 003/084" collector number some importers stored as part of the
-     * card name, whether it sits at the end or before a printing parenthetical.
-     * Mirrors ImportTcgcsvSet::cleanName.
-     */
+    /** @see CardName::clean() */
     public static function cleanName(string $name): string
     {
-        $stripped = preg_replace(
-            '/\s*-\s*[0-9A-Za-z]+\/[0-9A-Za-z]+(?=\s*\(|\s*$)/',
-            '',
-            $name,
-        );
-
-        return trim((string) $stripped) ?: $name;
+        return CardName::clean($name);
     }
 }
