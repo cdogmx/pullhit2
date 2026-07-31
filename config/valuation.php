@@ -159,12 +159,15 @@ return [
         // to this many times before giving up; an explicit "no matches" page is
         // trusted immediately. Kept small — each attempt is a paid Oxylabs call.
         //
-        // Now 1, not 3. As of 2026-07-23 eBay redirects scraped SOLD searches to
-        // signin.ebay.com (active-listing searches still render fine), so a retry
-        // re-buys the same sign-in wall. Three attempts × ~3.5k cards/day billed
-        // ~10k requests for zero comps while the daily counter moved by one per
-        // card. Raise this again only if the sold view starts rendering.
-        'fetch_attempts' => (int) env('EBAY_FETCH_ATTEMPTS', 1),
+        // 2, not 1. This was dropped to 1 on 2026-07-23 on the belief that eBay
+        // had started redirecting scraped SOLD searches to a sign-in wall, so a
+        // retry only re-bought the wall. That was wrong: sold pages were coming
+        // back complete the whole time and our parser had stopped reading them
+        // (see EbayHtmlParser, fixed 2026-07-31). With the real cause gone, one
+        // retry is worth it again — it only fires when a page parses to nothing
+        // AND eBay did not say "no matches", which is the genuine degraded-render
+        // case. Left below 3 because that is what made the bad days expensive.
+        'fetch_attempts' => (int) env('EBAY_FETCH_ATTEMPTS', 2),
 
         // On a card view, refresh its eBay comps if they're older than this. The
         // detail page shows an "updating" indicator and live-swaps the new values.
