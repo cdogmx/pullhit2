@@ -123,13 +123,17 @@ final class EbayHtmlParser
      */
     private static function titleAndHref(string $block): array
     {
-        // Current layout: the title link wraps the title div directly.
-        if (preg_match(
-            '#<a class=["\']?s-card__link[^>]*\bhref=["\']?([^\s"\'>]+)[^>]*>\s*<div[^>]*class=["\']?s-card__title[^>]*>(.*?)</div>#s',
-            $block,
-            $m,
-        )) {
-            return [$m[1], $m[2]];
+        // Current layout: link and title matched independently, because eBay
+        // moves both around. `s-card__link` is no longer first in the class list
+        // ("su-card-container__header s-card__link"), and the sold-date caption
+        // now renders INSIDE the anchor, between it and the title — so a pattern
+        // requiring the title to follow the <a> directly matched every active
+        // listing and no sold one, which read as eBay blocking sold searches.
+        // Both the image link and the title link carry the same item href, so
+        // taking the first is safe.
+        if (preg_match('#<a[^>]*\bclass=["\']?[^"\'>]*\bs-card__link\b[^>]*\bhref=["\']?([^\s"\'>]+)#', $block, $hrefMatch)
+            && preg_match('#class=["\']?[^"\'>]*\bs-card__title\b[^>]*>(.*?)</div>#s', $block, $titleMatch)) {
+            return [$hrefMatch[1], $titleMatch[1]];
         }
 
         // Legacy layout: the link (s-item__link) and title (s-item__title) are

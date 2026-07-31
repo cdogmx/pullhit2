@@ -95,3 +95,27 @@ test('isEmptyResults detects only an explicit zero-match page', function () {
         ->and(EbayHtmlParser::isEmptyResults('<html><body>Pardon Our Interruption</body></html>'))->toBeFalse()
         ->and(EbayHtmlParser::isEmptyResults(''))->toBeFalse();
 });
+
+test('it parses the live sold-search layout', function () {
+    // Captured from a real sold search. eBay moved `s-card__link` out of first
+    // place in the class list and pulled the sold-date caption INSIDE the
+    // anchor; the previous matcher required the title to follow the <a>
+    // directly, so it read every sold page as empty — which looked like a block.
+    // Unit tests run without the app container, so resolve the path directly.
+    $cands = EbayHtmlParser::parse(file_get_contents(dirname(__DIR__, 2).'/Fixtures/ebay-sold-search.html'));
+
+    expect($cands)->toHaveCount(2); // the "Shop on eBay" promo is still skipped
+
+    expect($cands[0]->title)->toBe('Pokemon Obsidian Flames Reverse Holos Choose Your Card! Ultra Rares Near Mint')
+        ->and($cands[0]->priceCents)->toBe(200)
+        ->and($cands[0]->soldAt?->toDateString())->toBe('2026-07-30');
+
+    expect($cands[1]->priceCents)->toBe(70000)
+        ->and($cands[1]->soldAt?->toDateString())->toBe('2026-07-29');
+
+    // Every comp must carry a real listing id, never the promo placeholder.
+    foreach ($cands as $c) {
+        expect($c->itemId)->not->toBe('123456')
+            ->and($c->url)->toStartWith('https://www.ebay.com/itm/');
+    }
+});
