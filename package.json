@@ -14,7 +14,8 @@
         "types:check": "tsc --noEmit",
         "cap:sync": "cap sync",
         "cap:ios": "cap open ios",
-        "cap:android": "cap open android"
+        "cap:android": "cap open android",
+        "test:js": "node --test \"resources/js/**/*.test.ts\""
     },
     "devDependencies": {
         "@capacitor/android": "^7.6.7",
