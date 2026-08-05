@@ -94,6 +94,35 @@ class CatalogItem extends Model
                 $item->slug = $item->buildUniqueSlug();
             }
         });
+
+        // The slug is derived from the card's name and number, so correcting
+        // either moves its URL. Keep the old one so existing links redirect
+        // rather than 404 — a correction should never cost the page its inbound
+        // links. Recorded after the write so a failed save leaves no alias.
+        static::updated(function (CatalogItem $item) {
+            $old = $item->getOriginal('slug');
+
+            if (! $item->wasChanged('slug') || empty($old) || empty($item->set_id)) {
+                return;
+            }
+
+            CatalogItemSlugAlias::updateOrCreate(
+                ['set_id' => $item->set_id, 'slug' => $old],
+                ['catalog_item_id' => $item->getKey()],
+            );
+
+            // The card just reclaimed a slug it previously vacated; that alias
+            // would now redirect the card to itself.
+            CatalogItemSlugAlias::where('set_id', $item->set_id)
+                ->where('slug', $item->slug)
+                ->delete();
+        });
+    }
+
+    /** @return HasMany<CatalogItemSlugAlias, $this> */
+    public function slugAliases(): HasMany
+    {
+        return $this->hasMany(CatalogItemSlugAlias::class);
     }
 
     /**

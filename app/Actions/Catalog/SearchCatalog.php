@@ -158,6 +158,20 @@ class SearchCatalog
                     $w->orWhere('number', 'like', "%{$token}%")
                         ->orWhere('number', $numerator === '' ? '0' : $numerator);
                 }
+
+                // A short all-letters token may be the printed prefix of a promo
+                // number — "SVP 074", "SWSH 050", "XY 01". Anchored to the start
+                // of the number, and only 2–5 letters, so it stays a prefix match
+                // and a one-letter token like the "V" in "Charizard V" can't pull
+                // in every card whose number merely contains a V.
+                //
+                // Without this the two halves of "SVP 074" are ANDed and "svp"
+                // has to match a name somewhere: it works for SWSH only because
+                // that set is literally called "SWSH Black Star Promos", while
+                // the SV promos live in "Scarlet & Violet Black Star Promos".
+                if (preg_match('/^[a-z]{2,5}$/', $token)) {
+                    $w->orWhere('number', 'like', "{$token}%");
+                }
             });
         }
     }

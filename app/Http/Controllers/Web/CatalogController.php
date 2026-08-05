@@ -16,6 +16,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Catalog\SearchCatalogRequest;
 use App\Http\Resources\CatalogItemResource;
 use App\Models\CatalogItem;
+use App\Models\CatalogItemSlugAlias;
 use App\Models\CollectionItem;
 use App\Models\GradingCompany;
 use App\Models\ProductLine;
@@ -282,12 +283,36 @@ class CatalogController extends Controller
         ShowCatalogItem $show,
         MaybeRefreshEbay $maybeRefresh,
         PriceHistory $history,
-    ): Response {
+    ): Response|RedirectResponse {
         $line = ProductLine::where('slug', $productLine)->firstOrFail();
         $setModel = Set::where('slug', $set)->where('product_line_id', $line->id)->firstOrFail();
-        $item = CatalogItem::where('set_id', $setModel->id)->where('slug', $card)->firstOrFail();
+        $item = CatalogItem::where('set_id', $setModel->id)->where('slug', $card)->first();
+
+        if (! $item) {
+            // The slug may be one this card used to live at — correcting a name
+            // or a collector number moves the URL. Send the old link on to the
+            // current one rather than 404ing it.
+            $moved = CatalogItemSlugAlias::where('set_id', $setModel->id)
+                ->where('slug', $card)
+                ->first();
+
+            abort_unless($moved, 404);
+
+            return $this->redirectToCanonical($moved->catalogItem);
+        }
 
         return $this->renderShow($request, $item, $show, $maybeRefresh, $history);
+    }
+
+    /**
+     * Permanent redirect to a card's current URL. 301 rather than 302 so search
+     * engines move their index across instead of holding the dead address.
+     */
+    private function redirectToCanonical(CatalogItem $item): RedirectResponse
+    {
+        $item->loadMissing(['productLine', 'set']);
+
+        return redirect($item->path() ?? "/catalog/{$item->getKey()}", 301);
     }
 
     private function renderShow(
