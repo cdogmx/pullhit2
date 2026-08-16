@@ -31,17 +31,20 @@ class CatalogFilterOptions
      */
     public function __invoke(array $filters = []): array
     {
-        // The single-card attributes present in the current vertical/line/set
-        // scope, read once so rarity/variant/edition narrow to what actually
-        // exists (e.g. a game with only `normal` printings shows no variant
-        // filter; a set with no editions shows no edition filter).
-        $attributes = $this->applyScope(
+        // Which values a facet actually takes in the current vertical/line/set
+        // scope, so each filter offers only what exists (a game with only
+        // `normal` printings shows no variant filter; a set with no editions
+        // shows no edition filter).
+        //
+        // One indexed DISTINCT per facet. This used to load every in-scope card's
+        // `attributes` JSON into PHP and reduce it there — on the browse landing
+        // page that hydrated 67,660 rows and took over five seconds, to produce
+        // three short lists. rarity/variant/edition are indexed columns now, so
+        // the database can answer straight from the index.
+        $present = fn (string $column) => $this->applyScope(
             CatalogItem::query()->where('item_type', ItemType::Single->value),
             $filters,
-        )->get(['attributes']);
-
-        $present = fn (string $key) => $attributes
-            ->pluck("attributes.{$key}")->filter()->unique()->sort()->values()->all();
+        )->whereNotNull($column)->distinct()->orderBy($column)->pluck($column)->all();
 
         return [
             'verticals' => Vertical::orderBy('name')->get(['slug', 'name']),
@@ -106,7 +109,10 @@ class CatalogFilterOptions
     {
         $ids = MarketValue::query()
             ->whereNotNull('grading_company_id')
-            ->whereHas('catalogItem', fn (Builder $c) => $this->applyScope($c, $filters))
+            ->when(
+                $this->isScoped($filters),
+                fn (Builder $q) => $q->whereHas('catalogItem', fn (Builder $c) => $this->applyScope($c, $filters)),
+            )
             ->distinct()
             ->pluck('grading_company_id');
 
@@ -131,7 +137,10 @@ class CatalogFilterOptions
                 $filters['grading_company'] ?? null,
                 fn (Builder $q, $slug) => $q->whereHas('gradingCompany', fn (Builder $c) => $c->where('slug', $slug)),
             )
-            ->whereHas('catalogItem', fn (Builder $c) => $this->applyScope($c, $filters))
+            ->when(
+                $this->isScoped($filters),
+                fn (Builder $q) => $q->whereHas('catalogItem', fn (Builder $c) => $this->applyScope($c, $filters)),
+            )
             ->distinct()
             ->orderByDesc('grade')
             ->pluck('grade')
@@ -152,6 +161,25 @@ class CatalogFilterOptions
             ->when($filters['product_line'] ?? null, fn (Builder $q, $slug) => $q->whereHas('productLine', fn (Builder $p) => $p->where('slug', $slug)))
             ->when($filters['series'] ?? null, fn (Builder $q, $series) => $q->whereHas('set', fn (Builder $s) => $s->where('series', $series)))
             ->when($filters['set'] ?? null, fn (Builder $q, $slug) => $q->whereHas('set', fn (Builder $s) => $s->where('slug', $slug)));
+    }
+
+    /**
+     * Whether any scope filter is set. With none, `applyScope` constrains
+     * nothing, and wrapping a market_values lookup in "exists (every catalog
+     * item)" makes the planner walk the join for a question whose answer is just
+     * the distinct values of an indexed column.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    protected function isScoped(array $filters): bool
+    {
+        foreach (['vertical', 'product_line', 'series', 'set'] as $key) {
+            if (! empty($filters[$key])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
