@@ -54,7 +54,6 @@ class CatalogItem extends Model
             'ebay_refreshed_at' => 'datetime',
             'for_sale_refreshed_at' => 'datetime',
             'pc_synced_at' => 'datetime',
-            'pc_price_history' => 'array',
         ];
     }
 
@@ -67,13 +66,24 @@ class CatalogItem extends Model
      */
     public function longTermHistoryTiers(): array
     {
-        $h = $this->pc_price_history;
+        $h = $this->priceHistory?->history;
         if (empty($h) || ! is_array($h)) {
             return [];
         }
 
         // Legacy shape: a list of {t, price} points === the ungraded series.
         return array_is_list($h) ? ['ungraded' => $h] : $h;
+    }
+
+    /**
+     * The PriceCharting long-term series. Its own table because it averaged ~1 KB
+     * a row and was being selected by every list query that never reads it.
+     *
+     * @return HasOne<CatalogItemPriceHistory, $this>
+     */
+    public function priceHistory(): HasOne
+    {
+        return $this->hasOne(CatalogItemPriceHistory::class);
     }
 
     /**

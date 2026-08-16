@@ -535,7 +535,7 @@ class CatalogController extends Controller
         $repIds = CatalogItem::query()
             ->where('set_id', $item->set_id)
             ->where('base_key', '!=', $item->base_key)
-            ->when($rarity, fn ($q) => $q->where('attributes->rarity', $rarity))
+            ->when($rarity, fn ($q) => $q->where('rarity', $rarity))
             ->selectRaw('MIN(id) as id')
             ->groupBy('base_key')
             ->limit(24)

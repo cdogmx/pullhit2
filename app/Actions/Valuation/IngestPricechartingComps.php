@@ -36,10 +36,15 @@ class IngestPricechartingComps
         // Long-term monthly series per grade tier (older than eBay's sold view) +
         // a sync marker, stored whether or not any comps pass — it drives the
         // on-view TTL too. Shape: {"ungraded": [...], "9": [...], "10": [...]}.
-        $item->forceFill([
-            'pc_price_history' => $data->histories !== [] ? $data->histories : null,
-            'pc_synced_at' => Carbon::now(),
-        ])->save();
+        $item->forceFill(['pc_synced_at' => Carbon::now()])->save();
+
+        // The series lives in its own table; an empty result clears it rather
+        // than leaving a stale one behind.
+        if ($data->histories !== []) {
+            $item->priceHistory()->updateOrCreate([], ['history' => $data->histories]);
+        } else {
+            $item->priceHistory()->delete();
+        }
 
         $accepted = [];
         foreach ($data->comps as $sale) {

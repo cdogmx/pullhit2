@@ -46,7 +46,7 @@ class GenerateFoilsCommand extends Command
         CatalogItem::query()
             ->where('product_line_id', $line->id)
             ->where('item_type', ItemType::Single)
-            ->where('attributes->variant', 'normal')
+            ->where('variant', 'normal')
             ->when($this->option('limit'), fn ($q, $n) => $q->limit((int) $n))
             ->with(['vertical', 'productLine', 'set', 'defaultMarketValue'])
             ->chunkById(200, function ($chunk) use ($create, $seed, $mult, $dry, &$created, &$seeded, &$skipped) {

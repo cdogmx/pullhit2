@@ -36,7 +36,7 @@ class RefreshFoilValuesCommand extends Command
         $ids = CatalogItem::query()
             ->where('product_line_id', $line->id)
             ->where('item_type', 'single')
-            ->where('attributes->variant', 'foil')
+            ->where('variant', 'foil')
             ->whereHas('defaultMarketValue', fn ($q) => $q->where('median', '>=', $min))
             ->when($this->option('limit'), fn ($q, $n) => $q->limit((int) $n))
             ->pluck('id');

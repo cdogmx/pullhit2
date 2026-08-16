@@ -142,8 +142,10 @@ class SearchCatalog
         }
 
         // Edition/variant phrases → facets (they live in attributes, not the name).
+        // Both are generated, indexed columns, so match those rather than the JSON
+        // path — "charizard 1st edition" would otherwise scan the whole catalog.
         foreach ($facets as $facet => $value) {
-            $query->where("attributes->{$facet}", $value);
+            $query->where($facet, $value);
         }
 
         // Each remaining token must match somewhere (AND across tokens).
@@ -179,7 +181,7 @@ class SearchCatalog
                 // without this a search for the pattern printed on the card finds
                 // nothing, which is how a whole set of Poke Ball / Dusk Ball /
                 // Love Ball printings became invisible.
-                $w->orWhere('attributes->finish', 'like', "%{$token}%");
+                $w->orWhere('finish', 'like', "%{$token}%");
             });
         }
     }
@@ -270,10 +272,14 @@ class SearchCatalog
                 ($filters['item_type'] ?? null) && $filters['item_type'] !== 'all',
                 fn (Builder $q) => $q->where('item_type', $filters['item_type']),
             )
+            // These four are generated, indexed columns over the same JSON the
+            // registry validates. Filtering `attributes->rarity` instead compiles
+            // to a json_extract expression, which no index can serve — every
+            // facet filter was a full table scan.
             ->when($filters['language'] ?? null, fn (Builder $q, $lang) => $q->where('language', $lang))
-            ->when($filters['rarity'] ?? null, fn (Builder $q, $rarity) => $q->where('attributes->rarity', $rarity))
-            ->when($filters['variant'] ?? null, fn (Builder $q, $variant) => $q->where('attributes->variant', $variant))
-            ->when($filters['edition'] ?? null, fn (Builder $q, $edition) => $q->where('attributes->edition', $edition));
+            ->when($filters['rarity'] ?? null, fn (Builder $q, $rarity) => $q->where('rarity', $rarity))
+            ->when($filters['variant'] ?? null, fn (Builder $q, $variant) => $q->where('variant', $variant))
+            ->when($filters['edition'] ?? null, fn (Builder $q, $edition) => $q->where('edition', $edition));
 
         // Graded state: keep only cards that have a value for the chosen grader
         // (and grade). The matching value is loaded + displayed in __invoke.

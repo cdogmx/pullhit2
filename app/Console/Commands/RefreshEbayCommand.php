@@ -41,7 +41,7 @@ class RefreshEbayCommand extends Command
         // Skip low-value rarities (e.g. Common/Uncommon) to conserve Oxylabs calls.
         if ($exclude = $this->option('exclude-rarity')) {
             $skip = array_filter(array_map('trim', explode(',', $exclude)));
-            $query->whereNotIn('attributes->rarity', $skip);
+            $query->whereNotIn('rarity', $skip);
         }
 
         $items = $query->limit((int) $this->option('limit'))->get();

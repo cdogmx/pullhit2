@@ -51,8 +51,8 @@ class CardController extends Controller
                 fn (Builder $w) => $w->where('name', 'like', "%{$f['q']}%")->orWhere('number', 'like', "%{$f['q']}%"),
             ))
             ->when($f['set'] !== '', fn (Builder $q) => $q->whereHas('set', fn (Builder $s) => $s->where('slug', $f['set'])))
-            ->when($f['rarity'] !== '', fn (Builder $q) => $q->where('attributes->rarity', $f['rarity']))
-            ->when($f['variant'] !== '', fn (Builder $q) => $q->where('attributes->variant', $f['variant']))
+            ->when($f['rarity'] !== '', fn (Builder $q) => $q->where('rarity', $f['rarity']))
+            ->when($f['variant'] !== '', fn (Builder $q) => $q->where('variant', $f['variant']))
             ->when($f['language'] !== '', fn (Builder $q) => $q->where('language', $f['language']));
 
         $this->sort($query, $f['sort']);

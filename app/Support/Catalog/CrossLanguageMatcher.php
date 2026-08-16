@@ -64,7 +64,7 @@ class CrossLanguageMatcher
             ->whereKeyNot($item->id)
             ->when(
                 $item->getAttribute('attributes')['variant'] ?? null,
-                fn (Builder $q, $variant) => $q->where('attributes->variant', $variant),
+                fn (Builder $q, $variant) => $q->where('variant', $variant),
             )
             ->with(['productLine:id,slug', 'set:id,slug,name'])
             ->limit(6)

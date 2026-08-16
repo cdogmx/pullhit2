@@ -30,7 +30,7 @@ class CompareController extends Controller
 
         $items = CatalogItem::query()
             ->whereIn('id', $ids)
-            ->with(['productLine:id,slug', 'set:id,name,slug', 'defaultMarketValue'])
+            ->with(['productLine:id,slug', 'set:id,name,slug', 'defaultMarketValue', 'priceHistory'])
             ->get()
             // Preserve the order the ids were given (sortBy the id's position).
             ->sortBy(fn (CatalogItem $item) => $ids->search($item->id))
