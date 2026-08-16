@@ -27,6 +27,38 @@ return [
         '8' => 0.25,
     ],
 
+    // ---- Photo-derived condition estimate -------------------------------
+    //
+    // Centering score = 1000 − penalty × (percentage points off centre on the
+    // worse axis). Fitted to TAG cert Y1267951: 53.31/46.69 scores 970, so
+    // 30 points of penalty over 3.31 points of deviation. ONE anchor — re-fit
+    // this as more certs are collected.
+    'centering_penalty_per_point' => (float) env('GRADING_CENTERING_PENALTY', 9.06),
+
+    // 0–1000 condition score => the grade the dossier prices. Per TAG's mapping,
+    // a PSA 10 sits roughly in 900–1000 and a 9 in 800–900.
+    'score_bands' => [
+        '10' => [900, 1000],
+        '9' => [800, 900],
+        '8' => [700, 800],
+    ],
+
+    // Spread on the estimated score, in points. Base is the honest error of the
+    // attributes we DID observe; each unobserved attribute widens it further.
+    'sigma_base' => (float) env('GRADING_SIGMA_BASE', 25),
+    'sigma_per_unseen' => (float) env('GRADING_SIGMA_PER_UNSEEN', 20),
+
+    // What an unobserved attribute costs the estimate. An unseen defect can only
+    // ever drag a grade down, so not-looking is never free. Surface is the big
+    // one: it needs photometric stereo (multi-angle lighting) that a phone photo
+    // cannot provide, and on the Griffey it was the attribute that set the grade.
+    'unseen_penalty' => [
+        'surface' => 45,
+        'corners' => 30,
+        'edges' => 25,
+        'centering' => 30,
+    ],
+
     // Advantage (grade EV − sell-raw EV) beyond which we call it, in dollars.
     // Inside the band it's a toss-up.
     'call_threshold' => (float) env('GRADING_CALL_THRESHOLD', 5),
