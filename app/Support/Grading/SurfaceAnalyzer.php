@@ -42,6 +42,16 @@ class SurfaceAnalyzer
         private int $minPixels = 6,
         /** Minimum elongation (major/minor axis) for a component to count as a scratch. */
         private float $minElongation = 2.5,
+        /**
+         * Fraction of each dimension ignored around the border. Two reasons, and
+         * both are real rather than a fudge: surface means the card FACE — damage
+         * at the perimeter is what the edges and corners attributes are for, and
+         * TAG scores them separately for the same reason. And a rectified frame's
+         * outermost ring is bilinearly mixed with whatever lay outside the card,
+         * in slightly different proportions per frame, so it varies across the
+         * sequence and reads as a long thin scratch pinned to the edge.
+         */
+        private float $borderInset = 0.02,
     ) {}
 
     /**
@@ -100,9 +110,15 @@ class SurfaceAnalyzer
         [$mean, $std] = $this->stats($detail);
         $cut = $mean + $this->threshold * $std;
 
-        $mask = [];
-        for ($p = 0; $p < $size; $p++) {
-            $mask[$p] = $detail[$p] > $cut;
+        $insetX = max(2, (int) round($this->borderInset * $width));
+        $insetY = max(2, (int) round($this->borderInset * $height));
+
+        $mask = array_fill(0, $size, false);
+        for ($y = $insetY; $y < $height - $insetY; $y++) {
+            for ($x = $insetX; $x < $width - $insetX; $x++) {
+                $p = $y * $width + $x;
+                $mask[$p] = $detail[$p] > $cut;
+            }
         }
 
         // 5) Keep only elongated components — scratches are lines, noise is blobs.
