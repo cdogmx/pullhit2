@@ -7,6 +7,7 @@ use App\Models\CatalogItem;
 use App\Models\GradingCompany;
 use App\Models\MarketValue;
 use App\Models\ProductLine;
+use App\Models\Rarity;
 use App\Models\Set;
 use App\Models\Vertical;
 use App\Support\Verticals\VerticalRegistry;
@@ -64,7 +65,7 @@ class CatalogFilterOptions
             'languages' => $this->applyScope(
                 CatalogItem::query()->whereNotNull('language'), $filters,
             )->distinct()->orderBy('language')->pluck('language')->all(),
-            'rarities' => $present('rarity'),
+            'rarities' => $this->rarities($present('rarity')),
             'variants' => $this->meaningfulVariants($present('variant')),
             'editions' => $present('edition'),
             // Graders that have graded values in scope, and the grades available
@@ -72,6 +73,52 @@ class CatalogFilterOptions
             'grading_companies' => $this->gradingCompanies($filters),
             'grades' => $this->grades($filters),
         ];
+    }
+
+    /**
+     * The rarity options in scope, presented rather than raw: readable labels,
+     * ordered common → chase, with the meaningless ones dropped.
+     *
+     * Sources hand us 66 different strings — abbreviations ("SR", "UC"),
+     * untranslated Japanese ("Kagayaku"), and placeholders ("None", "Unknown")
+     * sitting on 4,105 rows. Alphabetical and raw, that list is not usable.
+     *
+     * A value with no row in `rarities` still appears, labelled as it arrived and
+     * sorted to the end — a new rarity from a new set must never vanish from the
+     * filter just because nobody has classified it yet.
+     *
+     * @param  array<int, string>  $present  raw values in scope
+     * @return array<int, array{value: string, label: string}>
+     */
+    protected function rarities(array $present): array
+    {
+        if ($present === []) {
+            return [];
+        }
+
+        $known = Rarity::whereIn('value', $present)->get()->keyBy('value');
+
+        $options = [];
+        foreach ($present as $value) {
+            $rarity = $known->get($value);
+
+            if ($rarity?->is_hidden) {
+                continue;
+            }
+
+            $options[] = [
+                'value' => $value,
+                'label' => $rarity->label ?? $value,
+                'order' => $rarity->sort_order ?? 998,
+            ];
+        }
+
+        usort($options, fn ($a, $b) => [$a['order'], $a['label']] <=> [$b['order'], $b['label']]);
+
+        return array_map(
+            fn (array $o) => ['value' => $o['value'], 'label' => $o['label']],
+            $options,
+        );
     }
 
     /**

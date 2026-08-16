@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             GradingCompaniesSeeder::class,
+            RaritySeeder::class,
             PokemonCatalogSeeder::class,
             ChaosRisingSeeder::class,
             SyntheticObservationsSeeder::class,

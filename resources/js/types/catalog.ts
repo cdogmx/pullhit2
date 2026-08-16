@@ -119,7 +119,8 @@ export type CatalogFilterOptions = {
     }[];
     item_types: string[];
     languages: string[];
-    rarities: string[];
+    /** Presented options: the raw value to filter by, plus a readable label. */
+    rarities: { value: string; label: string }[];
     variants: string[];
     editions: string[];
     grading_companies: { slug: string; name: string }[];

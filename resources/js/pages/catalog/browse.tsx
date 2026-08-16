@@ -1258,7 +1258,7 @@ function FilterControls({
         {
             key: 'rarity',
             label: 'Rarity',
-            opts: options.rarities.map((v) => ({ value: v, label: v })),
+            opts: options.rarities,
         },
         {
             key: 'variant',

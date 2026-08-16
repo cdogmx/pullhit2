@@ -28,7 +28,8 @@ test('value facets narrow to the selected product line', function () {
     $opts = app(CatalogFilterOptions::class)(['product_line' => 'cyberpunk']);
 
     // Only cyberpunk's rarity shows; Pokémon's "Rare Holo" is excluded.
-    expect($opts['rarities'])->toBe(['Legend']);
+    // Options carry a display label alongside the raw value they filter by.
+    expect(collect($opts['rarities'])->pluck('value')->all())->toBe(['Legend']);
 });
 
 test('a scope with only normal printings shows no variant filter', function () {
@@ -138,7 +139,7 @@ test('value facets narrow to the selected series', function () {
         'series' => 'Scarlet & Violet',
     ]);
 
-    expect($opts['rarities'])->toBe(['Illustration Rare']);
+    expect(collect($opts['rarities'])->pluck('value')->all())->toBe(['Illustration Rare']);
 });
 
 test('languages narrow to the selected product line', function () {
