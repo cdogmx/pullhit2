@@ -172,6 +172,14 @@ class SearchCatalog
                 if (preg_match('/^[a-z]{2,5}$/', $token)) {
                     $w->orWhere('number', 'like', "{$token}%");
                 }
+
+                // The printing a card carries lives in attributes.finish and only
+                // reaches the reader through the display name — "Erika's Oddish
+                // (Love Ball)". The `name` column is just "Erika's Oddish", so
+                // without this a search for the pattern printed on the card finds
+                // nothing, which is how a whole set of Poke Ball / Dusk Ball /
+                // Love Ball printings became invisible.
+                $w->orWhere('attributes->finish', 'like', "%{$token}%");
             });
         }
     }
