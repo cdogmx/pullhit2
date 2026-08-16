@@ -287,6 +287,12 @@ class SoldCompClassifier
      * starter/partner set that lists every character (only one of which is ours).
      * Matches each sibling's full core name as a whole phrase, so shared-prefix
      * names ("Iron Hands" vs "Iron Valiant") don't collide.
+     *
+     * A sibling whose name is part of THIS card's own name is not a second card —
+     * it's our own identity (the blocklist's rule 2, applied here). "Pikachu &
+     * Zekrom-GX" shares a set with a solo "Pikachu" and a solo "Zekrom-GX", so
+     * every honest listing for the Tag Team card named two "other" cards and was
+     * rejected as a bundle. Same for every duo/trio single (464 of them).
      */
     private function namesOtherSetCards(string $lower, CatalogItem $item): bool
     {
@@ -295,6 +301,7 @@ class SoldCompClassifier
         }
 
         $own = $this->nameCore($item->name);
+        $ownPhrase = ' '.$own.' ';
         $siblings = $this->setNameCache[$item->set_id] ??= CatalogItem::query()
             ->where('set_id', $item->set_id)
             ->pluck('name')
@@ -308,7 +315,11 @@ class SoldCompClassifier
 
         $others = 0;
         foreach ($siblings as $core) {
-            if ($core !== $own && str_contains($haystack, ' '.$core.' ') && ++$others >= 2) {
+            if (str_contains($ownPhrase, ' '.$core.' ')) {
+                continue;   // our own name, whole or in part — not another card
+            }
+
+            if (str_contains($haystack, ' '.$core.' ') && ++$others >= 2) {
                 return true;
             }
         }

@@ -106,6 +106,23 @@ test('it rejects a starter-set listing that names several cards from the same se
     expect($this->classifier->classify(candidate('Pokemon First Partners Series 2 Chikorita 046 Promo', 3000), $chikorita, 0, $this->companies))->not->toBeNull();
 });
 
+test('a tag-team card is not a bundle just because its set also has each Pokemon solo', function () {
+    $set = Set::factory()->create();
+    $tagTeam = CatalogItem::factory()->create(['name' => 'Pikachu & Zekrom-GX', 'number' => 'SM168', 'set_id' => $set->id,
+        'attributes' => ['language' => 'en', 'variant' => 'holo']]);
+    CatalogItem::factory()->create(['name' => 'Pikachu', 'number' => 'SM32', 'set_id' => $set->id, 'attributes' => ['language' => 'en']]);
+    CatalogItem::factory()->create(['name' => 'Zekrom-GX', 'number' => 'SM172', 'set_id' => $set->id, 'attributes' => ['language' => 'en']]);
+    CatalogItem::factory()->create(['name' => 'Solgaleo', 'number' => 'SM104', 'set_id' => $set->id, 'attributes' => ['language' => 'en']]);
+    CatalogItem::factory()->create(['name' => 'Lunala', 'number' => 'SM105', 'set_id' => $set->id, 'attributes' => ['language' => 'en']]);
+
+    // Both halves of our own name are separate cards in this set — but naming them
+    // is what an honest listing for the tag team does.
+    expect($this->classifier->classify(candidate('Pokemon Pikachu & Zekrom GX SM168 Full Art Black Star Promo', 4000), $tagTeam, 0, $this->companies))->not->toBeNull();
+
+    // Two genuinely-other cards still make it a bundle.
+    expect($this->classifier->classify(candidate('Pikachu Zekrom GX Solgaleo Lunala Promo Cards', 9000), $tagTeam, 0, $this->companies))->toBeNull();
+});
+
 test('a set name containing a number is not mistaken for a multi-card listing', function () {
     // "151" (set name) + the card's own 276 = two numbers, under the 3-number bar.
     expect($this->classifier->classify(candidate('Pikachu ex 276/217 Pokemon 151 PSA 10', 380000), $this->item, $this->anchor, $this->companies))->not->toBeNull();
