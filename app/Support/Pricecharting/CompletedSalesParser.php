@@ -79,8 +79,15 @@ class CompletedSalesParser
 
     private function title(string $cells): string
     {
-        if (preg_match('/<td class="title">.*?<a[^>]*>(.*?)<\/a>/s', $cells, $m)) {
-            return trim(html_entity_decode(strip_tags($m[1]), ENT_QUOTES | ENT_HTML5));
+        // "</a\n>" is a legal closing tag and formatters emit it whenever the
+        // anchor's attributes get wrapped, so the tag cannot be matched literally.
+        if (preg_match('/<td class="title">.*?<a[^>]*>(.*?)<\/a\s*>/s', $cells, $m)) {
+            $title = html_entity_decode(strip_tags($m[1]), ENT_QUOTES | ENT_HTML5);
+
+            // The title routinely wraps across source lines; collapse the markup's
+            // indentation so it reads as one line rather than carrying newlines
+            // and runs of spaces into the database.
+            return trim((string) preg_replace('/\s+/u', ' ', $title));
         }
 
         return '';
