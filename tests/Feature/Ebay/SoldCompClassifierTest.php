@@ -288,3 +288,77 @@ test('a base One Piece card rejects every special printing; a full-art card reje
         ->and($f('One Piece Monkey D. Luffy OP01-024 Alternate Art', 15000))->toBeNull()
         ->and($f('One Piece Monkey D. Luffy OP01-024 Full Art', 20000))->not->toBeNull();
 });
+
+test('a stated collector number that contradicts the card is rejected', function () {
+    // "Muk & Alolan Muk-GX" #220 reduces to the name token "muk", so every solo
+    // "Alolan Muk GX" from a different set matched the name gate. 103 of that
+    // card's 105 raw comps belonged to Burning Shadows, and it read $5.34 when
+    // its own two sales said about $30.
+    $muk = CatalogItem::factory()->create([
+        'name' => 'Muk & Alolan Muk-GX', 'number' => '220',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    $wrongCard = 'Alolan Muk GX 84/147 Burning Shadows Holo GX Rare Pokemon';
+    $rightCard = 'Muk & Alolan Muk GX TAG TEAM 220/214 Secret Rainbow Rare';
+
+    expect($this->classifier->titleRejectReason($muk, $wrongCard))
+        ->toBe('collector number does not match')
+        ->and($this->classifier->titleRejectReason($muk, $rightCard))->toBeNull();
+});
+
+test('a number is only read from the printed form, never from a bare figure', function () {
+    $muk = CatalogItem::factory()->create([
+        'name' => 'Muk & Alolan Muk-GX', 'number' => '220',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    // This listing is for a DIFFERENT card and happens to end "220HP". Reading
+    // bare numbers would have taken that as agreeing with #220.
+    expect($this->classifier->titleRejectReason(
+        $muk, 'Alolan Muk GX 157/147 Secret Rare Full Art Holo 220HP Burning Shadows'
+    ))->toBe('collector number does not match');
+
+    // The hashed form is a real collector number and does count.
+    expect($this->classifier->titleRejectReason(
+        $muk, 'Alolan Muk GX 2017 Pokemon Sun & Moon Burning Shadows #84'
+    ))->toBe('collector number does not match');
+});
+
+test('a listing that states no number is still accepted', function () {
+    $muk = CatalogItem::factory()->create([
+        'name' => 'Muk & Alolan Muk-GX', 'number' => '220',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    // Plenty of honest listings never print the number. Silence is not
+    // disagreement — only a stated number that contradicts is a reject.
+    expect($this->classifier->titleRejectReason(
+        $muk, 'Pokemon Muk & Alolan Muk GX TAG TEAM Rainbow Rare Unbroken Bonds NM'
+    ))->toBeNull();
+});
+
+test('the printed and bare forms of a number agree', function () {
+    // Importers store one or the other; titles print both.
+    $full = CatalogItem::factory()->create([
+        'name' => 'Pikachu ex', 'number' => '276/217',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+    $bare = CatalogItem::factory()->create([
+        'name' => 'Pikachu ex', 'number' => '276',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    foreach ([$full, $bare] as $item) {
+        expect($this->classifier->titleRejectReason($item, 'Pikachu ex 276/217 SIR'))->toBeNull()
+            ->and($this->classifier->titleRejectReason($item, 'Pikachu ex 025/217'))
+            ->toBe('collector number does not match');
+    }
+
+    // Zero padding is not a difference either.
+    $padded = CatalogItem::factory()->create([
+        'name' => 'Sewaddle', 'number' => '007',
+        'attributes' => ['language' => 'en', 'variant' => 'normal'],
+    ]);
+    expect($this->classifier->titleRejectReason($padded, 'Sewaddle 7/86 White Flare'))->toBeNull();
+});

@@ -192,12 +192,85 @@ class SoldCompClassifier
             return 'title does not name this card';
         }
 
+        // The collector number, when the listing states one.
+        if ($this->numberContradicts($item, $lower)) {
+            return 'collector number does not match';
+        }
+
         // Printing match — keep an edition's comps from mixing with another's.
         if (! $this->printingMatches($item, $lower)) {
             return 'wrong printing / variant';
         }
 
         return null;
+    }
+
+    /**
+     * Whether the listing states a collector number, and none of them is this
+     * card's.
+     *
+     * The name gate only requires the card's FIRST word, which is far too loose
+     * for any card whose name starts with a shared word. "Muk & Alolan Muk-GX"
+     * #220 reduces to "muk", so every solo "Alolan Muk GX" from Burning Shadows
+     * — a different card, in a different set, worth a few dollars — matched, and
+     * 103 of its 105 raw comps belonged to that card. The value read $5.34 where
+     * its two genuine sales said about $30.
+     *
+     * Only the printed "N/M" form counts. A bare number is not safe to read:
+     * one of those very listings ends "Full Art Holo 220HP", which a loose match
+     * would have taken as agreeing with #220.
+     *
+     * Silence is not disagreement — plenty of honest listings never print the
+     * number, so this rejects only a stated number that contradicts.
+     */
+    private function numberContradicts(CatalogItem $item, string $lower): bool
+    {
+        $own = $this->normalizeNumber((string) $item->number);
+
+        if ($own === '') {
+            return false;
+        }
+
+        $stated = [];
+
+        // "220/214", "84/147", "TG12/TG30" — numerator is the collector number.
+        if (preg_match_all('#\b([0-9a-z]{1,5})\s*/\s*[0-9a-z]{1,5}\b#u', $lower, $matches)) {
+            $stated = $matches[1];
+        }
+
+        // "… Burning Shadows #84" — the other way sellers write it. Requires the
+        // hash, so an HP or a year can't be mistaken for a collector number.
+        if (preg_match_all('/#\s*([0-9]{1,4})\b/u', $lower, $matches)) {
+            $stated = array_merge($stated, $matches[1]);
+        }
+
+        if ($stated === []) {
+            return false;
+        }
+
+        foreach ($stated as $number) {
+            if ($this->normalizeNumber($number) === $own) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Collector numbers compare zero-padding- and case-insensitively.
+     *
+     * A stored number may be either the bare collector number ("220") or the
+     * full printed form ("276/217") depending on the importer that wrote it, and
+     * titles print both. Compare numerators so the two forms agree.
+     */
+    private function normalizeNumber(string $number): string
+    {
+        $clean = mb_strtolower(trim(explode('/', $number)[0]));
+        $clean = (string) preg_replace('/[^a-z0-9]/', '', $clean);
+
+        // "007" and "7" are the same card; "tg12" keeps its prefix.
+        return ltrim($clean, '0') ?: ($clean === '' ? '' : '0');
     }
 
     /**
