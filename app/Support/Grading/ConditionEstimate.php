@@ -51,6 +51,33 @@ readonly class ConditionEstimate
         return $this->unseen === [];
     }
 
+    /**
+     * Plain-English reason for each attribute we could not judge, for the UI to
+     * show alongside the estimate. These are not footnotes: surface in particular
+     * is the attribute most likely to hold a card back — it is what dragged TAG's
+     * reference Griffey to an 8.5 while its centering, corners and edges all
+     * scored 960+ — and we never see it. An estimate that hides that is worse
+     * than no estimate, because the user pays the submission fee for our silence.
+     *
+     * @return array<string, string>
+     */
+    public function caveats(): array
+    {
+        return array_combine($this->unseen, array_map(fn (string $a) => match ($a) {
+            'surface' => 'Surface (scratches, print lines, dents) is not assessed. Seeing it needs '.
+                'controlled multi-angle lighting that a phone photo cannot provide. It is also the '.
+                'most common reason a clean-looking card grades low, so this estimate is optimistic '.
+                'by exactly the amount your card is scratched.',
+            'corners' => 'Corners were not readable in the photo — usually too little resolution or '.
+                'too much blur at the card edge.',
+            'edges' => 'Edges were not readable in the photo. Whitening on a light border is the '.
+                'usual culprit.',
+            'centering' => 'Centering could not be measured — the card outline or its inner frame '.
+                'was not located.',
+            default => "The {$a} attribute was not assessed.",
+        }, $this->unseen), );
+    }
+
     /** @return array<string, mixed> */
     public function toArray(): array
     {
@@ -62,6 +89,7 @@ readonly class ConditionEstimate
             'probs' => $this->probs,
             'limiting_attribute' => $this->limitingAttribute(),
             'confident' => $this->isConfident(),
+            'caveats' => $this->caveats(),
             'centering' => $this->centering?->toArray(),
         ];
     }

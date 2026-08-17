@@ -5,6 +5,27 @@ namespace App\Support\Grading;
 use InvalidArgumentException;
 
 /**
+ * EXPERIMENTAL — NOT WIRED INTO THE GRADE ESTIMATE. Reached by the
+ * grading:surface harness only. The condition estimator deliberately treats
+ * surface as unseen and says so; see ConditionEstimate::caveats().
+ *
+ * It works on synthetic frames and fails on realistic ones. A synthetic card
+ * carrying ordinary texture produced 154 false defects against a single real
+ * scratch, even given ground-truth corners. The cause is not a tuning problem:
+ * no resampler is phase-invariant near Nyquist, so two frames sampled at
+ * different sub-pixel offsets reconstruct fine artwork differently, leaving a
+ * residual of about |gradient| x offset. Real card printing — fine text, line
+ * art, holo patterns — has gradients everywhere, and that residual swamps the
+ * damage. Discounting by local artwork energy (see $textureWeight) only moved
+ * 154 to 138; shrinking the canvas helps only by throwing away the resolution
+ * the scratches live in.
+ *
+ * Kept because the approach is sound and the failure is well characterised: with
+ * a real capture rig, or a phone that exposes per-frame sub-pixel registration,
+ * this becomes viable. Do not put it in front of users before then.
+ *
+ * ---
+ *
  * Recovers surface damage from a tilt sequence — several photos of the same card
  * with the specular highlight swept across it.
  *
@@ -52,12 +73,34 @@ class SurfaceAnalyzer
          * sequence and reads as a long thin scratch pinned to the edge.
          */
         private float $borderInset = 0.02,
+        /**
+         * How hard to discount detail that sits on busy printing.
+         *
+         * No resampler is phase-invariant near Nyquist: two frames sampled at
+         * different sub-pixel offsets reconstruct fine artwork slightly
+         * differently, leaving a residual of roughly |gradient| x offset. Fine
+         * text, line art and holo patterns therefore do NOT cancel, and on a real
+         * card they swamp the damage — a synthetic card with ordinary texture
+         * produced 154 false defects before this existed.
+         *
+         * A scratch's signal, by contrast, is a change in the reflected light and
+         * carries no dependence on what is printed underneath. So dividing the
+         * detail by local albedo energy targets exactly the confound: sensitivity
+         * stays high on flat borders and drops where the printing is loud, which
+         * is the honest trade rather than a global threshold that loses both.
+         */
+        private float $textureWeight = 0.05,
     ) {}
 
     /**
+     * The intermediate maps, exposed so a diagnostic harness can render them —
+     * eyeballing the albedo and detail images is the only practical way to tell
+     * whether a real capture carried usable signal.
+     *
      * @param  array<int, array<int, float>>  $frames  aligned luminance maps (0–255), row-major
+     * @return array{min: array<int, float>, specular: array<int, float>, detail: array<int, float>, range: float}
      */
-    public function analyze(array $frames, int $width, int $height): SurfaceAnalysis
+    public function composites(array $frames, int $width, int $height): array
     {
         $frames = array_values($frames);
         $n = count($frames);
@@ -90,14 +133,9 @@ class SurfaceAnalyzer
 
         // 2) Specular component — what changed as the light moved.
         $specular = [];
-        $sum = 0.0;
         for ($p = 0; $p < $size; $p++) {
             $specular[$p] = $max[$p] - $min[$p];
-            $sum += $specular[$p];
         }
-
-        // If the highlight never moved there is nothing to read; say so.
-        $range = $this->spread($specular);
 
         // 3) High-pass: subtract the smooth glare envelope, keep the fine detail.
         $blurred = $this->boxBlur($specular, $width, $height, $this->blurRadius);
@@ -106,7 +144,52 @@ class SurfaceAnalyzer
             $detail[$p] = $specular[$p] - $blurred[$p];
         }
 
-        // 4) Threshold well above the noise floor.
+        // 4) Discount detail sitting on loud printing — see $textureWeight. The
+        //    energy map is blurred because the resampling residual lands beside
+        //    an edge, not exactly on it.
+        $energy = $this->boxBlur($this->gradient($min, $width, $height), $width, $height, 2);
+
+        $normalized = [];
+        for ($p = 0; $p < $size; $p++) {
+            $normalized[$p] = $detail[$p] / (1.0 + $this->textureWeight * $energy[$p]);
+        }
+
+        return [
+            'min' => $min,
+            'specular' => $specular,
+            'detail' => $detail,
+            'normalized' => $normalized,
+            // If the highlight never moved there is nothing to read; say so.
+            'range' => $this->spread($specular),
+        ];
+    }
+
+    /** L1 gradient magnitude by central differences — cheap and good enough here. */
+    private function gradient(array $map, int $width, int $height): array
+    {
+        $out = array_fill(0, $width * $height, 0.0);
+
+        for ($y = 1; $y < $height - 1; $y++) {
+            for ($x = 1; $x < $width - 1; $x++) {
+                $p = $y * $width + $x;
+                $out[$p] = abs($map[$p + 1] - $map[$p - 1]) + abs($map[$p + $width] - $map[$p - $width]);
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<int, array<int, float>>  $frames  aligned luminance maps (0–255), row-major
+     */
+    public function analyze(array $frames, int $width, int $height): SurfaceAnalysis
+    {
+        $size = $width * $height;
+        $n = count($frames);
+
+        ['normalized' => $detail, 'range' => $range] = $this->composites($frames, $width, $height);
+
+        // 5) Threshold well above the noise floor.
         [$mean, $std] = $this->stats($detail);
         $cut = $mean + $this->threshold * $std;
 
