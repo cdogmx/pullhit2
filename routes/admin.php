@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\EbaySweepController;
 use App\Http\Controllers\Admin\GiveawayController;
 use App\Http\Controllers\Admin\GradingGapController;
 use App\Http\Controllers\Admin\ImageController;
+use App\Http\Controllers\Admin\PriceInversionController;
 use App\Http\Controllers\Admin\ReconcileController;
 use App\Http\Controllers\Admin\ScanFeedbackController;
 use App\Http\Controllers\Admin\SetController;
@@ -96,6 +97,10 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     // reject / reassign applied sales (sticky across future re-pulls).
     // Grading-arbitrage finder: cards worth more in a PSA 10 slab than raw.
     Route::get('grading-gaps', [GradingGapController::class, 'index'])->name('grading-gaps.index');
+
+    // The same comparison read the other way: a graded value BELOW its own
+    // raw value, which is a mispricing rather than an opportunity.
+    Route::get('price-inversions', [PriceInversionController::class, 'index'])->name('price-inversions.index');
 
     Route::get('ebay-sweep', [EbaySweepController::class, 'index'])->name('ebay-sweep.index');
     Route::post('ebay-sweep/applied/{saleObservation}/reject', [EbaySweepController::class, 'reject'])->name('ebay-sweep.reject');

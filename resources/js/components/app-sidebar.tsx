@@ -23,6 +23,7 @@ import {
     Shield,
     Tag,
     Sparkles,
+    TrendingDown,
     TrendingUp,
     Trophy,
     Users,
@@ -132,6 +133,11 @@ const adminNavItems: NavItem[] = [
 
     // Pricing & availability ops
     { title: 'Grading gaps', href: '/admin/grading-gaps', icon: TrendingUp },
+    {
+        title: 'Price inversions',
+        href: '/admin/price-inversions',
+        icon: TrendingDown,
+    },
     { title: 'eBay sweep', href: '/admin/ebay-sweep', icon: Radar },
     { title: 'Stock alerts', href: '/admin/stock-alerts', icon: Bell },
 
