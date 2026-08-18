@@ -114,3 +114,31 @@ test('one user\'s collection does not affect another user\'s ownership view', fu
 
     expect(ids($res))->toBe([$mine->id]); // not $theirs
 });
+
+test('a card with no base_key still shows as unowned', function () {
+    // base_key is nullable, and the ownership filter matches on it. Because
+    // "NULL IN (...)" is NULL rather than false, a NULL slipping into the
+    // negated branch would silently drop the row from "unowned" entirely —
+    // the card would appear nowhere. Guarded, so pin it.
+    $owned = ownCard('Pikachu');
+    $keyless = ownCard('Charizard');
+    $keyless->forceFill(['base_key' => null])->save();
+
+    addToCollection($this->user, $owned);
+
+    $unowned = app(SearchCatalog::class)(['owned' => 'unowned', 'user_id' => $this->user->id]);
+
+    expect(ids($unowned))->toContain($keyless->id)
+        ->and(ids($unowned))->not->toContain($owned->id);
+});
+
+test('a user who owns nothing sees everything as unowned and nothing as owned', function () {
+    $a = ownCard('Pikachu');
+    $b = ownCard('Charizard');
+    $empty = User::factory()->create();
+
+    expect(ids(app(SearchCatalog::class)(['owned' => 'unowned', 'user_id' => $empty->id])))
+        ->toBe([$a->id, $b->id])
+        ->and(ids(app(SearchCatalog::class)(['owned' => 'owned', 'user_id' => $empty->id])))
+        ->toBe([]);
+});

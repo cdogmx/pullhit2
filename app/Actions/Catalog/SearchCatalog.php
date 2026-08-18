@@ -8,6 +8,7 @@ use App\Models\Set;
 use App\Support\Catalog\LikeTerm;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Search, filter, sort, and paginate the catalog. The single source of catalog
@@ -312,16 +313,57 @@ class SearchCatalog
             return;
         }
 
-        $has = fn (Builder $q) => $q->whereExists(fn ($sub) => $sub
-            ->from('collection_items as ci')
-            ->join('catalog_items as owned', 'owned.id', '=', 'ci.catalog_item_id')
-            ->where('ci.user_id', (int) $userId)
-            ->where(fn ($w) => $w
-                ->whereColumn('owned.base_key', 'catalog_items.base_key')
-                ->orWhereColumn('owned.id', 'catalog_items.id'))
-            ->selectRaw('1'));
+        // Resolve what the user owns ONCE, then ask a plain membership question.
+        //
+        // This used to be a correlated NOT EXISTS whose predicate OR'd two
+        // different columns (owned.base_key = ours OR owned.id = ours). MySQL
+        // cannot index an OR across columns, so it re-probed the user's whole
+        // collection for every candidate row — 4.9k rows x 735 collection items,
+        // each with a primary-key lookup behind it. Browsing a series while
+        // filtering to unowned took 21s and timed out. Resolving first turns the
+        // same question into two indexed IN lists: 8.5s of counting becomes 0.9s,
+        // for one extra 0.2s query, and returns identical rows.
+        [$ids, $keys] = $this->ownedKeys((int) $userId);
 
-        $owned === 'owned' ? $has($query) : $query->whereNot($has);
+        if ($ids === []) {
+            // Owns nothing at all: "owned" can match nothing, "unowned" everything.
+            if ($owned === 'owned') {
+                $query->whereRaw('1 = 0');
+            }
+
+            return;
+        }
+
+        // base_key is nullable. "NULL IN (...)" is NULL rather than false, and a
+        // NULL inside the negation would silently drop unowned rows — so the
+        // base_key branch is guarded to be strictly true-or-false.
+        $matches = fn (Builder $q) => $q
+            ->whereIn('catalog_items.id', $ids)
+            ->when($keys !== [], fn (Builder $w) => $w->orWhere(fn (Builder $b) => $b
+                ->whereNotNull('catalog_items.base_key')
+                ->whereIn('catalog_items.base_key', $keys)));
+
+        $owned === 'owned' ? $query->where($matches) : $query->whereNot($matches);
+    }
+
+    /**
+     * The catalog ids in a user's collection, plus the base_keys those ids belong
+     * to — so owning any printing of a card counts as owning the card.
+     *
+     * @return array{0: array<int, int>, 1: array<int, string>}
+     */
+    protected function ownedKeys(int $userId): array
+    {
+        $rows = DB::table('collection_items as ci')
+            ->join('catalog_items as owned', 'owned.id', '=', 'ci.catalog_item_id')
+            ->where('ci.user_id', $userId)
+            ->distinct()
+            ->get(['ci.catalog_item_id as id', 'owned.base_key as base_key']);
+
+        return [
+            $rows->pluck('id')->map(fn ($id) => (int) $id)->unique()->values()->all(),
+            $rows->pluck('base_key')->filter()->unique()->values()->all(),
+        ];
     }
 
     /**
