@@ -15,6 +15,7 @@ enum TcgcsvGame: string
 {
     case Pokemon = 'pokemon';
     case Lorcana = 'lorcana';
+    case OnePiece = 'one-piece';
 
     /** TCGplayer category id this game's groups live under. */
     public function categoryId(): int
@@ -22,6 +23,7 @@ enum TcgcsvGame: string
         return match ($this) {
             self::Pokemon => TcgcsvClient::POKEMON,
             self::Lorcana => TcgcsvClient::LORCANA,
+            self::OnePiece => TcgcsvClient::ONE_PIECE,
         };
     }
 
@@ -31,6 +33,7 @@ enum TcgcsvGame: string
         return match ($this) {
             self::Pokemon => 'Pokémon',
             self::Lorcana => 'Disney Lorcana',
+            self::OnePiece => 'One Piece Card Game',
         };
     }
 
@@ -54,6 +57,19 @@ enum TcgcsvGame: string
     public function hasFinishVariants(): bool
     {
         return $this === self::Pokemon;
+    }
+
+    /**
+     * The extendedData field carrying this game's "type" facet. Pokémon publishes
+     * an energy type under that name; One Piece calls the same idea Color.
+     */
+    public function typeField(): ?string
+    {
+        return match ($this) {
+            self::Pokemon => 'Card Type',
+            self::OnePiece => 'Color',
+            self::Lorcana => null,
+        };
     }
 
     public static function fromSlug(string $slug): self

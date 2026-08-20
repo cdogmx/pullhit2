@@ -23,6 +23,7 @@ class RaritySeeder extends Seeder
     private const RARITIES = [
         // Not a rarity so much as a channel, but people filter by it constantly.
         ['Promo', 'Promo', 5, false],
+        ['PR', 'Promo', 5, false],
         ['L', 'Leader', 6, false],
 
         ['Common', 'Common', 10, false],
@@ -74,6 +75,7 @@ class RaritySeeder extends Seeder
         ['ACE Rare', 'ACE Rare (JP)', 68, false],
 
         ['Illustration Rare', 'Illustration Rare', 70, false],
+        ['Showcase', 'Showcase', 71, false],
         ['Art Rare', 'Art Rare (JP)', 70, false],
         ['Legendary', 'Legendary', 70, false],
         ['Shiny Rare', 'Shiny Rare', 72, false],
@@ -85,6 +87,10 @@ class RaritySeeder extends Seeder
         ['Special Art Rare', 'Special Art Rare (JP)', 80, false],
         ['Shiny Ultra Rare', 'Shiny Ultra Rare', 82, false],
         ['Shiny Secret Rare', 'Shiny Secret Rare (JP)', 85, false],
+
+        // One Piece's own tiers above Super Rare.
+        ['TR', 'Treasure Rare', 88, false],
+        ['DON!!', 'DON!! Card', 8, false],
 
         ['Rare Secret', 'Secret Rare', 90, false],
         ['SEC', 'Secret Rare', 90, false],
