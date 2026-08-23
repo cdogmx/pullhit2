@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\PriceInversionController;
 use App\Http\Controllers\Admin\ReconcileController;
 use App\Http\Controllers\Admin\ScanFeedbackController;
 use App\Http\Controllers\Admin\SetController;
+use App\Http\Controllers\Admin\SetHealthController;
 use App\Http\Controllers\Admin\StockAlertController;
 use App\Http\Controllers\Admin\StructureController;
 use App\Http\Controllers\Admin\SuggestionController;
@@ -50,6 +51,12 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('sets/{set}/sealed', [SetController::class, 'storeSealed'])->name('sets.sealed');
     Route::patch('sealed/{catalogItem}', [SetController::class, 'updateSealed'])->name('sealed.update');
     Route::get('sets/{set}/missing', [SetController::class, 'missing'])->name('sets.missing');
+
+    // Set health — how completely each set is described, and the two fixes.
+    Route::get('set-health', [SetHealthController::class, 'index'])->name('set-health.index');
+    Route::get('set-health/{set}/candidates', [SetHealthController::class, 'candidates'])->name('set-health.candidates');
+    Route::post('set-health/{set}/link', [SetHealthController::class, 'link'])->name('set-health.link');
+    Route::post('set-health/{set}/backfill', [SetHealthController::class, 'backfill'])->name('set-health.backfill');
 
     // Catalog structure reference (brand → series → set → subset → card).
     Route::get('structure', [StructureController::class, 'index'])->name('structure');

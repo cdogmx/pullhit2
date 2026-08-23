@@ -8,6 +8,7 @@ import {
     FlagTriangleRight,
     Gift,
     GitCompare,
+    HeartPulse,
     Globe,
     Heart,
     Inbox,
@@ -119,6 +120,7 @@ const adminNavItems: NavItem[] = [
     { title: 'Structure', href: '/admin/structure', icon: ListTree },
     { title: 'Brands', href: '/admin/brands', icon: Boxes },
     { title: 'Sets', href: '/admin/sets', icon: Library },
+    { title: 'Set health', href: '/admin/set-health', icon: HeartPulse },
     { title: 'Cards', href: '/admin/cards', icon: PencilRuler },
 
     // Review & moderation
