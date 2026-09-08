@@ -169,6 +169,19 @@ return [
         // case. Left below 3 because that is what made the bad days expensive.
         'fetch_attempts' => (int) env('EBAY_FETCH_ATTEMPTS', 2),
 
+        // When eBay gates sold searches outright, every attempt is a paid call
+        // that cannot succeed. IngestEbaySoldComps deliberately does NOT stamp
+        // ebay_refreshed_at on a block, so the next view retries immediately —
+        // right for a passing interstitial, ruinous for a standing gate, which
+        // is what 2026-09-08 turned out to be: 242 billed requests, 0 items
+        // refreshed. After this many consecutive blocks the source is treated as
+        // down and stops spending; it retries once the cooldown lapses, so it
+        // heals on its own when eBay relents.
+        'breaker' => [
+            'threshold' => (int) env('EBAY_BREAKER_THRESHOLD', 4),
+            'cooldown_minutes' => (int) env('EBAY_BREAKER_COOLDOWN', 60),
+        ],
+
         // On a card view, refresh its eBay comps if they're older than this. The
         // detail page shows an "updating" indicator and live-swaps the new values.
         'view_refresh_hours' => (int) env('EBAY_VIEW_REFRESH_HOURS', 12),
