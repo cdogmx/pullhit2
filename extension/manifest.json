@@ -1,0 +1,28 @@
+{
+  "manifest_version": 2,
+  "name": "CardFoo Sold Agent",
+  "version": "1.0.0",
+  "description": "Fetches eBay sold searches from this signed-in browser and returns them to CardFoo.",
+  "browser_specific_settings": {
+    "gecko": { "id": "sold-agent@cardfoo.com", "strict_min_version": "115.0" }
+  },
+  "permissions": [
+    "storage",
+    "tabs",
+    "https://www.ebay.com/*",
+    "https://cardfoo.com/*",
+    "http://pullhit2.test/*"
+  ],
+  "background": { "scripts": ["background.js"], "persistent": true },
+  "content_scripts": [
+    {
+      "matches": ["https://www.ebay.com/sch/*", "https://www.ebay.com/splashui/*", "https://signin.ebay.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "browser_action": {
+    "default_title": "CardFoo Sold Agent",
+    "default_popup": "popup.html"
+  }
+}

@@ -6,6 +6,7 @@ use App\Models\CatalogItem;
 use App\Models\GradingCompany;
 use App\Support\Ebay\EbayBlockedException;
 use App\Support\Ebay\EbaySoldSource;
+use App\Support\Ebay\SoldCandidate;
 use App\Support\Ebay\SoldComp;
 use App\Support\Ebay\SoldCompClassifier;
 use Illuminate\Support\Carbon;
@@ -15,6 +16,13 @@ use Illuminate\Support\Facades\Log;
  * Pull real eBay sold comps for a catalog item, filter/classify them, ingest the
  * survivors as sale_observations, replace the card's synthetic placeholders, and
  * recompute its market values. The eBay SourceAdapter for the Phase-3 engine.
+ *
+ * Fetching and ingesting are separate because there are now two ways to get the
+ * page. The server fetches through Oxylabs; when eBay gates that (it requires a
+ * signed-in session for completed listings as of September 2026) the same HTML
+ * arrives instead from the browser agent, already fetched. Everything after the
+ * bytes — classify, store, drop synthetics, recompute — has to be identical
+ * whichever way they came, so it lives in {@see ingest()} and both callers use it.
  */
 class IngestEbaySoldComps
 {
@@ -27,9 +35,6 @@ class IngestEbaySoldComps
     /** @return int  number of accepted comps ingested */
     public function __invoke(CatalogItem $item): int
     {
-        $anchor = $this->anchorCents($item);
-        $companyIds = GradingCompany::pluck('id', 'slug')->all();
-
         try {
             $candidates = $this->source->fetch($item);
         } catch (EbayBlockedException) {
@@ -40,6 +45,20 @@ class IngestEbaySoldComps
 
             return 0;
         }
+
+        return $this->ingest($item, $candidates);
+    }
+
+    /**
+     * Classify and store candidates that have already been fetched, from wherever.
+     *
+     * @param  array<int, SoldCandidate>  $candidates
+     * @return int number of accepted comps ingested
+     */
+    public function ingest(CatalogItem $item, array $candidates): int
+    {
+        $anchor = $this->anchorCents($item);
+        $companyIds = GradingCompany::pluck('id', 'slug')->all();
 
         $accepted = array_values(array_filter(array_map(
             fn ($candidate) => $this->classifier->classify($candidate, $item, $anchor, $companyIds),

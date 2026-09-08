@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: light dark; --fg:#111; --muted:#666; --bg:#fff; --line:#e5e5e5; --gold:#b8860b; }
+  @media (prefers-color-scheme: dark) { :root { --fg:#eee; --muted:#999; --bg:#1b1b1b; --line:#333; --gold:#e0b64a; } }
+  body { width: 300px; margin: 0; padding: 14px; font: 13px/1.45 system-ui, sans-serif; color: var(--fg); background: var(--bg); }
+  h1 { font-size: 14px; margin: 0 0 10px; letter-spacing: .01em; }
+  .row { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; }
+  .muted { color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+  button { width: 100%; padding: 9px; font-size: 13px; font-weight: 600; border: 1px solid var(--line);
+           border-radius: 8px; cursor: pointer; background: var(--gold); color: #1b1b1b; }
+  button.off { background: transparent; color: var(--fg); }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
+  label { display: block; font-size: 11px; color: var(--muted); margin: 8px 0 3px; }
+  input { width: 100%; box-sizing: border-box; padding: 6px; font-size: 12px;
+          border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--fg); }
+  .warn { color: #c0392b; }
+  details summary { cursor: pointer; font-size: 12px; color: var(--muted); }
+  .status { min-height: 2.4em; }
+</style>
+</head>
+<body>
+  <h1>CardFoo Sold Agent</h1>
+
+  <div class="status">
+    <div class="row"><span class="muted">State</span><span id="state">…</span></div>
+    <div class="row"><span class="muted">Now</span><span id="current" class="muted">—</span></div>
+  </div>
+
+  <div class="row"><span class="muted">Queue outstanding</span><span id="outstanding" class="num">—</span></div>
+  <div class="row"><span class="muted">Done today</span><span id="done" class="num">—</span></div>
+  <div class="row"><span class="muted">Comps found today</span><span id="comps" class="num">—</span></div>
+
+  <hr>
+  <button id="toggle">…</button>
+
+  <details>
+    <summary>Settings</summary>
+    <label for="apiBase">CardFoo URL</label>
+    <input id="apiBase" type="text" placeholder="https://cardfoo.com">
+    <label for="token">Agent token</label>
+    <input id="token" type="password" placeholder="SCRAPE_AGENT_TOKEN">
+    <label for="delaySeconds">Seconds between pages</label>
+    <input id="delaySeconds" type="number" min="5" max="600">
+    <label for="dailyCap">Daily page cap</label>
+    <input id="dailyCap" type="number" min="1" max="5000">
+    <p class="muted" style="font-size:11px">Saved automatically. A slower pace and a lower cap look more like ordinary browsing.</p>
+  </details>
+
+  <script src="popup.js"></script>
+</body>
+</html>

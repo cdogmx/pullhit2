@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ScrapeAgentController;
 use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\CollectionController;
 use App\Http\Controllers\Api\V1\PingController;
@@ -20,6 +21,21 @@ Route::post(
     'webhooks/ebay/marketplace-account-deletion',
     [WebhookController::class, 'ebayMarketplaceDeletionNotify'],
 )->name('webhooks.ebay.marketplace-deletion.notify');
+
+/*
+|--------------------------------------------------------------------------
+| Browser scrape agent
+|--------------------------------------------------------------------------
+| eBay serves completed listings only to a signed-in session, so those pages
+| are fetched by a browser extension running in a real logged-in browser and
+| posted back here. Shared-secret auth, not a user session: the extension is a
+| transport for HTML and is never given the right to act as anyone on this site.
+*/
+Route::middleware('scrape.agent')->prefix('agent')->name('agent.')->group(function () {
+    Route::post('claim', [ScrapeAgentController::class, 'claim'])->name('claim');
+    Route::post('result', [ScrapeAgentController::class, 'result'])->name('result');
+    Route::get('status', [ScrapeAgentController::class, 'status'])->name('status');
+});
 
 /*
 |--------------------------------------------------------------------------

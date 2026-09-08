@@ -181,4 +181,9 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    // Shared secret for the browser scrape agent (the Firefox extension that
+    // fetches eBay sold pages from a signed-in session). No token, no agent.
+    'scrape_agent' => [
+        'token' => env('SCRAPE_AGENT_TOKEN'),
+    ],
 ];

@@ -3,6 +3,7 @@
 use App\Http\Middleware\CaptureReferral;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureNotBanned;
+use App\Http\Middleware\EnsureScrapeAgent;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RequireUsername;
@@ -33,7 +34,10 @@ return Application::configure(basePath: dirname(__DIR__))
             TrackDailyCheckin::class,
         ]);
 
-        $middleware->alias(['admin' => EnsureAdmin::class]);
+        $middleware->alias([
+            'admin' => EnsureAdmin::class,
+            'scrape.agent' => EnsureScrapeAgent::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
