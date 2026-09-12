@@ -32,5 +32,10 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Pinned so the suite does not inherit whichever way the live kill
+             switch happens to be set. Tests that care about it being off turn
+             it off themselves. -->
+        <env name="EBAY_REFRESH_ENABLED" value="true"/>
+        <env name="EBAY_SWEEP_ENABLED" value="true"/>
     </php>
 </phpunit>

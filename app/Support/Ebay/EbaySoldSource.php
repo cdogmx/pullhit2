@@ -37,6 +37,12 @@ class EbaySoldSource
      */
     public function fetch(CatalogItem $item): array
     {
+        // Checked before the breaker so being switched off never looks like a
+        // gate, and never leaves strikes behind for the next run to inherit.
+        if (! config('valuation.ebay.enabled')) {
+            throw new EbayDisabledException('eBay fetching is switched off (EBAY_REFRESH_ENABLED=false).');
+        }
+
         if ($this->isDown()) {
             throw new EbayBlockedException('eBay sold search is gated; not retrying until the cooldown lapses.');
         }

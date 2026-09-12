@@ -59,6 +59,17 @@ class OxylabsClient
         bool $render = true,
         string $budget = self::BUDGET_EBAY,
     ): string {
+        // Enforced here rather than at the callers. Seven of them check
+        // `valuation.ebay.enabled` and two — catalog:refresh-ebay and
+        // valuation:resweep-misses — do not, so a caller-side switch is only as
+        // good as the next caller written. This is the meter: nothing spends
+        // without passing through it.
+        if ($budget === self::BUDGET_EBAY && ! config('valuation.ebay.enabled')) {
+            throw new EbayDisabledException(
+                'eBay fetching is switched off (EBAY_REFRESH_ENABLED=false).'
+            );
+        }
+
         $config = config('services.oxylabs');
 
         if (empty($config['username']) || empty($config['password'])) {

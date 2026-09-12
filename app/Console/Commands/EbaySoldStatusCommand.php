@@ -31,6 +31,7 @@ class EbaySoldStatusCommand extends Command
 {
     protected $signature = 'ebay:sold-status
         {--probe : spend two Oxylabs calls to test sold and active side by side}
+        {--force : probe even while eBay fetching is switched off}
         {--reset : close the breaker so the next fetch retries immediately}';
 
     protected $description = 'Report whether eBay sold search is reachable, and why it is not';
@@ -47,6 +48,11 @@ class EbaySoldStatusCommand extends Command
         $this->line('  consecutive blocks: '.$source->consecutiveBlocks()
             .' (trips at '.config('valuation.ebay.breaker.threshold').')');
         $this->line('  cooldown          : '.config('valuation.ebay.breaker.cooldown_minutes').' min');
+
+        $this->line('<comment>Switch</comment>');
+        $this->line('  eBay fetching     : '.(config('valuation.ebay.enabled')
+            ? '<fg=green>on</>'
+            : '<fg=red>OFF</> (EBAY_REFRESH_ENABLED=false)'));
 
         $this->line('<comment>Budget today</comment>');
         $this->line('  ebay: '.number_format($oxylabs->spent(OxylabsClient::BUDGET_EBAY))
@@ -69,6 +75,21 @@ class EbaySoldStatusCommand extends Command
         // Probe with a card people actually sell. A long-tail item returns an
         // error or an empty page on its own merits and tells us nothing about
         // whether eBay is gating us.
+        if (! config('valuation.ebay.enabled')) {
+            if (! $this->option('force')) {
+                $this->newLine();
+                $this->error('eBay fetching is switched off, so the probe would spend nothing to learn nothing.');
+                $this->line('  Re-run with --force to test the gate anyway (two Oxylabs calls).');
+
+                return self::SUCCESS;
+            }
+
+            // Deliberate, one-off, and typed by a person: this is the command
+            // that says whether it is time to switch eBay back on.
+            config()->set('valuation.ebay.enabled', true);
+            $this->warn('Probing with --force while eBay fetching is switched off.');
+        }
+
         $item = CatalogItem::query()
             ->where('item_type', 'single')
             ->whereNotNull('number')
