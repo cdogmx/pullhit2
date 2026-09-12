@@ -10,6 +10,13 @@
  */
 const WALLS = ['Security Measure', 'Sign in or Register', 'Error Page'];
 
+// Injected across all of ebay.com, not just /sch/, because a refused sold
+// search does not stay on the search URL — it lands on the captcha splash, on
+// signin, or bounced to the homepage with an error. Only matching /sch/ meant
+// the most common refusal arrived as a 45-second timeout reported as "failed",
+// which is both slow and the wrong answer.
+
+
 browser.runtime.onMessage.addListener((msg) => {
   if (msg.type !== 'cardfoo:scrape') {
     return undefined;
@@ -27,6 +34,12 @@ browser.runtime.onMessage.addListener((msg) => {
 
   // Results are rendered by the time the list container exists; without it the
   // page is still settling and the background script should ask again.
+  // Bounced somewhere that is not a search page at all, and not a wall we
+  // recognise by title either. Report rather than wait out the timeout.
+  if (!location.pathname.startsWith('/sch/')) {
+    return Promise.resolve({ ready: true, refused: true, title: title || location.href, html: '' });
+  }
+
   const settled =
     document.readyState === 'complete' &&
     document.querySelector('.srp-results, .s-card, .srp-save-null-search__heading');
