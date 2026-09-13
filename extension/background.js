@@ -77,7 +77,21 @@ async function api(path, options = {}) {
   });
 
   if (!res.ok) {
-    throw new Error(`${path} → HTTP ${res.status}`);
+    // Say what is actually wrong. "claim → HTTP 401" sends you looking at the
+    // queue; the problem is always the token field two inches above it.
+    if (res.status === 401) {
+      throw new Error('Agent token rejected — re-paste SCRAPE_AGENT_TOKEN in Settings.');
+    }
+
+    if (res.status === 503) {
+      throw new Error('CardFoo has no SCRAPE_AGENT_TOKEN set for this environment.');
+    }
+
+    if (res.status === 404) {
+      throw new Error(`No agent endpoint at ${apiBase} — check the CardFoo URL.`);
+    }
+
+    throw new Error(`${path} failed: HTTP ${res.status}`);
   }
 
   return res.json();

@@ -24,9 +24,9 @@ async function refresh() {
       $(key).value = state[key];
     }
   }
-  if (!state.hasToken) {
-    $('token').placeholder = 'required — paste SCRAPE_AGENT_TOKEN';
-  }
+  $('token').placeholder = state.hasToken
+    ? 'stored — paste again to replace'
+    : 'required — paste SCRAPE_AGENT_TOKEN';
 
   // Queue depth comes from the server; the background script holds the token.
   const status = await browser.runtime.sendMessage({ type: 'cardfoo:status' });
@@ -40,11 +40,19 @@ $('toggle').addEventListener('click', async () => {
 });
 
 for (const key of ['apiBase', 'token', 'delaySeconds', 'dailyCap']) {
-  $(key).addEventListener('change', async () => {
-    const value = ['delaySeconds', 'dailyCap'].includes(key) ? Number($(key).value) : $(key).value.trim();
-    if (key === 'token' && value === '') return;
-    await browser.runtime.sendMessage({ type: 'cardfoo:save', settings: { [key]: value } });
-  });
+  // Both events: "change" alone fires on blur, so a pasted token that is never
+  // blurred — paste, then straight to Start — was silently not saved.
+  for (const event of ['change', 'input']) {
+    $(key).addEventListener(event, async () => {
+      const value = ['delaySeconds', 'dailyCap'].includes(key)
+        ? Number($(key).value)
+        : $(key).value.trim();
+
+      if (key === 'token' && value === '') return;
+
+      await browser.runtime.sendMessage({ type: 'cardfoo:save', settings: { [key]: value } });
+    });
+  }
 }
 
 refresh();
