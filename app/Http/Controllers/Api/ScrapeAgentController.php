@@ -6,6 +6,7 @@ use App\Actions\Valuation\IngestEbaySoldComps;
 use App\Http\Controllers\Controller;
 use App\Models\EbayScrapeJob;
 use App\Support\Ebay\EbayHtmlParser;
+use App\Support\Ebay\ScrapeAgentPresence;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,8 +34,12 @@ class ScrapeAgentController extends Controller
     private const MAX_ATTEMPTS = 3;
 
     /** Claim a batch of searches to run. */
-    public function claim(Request $request): JsonResponse
+    public function claim(Request $request, ScrapeAgentPresence $presence): JsonResponse
     {
+        // The card page asks whether anything is listening before it promises
+        // someone an update, so every call from the agent counts as a heartbeat.
+        $presence->touch();
+
         $data = $request->validate([
             'limit' => ['nullable', 'integer', 'min:1', 'max:25'],
             'agent' => ['nullable', 'string', 'max:64'],
@@ -91,8 +96,10 @@ class ScrapeAgentController extends Controller
      * Report on one job. Either HTML we should parse, or a reason it could not
      * be fetched.
      */
-    public function result(Request $request, IngestEbaySoldComps $ingest): JsonResponse
+    public function result(Request $request, IngestEbaySoldComps $ingest, ScrapeAgentPresence $presence): JsonResponse
     {
+        $presence->touch();
+
         $data = $request->validate([
             'id' => ['required', 'integer'],
             // ~2.5 MB of eBay search HTML is normal; the cap is a sanity bound.
@@ -144,7 +151,7 @@ class ScrapeAgentController extends Controller
     }
 
     /** Queue depth and recent throughput — what the popup shows. */
-    public function status(): JsonResponse
+    public function status(ScrapeAgentPresence $presence): JsonResponse
     {
         $counts = EbayScrapeJob::selectRaw('status, COUNT(*) n')->groupBy('status')->pluck('n', 'status');
 
@@ -156,6 +163,7 @@ class ScrapeAgentController extends Controller
             'comps_today' => (int) EbayScrapeJob::where('completed_at', '>=', now()->startOfDay())->sum('comps_found'),
             'blocked_today' => EbayScrapeJob::where('status', EbayScrapeJob::STATUS_BLOCKED)
                 ->where('updated_at', '>=', now()->startOfDay())->count(),
+            'agent_last_seen' => $presence->lastSeen()?->toIso8601String(),
         ]);
     }
 

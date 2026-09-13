@@ -50,7 +50,8 @@ final class SealedSearch
 
         $parts[] = $name;
 
-        return implode(' - ', array_values(array_filter($parts, fn ($p) => $p !== '')));
+        // Spaces, not " - " — eBay reads a leading minus as an exclusion.
+        return implode(' ', array_values(array_filter($parts, fn ($p) => $p !== '')));
     }
 
     /**

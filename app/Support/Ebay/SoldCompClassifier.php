@@ -197,12 +197,146 @@ class SoldCompClassifier
             return 'collector number does not match';
         }
 
+        // The treatment, when the listing names one in words. A chase printing
+        // often states what it is and never states its number: a "SPECIAL
+        // ILLUSTRATION RARE GARDEVOIR EX" sold at $346 as a comp for the Double
+        // Rare #29, which is worth about a dollar raw, because the number gate
+        // had no number to judge and the name matched.
+        if ($treatment = $this->treatmentContradicts($item, $lower)) {
+            return "listing is a {$treatment}, this card is not";
+        }
+
         // Printing match — keep an edition's comps from mixing with another's.
         if (! $this->printingMatches($item, $lower)) {
             return 'wrong printing / variant';
         }
 
         return null;
+    }
+
+    /**
+     * Chase treatments a title states in words, and the rarities that may
+     * legitimately carry them.
+     *
+     * Longest phrase first: a Special Illustration Rare title also contains
+     * "illustration rare", so the specific reading has to win. Our rarity
+     * vocabulary holds several spellings of one tier — "Rare Secret", "SEC" and
+     * "Secret Rare" are the same thing — so each entry lists every value that
+     * counts as a match rather than comparing the phrase to the stored string.
+     */
+    /**
+     * Rarities that are plainly not a chase printing, in every spelling our
+     * vocabulary holds. The treatment gate rules only on these.
+     */
+    private const PLAIN_RARITIES = [
+        'Common', 'Uncommon', 'Rare', 'Double Rare', 'C', 'UC', 'R',
+    ];
+
+    private const TREATMENTS = [
+        'special illustration rare' => ['Special Illustration Rare', 'Special Art Rare'],
+        'shiny ultra rare' => ['Shiny Ultra Rare', 'Shiny Rare', 'Rare Shiny', 'Shiny Secret Rare'],
+        'illustration rare' => [
+            'Illustration Rare', 'Special Illustration Rare', 'Art Rare', 'Special Art Rare',
+        ],
+        'hyper rare' => ['Hyper Rare', 'Mega Hyper Rare', 'Rare Rainbow', 'Rare Secret', 'SEC'],
+        'secret rare' => [
+            'Rare Secret', 'SEC', 'Secret Rare', 'Rare Rainbow', 'Hyper Rare',
+            'Shiny Secret Rare', 'Mega Hyper Rare',
+        ],
+    ];
+
+    /**
+     * The treatment a title claims, when this card is demonstrably not it.
+     *
+     * Only judges when we actually hold a rarity for the card — an unknown
+     * rarity cannot contradict anything, and guessing would reject comps for
+     * exactly the cards with the least data on them.
+     */
+    private function treatmentContradicts(CatalogItem $item, string $lower): ?string
+    {
+        $rarity = trim((string) $item->rarity);
+
+        if ($rarity === '') {
+            return null;
+        }
+
+        // A stated collector number outranks a stated treatment. numberContradicts
+        // has already rejected the listings that state a number and get it wrong,
+        // so any number still standing is this card's — and the listing is this
+        // card however the seller chose to describe it.
+        //
+        // This matters because our own rarity is often the weaker fact. A "Chaos
+        // Rising Illustration Rare" at 090/086 really is one whatever we have
+        // stored, and judging the words over the number rejected 3,638 comps on
+        // that single pattern alone.
+        if ($this->statesAnIdentifier($lower)) {
+            return null;
+        }
+
+        // Only judged for cards whose rarity could not be mistaken for a chase
+        // printing. Our rarity data is the weak side of this comparison — a
+        // Neo Destiny Shining Charizard is stored "Rare Shining" and really is
+        // the set's secret rare, a Call of Legends SL10 is stored "Rare Holo"
+        // and really is one too. Enumerating every synonym would be a losing
+        // game, so the gate simply declines to judge anything that might be a
+        // chase card and rules only on the tiers that plainly are not.
+        if (! in_array($rarity, self::PLAIN_RARITIES, true)) {
+            return null;
+        }
+
+        foreach (self::TREATMENTS as $phrase => $allowed) {
+            if (! str_contains($lower, $phrase)) {
+                continue;
+            }
+
+            // First phrase wins: the list runs most specific to least, so a
+            // Special Illustration Rare is judged as one and not as a plain
+            // Illustration Rare.
+            return in_array($rarity, $allowed, true) ? null : $phrase;
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether a title pins itself to a specific card by number at all.
+     *
+     * Wider than {@see statedNumbers()} on purpose, and used only to stand the
+     * treatment gate down. It also counts the hyphenated codes One Piece and its
+     * starter decks use — "OP14-119", "ST15-001", "PRB02-002" — which are not
+     * written as a fraction and so are invisible to the number gate. Counting
+     * them here only ever makes the treatment gate fire less, which is the safe
+     * direction for a title that has already told us which card it is.
+     */
+    private function statesAnIdentifier(string $lower): bool
+    {
+        return $this->statedNumbers($lower) !== []
+            || preg_match('/(?:\b|#)[a-z]{1,4}[0-9]{0,2}-[0-9]{1,4}[a-z]?\b/u', $lower) === 1
+            // "#SL10", "#SM155" — a hash and a set code with no hyphen.
+            || preg_match('/#\s*[a-z]{1,3}[0-9]{1,4}\b/u', $lower) === 1;
+    }
+
+    /**
+     * Every collector number a title states, in the two forms sellers write.
+     *
+     * @return array<int, string>
+     */
+    private function statedNumbers(string $lower): array
+    {
+        $stated = [];
+
+        // "220/214", "84/147", "TG12/TG30" — numerator is the collector number.
+        if (preg_match_all('#\b([0-9a-z]{1,5})\s*/\s*[0-9a-z]{1,5}\b#u', $lower, $matches)) {
+            $stated = $matches[1];
+        }
+
+        // "… Burning Shadows #84" — the other way sellers write it. Requires the
+        // hash, so an HP or a year can't be mistaken for a collector number.
+        if (preg_match_all('/#\s*([0-9]{1,4})\b/u', $lower, $matches)) {
+            $stated = array_merge($stated, $matches[1]);
+        }
+
+        return $stated;
     }
 
     /**
@@ -231,18 +365,7 @@ class SoldCompClassifier
             return false;
         }
 
-        $stated = [];
-
-        // "220/214", "84/147", "TG12/TG30" — numerator is the collector number.
-        if (preg_match_all('#\b([0-9a-z]{1,5})\s*/\s*[0-9a-z]{1,5}\b#u', $lower, $matches)) {
-            $stated = $matches[1];
-        }
-
-        // "… Burning Shadows #84" — the other way sellers write it. Requires the
-        // hash, so an HP or a year can't be mistaken for a collector number.
-        if (preg_match_all('/#\s*([0-9]{1,4})\b/u', $lower, $matches)) {
-            $stated = array_merge($stated, $matches[1]);
-        }
+        $stated = $this->statedNumbers($lower);
 
         if ($stated === []) {
             return false;

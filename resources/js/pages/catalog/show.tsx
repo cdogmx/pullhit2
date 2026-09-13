@@ -391,7 +391,11 @@ export default function Show({
                 // keep trying
             }
 
-            if (active && attempts < 15) {
+            // Long enough for the browser agent to reach this card. It claims a
+            // small batch at a time and paces itself between pages, so a card
+            // queued while a batch is already running waits for that batch —
+            // far longer than the server's own fetcher ever took.
+            if (active && attempts < 45) {
                 timer = setTimeout(tick, 4000);
             } else if (active) {
                 setUpdating(false);

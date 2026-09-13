@@ -24,7 +24,10 @@ const DEFAULTS = {
   delaySeconds: 25,
   // Stop for the day after this many pages, whatever the queue says.
   dailyCap: 400,
-  batchSize: 5,
+  // Small on purpose. Priority only helps if the agent asks again soon: a card
+  // someone just opened is queued above the routine work, but it still has to
+  // wait out whatever batch is already in hand.
+  batchSize: 2,
 };
 
 const state = {

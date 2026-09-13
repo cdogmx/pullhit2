@@ -14,7 +14,8 @@ use Illuminate\Database\Eloquent\Builder;
  * The agent is slow by design — one signed-in browser pacing itself like a
  * person — so the queue is a shortlist, not the catalog. Ordering therefore
  * matters more than it did when the server could fetch thousands a day: the
- * cards that get done are the ones at the front.
+ * cards that get done are the ones at the front, so they are taken in order of
+ * how much the site actually looks at them.
  *
  * Cards nobody values are skipped, not deprioritised. A card with no market
  * value has never been looked up, and spending a scarce fetch on it to discover
@@ -67,7 +68,16 @@ class EnqueueEbaySoldCommand extends Command
                 ! $this->option('include-unvalued'),
                 fn (Builder $q) => $q->whereHas('marketValues'),
             )
-            // Stalest first, with never-fetched treated as infinitely stale.
+            // Most-looked-at first. The agent is slow by design — one browser
+            // pacing itself like a person — so the queue is a shortlist and the
+            // cards that get done are the ones at the front. A price nobody
+            // looks at being stale costs nothing; the one on the page someone
+            // opens is the whole point.
+            ->orderByDesc('popularity')
+            // Then whoever was looked at most recently, so a card someone is
+            // reading right now beats one from months ago on the same count.
+            ->orderByRaw("COALESCE(last_viewed_at, '1970-01-01 00:00:00') DESC")
+            // Then stalest, with never-fetched treated as infinitely stale.
             // Written as a COALESCE rather than relying on where NULLs happen to
             // sort, which differs between MySQL and SQLite — and the order here
             // is the order the agent works in, so it has to be the same in the

@@ -58,7 +58,7 @@ test('listing titles are matched against the card language', function () {
     expect(CardSearchTerms::matchesLanguage($make(null), 'Japanese Charizard'))->toBeTrue();
 });
 
-test('a single query is game - name - variant - number (no set/code)', function () {
+test('a single query is game set name variant number — the set NAME, never its code', function () {
     $item = CatalogItem::factory()->make([
         'name' => 'Snivy', 'number' => '1',
         'attributes' => ['language' => 'en', 'variant' => 'reverse_holo'],
@@ -68,7 +68,10 @@ test('a single query is game - name - variant - number (no set/code)', function 
 
     $query = (new EbaySoldSource(app(OxylabsClient::class)))->searchQuery($item);
 
-    expect($query)->toBe('Pokemon - Snivy - Reverse Holo - 1');
+    // "Black Bolt" is in; "BLK" is not — real listings carry the set name and
+    // never the code.
+    expect($query)->toBe('Pokemon Black Bolt Snivy Reverse Holo 1')
+        ->not->toContain('BLK');
 });
 
 test('the sold-comp eBay query still carries every printing qualifier', function () {
@@ -77,10 +80,13 @@ test('the sold-comp eBay query still carries every printing qualifier', function
         'attributes' => ['language' => 'en', 'variant' => 'holo', 'edition' => 'first_edition'],
     ]);
     $item->setRelation('productLine', ProductLine::factory()->make(['name' => 'Pokémon']));
+    // Pinned: the factory invents a set name, which would otherwise appear in
+    // the query and make this assertion depend on a random word.
+    $item->setRelation('set', Set::factory()->make(['name' => 'Base Set', 'code' => 'BS']));
 
     $query = (new EbaySoldSource(app(OxylabsClient::class)))->searchQuery($item);
 
-    expect($query)->toBe('Pokemon - Charizard - 1st Edition - 4');
+    expect($query)->toBe('Pokemon Base Set Charizard 1st Edition 4');
 });
 
 test('the sold URL filters to the card language via the Language aspect', function () {
@@ -97,15 +103,15 @@ test('the sold URL filters to the card language via the Language aspect', functi
 test('a sealed query uses natural retail wording, not the card-identity form', function () {
     // Set name already in the product name → not duplicated; no (CODE); game prefixed.
     expect(sealedQuery('Black Bolt Booster Bundle', 'Pokémon', 'Black Bolt'))
-        ->toBe('Pokemon - Black Bolt Booster Bundle');
+        ->toBe('Pokemon Black Bolt Booster Bundle');
 });
 
 test('a sealed query folds in the set name when the product name lacks it', function () {
     expect(sealedQuery('Booster Pack', 'Pokémon', 'Ascended Heroes'))
-        ->toBe('Pokemon - Ascended Heroes - Booster Pack');
+        ->toBe('Pokemon Ascended Heroes Booster Pack');
 
     expect(sealedQuery('Unova Mini Tin [Chandelure & Zorua]', 'Pokémon', 'Black Bolt'))
-        ->toBe('Pokemon - Black Bolt - Unova Mini Tin [Chandelure & Zorua]');
+        ->toBe('Pokemon Black Bolt Unova Mini Tin [Chandelure & Zorua]');
 });
 
 test('a sealed query does not repeat a game name already in the product name', function () {

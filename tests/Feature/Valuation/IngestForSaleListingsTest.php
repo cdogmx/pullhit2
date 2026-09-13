@@ -202,8 +202,10 @@ test('a sealed product gets a for-sale value from its SEALED state', function ()
         'median' => 14000, 'n_sales' => 12, 'for_sale' => null, 'combined' => null,
     ]);
 
-    // Keyed on the retail wording — the singles query would never match.
-    fakeBrowse(['Disney Lorcana - Attack of the Vine! - Booster Box' => [
+    // Keyed on the retail wording — the singles query would never match. Joined
+    // with spaces: eBay reads a leading minus as an exclusion, so the separator
+    // dash came out of the query builders.
+    fakeBrowse(['Disney Lorcana Attack of the Vine! Booster Box' => [
         listing(13500, 'Disney Lorcana Attack of the Vine Booster Box Sealed'),
         listing(13900, 'Disney Lorcana Attack of the Vine Booster Box Factory Sealed'),
         listing(52000, 'Lot of 4 Disney Lorcana Attack of the Vine Booster Box'), // a lot

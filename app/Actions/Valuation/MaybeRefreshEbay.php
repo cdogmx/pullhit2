@@ -4,31 +4,84 @@ namespace App\Actions\Valuation;
 
 use App\Jobs\RefreshEbaySoldComps;
 use App\Models\CatalogItem;
+use App\Models\EbayScrapeJob;
+use App\Support\Ebay\EbaySoldSource;
+use App\Support\Ebay\ScrapeAgentPresence;
 use Illuminate\Support\Carbon;
 
 /**
  * On a card view, refresh its eBay comps if they're stale (older than
  * `view_refresh_hours`, default 12h) and the card isn't a low-value rarity we
- * skip to conserve Oxylabs calls. Dispatches the queued job — non-blocking; the
- * page renders the cached value and shows an "updating" indicator. Returns
- * whether a refresh is now in flight (so the page can poll for the new values).
+ * skip. Non-blocking: the page renders the cached value and shows an "updating"
+ * indicator. Returns whether a refresh is really in flight, so the page only
+ * makes that promise when something is going to keep it.
+ *
+ * There are two ways to fetch now. The server can go through Oxylabs, which is
+ * switched off while eBay requires a signed-in session for completed listings;
+ * otherwise the work goes on the queue for the browser agent to pick up. The
+ * agent is a browser extension on a desk and may simply be closed, so the queue
+ * is only written — and "updating" only reported — when it has been heard from
+ * recently. A spinner for work nobody is doing is worse than no spinner.
  */
 class MaybeRefreshEbay
 {
+    public function __construct(
+        private ScrapeAgentPresence $presence,
+        private EbaySoldSource $source,
+    ) {}
+
     public function __invoke(CatalogItem $item): bool
     {
-        if (! config('valuation.ebay.enabled')
-            || $this->isSkippedRarity($item)
-            || ! $this->isDue($item)) {
+        if ($this->isSkippedRarity($item) || ! $this->isDue($item)) {
             return false;
         }
 
-        RefreshEbaySoldComps::dispatch($item->id);
+        // The server's own fetcher, when it is switched on.
+        if (config('valuation.ebay.enabled')) {
+            RefreshEbaySoldComps::dispatch($item->id);
+
+            return true;
+        }
+
+        return $this->queueForAgent($item);
+    }
+
+    /**
+     * Put the card at the front of the agent's queue, if the agent is there.
+     *
+     * Priority, not position: a card someone is reading right now is worth more
+     * than anything a routine top-up queued, and the agent works the queue in
+     * priority order.
+     */
+    private function queueForAgent(CatalogItem $item): bool
+    {
+        if (! $this->presence->isLive()) {
+            return false;
+        }
+
+        // Already waiting, or already being fetched — say "updating" without
+        // queueing the same card twice.
+        if (EbayScrapeJob::outstanding()->where('catalog_item_id', $item->id)->exists()) {
+            return true;
+        }
+
+        EbayScrapeJob::create([
+            'catalog_item_id' => $item->id,
+            'url' => $this->source->soldSearchUrl($item),
+            'status' => EbayScrapeJob::STATUS_PENDING,
+            'priority' => self::VIEW_PRIORITY,
+        ]);
 
         return true;
     }
 
-    /** Low-value rarities (e.g. Common/Uncommon) aren't worth a paid sold-comp pull. */
+    /**
+     * Above anything `ebay:enqueue-sold` writes, which queues at 0 unless told
+     * otherwise. Someone is looking at this card now.
+     */
+    private const VIEW_PRIORITY = 100;
+
+    /** Low-value rarities (e.g. Common/Uncommon) aren't worth a sold-comp pull. */
     public function isSkippedRarity(CatalogItem $item): bool
     {
         $skip = (array) config('valuation.ebay.skip_rarities', []);

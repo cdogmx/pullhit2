@@ -19,10 +19,11 @@ function soldHtml(): string
 }
 
 /** A card the queue should consider: valued, with its rarity pinned. */
-function enqueueableCard(?DateTimeInterface $refreshedAt, ?string $rarity = 'Rare'): CatalogItem
+function enqueueableCard(?DateTimeInterface $refreshedAt, ?string $rarity = 'Rare', int $popularity = 0): CatalogItem
 {
     $item = CatalogItem::factory()->create([
         'ebay_refreshed_at' => $refreshedAt,
+        'popularity' => $popularity,
         'attributes' => array_filter([
             'language' => 'en', 'variant' => 'normal', 'rarity' => $rarity,
         ], fn ($v) => $v !== null),
@@ -222,13 +223,39 @@ test('the enqueue command queues the stalest valued cards and does not double up
     expect($queued)->toContain($never->id)
         ->and($queued)->toContain($stale->id)
         ->and($queued)->not->toContain($fresh->id)
-        // Never-fetched leads merely-old.
+        // Never-fetched leads merely-old when nothing has been viewed.
         ->and($queued[0])->toBe($never->id);
 
     // Re-running tops the queue up rather than stacking a second copy.
     $this->artisan('ebay:enqueue-sold', ['--limit' => 10])->assertSuccessful();
 
     expect(EbayScrapeJob::count())->toBe(count($queued));
+});
+
+test('the queue is taken in order of how much the site looks at each card', function () {
+    // The agent is slow, so the front of the queue is what actually gets done.
+    // A stale price nobody opens costs nothing; the one on the page someone is
+    // reading is the point.
+    $ignored = enqueueableCard(null, popularity: 0);
+    $popular = enqueueableCard(now()->subHours(13), popularity: 250);
+    $middling = enqueueableCard(null, popularity: 40);
+
+    test()->artisan('ebay:enqueue-sold', ['--limit' => 10])->assertSuccessful();
+
+    expect(EbayScrapeJob::orderBy('id')->pluck('catalog_item_id')->all())
+        ->toBe([$popular->id, $middling->id, $ignored->id]);
+});
+
+test('among equally popular cards the most recently viewed goes first', function () {
+    $older = enqueueableCard(null, popularity: 10);
+    $older->forceFill(['last_viewed_at' => now()->subMonth()])->save();
+
+    $recent = enqueueableCard(null, popularity: 10);
+    $recent->forceFill(['last_viewed_at' => now()->subMinutes(5)])->save();
+
+    test()->artisan('ebay:enqueue-sold', ['--limit' => 10])->assertSuccessful();
+
+    expect(EbayScrapeJob::orderBy('id')->pluck('catalog_item_id')->first())->toBe($recent->id);
 });
 
 test('a card whose rarity we do not know is still queued', function () {
