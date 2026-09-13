@@ -216,15 +216,18 @@ class EbaySoldSource
             return null;
         }
 
+        // A set's display name is not always the thing people search for. The
+        // First Partner sets are named "Series 1/2/3" — which identifies nothing
+        // on its own — while the line they belong to, "First Partners", appears
+        // in 76% of their sold titles. So a generic name falls through to the
+        // series it sits in rather than dropping the set from the search.
         $name = trim((string) $set->name);
 
-        if ($name === '') {
-            return null;
+        if ($this->identifiesNothing($name)) {
+            $name = trim((string) $set->series);
         }
 
-        // Names that identify nothing on their own. Every line has a "Promo"
-        // set, and "Series 2" means nothing without the line it belongs to.
-        if (preg_match('/^(promos?|base|other|series\s+\d+)$/i', $name)) {
+        if ($name === '' || $this->identifiesNothing($name)) {
             return null;
         }
 
@@ -241,6 +244,17 @@ class EbaySoldSource
         }
 
         return $name;
+    }
+
+    /**
+     * A set or series name too generic to narrow anything. Every product line
+     * has a "Promo" set, and "Series 2" means nothing without the line it
+     * belongs to.
+     */
+    private function identifiesNothing(string $name): bool
+    {
+        return $name === ''
+            || preg_match('/^(promos?|base|other|series\s+\d+)$/i', $name) === 1;
     }
 
     /** The eBay "Language" aspect value for a card's language, or null if unknown. */

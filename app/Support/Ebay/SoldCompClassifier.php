@@ -27,6 +27,15 @@ class SoldCompClassifier
      */
     public function classify(SoldCandidate $candidate, CatalogItem $item, int $anchorCents, array $companyIds): ?SoldComp
     {
+        // 0) It has to have actually sold. Every real result on a completed
+        //    search carries a "Sold <date>" caption; eBay pads a thin results
+        //    page with loosely related ACTIVE listings, which carry none. Those
+        //    were being stored as sales dated today at their asking price — an
+        //    ask is not a sale, and asks sit above the market by definition.
+        if ($candidate->soldAt === null) {
+            return null;
+        }
+
         // 1-3) Structural gates: blocklist, multi-quantity, multi-card/sealed
         //      bundles, name/variant match, printing. Shared with the prune pass.
         if ($this->structurallyInvalid($candidate, $item)) {

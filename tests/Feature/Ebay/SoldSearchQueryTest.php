@@ -12,11 +12,12 @@ beforeEach(function () {
 });
 
 /** A single in a named set. */
-function queryCard(string $setName, string $name = 'Gardevoir ex', string $number = '29'): CatalogItem
+function queryCard(string $setName, string $name = 'Gardevoir ex', string $number = '29', ?string $series = null): CatalogItem
 {
     $set = Set::factory()->create([
         'product_line_id' => test()->line->id,
         'name' => $setName,
+        'series' => $series,
     ]);
 
     return CatalogItem::factory()->create([
@@ -51,6 +52,22 @@ test('a set name that identifies nothing is left out', function () {
         expect($this->source->searchQuery(queryCard($generic)))
             ->toBe('Pokemon Gardevoir ex 29', "set name: {$generic}");
     }
+});
+
+test('a generic set name falls through to the series it sits in', function () {
+    // The First Partner sets are named "Series 1/2/3", which identifies nothing,
+    // while "First Partner" appears in 76% of their sold titles. Searching
+    // without a set at all returned no listings for these cards.
+    $card = queryCard('Series 3', name: 'Torchic', number: '56', series: 'First Partners');
+
+    expect($this->source->searchQuery($card))
+        ->toBe('Pokemon First Partners Torchic 56');
+});
+
+test('a series as generic as the name is still left out', function () {
+    $card = queryCard('Promo', name: 'Torchic', number: '56', series: 'Other');
+
+    expect($this->source->searchQuery($card))->toBe('Pokemon Torchic 56');
 });
 
 test('a long set name is left out, because eBay ANDs the keywords', function () {

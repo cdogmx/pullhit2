@@ -37,6 +37,9 @@ function chmiss(array $overrides = []): EbaySweepMiss
         'source_listing_id' => '12345',
         'title' => 'Charizard ex 223/197 PSA 10 Obsidian Flames',
         'price' => 50000,
+        // Every one of the 85,450 real misses carries this: they come off a
+        // completed search, and a listing with no sale date is not a sale.
+        'sold_at' => now()->subWeek(),
         'reason' => 'unmatched',
     ], $overrides));
 }
