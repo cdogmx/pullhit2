@@ -183,6 +183,15 @@ return [
 
     // Shared secret for the browser scrape agent (the Firefox extension that
     // fetches eBay sold pages from a signed-in session). No token, no agent.
+    // TCGCSV blocks clients that do not identify themselves (HTTP 401). Their
+    // guidelines ask for "Your-Application-Name/X.Y.Z"; the contact is so they
+    // can reach us rather than just block us if we misbehave.
+    'tcgcsv_agent' => [
+        'app_name' => env('TCGCSV_APP_NAME', 'CardFoo'),
+        'version' => env('TCGCSV_VERSION', '1.0.0'),
+        'contact' => env('TCGCSV_CONTACT', 'https://cardfoo.com'),
+    ],
+
     'scrape_agent' => [
         'token' => env('SCRAPE_AGENT_TOKEN'),
     ],

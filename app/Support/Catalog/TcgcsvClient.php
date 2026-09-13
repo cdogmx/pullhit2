@@ -64,7 +64,26 @@ class TcgcsvClient
     protected function http(): PendingRequest
     {
         return Http::baseUrl(rtrim((string) config('services.tcgcsv.base_url'), '/'))
+            // TCGCSV is one person's free mirror and they block clients that do
+            // not say who they are: without this every call returns 401 with
+            // "Your User-Agent has been blocked … identify your application".
+            // It is a courtesy as much as a requirement — they carry our whole
+            // Japanese catalog, our card facts and our set matching.
+            ->withHeaders(['User-Agent' => $this->userAgent()])
             ->timeout(60)
             ->retry(2, 2000, throw: false);
+    }
+
+    /** Who we are, in the form TCGCSV's guidelines ask for. */
+    protected function userAgent(): string
+    {
+        $contact = (string) config('services.tcgcsv_agent.contact', config('mail.from.address', ''));
+
+        return trim(sprintf(
+            '%s/%s%s',
+            (string) config('services.tcgcsv_agent.app_name', 'CardFoo'),
+            (string) config('services.tcgcsv_agent.version', '1.0.0'),
+            $contact !== '' ? " (+{$contact})" : '',
+        ));
     }
 }
