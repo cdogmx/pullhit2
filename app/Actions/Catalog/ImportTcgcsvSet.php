@@ -50,11 +50,24 @@ class ImportTcgcsvSet
     /**
      * @return array{set: string, items: int, valued: int, images: int}
      */
+    /**
+     * Skip numbers compared the way the importer writes them, so a caller can
+     * pass "037" or "37" and mean the same card.
+     *
+     * @param  array<int, string|int>  $skips
+     * @return array<int, string>
+     */
+    private function normalizeSkips(array $skips): array
+    {
+        return array_map(fn ($n) => $this->cleanNumber((string) $n), $skips);
+    }
+
     public function __invoke(
         int $groupId,
         bool $withPrices = true,
         bool $withImages = true,
         TcgcsvGame $game = TcgcsvGame::Pokemon,
+        array $skipNumbers = [],
     ): array {
         $category = $game->categoryId();
 
@@ -86,8 +99,18 @@ class ImportTcgcsvSet
 
             $productId = (string) ($product['productId'] ?? '');
             $number = $this->cleanNumber((string) $rawNumber);
+
+            // Numbers this catalog already holds somewhere else. A group can
+            // overlap a set we curate by hand — ME: Mega Evolution Promo carries
+            // 037-063, which live in the First Partners sets with hand-uploaded
+            // art and 45 user collections against them — and importing those
+            // again would make a second copy of a card people already own,
+            // because identity includes the set.
+            if ($skipNumbers !== [] && in_array($number, $this->normalizeSkips($skipNumbers), true)) {
+                continue;
+            }
             $rarity = Arr::get($extended->get('Rarity', []), 'value') ?: 'Unknown';
-            $name = $this->cleanName((string) ($product['name'] ?? $product['cleanName'] ?? 'Unknown'));
+            $name = $this->cleanName((string) ($product['name'] ?? $product['cleanName'] ?? 'Unknown'), $number);
 
             $imageUrl = null;
             if ($withImages) {
@@ -194,6 +217,49 @@ class ImportTcgcsvSet
     }
 
     /** @param  array<string, mixed>  $group */
+    /**
+     * The era a set belongs to, read off the sets that already share its code
+     * prefix — "ME05" and "MEG" are both Mega Evolution, so "ME" is too.
+     *
+     * Only answers when the siblings agree: a prefix that spans two eras tells
+     * us nothing, and a wrong series is worse than a blank one because it files
+     * the set somewhere a person will not look.
+     */
+    /**
+     * The era a set belongs to, read off the sets that already share its code
+     * prefix — "ME05" is Mega Evolution, so plain "ME" is too.
+     *
+     * Compared on the leading run of letters exactly, not as a prefix search:
+     * "ME%" also matches "MEW", which is Scarlet & Violet 151, and a code
+     * that spans two eras tells us nothing. Only answers when the siblings
+     * agree, because filing a set under the wrong era hides it just as
+     * thoroughly as leaving it blank, and less visibly.
+     */
+    protected function seriesFor(int $productLineId, ?string $code): ?string
+    {
+        if (! $code || ! preg_match('/^([A-Za-z]{2,})/', $code, $m)) {
+            return null;
+        }
+
+        $prefix = mb_strtolower($m[1]);
+
+        $series = Set::query()
+            ->where('product_line_id', $productLineId)
+            ->whereNotNull('series')
+            ->whereNotNull('code')
+            ->get(['code', 'series'])
+            ->filter(function ($set) use ($prefix) {
+                preg_match('/^([A-Za-z]+)/', (string) $set->code, $sm);
+
+                return isset($sm[1]) && mb_strtolower($sm[1]) === $prefix;
+            })
+            ->pluck('series')
+            ->unique()
+            ->values();
+
+        return $series->count() === 1 ? $series->first() : null;
+    }
+
     protected function upsertSet(int $productLineId, array $group): Set
     {
         $fullName = $group['name'] ?? ('Group '.($group['groupId'] ?? ''));
@@ -233,6 +299,13 @@ class ImportTcgcsvSet
             // English group would have relabelled WHT/PRE/BLK as "SV".
             'code' => $set->code ?: $code,
             'language' => 'en',
+            // Browse drills brand → series → set, and a set with no series hangs
+            // off none of those tiles: importing "ME: 30th Celebration" put 184
+            // cards in the catalog that could not be reached from the Pokemon
+            // browse page at all. Inferred from the sets that already share this
+            // one's code prefix, never overwritten — the game's own importer
+            // knows the real era and this is only filling a blank.
+            'series' => $set->series ?: $this->seriesFor($productLineId, $set->code ?: $code),
             // Clean name links this set to a same-named set in another language.
             'set_family' => $name,
             'released_at' => isset($group['publishedOn']) ? substr((string) $group['publishedOn'], 0, 10) : null,
@@ -245,12 +318,37 @@ class ImportTcgcsvSet
     }
 
     /** @see CardName::clean() */
-    protected function cleanName(string $name): string
+    protected function cleanName(string $name, ?string $number = null): string
     {
-        return CardName::clean($name);
+        $name = CardName::clean($name);
+
+        // TCGplayer names promo products "Oricorio ex - 024", where CardName
+        // only strips the "N/M" form. Left in, an imported promo reads
+        // "Oricorio ex - 024" beside a hand-entered "Bulbasaur" from the same
+        // run of cards.
+        //
+        // The number may be followed by a qualifier that has to survive:
+        // "Drifloon - 005 (Cosmos Holo)" and "Alakazam - 003 [Staff]" are
+        // distinct printings sharing a number with the plain card, and the
+        // parenthetical is the only thing telling them apart.
+        //
+        // Only stripped when the number IS this card's, so a name that simply
+        // ends in a numeral cannot be truncated by accident.
+        if ($number === null || $number === '') {
+            return $name;
+        }
+
+        $stripped = preg_replace(
+            '/\s*-\s*0*'.preg_quote($number, '/').'(?=\s*[(\[]|\s*$)/i',
+            '',
+            $name,
+        );
+
+        $stripped = trim((string) preg_replace('/\s{2,}/', ' ', (string) $stripped));
+
+        return $stripped !== '' ? $stripped : $name;
     }
 
-    /** "003/084" → "3" (leading number, zero-stripped, matching EN storage). */
     protected function cleanNumber(string $raw): ?string
     {
         $head = trim(explode('/', $raw)[0]);

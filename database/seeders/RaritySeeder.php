@@ -60,6 +60,12 @@ class RaritySeeder extends Seeder
         ['Kagayaku', 'Kagayaku / Shiny (JP)', 56, false],
         ['Classic Collection', 'Classic Collection', 57, false],
 
+        // The 30th Celebration set's own two tiers. "Pikachu Rare" is a whole
+        // run of thirty Pikachu, so it sits with the mid-tier specials rather
+        // than the chase; "Futuristic Rare" is two cards in the set.
+        ['Pikachu Rare', 'Pikachu Rare', 58, false],
+        ['Futuristic Rare', 'Futuristic Rare', 88, false],
+
         ['Ultra Rare', 'Ultra Rare', 60, false],
         ['Rare Ultra', 'Ultra Rare', 60, false],
         ['Super Rare', 'Super Rare', 60, false],
