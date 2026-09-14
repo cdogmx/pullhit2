@@ -20,6 +20,12 @@ class EbayScrapeJob extends Model
     /** @use HasFactory<EbayScrapeJobFactory> */
     use HasFactory;
 
+    /** One card's sold search. */
+    public const KIND_CARD = 'card';
+
+    /** A broad sold page whose listings are resolved back to cards afterwards. */
+    public const KIND_SWEEP = 'sweep';
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_LEASED = 'leased';
@@ -42,6 +48,11 @@ class EbayScrapeJob extends Model
             'attempts' => 'integer',
             'comps_found' => 'integer',
         ];
+    }
+
+    public function isSweep(): bool
+    {
+        return $this->kind === self::KIND_SWEEP;
     }
 
     public function catalogItem(): BelongsTo

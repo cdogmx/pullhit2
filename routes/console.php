@@ -30,6 +30,13 @@ Schedule::command('valuation:snapshot')->dailyAt('06:30')->withoutOverlapping();
 // daily Oxylabs cap. Needs Laravel Cloud's scheduler enabled to run.
 Schedule::command('valuation:sweep-ebay')->everyTenMinutes()->withoutOverlapping(15);
 
+// The same sweeps, for the browser agent. eBay serves completed listings only
+// to a signed-in session, so when the server-side sweep above is switched off
+// this is what actually runs them. Every five minutes only decides how often we
+// LOOK: each search still honours its own interval_minutes, and a label already
+// queued or in flight is never queued twice.
+Schedule::command('ebay:enqueue-sweeps')->everyFiveMinutes()->withoutOverlapping(10);
+
 // Proactive sealed-product comps. The broad sweep is collector-number-based and
 // skips sealed, so warm the valuable, stale sealed SKUs by name in small hourly
 // batches under the shared daily Oxylabs cap.

@@ -49,11 +49,6 @@ class SweepEbaySold
      */
     public function __invoke(array $search, bool $dryRun = false): array
     {
-        $label = $search['label'];
-        $language = $search['language'] ?? null;
-        $line = $search['line'] ?? null;
-        $minScore = (float) config('valuation.ebay.sweep.min_score', 0.75);
-
         $candidates = EbayHtmlParser::parse(
             $this->client->fetchHtml(
                 $search['url'],
@@ -61,6 +56,29 @@ class SweepEbaySold
                 budget: OxylabsClient::BUDGET_EBAY,
             ),
         );
+
+        return $this->ingest($search, $candidates, $dryRun);
+    }
+
+    /**
+     * Everything after the bytes: resolve each title to a card, judge it with
+     * the same classifier the per-card pull uses, store the survivors.
+     *
+     * Separate from the fetch because there are two ways to get the page now.
+     * The server fetches through Oxylabs; when eBay gates that, the same HTML
+     * arrives from the browser agent already parsed. What happens to a listing
+     * must not depend on which door it came through.
+     *
+     * @param  array{label:string, url:string, language?:string, line?:string}  $search
+     * @param  array<int, SoldCandidate>  $candidates
+     * @return array{label:string, fetched:int, matched:int, stored:int, missed:int, recomputed:int}
+     */
+    public function ingest(array $search, array $candidates, bool $dryRun = false): array
+    {
+        $label = $search['label'];
+        $language = $search['language'] ?? null;
+        $line = $search['line'] ?? null;
+        $minScore = (float) config('valuation.ebay.sweep.min_score', 0.75);
 
         $companyIds = GradingCompany::pluck('id', 'slug')->all();
 

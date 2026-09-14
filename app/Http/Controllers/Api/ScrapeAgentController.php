@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Actions\Valuation\IngestEbaySoldComps;
+use App\Actions\Valuation\SweepEbaySold;
 use App\Http\Controllers\Controller;
 use App\Models\EbayScrapeJob;
 use App\Support\Ebay\EbayHtmlParser;
 use App\Support\Ebay\ScrapeAgentPresence;
+use App\Support\Ebay\SoldCandidate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -87,7 +89,9 @@ class ScrapeAgentController extends Controller
                 'id' => $job->id,
                 'url' => $job->url,
                 // Only so the popup can say what it is working on.
-                'label' => trim($job->catalogItem?->name.' '.$job->catalogItem?->number),
+                'label' => $job->isSweep()
+                    ? 'sweep: '.$job->label
+                    : trim($job->catalogItem?->name.' '.$job->catalogItem?->number),
             ])->values(),
         ]);
     }
@@ -137,6 +141,13 @@ class ScrapeAgentController extends Controller
             return response()->json($this->giveUpOrRequeue($job, EbayScrapeJob::STATUS_BLOCKED, 'no cards and no "no matches"'));
         }
 
+        // A sweep page belongs to no single card: which cards it touches is only
+        // known once the titles are resolved, so it goes through the sweep's own
+        // matching rather than this job's catalogItem, which is null.
+        if ($job->isSweep()) {
+            return response()->json($this->completeSweep($job, $candidates));
+        }
+
         $comps = $ingest->ingest($job->catalogItem, $candidates);
 
         $job->forceFill([
@@ -148,6 +159,44 @@ class ScrapeAgentController extends Controller
         ])->save();
 
         return response()->json(['status' => 'ok', 'comps' => $comps, 'candidates' => count($candidates)]);
+    }
+
+    /**
+     * Hand a swept page to the matcher and record what it made of it.
+     *
+     * @param  array<int, SoldCandidate>  $candidates
+     * @return array<string, mixed>
+     */
+    private function completeSweep(EbayScrapeJob $job, array $candidates): array
+    {
+        $search = collect((array) config('valuation.ebay.sweep.searches', []))
+            ->firstWhere('label', $job->label);
+
+        if (! $search) {
+            // The search was renamed or removed while this job was in flight.
+            $job->forceFill([
+                'status' => EbayScrapeJob::STATUS_FAILED,
+                'note' => "no configured search labelled \"{$job->label}\"",
+                'completed_at' => now(),
+                'leased_until' => null,
+            ])->save();
+
+            return ['status' => 'failed', 'note' => 'unknown search label'];
+        }
+
+        $result = app(SweepEbaySold::class)->ingest($search, $candidates);
+
+        $job->forceFill([
+            'status' => EbayScrapeJob::STATUS_DONE,
+            'comps_found' => $result['stored'],
+            // Misses are not failures — they are listings we could not place,
+            // already logged for tuning. Worth seeing on the job all the same.
+            'note' => "matched {$result['matched']}, missed {$result['missed']}",
+            'completed_at' => now(),
+            'leased_until' => null,
+        ])->save();
+
+        return ['status' => 'ok'] + $result;
     }
 
     /** Queue depth and recent throughput — what the popup shows. */
