@@ -3,6 +3,7 @@
 use App\Models\CatalogItem;
 use App\Models\EbaySweepMiss;
 use App\Models\GradingCompany;
+use App\Models\ProductLine;
 
 beforeEach(function () {
     GradingCompany::firstOrCreate(['slug' => 'psa'], ['name' => 'PSA']);
@@ -64,4 +65,50 @@ test('a miss with no resolvable number is left unchanged', function () {
     $fresh = EbaySweepMiss::find($miss->id);
     expect($fresh)->not->toBeNull()
         ->and($fresh->reason)->toBe('no_number');
+});
+
+test('--id replays one miss and leaves the rest of the corpus alone', function () {
+    // The corpus runs to 89,000 rows against a remote database. Replaying all of
+    // them to test one parsing change is how an afternoon becomes a CPU alarm.
+    $wanted = lorcanaMiss();
+    $other = lorcanaMiss();
+
+    CatalogItem::factory()->create([
+        'name' => 'Worktogether', 'number' => '165',
+        'attributes' => ['language' => 'en', 'variant' => 'normal'],
+    ]);
+
+    test()->artisan('valuation:resweep-misses', ['--id' => [$wanted->id]])->assertSuccessful();
+
+    expect(EbaySweepMiss::find($wanted->id))->toBeNull()
+        ->and(EbaySweepMiss::find($other->id))->not->toBeNull();
+});
+
+test('--any-line resolves a miss the search label filed under the wrong game', function () {
+    // A sold page is not a single game. The $100,000 30th Celebration Mew was
+    // logged under onepiece-psa10, so re-resolving it inside the line that label
+    // implies searches a catalog the card is not in.
+    $line = ProductLine::factory()->create(['slug' => 'lorcana', 'name' => 'Lorcana']);
+    $card = CatalogItem::factory()->create([
+        'product_line_id' => $line->id,
+        'name' => 'Worktogether', 'number' => '165',
+        'attributes' => ['language' => 'en', 'variant' => 'normal'],
+    ]);
+
+    // The label has to map to a line that exists, or there is no filter to
+    // defeat: an unknown slug resolves to no id and the filter quietly no-ops.
+    ProductLine::factory()->create(['slug' => 'one-piece', 'name' => 'One Piece']);
+
+    config(['valuation.ebay.sweep.searches' => [
+        ['label' => 'onepiece-psa10', 'language' => 'en', 'line' => 'one-piece'],
+    ]]);
+
+    $miss = lorcanaMiss(['search_label' => 'onepiece-psa10']);
+
+    test()->artisan('valuation:resweep-misses', ['--id' => [$miss->id]])->assertSuccessful();
+    expect(EbaySweepMiss::find($miss->id))->not->toBeNull();
+
+    test()->artisan('valuation:resweep-misses', ['--id' => [$miss->id], '--any-line' => true])->assertSuccessful();
+    expect(EbaySweepMiss::find($miss->id))->toBeNull()
+        ->and($card->saleObservations()->count())->toBe(1);
 });

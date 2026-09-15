@@ -17,8 +17,10 @@ use Illuminate\Database\Eloquent\Builder;
 class ResweepMissesCommand extends Command
 {
     protected $signature = 'valuation:resweep-misses
+        {--id=* : only these miss ids}
         {--label= : only misses from this search label (e.g. lorcana-psa10)}
         {--reason= : only misses with this reason (e.g. no_number)}
+        {--any-line : resolve against every product line, not the one the search implies}
         {--dry-run : report what would happen, write nothing}';
 
     protected $description = 'Re-evaluate logged eBay sweep misses against the current resolver (no network)';
@@ -26,6 +28,7 @@ class ResweepMissesCommand extends Command
     public function handle(SweepEbaySold $sweep): int
     {
         $apply = ! $this->option('dry-run');
+        $anyLine = (bool) $this->option('any-line');
         $minScore = (float) config('valuation.ebay.sweep.min_score', 0.75);
         $companyIds = GradingCompany::pluck('id', 'slug')->all();
 
@@ -46,6 +49,7 @@ class ResweepMissesCommand extends Command
         $sweep->deferRecomputes();
 
         $query = EbaySweepMiss::query()
+            ->when($this->option('id'), fn (Builder $q, $ids) => $q->whereKey($ids))
             ->when($this->option('label'), fn (Builder $q, $l) => $q->where('search_label', $l))
             ->when($this->option('reason'), fn (Builder $q, $r) => $q->where('reason', $r));
 
@@ -55,10 +59,17 @@ class ResweepMissesCommand extends Command
         $bar = $this->output->createProgressBar($total);
         $bar->start();
 
-        $query->chunkById(200, function ($misses) use ($sweep, $langByLabel, $lineByLabel, $minScore, $companyIds, $apply, &$counts, $bar) {
+        $query->chunkById(200, function ($misses) use ($sweep, $langByLabel, $lineByLabel, $minScore, $companyIds, $apply, $anyLine, &$counts, $bar) {
             foreach ($misses as $miss) {
                 $language = $langByLabel[$miss->search_label] ?? null;
-                $line = $lineByLabel[$miss->search_label] ?? null;
+
+                // A miss carries the label of the search that surfaced it, and a
+                // sold page is not a single game: the $100,000 30th Celebration
+                // Mew was logged under onepiece-psa10, so re-resolving it inside
+                // the line that label implies searches the wrong catalog
+                // entirely. --any-line drops the filter and lets the title say
+                // which game it is.
+                $line = $anyLine ? null : ($lineByLabel[$miss->search_label] ?? null);
                 $outcome = $sweep->reprocessMiss($miss, $language, $minScore, $companyIds, $apply, $line);
                 $counts[$outcome] = ($counts[$outcome] ?? 0) + 1;
                 $bar->advance();
