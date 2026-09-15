@@ -177,7 +177,9 @@ class EbaySoldSource
             $parts[] = $set;
         }
 
-        $parts[] = $item->name;
+        // The card's name as a seller writes it, without the set we bracket onto
+        // it to tell two printings apart in our own catalog.
+        $parts[] = CardSearchTerms::cardTerm($item);
 
         // Pin the search to this exact printing (Reverse Holo / 1st Edition /
         // Foil / a finish or stamp) — the "variant" component. It qualifies the

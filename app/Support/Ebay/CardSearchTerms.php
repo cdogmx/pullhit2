@@ -4,6 +4,7 @@ namespace App\Support\Ebay;
 
 use App\Models\CatalogItem;
 use App\Support\Catalog\StampMatcher;
+use App\Support\Catalog\Subsets;
 
 /**
  * The edition/variant/error terms that pin an eBay search to one specific
@@ -106,6 +107,86 @@ final class CardSearchTerms
      */
     public static function setTerm(CatalogItem $item): ?string
     {
+        return self::splitSet($item)[0];
+    }
+
+    /**
+     * The card's own name as a seller would write it.
+     *
+     * We bracket a set onto a card name to tell two printings apart in our own
+     * catalog — "Umbreon ex (30th Celebration)" — and that bracket is ours, not
+     * eBay's. Since the set is already a keyword in its own right, keeping it
+     * inside the name too only demands the seller wrote it twice. Brackets that
+     * say something the set does not, like "(Pokemon Center Exclusive)", stay:
+     * those are the printing, and sellers do write them.
+     */
+    public static function cardTerm(CatalogItem $item): string
+    {
+        $name = trim((string) $item->name);
+        $said = array_flip(self::words(self::setName($item) ?? ''));
+
+        if ($said === []) {
+            return $name;
+        }
+
+        $cleaned = preg_replace_callback(
+            '/\s*[\(\[]([^\)\]]*)[\)\]]/u',
+            function (array $m) use ($said) {
+                $words = self::words($m[1]);
+                $known = array_filter($words, fn (string $w) => isset($said[$w]));
+
+                return $words !== [] && count($known) === count($words) ? '' : $m[0];
+            },
+            $name,
+        );
+
+        return trim($cleaned ?? $name) ?: $name;
+    }
+
+    /**
+     * The set name split into the part that names an expansion and the part that
+     * names a run within it — "30th Celebration Promos" into "30th Celebration"
+     * and "Promo".
+     *
+     * Both halves are search words, but they are different kinds of word: one
+     * says which release, the other says which printing, and the printing words
+     * belong with the card's other qualifiers. Splitting also lets the plural we
+     * shelve under become the singular sellers write.
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    private static function splitSet(CatalogItem $item): array
+    {
+        $name = self::setName($item);
+
+        if ($name === null) {
+            return [null, null];
+        }
+
+        [$parent, $suffix] = Subsets::split($name);
+
+        if ($parent !== null && ! self::identifiesNothing($parent)) {
+            $name = $parent;
+        } else {
+            $suffix = null;
+        }
+
+        // What does the set name actually add, given what the card is called?
+        // If all it adds is a word that identifies nothing on its own, it has
+        // nothing to say here — judged the same way the whole name is judged.
+        if (self::identifiesNothing(self::wordsBeyond($name, self::cardTerm($item)))) {
+            return [null, $suffix === null ? null : self::suffixTerm($suffix)];
+        }
+
+        return [$name, $suffix === null ? null : self::suffixTerm($suffix)];
+    }
+
+    /**
+     * The set name worth searching on at all, before it is split — null when it
+     * names nothing or is too long to AND.
+     */
+    private static function setName(CatalogItem $item): ?string
+    {
         $set = $item->set;
 
         if (! $set) {
@@ -134,19 +215,17 @@ final class CardSearchTerms
             return null;
         }
 
-        // What does the set name actually add, given what the card is called?
-        //
-        // Our shelving vocabulary is not eBay's. The 30th Celebration promos are
-        // named "Umbreon ex (30th Celebration)" and filed in "30th Celebration
-        // Promos", so the set contributed one word nobody writes in a title —
-        // "Promos" — and eBay ANDs it, which returned nothing at all. Judge the
-        // remainder the same way the whole name is judged: if all it adds is a
-        // word that identifies nothing, the set has nothing to say here.
-        if (self::identifiesNothing(self::wordsBeyond($name, $item->name))) {
-            return null;
-        }
-
         return $name;
+    }
+
+    /**
+     * The suffix as a seller writes it. We shelve a promo run as "Promos"; 94.2%
+     * of Mega Evolution Promo sold titles and 89.4% of SWSH Black Star Promos
+     * ones carry the word, and they carry it singular.
+     */
+    private static function suffixTerm(string $suffix): string
+    {
+        return $suffix === 'Promos' ? 'Promo' : $suffix;
     }
 
     /**
@@ -197,6 +276,13 @@ final class CardSearchTerms
     {
         $attributes = $item->getAttribute('attributes') ?? [];
         $out = [];
+
+        // "Promo", "Trainer Gallery" — the half of the set name that says which
+        // printing rather than which release. It qualifies the card, so it sits
+        // with the card's other qualifiers.
+        if ($suffix = self::splitSet($item)[1]) {
+            $out[] = $suffix;
+        }
 
         $edition = $attributes['edition'] ?? null;
         if ($edition === 'first_edition') {

@@ -168,7 +168,7 @@ class GetCardListings
     protected function singleQuery(CatalogItem $item): string
     {
         return trim(implode(' ', array_filter(array_merge([
-            $item->name,
+            CardSearchTerms::cardTerm($item),
             $item->number,
             // Not the raw set name: eBay ANDs every keyword, so a set whose name
             // only repeats the card's own with a shelving word bolted on ("30th

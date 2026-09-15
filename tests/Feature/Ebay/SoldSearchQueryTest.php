@@ -89,24 +89,49 @@ test('a set the card already names is not repeated', function () {
         ->toBe('Pokemon Paldean Fates Booster 29');
 });
 
-test('a set that only repeats the card name plus a shelving word is left out', function () {
-    // Our filing vocabulary is not eBay's. The 30th Celebration promos are named
-    // "Umbreon ex (30th Celebration)" and filed in "30th Celebration Promos", so
-    // the set contributed one word no seller writes in a title — and eBay ANDs
-    // every keyword, so the search returned nothing at all.
+test('a promo run reads as brand, expansion, card, printing, number', function () {
+    // The standard shape. We shelve these as "30th Celebration Promos" and name
+    // them "Umbreon ex (30th Celebration)"; a seller writes the expansion once
+    // and the word "promo", so the search says each thing exactly once.
     $item = queryCard('30th Celebration Promos', name: 'Umbreon ex (30th Celebration)', number: '110');
 
     expect($this->source->searchQuery($item))
-        ->toBe('Pokemon Umbreon ex (30th Celebration) 110');
+        ->toBe('Pokemon 30th Celebration Umbreon ex Promo 110');
 });
 
-test('a set that adds something real to the card name is kept', function () {
-    // The rule is about what the set ADDS, not about any overlap at all:
-    // "Classic Collection" is wording sellers do write.
+test('the printing half of a set name is written the way sellers write it', function () {
+    // We shelve the plural; 94.2% of Mega Evolution Promo sold titles and 89.4%
+    // of SWSH Black Star Promos ones carry the word, and carry it singular.
+    $item = queryCard('30th Celebration Promos', name: 'Mew', number: '105');
+
+    expect($this->source->searchQuery($item))
+        ->toContain(' Promo ')
+        ->not->toContain('Promos');
+});
+
+test('a gallery run splits the same way a promo run does', function () {
     $item = queryCard('30th Celebration Classic Collection', name: 'Mew (30th Celebration)', number: '25');
 
     expect($this->source->searchQuery($item))
-        ->toBe('Pokemon 30th Celebration Classic Collection Mew (30th Celebration) 25');
+        ->toBe('Pokemon 30th Celebration Mew Classic Collection 25');
+});
+
+test('a bracket that says something the set does not is kept', function () {
+    // "(Pokemon Center Exclusive)" is the printing, and sellers do write it.
+    // Only the bracket that merely repeats the set comes off.
+    $item = queryCard('30th Celebration Promos', name: 'Nidorina (30th Celebration) (Pokemon Center Exclusive)', number: '101');
+
+    expect($this->source->searchQuery($item))
+        ->toBe('Pokemon 30th Celebration Nidorina (Pokemon Center Exclusive) Promo 101');
+});
+
+test('a set name with no known printing half is left whole', function () {
+    // "Mega Evolution Promo" is not "<expansion> Promos" — nothing splits off,
+    // and the name is what 94.2% of its sold titles carry.
+    $item = queryCard('Mega Evolution Promo', name: 'Meganium', number: '1');
+
+    expect($this->source->searchQuery($item))
+        ->toBe('Pokemon Mega Evolution Promo Meganium 1');
 });
 
 test('a card with no set still searches', function () {
