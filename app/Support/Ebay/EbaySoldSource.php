@@ -163,6 +163,12 @@ class EbaySoldSource
             return SealedSearch::query($item);
         }
 
+        // A colourway print gets its own, much shorter query — the sellers of
+        // these agree on the card's name and on "RGB", and on nothing else.
+        if ($colourway = CardSearchTerms::colourwayQuery($item)) {
+            return $colourway;
+        }
+
         $parts = [];
 
         if ($line = $item->productLine) {

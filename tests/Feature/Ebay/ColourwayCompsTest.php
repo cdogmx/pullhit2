@@ -64,12 +64,35 @@ test('a real collector number still contradicts', function () {
     ))->toBeNull();
 });
 
-test('the colour is gated, not searched', function () {
-    // No colour token is common to the listings — one says "B/RGB", another is
-    // found by "blue" — and eBay ANDs, so either spelling in the query loses the
-    // other seller's sale. The number goes too: two of the three titles omit it.
+test('a colourway is searched on the two words every seller writes', function () {
+    // eBay ANDs, so a query is only as good as its rarest term, and these
+    // listings agree on almost nothing. Across the three real titles only "Mew"
+    // and "RGB" appear in all of them: one says "Thirty Aniv" rather than 30th
+    // Celebration and never says Pokemon at all, another never says blue.
+    // Including the brand — the one term every other search we build starts
+    // with — would have cost us a $20,000 sale.
     expect(app(EbaySoldSource::class)->searchQuery(($this->mew)('blue')))
-        ->toBe('Pokemon 30th Celebration Mew');
+        ->toBe('Mew RGB');
+});
+
+test('every real title survives the query that fetches it', function () {
+    // The point of the short query: each of these is a real listing for the blue
+    // Mew, and each omits something a fuller query would have demanded.
+    $query = app(EbaySoldSource::class)->searchQuery(($this->mew)('blue'));
+
+    foreach ([
+        'Pokemon 30TH CELEBRATIONS MEW B/RGB SECRET RARE 1/20k PACK HIT',
+        'Ultra-Rare Blue Mew B/RGB Thirty Aniv Freshly Pulled Clean',
+        'Mew 30C 30th Celebration Blue RGB Near Mint',
+    ] as $title) {
+        $haystack = mb_strtolower(preg_replace('/[^a-z0-9]+/i', ' ', $title));
+
+        // One needle per call: Pest reads further arguments as more needles, not
+        // as a message.
+        foreach (explode(' ', mb_strtolower($query)) as $word) {
+            expect(str_contains($haystack, $word))->toBeTrue();
+        }
+    }
 });
 
 test('a card that is not a colourway keeps its number', function () {

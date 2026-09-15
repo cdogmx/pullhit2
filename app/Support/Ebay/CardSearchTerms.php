@@ -381,6 +381,33 @@ final class CardSearchTerms
     }
 
     /**
+     * The whole query for a colourway print: the card's name and "RGB", and
+     * nothing else at all.
+     *
+     * eBay ANDs every keyword, so a query is only as good as its rarest term,
+     * and these listings agree on almost nothing. Three real titles for the blue
+     * Mew:
+     *
+     *   Pokemon 30TH CELEBRATIONS MEW B/RGB SECRET RARE 1/20k PACK HIT
+     *   Ultra-Rare Blue Mew B/RGB Thirty Aniv Freshly Pulled Clean
+     *   Mew 30C 30th Celebration Blue RGB Near Mint
+     *
+     * "Mew" and "RGB" are in all three. Every other term we would normally reach
+     * for is in two: the second says "Thirty Aniv" rather than 30th Celebration
+     * and never says Pokemon at all, and the first never says blue. Adding the
+     * brand — the one term we put in front of every other search we build —
+     * would have cost us that listing, and it sold for $20,000.
+     *
+     * Which colour it is comes from the classifier's gate, not from here.
+     */
+    public static function colourwayQuery(CatalogItem $item): ?string
+    {
+        $finish = (string) ($item->getAttribute('attributes')['finish'] ?? '');
+
+        return self::isColourway($finish) ? trim($item->name).' RGB' : null;
+    }
+
+    /**
      * The collector number, where a seller is likely to write it.
      *
      * Usually they do, and it is the sharpest term in the search. The RGB
