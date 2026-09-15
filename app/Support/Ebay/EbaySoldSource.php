@@ -188,8 +188,8 @@ class EbaySoldSource
             $parts[] = $term;
         }
 
-        if ($item->number) {
-            $parts[] = $item->number;
+        if ($number = CardSearchTerms::numberTerm($item)) {
+            $parts[] = $number;
         }
 
         // Joined with spaces, not " - ". eBay reads a leading minus as an

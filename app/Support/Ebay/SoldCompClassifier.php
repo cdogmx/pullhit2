@@ -342,9 +342,16 @@ class SoldCompClassifier
     {
         $stated = [];
 
-        // "220/214", "84/147", "TG12/TG30" — numerator is the collector number.
-        if (preg_match_all('#\b([0-9a-z]{1,5})\s*/\s*[0-9a-z]{1,5}\b#u', $lower, $matches)) {
-            $stated = $matches[1];
+        // "220/214", "84/147", "TG12/TG30" — numerator is the collector number,
+        // but only where the denominator is a set size (see isNotASetSize).
+        if (preg_match_all('#\b([0-9a-z]{1,5})\s*/\s*([0-9a-z]{1,5})\b#u', $lower, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                if (self::isNotASetSize($match[2])) {
+                    continue;
+                }
+
+                $stated[] = $match[1];
+            }
         }
 
         // "… Burning Shadows #84" — the other way sellers write it. Requires the
@@ -374,6 +381,27 @@ class SoldCompClassifier
      * Silence is not disagreement — plenty of honest listings never print the
      * number, so this rejects only a stated number that contradicts.
      */
+    /**
+     * A "N/M" that is not a card out of a set of M.
+     *
+     * Pull odds: "20k" is shorthand for twenty thousand, and four figures is
+     * past the size of any set — the largest we hold runs to the high hundreds.
+     * A seller who beats the odds says so, and "MEW B/RGB SECRET RARE 1/20k PACK
+     * HIT" read as collector number 1, contradicted the card's own number, and
+     * threw away a $100,000 sale.
+     *
+     * Colourways: that same title says "B/RGB", which is the blue print's code
+     * off the card face and parsed just as happily as a collector number — so
+     * the one listing that names its colour unambiguously was the one rejected
+     * for naming it.
+     */
+    private static function isNotASetSize(string $denominator): bool
+    {
+        return $denominator === 'rgb'
+            || (bool) preg_match('/^\d+k$/', $denominator)
+            || (ctype_digit($denominator) && (int) $denominator > 999);
+    }
+
     private function numberContradicts(CatalogItem $item, string $lower): bool
     {
         $own = $this->normalizeNumber((string) $item->number);
@@ -541,7 +569,7 @@ class SoldCompClassifier
                 $between = substr($lower, $from, $numbers[$j][1] - $from);
 
                 if (strlen($between) <= self::JOIN_DISTANCE
-                    && preg_match('/&|\+|,|and|vs\.?/', $between)) {
+                    && preg_match('/&|\+|,|\band\b|\bvs\.?\b/', $between)) {
                     return true;
                 }
             }
@@ -679,6 +707,38 @@ class SoldCompClassifier
         return false;
     }
 
+    /** The RGB colourways, as the finish tag spells them. */
+    private const COLOURWAYS = ['red', 'blue', 'green'];
+
+    /** This card's colourway, or null when it is not one of the RGB prints. */
+    private static function colourway(array $attributes): ?string
+    {
+        $finish = (string) ($attributes['finish'] ?? '');
+
+        if (! str_ends_with($finish, '_rgb')) {
+            return null;
+        }
+
+        $colour = substr($finish, 0, -4);
+
+        return in_array($colour, self::COLOURWAYS, true) ? $colour : null;
+    }
+
+    /**
+     * Does the title say this colour? Either as the word, or as the code printed
+     * on the card face — "B/RGB" for blue — which is what the sellers who know
+     * what they are holding tend to write.
+     */
+    private static function statesColour(string $lower, string $colour): bool
+    {
+        return (bool) preg_match(
+            '/\b'.$colour.'\b|\b'.$colour[0].'\s*\/\s*rgb\b/',
+            $lower,
+        );
+    }
+
+    /** Normalised core of a card name: lowercased, suffixes (ex/gx/v/…) dropped. */
+
     /** Normalised core of a card name: lowercased, suffixes (ex/gx/v/…) dropped. */
     private function nameCore(string $name): string
     {
@@ -717,6 +777,26 @@ class SoldCompClassifier
         }
         if ($edition === 'unlimited' && ($is1st || $isShadowless)) {
             return false;
+        }
+
+        // A colourway is the whole card. The 30th Celebration's Mew exists in
+        // red, blue and green; one of them sold for $100,000 and the others did
+        // not, so pooling their sales would be the most expensive kind of wrong.
+        //
+        // It is gated rather than searched because no colour token is common to
+        // the listings. One real title says "MEW B/RGB SECRET RARE", another is
+        // found by "ultra rare blue mew" — and eBay ANDs, so a query naming
+        // either spelling loses the other. Broad search, strict gate.
+        if ($colour = self::colourway($attributes)) {
+            if (! self::statesColour($lower, $colour)) {
+                return false;
+            }
+
+            foreach (self::COLOURWAYS as $other) {
+                if ($other !== $colour && self::statesColour($lower, $other)) {
+                    return false;
+                }
+            }
         }
 
         $variant = $attributes['variant'] ?? null;

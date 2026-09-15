@@ -321,7 +321,13 @@ final class CardSearchTerms
             $out[] = 'Foil';
         }
 
-        if (! empty($attributes['finish'])) {
+        // A colourway is left out on purpose. The 30th Celebration's RGB Mews
+        // are listed as "MEW B/RGB SECRET RARE" by one seller and found under
+        // "ultra rare blue mew" from another, and eBay ANDs every keyword — so
+        // whichever spelling went in the query would lose the other seller's
+        // sale. The comp classifier separates the three colours instead, off a
+        // deliberately broad search.
+        if (! empty($attributes['finish']) && ! self::isColourway((string) $attributes['finish'])) {
             $out[] = self::finishTerm((string) $attributes['finish']);
         }
 
@@ -366,6 +372,35 @@ final class CardSearchTerms
         }
 
         return self::RARITY_TERMS[mb_strtolower(trim($rarity))] ?? null;
+    }
+
+    /** Whether a finish tag is one of the RGB colourways (see SoldCompClassifier). */
+    private static function isColourway(string $finish): bool
+    {
+        return (bool) preg_match('/^(red|blue|green)_rgb$/', $finish);
+    }
+
+    /**
+     * The collector number, where a seller is likely to write it.
+     *
+     * Usually they do, and it is the sharpest term in the search. The RGB
+     * colourways are the exception we have evidence for: of three real titles
+     * for the blue Mew, one carries "30C" and two identify the card by its
+     * colour instead. eBay ANDs, so asking for the number would fetch the one
+     * and miss the other two — and what separates these three prints is the
+     * colour, which SoldCompClassifier now gates on, not the number they share.
+     */
+    public static function numberTerm(CatalogItem $item): ?string
+    {
+        $number = trim((string) $item->number);
+
+        if ($number === '') {
+            return null;
+        }
+
+        $finish = (string) ($item->getAttribute('attributes')['finish'] ?? '');
+
+        return self::isColourway($finish) ? null : $number;
     }
 
     /**
