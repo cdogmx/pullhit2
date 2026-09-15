@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Actions\Marketplace\PrefillListing;
 use App\Actions\Marketplace\SaveListingPhotos;
 use App\Actions\Marketplace\SaveMarketplaceListing;
 use App\Actions\Marketplace\SearchCatalogForListing;
@@ -9,11 +10,14 @@ use App\Enums\Condition;
 use App\Enums\ListingCategory;
 use App\Enums\ListingStatus;
 use App\Http\Controllers\Controller;
+use App\Models\CatalogItem;
+use App\Models\CollectionItem;
 use App\Models\GradingCompany;
 use App\Models\MarketplaceListing;
 use App\Models\ProductLine;
 use App\Models\Set;
 use App\Support\Catalog\LikeTerm;
+use App\Support\Marketplace\CardHit;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -164,12 +168,43 @@ class MarketplaceController extends Controller
         ]);
     }
 
-    public function create(Request $request): Response
+    public function create(Request $request, PrefillListing $prefill): Response
     {
         return Inertia::render('marketplace/form', [
             'listing' => null,
+            // "List for sale" arrives from a card page or a collection row with
+            // the answers the seller has already given there.
+            'prefill' => $prefill($this->cardParam($request), $this->holdingParam($request)),
             'options' => $this->formOptions(),
         ]);
+    }
+
+    /** ?card= — the card page's "List for sale". */
+    private function cardParam(Request $request): ?CatalogItem
+    {
+        $id = $request->query('card');
+
+        return is_numeric($id)
+            ? CatalogItem::with(['set', 'productLine'])->find((int) $id)
+            : null;
+    }
+
+    /**
+     * ?holding= — a collection row's "List for sale". Scoped to the viewer, or
+     * the query string becomes a way to read out what anyone else owns, graded
+     * and valued.
+     */
+    private function holdingParam(Request $request): ?CollectionItem
+    {
+        $id = $request->query('holding');
+
+        if (! is_numeric($id)) {
+            return null;
+        }
+
+        return CollectionItem::with(['catalogItem.set', 'catalogItem.productLine'])
+            ->where('user_id', $request->user()->id)
+            ->find((int) $id);
     }
 
     public function edit(MarketplaceListing $listing, Request $request): Response
@@ -316,17 +351,9 @@ class MarketplaceController extends Controller
             // Shaped for the form's card picker as well as the listing page, so
             // editing a listing shows the card already attached rather than an
             // empty search box that looks like nothing was ever linked.
-            'card' => $listing->catalogItem ? [
-                'id' => $listing->catalogItem->id,
-                'name' => $listing->catalogItem->display_name,
-                'number' => $listing->catalogItem->number,
-                'set' => $listing->catalogItem->set?->name,
-                'set_code' => $listing->catalogItem->set?->code,
-                'line' => $listing->catalogItem->productLine?->name,
-                'thumb' => $listing->catalogItem->primary_image_path,
-                'market_cents' => $this->marketValue($listing)['cents'] ?? null,
-                'url' => $listing->catalogItem->path(),
-            ] : null,
+            'card' => $listing->catalogItem
+                ? CardHit::for($listing->catalogItem, $this->marketValue($listing)['cents'] ?? null)
+                : null,
             'created_at' => $listing->created_at?->toIso8601String(),
             'expires_at' => $listing->expires_at?->toIso8601String(),
         ];

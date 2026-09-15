@@ -8,6 +8,7 @@ import {
     Pencil,
     RefreshCw,
     Search,
+    Store,
     Swords,
     TrendingDown,
     TrendingUp,
@@ -847,6 +848,17 @@ export default function Show({
                                         wishlisted={wishlisted}
                                         variant="button"
                                     />
+                                    {/* Owning one and selling one are the same
+                                        card; the form arrives already knowing
+                                        which. */}
+                                    <Button asChild size="sm" variant="outline">
+                                        <Link
+                                            href={`/marketplace/new?card=${item.id}`}
+                                        >
+                                            <Store className="size-4" />
+                                            List for sale
+                                        </Link>
+                                    </Button>
                                 </>
                             )}
                             <ShareButtons

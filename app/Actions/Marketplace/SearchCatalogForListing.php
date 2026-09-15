@@ -6,6 +6,7 @@ use App\Enums\ItemType;
 use App\Models\CatalogItem;
 use App\Models\MarketValue;
 use App\Support\Catalog\LikeTerm;
+use App\Support\Marketplace\CardHit;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -52,17 +53,9 @@ class SearchCatalogForListing
 
         $values = $this->rawValues($items->pluck('id')->all());
 
-        return $items->map(fn (CatalogItem $item) => [
-            'id' => $item->id,
-            'name' => $item->display_name,
-            'number' => $item->number,
-            'set' => $item->set?->name,
-            'set_code' => $item->set?->code,
-            'line' => $item->productLine?->name,
-            'thumb' => $item->primary_image_path,
-            'market_cents' => $values[$item->id] ?? null,
-            'url' => $item->path(),
-        ])->all();
+        return $items
+            ->map(fn (CatalogItem $item) => CardHit::for($item, $values[$item->id] ?? null))
+            ->all();
     }
 
     /**

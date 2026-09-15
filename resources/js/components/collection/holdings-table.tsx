@@ -4,6 +4,7 @@ import {
     Pencil,
     Search,
     StickyNote,
+    Store,
     Tag,
     Trash2,
 } from 'lucide-react';
@@ -637,6 +638,16 @@ export function HoldingsTable({
                                             >
                                                 <Pencil className="size-4" />
                                             </button>
+                                            {h.catalog_item && (
+                                                <Link
+                                                    href={`/marketplace/new?holding=${h.id}`}
+                                                    className="text-muted-foreground transition-colors hover:text-foreground"
+                                                    aria-label="List for sale on the marketplace"
+                                                    title="List for sale on the marketplace"
+                                                >
+                                                    <Store className="size-4" />
+                                                </Link>
+                                            )}
                                             <button
                                                 type="button"
                                                 onClick={() =>
@@ -665,13 +676,13 @@ export function HoldingsTable({
                                                 )}
                                                 aria-label={
                                                     h.is_for_sale
-                                                        ? 'Remove from sale'
-                                                        : 'Mark for sale'
+                                                        ? 'Clear the for-sale flag'
+                                                        : 'Flag as for sale'
                                                 }
                                                 title={
                                                     h.is_for_sale
-                                                        ? 'Remove from sale'
-                                                        : 'Mark for sale'
+                                                        ? 'Clear the for-sale flag'
+                                                        : 'Flag as for sale (a note to yourself — it does not list the card)'
                                                 }
                                             >
                                                 <Tag className="size-4" />

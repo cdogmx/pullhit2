@@ -42,8 +42,22 @@ type Existing = {
     photos: { id: number; path: string }[];
 };
 
+/**
+ * What "List for sale" carries over from a card page or a collection row —
+ * everything the seller has already said elsewhere, and never a price.
+ */
+type Prefill = {
+    title: string;
+    category: string;
+    condition: string | null;
+    grading_company_id: number | null;
+    grade: string | null;
+    card: CardHit;
+};
+
 type Props = {
     listing: Existing | null;
+    prefill?: Prefill | null;
     options: {
         categories: CategoryOption[];
         conditions: { value: string; label: string }[];
@@ -51,8 +65,12 @@ type Props = {
     };
 };
 
-export default function MarketplaceForm({ listing, options }: Props) {
+export default function MarketplaceForm({ listing, prefill, options }: Props) {
     const editing = listing !== null;
+
+    // An edit always wins: a prefill is only ever the starting point of a new
+    // listing, and a stray ?card= must not rewrite one that already exists.
+    const start = editing ? null : prefill;
 
     // Prices are entered as dollars and stored as cents. The form is the only
     // place that conversion happens, so a mistyped decimal cannot reach the db.
@@ -63,19 +81,21 @@ export default function MarketplaceForm({ listing, options }: Props) {
         listing?.photos.map((p) => p.id) ?? [],
     );
     const [files, setFiles] = useState<File[]>([]);
-    const [card, setCard] = useState<CardHit | null>(listing?.card ?? null);
+    const [card, setCard] = useState<CardHit | null>(
+        listing?.card ?? start?.card ?? null,
+    );
 
     const { data, setData, processing, errors } = useForm({
-        category: listing?.category ?? 'raw_single',
-        title: listing?.title ?? '',
+        category: listing?.category ?? start?.category ?? 'raw_single',
+        title: listing?.title ?? start?.title ?? '',
         description: listing?.description ?? '',
-        condition: listing?.condition ?? 'NM',
-        grading_company_id: listing?.grading_company_id
-            ? String(listing.grading_company_id)
-            : '',
-        grade: listing?.grade ?? '',
+        condition: listing?.condition ?? start?.condition ?? 'NM',
+        grading_company_id: String(
+            listing?.grading_company_id ?? start?.grading_company_id ?? '',
+        ),
+        grade: listing?.grade ?? start?.grade ?? '',
         cert_number: listing?.cert_number ?? '',
-        catalog_item_id: listing?.catalog_item_id ?? null,
+        catalog_item_id: listing?.catalog_item_id ?? start?.card.id ?? null,
         accepts_offers: listing?.accepts_offers ?? true,
         accepts_direct: listing?.accepts_direct ?? true,
         accepts_escrow: listing?.accepts_escrow ?? true,
