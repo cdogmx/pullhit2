@@ -13,6 +13,8 @@ use App\Http\Controllers\Web\FeedController;
 use App\Http\Controllers\Web\FollowController;
 use App\Http\Controllers\Web\GradeController;
 use App\Http\Controllers\Web\HomeController;
+use App\Http\Controllers\Web\MarketplaceController;
+use App\Http\Controllers\Web\MarketplaceThreadController;
 use App\Http\Controllers\Web\MoversController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\RankingsController;
@@ -78,6 +80,39 @@ Route::get('robots.txt', function () {
 
 // Public community rankings (leaderboard + monthly giveaway entries).
 Route::get('rankings', RankingsController::class)->name('rankings');
+
+/*
+|--------------------------------------------------------------------------
+| Marketplace
+|--------------------------------------------------------------------------
+| Cards our users sell to each other. Under /marketplace because /deals is
+| already the retail deal tracker. Browsing is open; listing requires an
+| account. CardFoo is a venue — no route here moves money.
+*/
+Route::get('marketplace', [MarketplaceController::class, 'index'])->name('marketplace.index');
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    // Before /marketplace/{listing}, or "new" is read as a listing id.
+    Route::get('marketplace/new', [MarketplaceController::class, 'create'])->name('marketplace.create');
+    Route::post('marketplace', [MarketplaceController::class, 'store'])->name('marketplace.store');
+    Route::get('marketplace/{listing}/edit', [MarketplaceController::class, 'edit'])->name('marketplace.edit');
+    Route::post('marketplace/{listing}', [MarketplaceController::class, 'update'])->name('marketplace.update');
+    Route::delete('marketplace/{listing}', [MarketplaceController::class, 'destroy'])->name('marketplace.destroy');
+
+    // Conversations, and the deals that come out of them. Every route is scoped
+    // to the two people in the thread — people arrange payment in here, in
+    // prose, and that only works if the room is genuinely private.
+    Route::get('messages', [MarketplaceThreadController::class, 'index'])->name('marketplace.threads.index');
+    Route::post('marketplace/{listing}/contact', [MarketplaceThreadController::class, 'store'])->name('marketplace.threads.store');
+    Route::get('messages/{thread}', [MarketplaceThreadController::class, 'show'])->name('marketplace.threads.show');
+    Route::post('messages/{thread}', [MarketplaceThreadController::class, 'send'])->name('marketplace.threads.send');
+    Route::get('messages/{thread}/poll', [MarketplaceThreadController::class, 'poll'])->name('marketplace.threads.poll');
+    Route::post('messages/{thread}/deal', [MarketplaceThreadController::class, 'proposeDeal'])->name('marketplace.deals.propose');
+    Route::post('deals/{deal}/act', [MarketplaceThreadController::class, 'actOnDeal'])->name('marketplace.deals.act');
+    Route::post('deals/{deal}/rate', [MarketplaceThreadController::class, 'rate'])->name('marketplace.deals.rate');
+});
+
+Route::get('marketplace/{listing}', [MarketplaceController::class, 'show'])->name('marketplace.show');
 
 // Public in-stock deals feed (products at/below target across retailers).
 Route::get('deals', DealsController::class)->name('deals');
