@@ -4,6 +4,7 @@ namespace App\Actions\Catalog;
 
 use App\Actions\Valuation\SeedSyntheticValuation;
 use App\Enums\ItemType;
+use App\Models\CatalogItem;
 use App\Models\ProductLine;
 use App\Models\Set;
 use App\Models\Vertical;
@@ -132,11 +133,18 @@ class ImportTcgcsvSet
 
             $prices = ($pricesByProduct->get($product['productId'] ?? null) ?? collect())->all();
 
+            // A product we already hold stays where it is. Sets here are ours,
+            // not TCGplayer's: their promo group carries the 30th Celebration
+            // promos, and we file those under the expansion they belong to. A
+            // re-import that went by group alone would make a second copy in
+            // the promo set and split the card's comps across both.
+            $existingSet = $this->setHolding($productId);
+
             foreach ($this->variants($prices, $game) as $variant => $anchor) {
                 $item = ($this->create)(
                     vertical: $vertical,
                     productLine: $productLine,
-                    set: $set,
+                    set: $existingSet ?? $set,
                     itemType: ItemType::Single,
                     name: $name,
                     number: $number,
@@ -217,6 +225,25 @@ class ImportTcgcsvSet
     }
 
     /** @param  array<string, mixed>  $group */
+    /**
+     * The set a TCGplayer product already lives in here, when it is not the one
+     * this group maps to — so a card filed under its own expansion is refreshed
+     * there rather than duplicated back into the group's set.
+     */
+    protected function setHolding(string $productId): ?Set
+    {
+        if ($productId === '') {
+            return null;
+        }
+
+        $item = CatalogItem::query()
+            ->where('external_ids->tcgplayer_product_id', $productId)
+            ->with('set')
+            ->first();
+
+        return $item?->set;
+    }
+
     /**
      * The era a set belongs to, read off the sets that already share its code
      * prefix — "ME05" and "MEG" are both Mega Evolution, so "ME" is too.

@@ -105,19 +105,27 @@ class CatalogItem extends Model
             }
         });
 
-        // The slug is derived from the card's name and number, so correcting
-        // either moves its URL. Keep the old one so existing links redirect
+        // A card's URL is derived from its set, name and number, so correcting
+        // any of them moves it. Keep the old address so existing links redirect
         // rather than 404 — a correction should never cost the page its inbound
         // links. Recorded after the write so a failed save leaves no alias.
         static::updated(function (CatalogItem $item) {
-            $old = $item->getOriginal('slug');
+            $oldSlug = $item->getOriginal('slug');
+            $oldSet = $item->getOriginal('set_id');
 
-            if (! $item->wasChanged('slug') || empty($old) || empty($item->set_id)) {
+            // Either half of /{brand}/{set}/{card} can move: correcting a name
+            // or a number rewrites the card slug, and refiling a card into
+            // another set rewrites the set segment. Both break every link to it.
+            if (! $item->wasChanged('slug') && ! $item->wasChanged('set_id')) {
+                return;
+            }
+
+            if (empty($oldSlug) || empty($oldSet)) {
                 return;
             }
 
             CatalogItemSlugAlias::updateOrCreate(
-                ['set_id' => $item->set_id, 'slug' => $old],
+                ['set_id' => $oldSet, 'slug' => $oldSlug],
                 ['catalog_item_id' => $item->getKey()],
             );
 
