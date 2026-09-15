@@ -189,6 +189,58 @@ test('a bracket on a card name does not hide its siblings', function () {
     ))->not->toBeNull();
 });
 
+test('a listing for a more specific card of ours is not a comp for this one', function () {
+    // "M Charizard EX" names Charizard, states no number, and runs many
+    // multiples of the plain card. Every other gate lets it through.
+    $set = Set::factory()->create();
+    $charizard = CatalogItem::factory()->create([
+        'name' => 'Charizard', 'number' => '11', 'set_id' => $set->id,
+        'attributes' => ['language' => 'en', 'rarity' => 'Rare', 'variant' => 'holo'],
+    ]);
+    CatalogItem::factory()->create([
+        'name' => 'M Charizard EX', 'number' => '13', 'set_id' => $set->id,
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    expect($this->classifier->classify(candidate('M Charizard EX (Full Art) - XY - Evolutions', 9089), $charizard, 5000, $this->companies))
+        ->toBeNull();
+
+    // The plain card's own listing still is one.
+    expect($this->classifier->classify(candidate('Charizard XY Evolutions Holo Rare 11/108', 5000), $charizard, 5000, $this->companies))
+        ->not->toBeNull();
+});
+
+test('a card we have named less specifically than the seller keeps its comps', function () {
+    // We store cards as "Beedrill" that are really Beedrill-EX. There the seller
+    // is right and we are wrong, and judging by our own name would delete the
+    // only sales those cards have. The gate asks whether we hold something MORE
+    // specific — and where we do not, nothing fires.
+    $set = Set::factory()->create();
+    $beedrill = CatalogItem::factory()->create([
+        'name' => 'Beedrill', 'number' => 'XY157', 'set_id' => $set->id,
+        'attributes' => ['language' => 'en', 'rarity' => 'Promo', 'variant' => 'holo'],
+    ]);
+
+    expect($this->classifier->classify(candidate('Beedrill EX XY157 XY Promo Black Star Holo', 300), $beedrill, 300, $this->companies))
+        ->not->toBeNull();
+});
+
+test('a sibling that merely shares a word is not more specific', function () {
+    // "Iron Valiant" does not make a listing about "Iron Hands".
+    $set = Set::factory()->create();
+    $hands = CatalogItem::factory()->create([
+        'name' => 'Iron Hands', 'number' => '70', 'set_id' => $set->id,
+        'attributes' => ['language' => 'en', 'rarity' => 'Rare', 'variant' => 'holo'],
+    ]);
+    CatalogItem::factory()->create([
+        'name' => 'Iron Valiant', 'number' => '71', 'set_id' => $set->id,
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    expect($this->classifier->classify(candidate('Iron Hands Paradox Rift 70/182 Holo', 500), $hands, 500, $this->companies))
+        ->not->toBeNull();
+});
+
 test('a tag-team card is not a bundle just because its set also has each Pokemon solo', function () {
     $set = Set::factory()->create();
     $tagTeam = CatalogItem::factory()->create(['name' => 'Pikachu & Zekrom-GX', 'number' => 'SM168', 'set_id' => $set->id,

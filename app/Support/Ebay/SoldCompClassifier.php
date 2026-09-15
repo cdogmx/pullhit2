@@ -18,6 +18,9 @@ class SoldCompClassifier
     /** @var array<int, array<int, string>> set_id => other card name cores (request cache) */
     private array $setNameCache = [];
 
+    /** @var array<int, array<int, string>> set id => the normalised names of its singles */
+    private array $setSingleNameCache = [];
+
     public function __construct(
         private StampMatcher $stamps = new StampMatcher,
     ) {}
@@ -199,6 +202,11 @@ class SoldCompClassifier
         $primary = mb_strtolower((string) preg_replace('/[^a-z0-9]/i', '', (string) strtok($item->name, ' ')));
         if ($primary !== '' && ! str_contains((string) preg_replace('/[^a-z0-9]/', '', $lower), $primary)) {
             return 'title does not name this card';
+        }
+
+        // A card of ours that this listing is more specifically about.
+        if ($item->set_id && $better = $this->moreSpecificSibling($item, $lower)) {
+            return "listing is for “{$better}”, not this card";
         }
 
         // The collector number, when the listing states one.
@@ -543,6 +551,97 @@ class SoldCompClassifier
     }
 
     /**
+     * A card of ours that this listing is more specifically about than we are.
+     *
+     * "Reshiram & Charizard GX" is not a sale of Charizard; "M Charizard EX" is
+     * not a sale of Charizard either, and it runs many multiples of one. Both
+     * name our card, state no number, and sail through every other gate.
+     *
+     * The question is deliberately asked of our own catalog, never of the title:
+     * does some OTHER card we hold match this title better than this one does?
+     * The obvious version — "the title says a rank this card has not got" — is
+     * unsafe, because our own names have gaps. We store cards as "Beedrill",
+     * "Cinderace" and "Gengar" that are really Beedrill-EX, Cinderace V and
+     * Gengar Prime, and there the seller is right and we are wrong; judging by
+     * our name would have deleted 20,034 perfectly good sales to catch these.
+     * Asking instead whether we hold something more specific cannot make that
+     * mistake: where the more specific card is missing, nothing fires.
+     *
+     * Rejects 2,486 of 1,244,542 stored comps (0.2%).
+     */
+    private function moreSpecificSibling(CatalogItem $item, string $lower): ?string
+    {
+        $own = $this->nameCore($item->name);
+
+        if (mb_strlen($own) < 4) {
+            return null;
+        }
+
+        $haystack = self::flatten($lower);
+
+        foreach ($this->siblingSingleCores($item) as $core) {
+            // Strictly more specific: it has to contain our whole name and say
+            // something further. A shorter or equal name is not a better match.
+            if (mb_strlen($core) <= mb_strlen($own) || ! str_contains(' '.$core.' ', ' '.$own.' ')) {
+                continue;
+            }
+
+            if (str_contains($haystack, ' '.$core.' ')) {
+                return $core;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The normalised names of the SINGLES in this card's set, cached per set.
+     *
+     * Singles only, because a sealed product is not a more specific card. Its
+     * set ships a deck named after its own headline card — "Starter Deck 23: Red
+     * Shanks" — and the singles out of that deck name the deck in their titles,
+     * so counting the sealed row made every Shanks single read as a sale of the
+     * box it came in.
+     *
+     * @return array<int, string>
+     */
+    private function siblingSingleCores(CatalogItem $item): array
+    {
+        return $this->setSingleNameCache[$item->set_id] ??= CatalogItem::query()
+            ->where('set_id', $item->set_id)
+            ->where('item_type', ItemType::Single)
+            ->pluck('name')
+            ->map(fn ($n) => $this->nameCore((string) $n))
+            ->filter(fn ($n) => mb_strlen($n) >= 4)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * The normalised names of every card in this card's set, cached per set.
+     *
+     * @return array<int, string>
+     */
+    private function siblingCores(CatalogItem $item): array
+    {
+        return $this->setNameCache[$item->set_id] ??= CatalogItem::query()
+            ->where('set_id', $item->set_id)
+            ->pluck('name')
+            ->map(fn ($n) => $this->nameCore((string) $n))
+            ->filter(fn ($n) => mb_strlen($n) >= 4)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /** A title reduced to space-separated words, padded so phrases match whole. */
+    private static function flatten(string $lower): string
+    {
+        return ' '.trim((string) preg_replace('/[^a-z0-9]+/', ' ', $lower)).' ';
+    }
+
+    /**
      * Whether the title names 2+ OTHER cards from this card's set — the tell for a
      * starter/partner set that lists every character (only one of which is ours).
      * Matches each sibling's full core name as a whole phrase, so shared-prefix
@@ -562,16 +661,9 @@ class SoldCompClassifier
 
         $own = $this->nameCore($item->name);
         $ownPhrase = ' '.$own.' ';
-        $siblings = $this->setNameCache[$item->set_id] ??= CatalogItem::query()
-            ->where('set_id', $item->set_id)
-            ->pluck('name')
-            ->map(fn ($n) => $this->nameCore((string) $n))
-            ->filter(fn ($n) => mb_strlen($n) >= 4)
-            ->unique()
-            ->values()
-            ->all();
+        $siblings = $this->siblingCores($item);
 
-        $haystack = ' '.trim((string) preg_replace('/[^a-z0-9]+/', ' ', $lower)).' ';
+        $haystack = self::flatten($lower);
 
         $others = 0;
         foreach ($siblings as $core) {
