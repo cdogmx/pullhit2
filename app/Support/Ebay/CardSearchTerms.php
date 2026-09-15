@@ -26,8 +26,12 @@ final class CardSearchTerms
         'shiny secret rare' => 'Shiny Secret Rare',                   // 85.6%
         'ultra rare' => 'Ultra Rare',                                 // 70.4%
         'hyper rare' => 'Hyper Rare',                                 // 59.1%
-        'mega hyper rare' => 'Hyper Rare',
-        'futuristic rare' => 'Futuristic Rare',
+        'mega hyper rare' => 'Hyper Rare',                            // 67.3%
+        // Futuristic Rare is deliberately absent. It was in this list on a
+        // guess — the one entry here not measured first — and it does not hold:
+        // only 42.5% of its sold titles carry the word. ANDed into the query it
+        // cost the 30th Celebration's Mew ex most of its listings. A tier this
+        // new has no settled wording yet; leave it out until it earns a place.
     ];
 
     /** Our language codes => the eBay "Language" aspect / title wording. */

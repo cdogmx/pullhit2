@@ -207,3 +207,22 @@ test('a promo does not say promo twice', function () {
 
     expect(substr_count($this->source->searchQuery($item), 'Promo'))->toBe(1);
 });
+
+test('a rarity nobody has settled on yet is left out', function () {
+    // Futuristic Rare was in the list on a guess — the one entry not measured
+    // first — and only 42.5% of its sold titles carry the word. ANDed into the
+    // query it cost the 30th Celebration's Mew ex most of its listings.
+    $item = queryCard('30th Celebration', name: 'Mew ex', number: '158', rarity: 'Futuristic Rare');
+
+    expect($this->source->searchQuery($item))
+        ->toBe('Pokemon 30th Celebration Mew ex 158')
+        ->not->toContain('Futuristic');
+});
+
+test('a mega hyper rare is searched as a hyper rare', function () {
+    // 67.3% of its titles say "hyper rare"; almost none say "mega hyper rare".
+    $item = queryCard('Perfect Order', name: 'Mega Zygarde ex', number: '124', rarity: 'Mega Hyper Rare');
+
+    expect($this->source->searchQuery($item))
+        ->toBe('Pokemon Perfect Order Mega Zygarde ex Hyper Rare 124');
+});

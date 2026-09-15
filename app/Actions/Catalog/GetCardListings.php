@@ -97,7 +97,11 @@ class GetCardListings
         // Short-cache empty results so missing keys / blips recover quickly.
         $listings = [];
         if ($this->browse->configured()) {
-            $cacheKey = 'ebay:listings:'.$item->id.':v6:'.md5($suffix);
+            // v7: the query these results came from changed (rarity terms), so
+            // every cached answer was fetched with a keyword set we no longer
+            // build. A cached listing panel outlives a six-hour TTL, and leaving
+            // it means the fix is invisible on the pages that prompted it.
+            $cacheKey = 'ebay:listings:'.$item->id.':v7:'.md5($suffix);
             $cached = Cache::get($cacheKey);
 
             if (is_array($cached)) {
