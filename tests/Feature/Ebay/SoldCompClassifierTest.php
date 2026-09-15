@@ -156,6 +156,39 @@ test('a photo marker on the end of a title is not a second card', function () {
     ))->not->toBeNull();
 });
 
+test('a bracket on a card name does not hide its siblings', function () {
+    // Every card in a promo run carries the set in brackets, and nameCore kept
+    // the bracket's words — so the sibling gate hunted each title for the phrase
+    // "articuno 30th celebration" and never found it. One three-card listing was
+    // read as a single-card sale three times, once per bird.
+    $set = Set::factory()->create();
+    $shape = ['language' => 'en', 'rarity' => 'Promo', 'variant' => 'holo'];
+
+    $moltres = CatalogItem::factory()->create([
+        'name' => 'Moltres (30th Celebration)', 'number' => '96', 'set_id' => $set->id, 'attributes' => $shape,
+    ]);
+    foreach ([['Articuno (30th Celebration)', '97'], ['Zapdos (30th Celebration)', '98']] as [$name, $number]) {
+        CatalogItem::factory()->create([
+            'name' => $name, 'number' => $number, 'set_id' => $set->id, 'attributes' => $shape,
+        ]);
+    }
+
+    expect($this->classifier->classify(
+        candidate('Pokemon TCG 30TH Celebration Moltres Articuno Zapdos NM Ready To Ship!', 14999),
+        $moltres,
+        6000,
+        $this->companies,
+    ))->toBeNull();
+
+    // A listing for the one bird is still a comp for the one bird.
+    expect($this->classifier->classify(
+        candidate('Pokemon 30th Anniversary Moltres Illustration Rare', 6000),
+        $moltres,
+        6000,
+        $this->companies,
+    ))->not->toBeNull();
+});
+
 test('a tag-team card is not a bundle just because its set also has each Pokemon solo', function () {
     $set = Set::factory()->create();
     $tagTeam = CatalogItem::factory()->create(['name' => 'Pikachu & Zekrom-GX', 'number' => 'SM168', 'set_id' => $set->id,

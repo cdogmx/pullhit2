@@ -591,6 +591,13 @@ class SoldCompClassifier
     private function nameCore(string $name): string
     {
         $s = mb_strtolower($name);
+        // A bracket on a card name is our disambiguator, not part of what the
+        // card is called: "Articuno (30th Celebration)" kept its bracket's WORDS
+        // here, so the sibling gate hunted a title for the phrase "articuno 30th
+        // celebration" and never found it. A three-card listing naming Moltres,
+        // Articuno and Zapdos was therefore read as a single-card sale — three
+        // times over, once per card.
+        $s = (string) preg_replace('/[\(\[][^\)\]]*[\)\]]/', ' ', $s);
         $s = (string) preg_replace('/\b(ex|gx|v|vmax|vstar|v-union|vunion|prime|break|lv|tag team)\b/', ' ', $s);
 
         return trim((string) preg_replace('/[^a-z0-9]+/', ' ', $s));
