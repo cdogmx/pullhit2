@@ -263,3 +263,31 @@ test('a price of zero is refused', function () {
         ->post('/marketplace', listingPayload(['price_cents' => 0]))
         ->assertSessionHasErrors('price_cents');
 });
+
+test('a seller sees their own listings, drafts included', function () {
+    // A draft is invisible everywhere else; without this page a seller who
+    // saved one cannot find it again.
+    MarketplaceListing::factory()->create(['user_id' => $this->seller->id, 'title' => 'Live one']);
+    MarketplaceListing::factory()->draft()->create(['user_id' => $this->seller->id, 'title' => 'Unfinished']);
+    MarketplaceListing::factory()->create(['user_id' => User::factory(), 'title' => 'Somebody else\'s']);
+
+    $this->actingAs($this->seller)->get('/selling')
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('marketplace/mine')
+            ->has('listings', 2)
+            ->where('counts.active', 1)
+            ->where('counts.draft', 1));
+});
+
+test('drafts sort above everything else on the selling page', function () {
+    // The thing needing attention goes first.
+    MarketplaceListing::factory()->create(['user_id' => $this->seller->id, 'title' => 'Live']);
+    MarketplaceListing::factory()->draft()->create(['user_id' => $this->seller->id, 'title' => 'Draft']);
+
+    $this->actingAs($this->seller)->get('/selling')
+        ->assertInertia(fn (Assert $page) => $page->where('listings.0.title', 'Draft'));
+});
+
+test('the selling page needs an account', function () {
+    $this->get('/selling')->assertRedirect('/login');
+});

@@ -1,6 +1,8 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { ImagePlus, Loader2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import type { CardHit } from '@/components/marketplace/card-picker';
+import { CardPicker } from '@/components/marketplace/card-picker';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -32,6 +34,7 @@ type Existing = {
     grade: string | null;
     cert_number: string | null;
     catalog_item_id: number | null;
+    card: CardHit | null;
     accepts_offers: boolean;
     accepts_direct: boolean;
     accepts_escrow: boolean;
@@ -60,6 +63,7 @@ export default function MarketplaceForm({ listing, options }: Props) {
         listing?.photos.map((p) => p.id) ?? [],
     );
     const [files, setFiles] = useState<File[]>([]);
+    const [card, setCard] = useState<CardHit | null>(listing?.card ?? null);
 
     const { data, setData, processing, errors } = useForm({
         category: listing?.category ?? 'raw_single',
@@ -109,8 +113,8 @@ export default function MarketplaceForm({ listing, options }: Props) {
             body.append('cert_number', data.cert_number ?? '');
         }
 
-        if (data.catalog_item_id) {
-            body.append('catalog_item_id', String(data.catalog_item_id));
+        if (card) {
+            body.append('catalog_item_id', String(card.id));
         }
 
         if (editing) {
@@ -174,6 +178,15 @@ export default function MarketplaceForm({ listing, options }: Props) {
                             {errors.title}
                         </p>
                     )}
+                </div>
+
+                <div className="grid gap-2">
+                    <Label>Which card is it?</Label>
+                    <CardPicker
+                        seed={data.title}
+                        selected={card}
+                        onSelect={setCard}
+                    />
                 </div>
 
                 <div className="grid gap-2">

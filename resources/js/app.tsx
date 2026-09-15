@@ -26,6 +26,14 @@ createInertiaApp({
             case name === 'collection/public':
             case name === 'wishlist/public':
             case name.startsWith('catalog/'):
+            // The marketplace is its own world, not a panel inside the app:
+            // browsing it and reading a listing are public, and a buyer who
+            // followed a shared link has no account and no business being
+            // dropped into somebody's dashboard chrome. Only the management
+            // side of it — your own listings, your conversations — lives in
+            // the dashboard, and those stay on the default layout below.
+            case name === 'marketplace/index':
+            case name === 'marketplace/show':
                 return AppShellLayout;
             case name.startsWith('auth/'):
                 return AuthLayout;
@@ -65,9 +73,7 @@ router.on('navigate', (event) => {
     )?.meta;
     const url = meta?.url ?? window.location.origin + window.location.pathname;
 
-    document
-        .querySelector('link[rel="canonical"]')
-        ?.setAttribute('href', url);
+    document.querySelector('link[rel="canonical"]')?.setAttribute('href', url);
     document
         .querySelector('meta[property="og:url"]')
         ?.setAttribute('content', url);

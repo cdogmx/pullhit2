@@ -14,6 +14,7 @@ import {
     Inbox,
     Languages,
     LayoutGrid,
+    MessageCircle,
     Library,
     ListTree,
     PencilRuler,
@@ -24,6 +25,7 @@ import {
     Shield,
     Tag,
     Sparkles,
+    Store,
     TrendingDown,
     TrendingUp,
     Trophy,
@@ -91,6 +93,16 @@ const mainNavItems: NavItem[] = [
         title: 'Deals',
         href: '/deals',
         icon: Tag,
+    },
+    {
+        title: 'Selling',
+        href: '/selling',
+        icon: Store,
+    },
+    {
+        title: 'Messages',
+        href: '/messages',
+        icon: MessageCircle,
     },
     {
         title: 'One Piece',

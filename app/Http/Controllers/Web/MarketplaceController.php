@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Actions\Marketplace\SaveListingPhotos;
 use App\Actions\Marketplace\SaveMarketplaceListing;
+use App\Actions\Marketplace\SearchCatalogForListing;
 use App\Enums\Condition;
 use App\Enums\ListingCategory;
 use App\Enums\ListingStatus;
@@ -14,6 +15,7 @@ use App\Models\ProductLine;
 use App\Models\Set;
 use App\Support\Catalog\LikeTerm;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -87,6 +89,43 @@ class MarketplaceController extends Controller
         ]);
     }
 
+    /**
+     * The seller's own listings, drafts and sold ones included.
+     *
+     * The dashboard half of the marketplace: browsing is a public thing that
+     * happens in its own world, but managing what you are selling is account
+     * work and belongs beside the rest of it. A draft is invisible everywhere
+     * else, so without this page a seller who saved one cannot find it again.
+     */
+    public function mine(Request $request): Response
+    {
+        $listings = MarketplaceListing::query()
+            ->where('user_id', $request->user()->id)
+            ->with(['photos', 'catalogItem:id,name,number'])
+            ->withCount(['threads', 'deals'])
+            ->orderByRaw("CASE status WHEN 'draft' THEN 0 WHEN 'active' THEN 1 WHEN 'pending' THEN 2 ELSE 3 END")
+            ->orderByDesc('id')
+            ->get();
+
+        return Inertia::render('marketplace/mine', [
+            'listings' => $listings->map(fn (MarketplaceListing $l) => $this->tile($l) + [
+                'status' => $l->status->value,
+                'status_label' => $l->status->label(),
+                'editable' => $l->status->isEditable(),
+                'threads' => $l->threads_count,
+                'deals' => $l->deals_count,
+                'expires_at' => $l->expires_at?->toIso8601String(),
+                'edit_url' => route('marketplace.edit', $l),
+            ])->all(),
+            'counts' => [
+                'active' => $listings->where('status', ListingStatus::Active)->count(),
+                'draft' => $listings->where('status', ListingStatus::Draft)->count(),
+                'pending' => $listings->where('status', ListingStatus::Pending)->count(),
+                'sold' => $listings->where('status', ListingStatus::Sold)->count(),
+            ],
+        ]);
+    }
+
     public function show(MarketplaceListing $listing, Request $request): Response
     {
         abort_if(
@@ -103,6 +142,25 @@ class MarketplaceController extends Controller
             // hold one slab, so this is the loudest scam signal the marketplace
             // can produce — shown to the buyer rather than buried in a report.
             'certConflicts' => $this->certConflicts($listing),
+        ]);
+    }
+
+    /**
+     * Catalogue candidates for the listing form's card picker.
+     *
+     * Its own endpoint rather than the header's /search/suggest: a seller needs
+     * the collector number and what the card is worth, and the header search
+     * returns neither because navigation does not need them.
+     */
+    public function cardSearch(Request $request, SearchCatalogForListing $search): JsonResponse
+    {
+        $data = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'product_line' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        return response()->json([
+            'cards' => $search((string) ($data['q'] ?? ''), $data['product_line'] ?? null),
         ]);
     }
 
@@ -254,14 +312,54 @@ class MarketplaceController extends Controller
             'photos' => $listing->photos->map(fn ($p) => ['id' => $p->id, 'path' => $p->path])->all(),
             'grading_company_id' => $listing->grading_company_id,
             'catalog_item_id' => $listing->catalog_item_id,
+            'market' => $this->marketValue($listing),
+            // Shaped for the form's card picker as well as the listing page, so
+            // editing a listing shows the card already attached rather than an
+            // empty search box that looks like nothing was ever linked.
             'card' => $listing->catalogItem ? [
-                'name' => $listing->catalogItem->name,
+                'id' => $listing->catalogItem->id,
+                'name' => $listing->catalogItem->display_name,
                 'number' => $listing->catalogItem->number,
                 'set' => $listing->catalogItem->set?->name,
+                'set_code' => $listing->catalogItem->set?->code,
+                'line' => $listing->catalogItem->productLine?->name,
+                'thumb' => $listing->catalogItem->primary_image_path,
+                'market_cents' => $this->marketValue($listing)['cents'] ?? null,
                 'url' => $listing->catalogItem->path(),
             ] : null,
             'created_at' => $listing->created_at?->toIso8601String(),
             'expires_at' => $listing->expires_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * What the catalogue says this card is worth ungraded, when the listing
+     * points at one. The whole reason a seller links a card: a buyer can see
+     * the asking price beside the market, which is the thing an eBay listing
+     * cannot show them.
+     */
+    private function marketValue(MarketplaceListing $listing): ?array
+    {
+        if (! $listing->catalog_item_id) {
+            return null;
+        }
+
+        $value = $listing->catalogItem?->marketValues()
+            ->whereNull('grading_company_id')
+            ->orderByRaw("CASE WHEN state_key IN ('NM', 'SEALED') THEN 0 ELSE 1 END")
+            ->first();
+
+        if (! $value || ! $value->median) {
+            return null;
+        }
+
+        return [
+            'cents' => (int) $value->median,
+            'state' => $value->state_key,
+            'sales' => (int) $value->n_sales,
+            // Shown so a thin number reads as thin rather than as fact — the
+            // same honesty the card pages use.
+            'confidence' => (float) $value->confidence,
         ];
     }
 

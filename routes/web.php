@@ -93,6 +93,10 @@ Route::get('marketplace', [MarketplaceController::class, 'index'])->name('market
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Before /marketplace/{listing}, or "new" is read as a listing id.
+    // Before /marketplace/{listing}, or "card-search" is read as a listing id.
+    // The dashboard half: what you are selling, drafts included.
+    Route::get('selling', [MarketplaceController::class, 'mine'])->name('marketplace.mine');
+    Route::get('marketplace/card-search', [MarketplaceController::class, 'cardSearch'])->name('marketplace.card-search');
     Route::get('marketplace/new', [MarketplaceController::class, 'create'])->name('marketplace.create');
     Route::post('marketplace', [MarketplaceController::class, 'store'])->name('marketplace.store');
     Route::get('marketplace/{listing}/edit', [MarketplaceController::class, 'edit'])->name('marketplace.edit');

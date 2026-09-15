@@ -40,6 +40,12 @@ type Listing = {
         set: string | null;
         url: string | null;
     } | null;
+    market: {
+        cents: number;
+        state: string;
+        sales: number;
+        confidence: number;
+    } | null;
 };
 
 type Props = {
@@ -136,14 +142,70 @@ export default function MarketplaceShow({
                             )}
                         </div>
 
-                        <p className="text-3xl font-semibold tabular-nums">
-                            {formatMoney(listing.price_cents, listing.currency)}
-                            {listing.accepts_offers && (
-                                <span className="ml-2 align-middle text-sm font-normal text-muted-foreground">
-                                    or best offer
-                                </span>
+                        <div>
+                            <p className="text-3xl font-semibold tabular-nums">
+                                {formatMoney(
+                                    listing.price_cents,
+                                    listing.currency,
+                                )}
+                                {listing.accepts_offers && (
+                                    <span className="ml-2 align-middle text-sm font-normal text-muted-foreground">
+                                        or best offer
+                                    </span>
+                                )}
+                            </p>
+
+                            {/* The thing an eBay listing cannot show you: what
+                                this card actually sells for, beside what is
+                                being asked. Only when the seller linked a card. */}
+                            {listing.market && (
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Market {listing.market.state}:{' '}
+                                    <span className="font-medium text-foreground tabular-nums">
+                                        {formatMoney(listing.market.cents)}
+                                    </span>
+                                    {listing.market.cents > 0 && (
+                                        <>
+                                            {' · '}
+                                            {(() => {
+                                                const diff =
+                                                    ((listing.price_cents -
+                                                        listing.market.cents) /
+                                                        listing.market.cents) *
+                                                    100;
+
+                                                return (
+                                                    <span
+                                                        className={cn(
+                                                            Math.abs(diff) < 10
+                                                                ? ''
+                                                                : diff > 0
+                                                                  ? 'text-amber-600 dark:text-amber-500'
+                                                                  : 'text-emerald-600 dark:text-emerald-400',
+                                                        )}
+                                                    >
+                                                        {diff > 0 ? '+' : ''}
+                                                        {diff.toFixed(0)}%
+                                                    </span>
+                                                );
+                                            })()}
+                                        </>
+                                    )}
+                                    {/* A thin number should read as thin, not
+                                        as fact — the same honesty the card
+                                        pages use. */}
+                                    {listing.market.sales > 0 && (
+                                        <span className="ml-1">
+                                            ({listing.market.sales} sale
+                                            {listing.market.sales === 1
+                                                ? ''
+                                                : 's'}
+                                            )
+                                        </span>
+                                    )}
+                                </p>
                             )}
-                        </p>
+                        </div>
 
                         {/* Two ways to buy. Protected is primary: it is the only
                             path where anything stands behind the transaction. */}

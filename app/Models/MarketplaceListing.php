@@ -57,6 +57,16 @@ class MarketplaceListing extends Model
         return $this->hasMany(MarketplaceListingPhoto::class)->orderBy('sort_order');
     }
 
+    public function threads(): HasMany
+    {
+        return $this->hasMany(MarketplaceThread::class, 'marketplace_listing_id');
+    }
+
+    public function deals(): HasMany
+    {
+        return $this->hasMany(MarketplaceDeal::class, 'marketplace_listing_id');
+    }
+
     /** What a buyer may see: live, unexpired, and from someone not banned. */
     public function scopeVisible(Builder $query): Builder
     {
