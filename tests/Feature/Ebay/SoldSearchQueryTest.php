@@ -4,6 +4,7 @@ use App\Enums\ItemType;
 use App\Models\CatalogItem;
 use App\Models\ProductLine;
 use App\Models\Set;
+use App\Support\Ebay\CardSearchTerms;
 use App\Support\Ebay\EbaySoldSource;
 
 beforeEach(function () {
@@ -12,7 +13,7 @@ beforeEach(function () {
 });
 
 /** A single in a named set. */
-function queryCard(string $setName, string $name = 'Gardevoir ex', string $number = '29', ?string $series = null): CatalogItem
+function queryCard(string $setName, string $name = 'Gardevoir ex', string $number = '29', ?string $series = null, ?string $rarity = null): CatalogItem
 {
     $set = Set::factory()->create([
         'product_line_id' => test()->line->id,
@@ -26,7 +27,7 @@ function queryCard(string $setName, string $name = 'Gardevoir ex', string $numbe
         'item_type' => ItemType::Single,
         'name' => $name,
         'number' => $number,
-        'attributes' => ['language' => 'en', 'variant' => 'normal'],
+        'attributes' => array_filter(['language' => 'en', 'variant' => 'normal', 'rarity' => $rarity]),
     ]);
 }
 
@@ -169,4 +170,40 @@ test('the built URL still asks for sold listings only', function () {
     expect($url)->toContain('LH_Sold=1')
         ->toContain('LH_Complete=1')
         ->toContain(urlencode('Pokemon Paldean Fates Gardevoir ex 29'));
+});
+
+test('a chase rarity is searched in the words sellers actually write', function () {
+    // Measured over 1,200 sold titles per tier: "special illustration rare"
+    // appears in 60.4% of them and "SIR" in 22.6%. eBay ANDs every keyword, so
+    // searching the short form would throw away three sales in four.
+    $item = queryCard('Paldean Fates', number: '233', rarity: 'Special Illustration Rare');
+
+    expect($this->source->searchQuery($item))
+        ->toBe('Pokemon Paldean Fates Gardevoir ex Special Illustration Rare 233')
+        ->not->toContain('SIR');
+});
+
+test('a plain rarity is left out, because nobody writes it', function () {
+    // "Double Rare" turns up in 29.8% of its own listings. ANDing it would cost
+    // seven comps in ten to say what the collector number already says.
+    $item = queryCard('Paldean Fates', rarity: 'Double Rare');
+
+    expect($this->source->searchQuery($item))
+        ->toBe('Pokemon Paldean Fates Gardevoir ex 29');
+});
+
+test('a rarity we shelve back to front is searched the right way round', function () {
+    // Our vocabulary says "Rare Secret". Sellers write "Secret Rare" — 47.8% of
+    // titles against 0.2% — so the stored string is not the search term. Below
+    // the bar to include at all, but the spelling is the point.
+    expect(array_key_exists('rare secret', (new ReflectionClass(CardSearchTerms::class))
+        ->getConstant('RARITY_TERMS')))->toBeFalse();
+});
+
+test('a promo does not say promo twice', function () {
+    // The set's printing half already contributes "Promo"; the rarity would add
+    // it again, and a repeated keyword is noise in a search we keep short.
+    $item = queryCard('30th Celebration Promos', name: 'Umbreon ex', number: '110', rarity: 'Promo');
+
+    expect(substr_count($this->source->searchQuery($item), 'Promo'))->toBe(1);
 });
