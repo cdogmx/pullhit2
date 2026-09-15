@@ -11,6 +11,7 @@ use App\Support\Ebay\SoldCompClassifier;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
+use Symfony\Component\Console\Output\OutputInterface;
 
 /**
  * Re-judges already-stored eBay sale_observations against the CURRENT classifier
@@ -52,15 +53,16 @@ class PruneBadCompsCommand extends Command
             ->whereNotNull('raw->title')
             ->when($this->option('card'), fn (Builder $q, $id) => $q->where('catalog_item_id', $id))
             // Scoped, because the unscoped pass walks every stored comp we hold
-            // and takes about an hour against production — too slow to reach for
-            // after tightening one thing about one set.
+            // — 1.28M of them, over a remote connection, which runs for hours.
+            // Far too slow to reach for after tightening one thing about one set.
             ->when($set, fn (Builder $q) => $q->whereIn(
                 'catalog_item_id',
                 CatalogItem::where('set_id', $set->id)->select('id'),
             ))
-            ->chunkById(500, function ($rows) use ($classifier, $dryRun, &$affected, &$removed, &$checked) {
+            ->chunkById(500, function ($rows) use ($classifier, $recompute, $dryRun, &$affected, &$removed, &$checked) {
                 $items = CatalogItem::whereIn('id', $rows->pluck('catalog_item_id')->unique())
                     ->get()->keyBy('id');
+                $touched = [];
 
                 foreach ($rows as $o) {
                     $item = $items->get($o->catalog_item_id);
@@ -74,21 +76,37 @@ class PruneBadCompsCommand extends Command
 
                     if ($classifier->structurallyInvalid($candidate, $item)) {
                         $affected[$o->catalog_item_id] = true;
+                        $touched[$o->catalog_item_id] = $item;
                         $removed++;
                         if (! $dryRun) {
                             $o->delete();
                         }
                     }
                 }
-            });
 
-        if (! $dryRun) {
-            foreach (array_keys($affected) as $id) {
-                if ($card = CatalogItem::find($id)) {
-                    ($recompute)($card);
+                // Recompute the cards this chunk touched, before moving on.
+                //
+                // This used to run once at the end, which meant the pass was
+                // only correct if it ran to completion — and against production
+                // it walks 1.28M comps over a remote connection and takes hours.
+                // Interrupt it and every card it had already stripped kept a
+                // value derived from comps that were no longer there, with
+                // nothing to catch them afterwards: valuation:recompute --stale
+                // looks for observations NEWER than the value, and a deletion
+                // leaves none. Per chunk, stopping early costs only the work not
+                // yet done.
+                if (! $dryRun) {
+                    foreach ($touched as $card) {
+                        ($recompute)($card);
+                    }
                 }
-            }
-        }
+
+                $this->line(sprintf(
+                    '  %s checked, %s removed…',
+                    number_format($checked),
+                    number_format($removed),
+                ), null, OutputInterface::VERBOSITY_VERBOSE);
+            });
 
         $verb = $dryRun ? 'would remove' : 'removed';
         $this->info("checked {$checked} comps; {$verb} {$removed} bad comp(s) across ".count($affected).' card(s)'.

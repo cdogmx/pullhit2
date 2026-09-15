@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\CatalogItem;
+use App\Models\MarketValue;
 use App\Models\SaleObservation;
 use App\Models\Set;
 
@@ -39,4 +40,44 @@ test('a dry run removes nothing', function () {
     $this->artisan('valuation:prune-bad-comps', ['--card' => $card->id, '--dry-run' => true])->assertSuccessful();
 
     expect(SaleObservation::find($bad->id))->not->toBeNull();
+});
+
+test('a card is revalued in the same pass that strips it', function () {
+    // The recompute used to run once at the end, so the whole pass was only
+    // correct if it ran to completion — and against production it walks 1.28M
+    // comps and runs for hours. Interrupted, every card already stripped kept a
+    // value derived from comps that were gone, and nothing afterwards would find
+    // them: valuation:recompute --stale looks for observations NEWER than the
+    // value, and a deletion leaves none.
+    $set = Set::factory()->create();
+    $card = CatalogItem::factory()->create(['name' => 'Chikorita', 'number' => '46', 'set_id' => $set->id,
+        'attributes' => ['language' => 'en', 'variant' => 'holo']]);
+    CatalogItem::factory()->create(['name' => 'Cyndaquil', 'number' => '47', 'set_id' => $set->id, 'attributes' => ['language' => 'en']]);
+    CatalogItem::factory()->create(['name' => 'Totodile', 'number' => '48', 'set_id' => $set->id, 'attributes' => ['language' => 'en']]);
+
+    foreach ([['a1', 9000, 'First Partner Johto Starter Set Chikorita Cyndaquil Totodile'],
+        ['a2', 3000, 'Pokemon First Partners Series 2 Chikorita 046 Promo']] as [$id, $price, $title]) {
+        SaleObservation::create([
+            'catalog_item_id' => $card->id, 'venue' => 'ebay', 'price' => $price, 'currency' => 'USD',
+            'condition' => 'NM', 'observed_at' => now(), 'is_synthetic' => false, 'source_listing_id' => $id,
+            'raw' => ['title' => $title, 'source' => 'ebay'],
+        ]);
+    }
+
+    // A value that still counts the bundle sale.
+    MarketValue::factory()->create([
+        'catalog_item_id' => $card->id, 'state_key' => 'NM',
+        'grading_company_id' => null, 'median' => 6000, 'n_sales' => 2,
+    ]);
+
+    $this->artisan('valuation:prune-bad-comps', ['--card' => $card->id])->assertSuccessful();
+
+    $value = MarketValue::where('catalog_item_id', $card->id)->where('state_key', 'NM')->first();
+
+    // One comp left, and a value derived from it rather than from the $90
+    // bundle. The exact figure is the engine's business (it nets off fees), so
+    // what is pinned is that the bundle no longer counts.
+    expect($value)->not->toBeNull()
+        ->and($value->n_sales)->toBe(1)
+        ->and($value->median)->toBeLessThan(6000);
 });
