@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\CatalogItem;
 use App\Models\EbayScrapeJob;
+use App\Models\Set;
 use App\Support\Ebay\EbaySoldSource;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,10 +21,16 @@ use Illuminate\Database\Eloquent\Builder;
  * Cards nobody values are skipped, not deprioritised. A card with no market
  * value has never been looked up, and spending a scarce fetch on it to discover
  * it has no comps either is the worst trade in the queue.
+ *
+ * --set overrides that, because naming a set is the one case where the absence
+ * of a value is the reason to fetch rather than a reason not to: a set that was
+ * just imported has no values on any of its cards, and "queue this set" that
+ * queued three of eighteen would be answering a different question.
  */
 class EnqueueEbaySoldCommand extends Command
 {
     protected $signature = 'ebay:enqueue-sold
+        {--set= : only this set, by slug — implies --include-unvalued}
         {--limit=200 : how many cards to queue}
         {--stale-hours= : only cards not refreshed in this many hours (default: the view TTL)}
         {--priority=0 : higher runs first}
@@ -39,6 +46,18 @@ class EnqueueEbaySoldCommand extends Command
             $this->line("Cleared {$cleared} unstarted job(s).");
         }
 
+        $set = null;
+
+        if ($slug = $this->option('set')) {
+            $set = Set::where('slug', $slug)->first();
+
+            if (! $set) {
+                $this->error("No set with slug {$slug}.");
+
+                return self::FAILURE;
+            }
+        }
+
         $limit = max(1, (int) $this->option('limit'));
         $staleHours = (int) ($this->option('stale-hours') ?? config('valuation.ebay.view_refresh_hours', 12));
         $cutoff = now()->subHours($staleHours);
@@ -50,6 +69,7 @@ class EnqueueEbaySoldCommand extends Command
         $items = CatalogItem::query()
             ->with(['productLine', 'set'])
             ->whereNotIn('id', $queued)
+            ->when($set, fn (Builder $q) => $q->where('set_id', $set->id))
             ->where(fn (Builder $q) => $q
                 ->whereNull('ebay_refreshed_at')
                 ->orWhere('ebay_refreshed_at', '<', $cutoff))
@@ -65,7 +85,7 @@ class EnqueueEbaySoldCommand extends Command
                     ->orWhereNotIn('rarity', $skip)),
             )
             ->when(
-                ! $this->option('include-unvalued'),
+                ! $this->option('include-unvalued') && ! $set,
                 fn (Builder $q) => $q->whereHas('marketValues'),
             )
             // Most-looked-at first. The agent is slow by design — one browser
@@ -88,7 +108,9 @@ class EnqueueEbaySoldCommand extends Command
             ->get();
 
         if ($items->isEmpty()) {
-            $this->info('Nothing to queue — every card is fresher than '.$staleHours.'h.');
+            $this->info($set
+                ? "Nothing to queue — every card in {$set->name} is already queued or fresher than {$staleHours}h."
+                : 'Nothing to queue — every card is fresher than '.$staleHours.'h.');
 
             return self::SUCCESS;
         }

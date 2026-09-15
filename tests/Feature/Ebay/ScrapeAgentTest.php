@@ -4,6 +4,7 @@ use App\Models\CatalogItem;
 use App\Models\EbayScrapeJob;
 use App\Models\MarketValue;
 use App\Models\SaleObservation;
+use App\Models\Set;
 
 beforeEach(function () {
     config()->set('services.scrape_agent.token', 'test-token');
@@ -230,6 +231,47 @@ test('the enqueue command queues the stalest valued cards and does not double up
     $this->artisan('ebay:enqueue-sold', ['--limit' => 10])->assertSuccessful();
 
     expect(EbayScrapeJob::count())->toBe(count($queued));
+});
+
+test('naming a set queues that set, values or no values', function () {
+    // A set that was just imported has no market value on any of its cards, and
+    // the unvalued skip would queue none of them — which is the opposite of what
+    // "queue this set" asks for.
+    $set = Set::factory()->create(['slug' => '30th-celebration-promos', 'name' => '30th Celebration Promos']);
+
+    $unvalued = CatalogItem::factory()->create([
+        'set_id' => $set->id,
+        'ebay_refreshed_at' => null,
+        'attributes' => ['language' => 'en', 'variant' => 'normal', 'rarity' => 'Promo'],
+    ]);
+    $elsewhere = enqueueableCard(null);
+
+    test()->artisan('ebay:enqueue-sold', ['--set' => '30th-celebration-promos'])->assertSuccessful();
+
+    expect(EbayScrapeJob::pluck('catalog_item_id')->all())->toBe([$unvalued->id])
+        ->and(EbayScrapeJob::pluck('catalog_item_id')->all())->not->toContain($elsewhere->id);
+});
+
+test('an unknown set slug fails rather than queueing the whole catalog', function () {
+    enqueueableCard(null);
+
+    test()->artisan('ebay:enqueue-sold', ['--set' => 'no-such-set'])->assertFailed();
+
+    expect(EbayScrapeJob::count())->toBe(0);
+});
+
+test('naming a set still skips what is already queued', function () {
+    $set = Set::factory()->create(['slug' => 'promos-set', 'name' => 'Promos Set']);
+    $card = CatalogItem::factory()->create([
+        'set_id' => $set->id,
+        'ebay_refreshed_at' => null,
+        'attributes' => ['language' => 'en', 'variant' => 'normal', 'rarity' => 'Promo'],
+    ]);
+
+    test()->artisan('ebay:enqueue-sold', ['--set' => 'promos-set'])->assertSuccessful();
+    test()->artisan('ebay:enqueue-sold', ['--set' => 'promos-set'])->assertSuccessful();
+
+    expect(EbayScrapeJob::where('catalog_item_id', $card->id)->count())->toBe(1);
 });
 
 test('the queue is taken in order of how much the site looks at each card', function () {
