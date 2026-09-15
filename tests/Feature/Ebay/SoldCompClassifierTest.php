@@ -106,6 +106,56 @@ test('it rejects a starter-set listing that names several cards from the same se
     expect($this->classifier->classify(candidate('Pokemon First Partners Series 2 Chikorita 046 Promo', 3000), $chikorita, 0, $this->companies))->not->toBeNull();
 });
 
+test('two joined collector numbers is two cards, and the price is for the pair', function () {
+    // The Day/Night promo pairs sell sealed as a set. Recorded against either
+    // card alone, one $450 sale roughly doubles it.
+    $pikachu = CatalogItem::factory()->create([
+        'name' => 'Pikachu ex (30th Celebration)', 'number' => '107',
+        'attributes' => ['language' => 'en', 'rarity' => 'Promo', 'variant' => 'holo'],
+    ]);
+
+    foreach ([
+        '(SEALED) Pikachu ex Day #107 & Pikachu ex Night #109 Pokemon 30th Celebration',
+        'Pokemon Metal Charizard #4 & Pikachu ex #58 Celebrations Ultra Premium Collection',
+        'Pokemon TCG Black Star Promo Pikachu ex #200 and Zarude #199 Destined Rivals',
+        '2010 Pokemon HG SS Pikachu ex Legend #101 + #102 PSA 9',
+    ] as $title) {
+        expect($this->classifier->classify(candidate($title, 45000), $pikachu, 30000, $this->companies))
+            ->toBeNull($title);
+    }
+});
+
+test('a single card that states its number twice is still one card', function () {
+    // Found by running the rule over all 1.28M stored comps. Resellers repeat
+    // the number at the end of a title, with a comma somewhere in between.
+    $numel = CatalogItem::factory()->create([
+        'name' => 'Numel', 'number' => '110',
+        'attributes' => ['language' => 'en', 'rarity' => 'Common', 'variant' => 'reverse_holo'],
+    ]);
+
+    expect($this->classifier->classify(
+        candidate('2008 Pokemon Legends Awakened Reverse Foil #110 Numel, C, cd1 #110', 199),
+        $numel,
+        200,
+        $this->companies,
+    ))->not->toBeNull();
+});
+
+test('a photo marker on the end of a title is not a second card', function () {
+    // "#1" / "#2" is which photo, not which card — attached to nothing.
+    $item = CatalogItem::factory()->create([
+        'name' => 'Radiant Charizard', 'number' => '020',
+        'attributes' => ['language' => 'en', 'rarity' => 'Radiant Rare', 'variant' => 'holo'],
+    ]);
+
+    expect($this->classifier->classify(
+        candidate('2023 Pokemon SWSH Crown Zenith #020 Radiant Charizard #1', 1050),
+        $item,
+        1000,
+        $this->companies,
+    ))->not->toBeNull();
+});
+
 test('a tag-team card is not a bundle just because its set also has each Pokemon solo', function () {
     $set = Set::factory()->create();
     $tagTeam = CatalogItem::factory()->create(['name' => 'Pikachu & Zekrom-GX', 'number' => 'SM168', 'set_id' => $set->id,

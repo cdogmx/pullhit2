@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Actions\Valuation\RecomputeCatalogItem;
 use App\Models\CatalogItem;
 use App\Models\SaleObservation;
+use App\Models\Set;
 use App\Support\Ebay\SoldCandidate;
 use App\Support\Ebay\SoldCompClassifier;
 use Carbon\CarbonImmutable;
@@ -22,6 +23,7 @@ class PruneBadCompsCommand extends Command
 {
     protected $signature = 'valuation:prune-bad-comps
         {--card= : only this catalog_item_id}
+        {--set= : only the cards in this set, by slug}
         {--dry-run : report what would be removed, delete nothing}';
 
     protected $description = 'Remove stored eBay comps that no longer pass the classifier (multi-card sets, lots, …)';
@@ -29,6 +31,18 @@ class PruneBadCompsCommand extends Command
     public function handle(SoldCompClassifier $classifier, RecomputeCatalogItem $recompute): int
     {
         $dryRun = (bool) $this->option('dry-run');
+        $set = null;
+
+        if ($slug = $this->option('set')) {
+            $set = Set::where('slug', $slug)->first();
+
+            if (! $set) {
+                $this->error("No set with slug {$slug}.");
+
+                return self::FAILURE;
+            }
+        }
+
         $affected = [];
         $removed = 0;
         $checked = 0;
@@ -37,6 +51,13 @@ class PruneBadCompsCommand extends Command
             ->where('is_synthetic', false)
             ->whereNotNull('raw->title')
             ->when($this->option('card'), fn (Builder $q, $id) => $q->where('catalog_item_id', $id))
+            // Scoped, because the unscoped pass walks every stored comp we hold
+            // and takes about an hour against production — too slow to reach for
+            // after tightening one thing about one set.
+            ->when($set, fn (Builder $q) => $q->whereIn(
+                'catalog_item_id',
+                CatalogItem::where('set_id', $set->id)->select('id'),
+            ))
             ->chunkById(500, function ($rows) use ($classifier, $dryRun, &$affected, &$removed, &$checked) {
                 $items = CatalogItem::whereIn('id', $rows->pluck('catalog_item_id')->unique())
                     ->get()->keyBy('id');
