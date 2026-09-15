@@ -92,9 +92,29 @@ class MaybeRefreshEbay
 
     public function isDue(CatalogItem $item): bool
     {
-        $hours = (int) config('valuation.ebay.view_refresh_hours', 12);
+        if ($item->ebay_refreshed_at === null) {
+            return true;
+        }
 
-        return $item->ebay_refreshed_at === null
-            || $item->ebay_refreshed_at->lt(Carbon::now()->subHours($hours));
+        return $item->ebay_refreshed_at->lt($this->staleAfter($item));
+    }
+
+    /**
+     * The moment a price becomes stale for this card.
+     *
+     * Usually the global view TTL, but a set in its first week is a different
+     * market from the catalog around it — everything is being priced at once and
+     * a twelve-hour-old figure is wrong by lunchtime. Such a set can carry its
+     * own shorter cadence, which expires on its own date.
+     */
+    private function staleAfter(CatalogItem $item): Carbon
+    {
+        $item->loadMissing('set');
+
+        if ($minutes = $item->set?->refreshMinutes()) {
+            return Carbon::now()->subMinutes($minutes);
+        }
+
+        return Carbon::now()->subHours((int) config('valuation.ebay.view_refresh_hours', 12));
     }
 }

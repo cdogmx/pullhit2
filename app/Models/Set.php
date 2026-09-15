@@ -27,6 +27,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'set_family',
     'expansion_key',
     'released_at',
+    'refresh_minutes',
+    'refresh_boost_until',
     'external_ids',
 ])]
 class Set extends Model
@@ -38,9 +40,27 @@ class Set extends Model
     {
         return [
             'released_at' => 'date',
+            'refresh_boost_until' => 'datetime',
             'og_image_at' => 'datetime',
             'external_ids' => 'array',
         ];
+    }
+
+    /**
+     * How often this set's prices may be refetched on a card view, in minutes —
+     * null when it follows the global default.
+     *
+     * A set in its first week moves faster than the catalog around it, so it can
+     * be given a shorter TTL that expires on its own. See the migration adding
+     * these columns, and valuation:boost-set.
+     */
+    public function refreshMinutes(): ?int
+    {
+        if ($this->refresh_minutes === null || $this->refresh_boost_until === null) {
+            return null;
+        }
+
+        return $this->refresh_boost_until->isFuture() ? (int) $this->refresh_minutes : null;
     }
 
     /** @return BelongsTo<ProductLine, $this> */
