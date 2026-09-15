@@ -10,6 +10,9 @@ namespace App\Support\Catalog;
  */
 final class CardDisplayName
 {
+    /** Tags that are acronyms rather than words — RGB is never "Rgb". */
+    private const ACRONYMS = ['rgb'];
+
     /**
      * @param  array<string, mixed>  $attributes
      */
@@ -46,13 +49,25 @@ final class CardDisplayName
         return $bits === [] ? $name : $name.' ('.implode(', ', $bits).')';
     }
 
-    private static function finishLabel(string $finish): string
+    /**
+     * A finish tag as a person reads it: "alternate_art" → "Alternate Art".
+     *
+     * Public because the eBay search term is built from the same tag and used to
+     * title-case it separately. Two copies of one transformation is how a card
+     * page ends up advertising a printing under a name no search looks for.
+     */
+    public static function finishLabel(string $finish): string
     {
         // Year ranges: 1999_2000 → 1999-2000.
         if (preg_match('/^(\d{4})_(\d{4})$/', $finish, $m)) {
             return "{$m[1]}-{$m[2]}";
         }
 
-        return ucwords(str_replace('_', ' ', $finish));
+        return implode(' ', array_map(
+            fn (string $word): string => in_array($word, self::ACRONYMS, true)
+                ? mb_strtoupper($word)
+                : ucfirst($word),
+            explode(' ', str_replace('_', ' ', $finish)),
+        ));
     }
 }
