@@ -92,6 +92,106 @@ final class CardSearchTerms
         return true;
     }
 
+    /**
+     * The set name, when it is specific enough to narrow the search rather than
+     * break it.
+     *
+     * Worth including: between 88% and 95% of real sold titles for a modern set
+     * name it, measured across Paldean Fates, Surging Sparks, Obsidian Flames
+     * and Evolving Skies. The number alone does not disambiguate a printing —
+     * a Gardevoir ex sold search returned the Special Illustration Rare, whose
+     * title carried no number at all, and it set the card's PSA 10 price.
+     *
+     * The set CODE stays out: this once carried "(PAF)" and real listings do not.
+     */
+    public static function setTerm(CatalogItem $item): ?string
+    {
+        $set = $item->set;
+
+        if (! $set) {
+            return null;
+        }
+
+        // A set's display name is not always the thing people search for. The
+        // First Partner sets are named "Series 1/2/3" — which identifies nothing
+        // on its own — while the line they belong to, "First Partners", appears
+        // in 76% of their sold titles. So a generic name falls through to the
+        // series it sits in rather than dropping the set from the search.
+        $name = trim((string) $set->name);
+
+        if (self::identifiesNothing($name)) {
+            $name = trim((string) $set->series);
+        }
+
+        if (self::identifiesNothing($name)) {
+            return null;
+        }
+
+        // eBay ANDs the keywords, so a long set name is a long list of words
+        // every listing must carry — "Starter Deck 3: The Seven Warlords of the
+        // Sea" costs more recall than the precision is worth.
+        if (count(preg_split('/\s+/', $name)) > 4) {
+            return null;
+        }
+
+        // What does the set name actually add, given what the card is called?
+        //
+        // Our shelving vocabulary is not eBay's. The 30th Celebration promos are
+        // named "Umbreon ex (30th Celebration)" and filed in "30th Celebration
+        // Promos", so the set contributed one word nobody writes in a title —
+        // "Promos" — and eBay ANDs it, which returned nothing at all. Judge the
+        // remainder the same way the whole name is judged: if all it adds is a
+        // word that identifies nothing, the set has nothing to say here.
+        if (self::identifiesNothing(self::wordsBeyond($name, $item->name))) {
+            return null;
+        }
+
+        return $name;
+    }
+
+    /**
+     * $name with every word $said already contains removed, in order. Used to
+     * ask what a set name adds to a card's own name rather than whether one
+     * contains the other outright.
+     */
+    private static function wordsBeyond(string $name, ?string $said): string
+    {
+        // Compared as bare words, because a card name wears its set inside
+        // brackets — "Umbreon ex (30th Celebration)" — and "(30th" is the same
+        // word as "30th" to everyone except a string comparison.
+        $already = array_flip(self::words((string) $said));
+
+        $kept = array_filter(
+            self::words($name),
+            fn (string $word) => ! isset($already[$word]),
+        );
+
+        return trim(implode(' ', $kept));
+    }
+
+    /**
+     * Lowercased words, punctuation dropped.
+     *
+     * @return array<int, string>
+     */
+    private static function words(string $text): array
+    {
+        preg_match_all('/[\p{L}\p{N}]+/u', mb_strtolower($text), $m);
+
+        return $m[0];
+    }
+
+    /**
+     * A set or series name too generic to narrow anything. Every product line
+     * has a "Promo" set, and "Series 2" means nothing without the line it
+     * belongs to.
+     */
+    private static function identifiesNothing(string $name): bool
+    {
+        return trim($name) === ''
+            || preg_match('/^(promos?|base|other|series\s+\d+)$/i', trim($name)) === 1;
+    }
+
     /** @return array<int, string> */
     public static function qualifiers(CatalogItem $item): array
     {

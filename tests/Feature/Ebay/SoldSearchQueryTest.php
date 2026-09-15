@@ -89,6 +89,26 @@ test('a set the card already names is not repeated', function () {
         ->toBe('Pokemon Paldean Fates Booster 29');
 });
 
+test('a set that only repeats the card name plus a shelving word is left out', function () {
+    // Our filing vocabulary is not eBay's. The 30th Celebration promos are named
+    // "Umbreon ex (30th Celebration)" and filed in "30th Celebration Promos", so
+    // the set contributed one word no seller writes in a title — and eBay ANDs
+    // every keyword, so the search returned nothing at all.
+    $item = queryCard('30th Celebration Promos', name: 'Umbreon ex (30th Celebration)', number: '110');
+
+    expect($this->source->searchQuery($item))
+        ->toBe('Pokemon Umbreon ex (30th Celebration) 110');
+});
+
+test('a set that adds something real to the card name is kept', function () {
+    // The rule is about what the set ADDS, not about any overlap at all:
+    // "Classic Collection" is wording sellers do write.
+    $item = queryCard('30th Celebration Classic Collection', name: 'Mew (30th Celebration)', number: '25');
+
+    expect($this->source->searchQuery($item))
+        ->toBe('Pokemon 30th Celebration Classic Collection Mew (30th Celebration) 25');
+});
+
 test('a card with no set still searches', function () {
     $item = CatalogItem::factory()->create([
         'product_line_id' => $this->line->id,

@@ -173,7 +173,7 @@ class EbaySoldSource
         }
 
         // Brand, set, card, number — widest scope to narrowest.
-        if ($set = $this->setTerm($item)) {
+        if ($set = CardSearchTerms::setTerm($item)) {
             $parts[] = $set;
         }
 
@@ -194,67 +194,6 @@ class EbaySoldSource
         // exclusion operator, so a separator dash sitting against the next word
         // risks the search excluding the very terms we added to narrow it.
         return implode(' ', $parts);
-    }
-
-    /**
-     * The set name, when it is specific enough to narrow the search rather than
-     * break it.
-     *
-     * Worth including: between 88% and 95% of real sold titles for a modern set
-     * name it, measured across Paldean Fates, Surging Sparks, Obsidian Flames
-     * and Evolving Skies. The number alone does not disambiguate a printing —
-     * a Gardevoir ex sold search returned the Special Illustration Rare, whose
-     * title carried no number at all, and it set the card's PSA 10 price.
-     *
-     * The set CODE stays out: this once carried "(PAF)" and real listings do not.
-     */
-    private function setTerm(CatalogItem $item): ?string
-    {
-        $set = $item->set;
-
-        if (! $set) {
-            return null;
-        }
-
-        // A set's display name is not always the thing people search for. The
-        // First Partner sets are named "Series 1/2/3" — which identifies nothing
-        // on its own — while the line they belong to, "First Partners", appears
-        // in 76% of their sold titles. So a generic name falls through to the
-        // series it sits in rather than dropping the set from the search.
-        $name = trim((string) $set->name);
-
-        if ($this->identifiesNothing($name)) {
-            $name = trim((string) $set->series);
-        }
-
-        if ($name === '' || $this->identifiesNothing($name)) {
-            return null;
-        }
-
-        // eBay ANDs the keywords, so a long set name is a long list of words
-        // every listing must carry — "Starter Deck 3: The Seven Warlords of the
-        // Sea" costs more recall than the precision is worth.
-        if (count(preg_split('/\s+/', $name)) > 4) {
-            return null;
-        }
-
-        // Already said by the card's own name; repeating it only narrows.
-        if (str_contains(mb_strtolower($item->name), mb_strtolower($name))) {
-            return null;
-        }
-
-        return $name;
-    }
-
-    /**
-     * A set or series name too generic to narrow anything. Every product line
-     * has a "Promo" set, and "Series 2" means nothing without the line it
-     * belongs to.
-     */
-    private function identifiesNothing(string $name): bool
-    {
-        return $name === ''
-            || preg_match('/^(promos?|base|other|series\s+\d+)$/i', $name) === 1;
     }
 
     /** The eBay "Language" aspect value for a card's language, or null if unknown. */
