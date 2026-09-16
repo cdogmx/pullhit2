@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Download, Globe, Lock, Upload } from 'lucide-react';
+import { Download, Flag, Globe, Lock, Upload } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { CollectionFolders } from '@/components/collection/collection-folders';
@@ -153,6 +153,16 @@ export default function CollectionIndex({
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        {active && (
+                            <Button asChild variant="outline" size="sm">
+                                <Link
+                                    href={`/races/new?collection=${active.id}`}
+                                >
+                                    <Flag className="size-4" />
+                                    Race it
+                                </Link>
+                            </Button>
+                        )}
                         <Button asChild variant="outline" size="sm">
                             <Link href="/collection/import">
                                 <Upload className="size-4" />

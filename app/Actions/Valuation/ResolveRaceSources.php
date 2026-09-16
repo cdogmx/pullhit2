@@ -4,9 +4,11 @@ namespace App\Actions\Valuation;
 
 use App\Enums\ItemType;
 use App\Models\CatalogItem;
+use App\Models\CollectionItem;
 use App\Models\MarketValue;
 use App\Models\ProductLine;
 use App\Models\Set;
+use App\Models\WishlistItem;
 use App\Support\Catalog\Subsets;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -52,6 +54,8 @@ class ResolveRaceSources
                 'series' => $this->fromSeries((string) ($source['name'] ?? ''), $source['line'] ?? null),
                 'brand' => $this->fromBrand((string) ($source['slug'] ?? '')),
                 'cards' => $this->fromCards($source['ids'] ?? []),
+                'collection' => $this->fromCollection((int) ($source['id'] ?? 0)),
+                'wishlist' => $this->fromWishlist((int) ($source['id'] ?? 0)),
                 default => collect(),
             });
         }
@@ -115,6 +119,28 @@ class ResolveRaceSources
         return $line
             ? $this->singles(CatalogItem::where('product_line_id', $line->id))
             : collect();
+    }
+
+    /**
+     * Everything in a collection, or on a wishlist.
+     *
+     * Kept as a reference rather than a copy of the ids, so a race of what
+     * someone owns keeps meaning that as they buy and sell. Ownership is checked
+     * where the race is saved, not here — a race resolves the list it names, and
+     * the question of whose list that may be is the controller's.
+     */
+    private function fromCollection(int $id): Collection
+    {
+        return $id === 0 ? collect() : $this->singles(
+            CatalogItem::whereIn('id', CollectionItem::where('collection_id', $id)->select('catalog_item_id')),
+        );
+    }
+
+    private function fromWishlist(int $id): Collection
+    {
+        return $id === 0 ? collect() : $this->singles(
+            CatalogItem::whereIn('id', WishlistItem::where('wishlist_id', $id)->select('catalog_item_id')),
+        );
     }
 
     /**

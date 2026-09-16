@@ -29,7 +29,9 @@ type Source =
     | { type: 'set'; slug: string; name?: string }
     | { type: 'series'; name: string; line?: string | null }
     | { type: 'brand'; slug: string; name?: string }
-    | { type: 'cards'; ids: number[]; cards?: PickedCard[] };
+    | { type: 'cards'; ids: number[]; cards?: PickedCard[] }
+    | { type: 'collection'; id: number; name?: string | null }
+    | { type: 'wishlist'; id: number; name?: string | null };
 
 type Props = {
     race: {
@@ -39,6 +41,11 @@ type Props = {
         sources: Source[];
         options: { top?: number; window?: number };
         is_public: boolean;
+    } | null;
+    prefill?: {
+        name: string;
+        is_public: boolean;
+        sources: Source[];
     } | null;
     options: {
         brands: { slug: string; name: string }[];
@@ -57,13 +64,23 @@ function sourceLabel(s: Source): string {
             return `Brand — ${s.name ?? s.slug}`;
         case 'cards':
             return `${s.ids.length} hand-picked card${s.ids.length === 1 ? '' : 's'}`;
+        case 'collection':
+            return `Collection — ${s.name ?? s.id}`;
+        case 'wishlist':
+            return `Wishlist — ${s.name ?? s.id}`;
     }
 }
 
-export default function RaceForm({ race, options }: Props) {
+export default function RaceForm({ race, prefill, options }: Props) {
     const editing = race !== null;
 
-    const [sources, setSources] = useState<Source[]>(race?.sources ?? []);
+    // A prefill only ever starts a new race; editing one must not be rewritten
+    // by a stray ?collection= in the address bar.
+    const start = editing ? null : prefill;
+
+    const [sources, setSources] = useState<Source[]>(
+        race?.sources ?? start?.sources ?? [],
+    );
     const [picked, setPicked] = useState<PickedCard[]>(
         (
             race?.sources.find((s) => s.type === 'cards') as
@@ -79,9 +96,9 @@ export default function RaceForm({ race, options }: Props) {
     const pageErrors = (usePage().props.errors ?? {}) as Record<string, string>;
 
     const { data, setData, processing, errors } = useForm({
-        name: race?.name ?? '',
+        name: race?.name ?? start?.name ?? '',
         description: race?.description ?? '',
-        is_public: race?.is_public ?? true,
+        is_public: race?.is_public ?? start?.is_public ?? true,
         top: String(race?.options.top ?? 30),
         window: String(race?.options.window ?? 7),
     });
@@ -393,6 +410,14 @@ export default function RaceForm({ race, options }: Props) {
                     />
                     Anyone with the link can watch it
                 </label>
+                {sources.some(
+                    (s) => s.type === 'collection' || s.type === 'wishlist',
+                ) && (
+                    <p className="-mt-3 text-xs text-muted-foreground">
+                        This race follows a list of yours, so sharing it shows
+                        what is on that list.
+                    </p>
+                )}
 
                 <div className="flex items-center gap-2">
                     <Button onClick={submit} disabled={processing}>

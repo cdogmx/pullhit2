@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
+    Flag,
     Heart,
     LayoutGrid,
     List,
@@ -79,6 +80,7 @@ export default function WishlistIndex({
 
     const remove = (row: WishlistRow) => {
         const cardId = row.catalog_item?.id;
+
         if (!cardId || !active) {
             return;
         }
@@ -112,8 +114,7 @@ export default function WishlistIndex({
                                 rel="noopener noreferrer"
                                 className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                             >
-                                Public ·{' '}
-                                {publicUrl.replace(/^https?:\/\//, '')}
+                                Public · {publicUrl.replace(/^https?:\/\//, '')}
                             </a>
                         ) : (
                             <Link
@@ -138,9 +139,19 @@ export default function WishlistIndex({
                         </p>
                     </div>
 
-                    {items.length > 0 && (
-                        <ViewToggle value={view} onChange={changeView} />
-                    )}
+                    <div className="flex items-center gap-2">
+                        {active && items.length > 0 && (
+                            <Button asChild variant="outline" size="sm">
+                                <Link href={`/races/new?wishlist=${active.id}`}>
+                                    <Flag className="size-4" />
+                                    Race it
+                                </Link>
+                            </Button>
+                        )}
+                        {items.length > 0 && (
+                            <ViewToggle value={view} onChange={changeView} />
+                        )}
+                    </div>
                 </div>
 
                 <div className="mb-4">
@@ -440,7 +451,7 @@ function WishCard({
 
     return (
         <div className="group relative overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring">
-            <div className="absolute top-1.5 right-1.5 z-10 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+            <div className="absolute top-1.5 right-1.5 z-10 flex gap-1 opacity-100 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
                 <Button
                     size="icon"
                     variant="secondary"

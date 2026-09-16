@@ -6,9 +6,11 @@ use App\Actions\Valuation\BuildPriceRace;
 use App\Actions\Valuation\ResolveRaceSources;
 use App\Http\Controllers\Controller;
 use App\Models\CatalogItem;
+use App\Models\Collection;
 use App\Models\PriceRace;
 use App\Models\ProductLine;
 use App\Models\Set;
+use App\Models\Wishlist;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -46,12 +48,50 @@ class RaceController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
         return Inertia::render('races/form', [
             'race' => null,
+            // "Create a race" from a collection or a wishlist arrives here with
+            // the list already chosen, and private by default: a race is shared
+            // by URL, and a list is not public just because its owner wanted to
+            // watch it move.
+            'prefill' => $this->prefill($request),
             'options' => $this->formOptions(),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function prefill(Request $request): ?array
+    {
+        foreach ([
+            'collection' => [Collection::class, 'collection'],
+            'wishlist' => [Wishlist::class, 'wishlist'],
+        ] as $param => [$model, $type]) {
+            $id = $request->query($param);
+
+            if (! is_numeric($id)) {
+                continue;
+            }
+
+            $list = $model::where('id', (int) $id)
+                ->where('user_id', $request->user()->id)
+                ->first();
+
+            if (! $list) {
+                continue;
+            }
+
+            return [
+                'name' => $list->name,
+                'is_public' => false,
+                'sources' => [['type' => $type, 'id' => $list->id, 'name' => $list->name]],
+            ];
+        }
+
+        return null;
     }
 
     public function store(Request $request, ResolveRaceSources $resolve): RedirectResponse
@@ -153,7 +193,8 @@ class RaceController extends Controller
             'description' => ['nullable', 'string', 'max:500'],
             'is_public' => ['boolean'],
             'sources' => ['required', 'array', 'min:1', 'max:20'],
-            'sources.*.type' => ['required', 'string', 'in:set,series,brand,cards'],
+            'sources.*.type' => ['required', 'string', 'in:set,series,brand,cards,collection,wishlist'],
+            'sources.*.id' => ['nullable', 'integer'],
             'sources.*.slug' => ['nullable', 'string', 'max:120'],
             'sources.*.name' => ['nullable', 'string', 'max:120'],
             'sources.*.line' => ['nullable', 'string', 'max:64'],
@@ -166,6 +207,25 @@ class RaceController extends Controller
         ]);
 
         $data['options'] = array_filter($data['options'] ?? [], fn ($v) => $v !== null && $v !== '');
+
+        // A list source is only ever your own list. Without this the id is a
+        // guessable integer and a race becomes a way to read what anybody owns.
+        foreach ($data['sources'] as $source) {
+            $model = match ($source['type']) {
+                'collection' => Collection::class,
+                'wishlist' => Wishlist::class,
+                default => null,
+            };
+
+            if ($model === null) {
+                continue;
+            }
+
+            abort_unless(
+                $model::where('id', $source['id'] ?? 0)->where('user_id', $request->user()->id)->exists(),
+                403,
+            );
+        }
 
         return $data;
     }
@@ -210,6 +270,13 @@ class RaceController extends Controller
     private function describeSources(array $sources): array
     {
         return array_map(function (array $source) {
+            if (in_array($source['type'] ?? null, ['collection', 'wishlist'], true)) {
+                $model = $source['type'] === 'collection' ? Collection::class : Wishlist::class;
+                $source['name'] = $model::find($source['id'] ?? 0)?->name;
+
+                return $source;
+            }
+
             if (($source['type'] ?? null) !== 'cards') {
                 return $source;
             }
