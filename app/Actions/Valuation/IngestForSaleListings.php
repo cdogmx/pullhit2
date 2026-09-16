@@ -236,10 +236,6 @@ class IngestForSaleListings
             return SealedSearch::query($item);
         }
 
-        return trim(implode(' ', array_filter(array_merge([
-            $item->name,
-            $item->number,
-            $item->set?->name,
-        ], CardSearchTerms::qualifiers($item), [CardSearchTerms::languageKeyword($item)]))));
+        return CardSearchTerms::browseQuery($item);
     }
 }

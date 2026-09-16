@@ -412,6 +412,38 @@ final class CardSearchTerms
     }
 
     /**
+     * The keyword query for eBay's Browse API — the card page's "for sale"
+     * panel, and the ask ingest behind the FOR SALE and COMBINED figures.
+     *
+     * One builder, because there were three. The sold-comp query led with the
+     * brand; the panel dropped it; and the ask ingest pasted in the raw card
+     * name, the raw number and the raw set name, none of which had any of the
+     * rules the other two had grown. For a refiled promo it produced
+     *
+     *   Umbreon ex (30th Celebration) 110 30th Celebration Promos Promo
+     *
+     * — the bracket we hang on a name to tell printings apart, the shelving
+     * plural sellers never write, and "Promo" twice, every word of it ANDed.
+     * No listing answers that, which is why a card could show forty sold comps
+     * and a single ask.
+     *
+     * Callers handle sealed products themselves; they search on retail wording
+     * rather than the card shape.
+     */
+    public static function browseQuery(CatalogItem $item): string
+    {
+        if ($colourway = self::colourwayQuery($item)) {
+            return $colourway;
+        }
+
+        return trim(implode(' ', array_filter(array_merge([
+            self::cardTerm($item),
+            self::numberTerm($item),
+            self::setTerm($item),
+        ], self::qualifiers($item), [self::languageKeyword($item)]))));
+    }
+
+    /**
      * The collector number, where a seller is likely to write it.
      *
      * Usually they do, and it is the sharpest term in the search. The RGB

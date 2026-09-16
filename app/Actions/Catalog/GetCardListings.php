@@ -171,15 +171,7 @@ class GetCardListings
      */
     protected function singleQuery(CatalogItem $item): string
     {
-        return trim(implode(' ', array_filter(array_merge([
-            CardSearchTerms::cardTerm($item),
-            $item->number,
-            // Not the raw set name: eBay ANDs every keyword, so a set whose name
-            // only repeats the card's own with a shelving word bolted on ("30th
-            // Celebration Promos" behind "Umbreon ex (30th Celebration)") turns
-            // a working search into an empty one.
-            CardSearchTerms::setTerm($item),
-        ], CardSearchTerms::qualifiers($item), [CardSearchTerms::languageKeyword($item)]))));
+        return CardSearchTerms::browseQuery($item);
     }
 
     /**
