@@ -497,3 +497,80 @@ test('the printed and bare forms of a number agree', function () {
     ]);
     expect($this->classifier->titleRejectReason($padded, 'Sewaddle 7/86 White Flare'))->toBeNull();
 });
+
+test('a sibling set shares a numbering space, and the gate must see across it', function () {
+    // The 30th Celebration has a Pikachu at 33; its Classic Collection has a
+    // Pikachu & Zekrom GX at 33. Twelve sales of the tag team were recorded as
+    // sales of the Pikachu — the numerator matched, and the card that explained
+    // the title was one set over, where a set-scoped gate could not see it.
+    $line = ProductLine::factory()->create(['slug' => 'pokemon']);
+    $main = Set::factory()->for($line)->create([
+        'name' => '30th Celebration', 'slug' => '30th-celebration', 'language' => 'en',
+    ]);
+    $classic = Set::factory()->for($line)->create([
+        'name' => '30th Celebration Classic Collection',
+        'slug' => '30th-celebration-classic-collection', 'language' => 'en',
+    ]);
+
+    $pikachu = CatalogItem::factory()->create([
+        'product_line_id' => $line->id, 'set_id' => $main->id,
+        'name' => 'Pikachu', 'number' => '33',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+    CatalogItem::factory()->create([
+        'product_line_id' => $line->id, 'set_id' => $classic->id,
+        'name' => 'Pikachu & Zekrom-GX', 'number' => '33',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    foreach ([
+        'Pokemon 30th Pikachu & Zekrom GX 33/181 Tag Team Holo',
+        // "And" is the word form of "&", which punctuation stripping removes.
+        '30th Celebration Pokemon Pikachu And Zekrom GX tag team 33 English',
+    ] as $title) {
+        expect($this->classifier->classify(candidate($title, 18000), $pikachu, 9000, $this->companies))
+            ->toBeNull($title);
+    }
+
+    // The Pikachu's own sale still counts.
+    expect($this->classifier->classify(
+        candidate('Pikachu (11/30) 30th Celebration Pokemon TCG English Holo 033/128', 5800),
+        $pikachu, 9000, $this->companies,
+    ))->not->toBeNull();
+});
+
+test('a loose single is not sold sealed', function () {
+    $item = CatalogItem::factory()->create([
+        'name' => 'Pikachu', 'number' => '33',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    expect($this->classifier->classify(
+        candidate('Pokemon 30th Celebration Pikachu ex Day MEP 107 Promo Holo sealed', 24999),
+        $item, 9000, $this->companies,
+    ))->toBeNull();
+});
+
+test('a complete set is a lot however it is spelled', function () {
+    // "sets" plural was the only form caught, because "Set" singular is part of
+    // set names like Base Set.
+    $item = CatalogItem::factory()->create([
+        'name' => 'Pikachu', 'number' => '33',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    foreach ([
+        'Pikachu 30th Anniversary Celebration Pokemon TCG Pikachu Holo Complete Set',
+        '8 Pokemon Pikachu 30th Anniversary Celebrations Cards NM Holo',
+        'Pikachu Holos Pokemon 30th Celebration',
+    ] as $title) {
+        expect($this->classifier->classify(candidate($title, 30000), $item, 9000, $this->companies))
+            ->toBeNull($title);
+    }
+
+    // "Base Set" is a set name, not a complete set — the singular "set" has to
+    // survive or every vintage card loses its comps.
+    expect($this->classifier->classify(
+        candidate('Pikachu Base Set 33/102 Holo Pokemon', 9000), $item, 9000, $this->companies,
+    ))->not->toBeNull();
+});

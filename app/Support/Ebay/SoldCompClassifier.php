@@ -4,7 +4,10 @@ namespace App\Support\Ebay;
 
 use App\Enums\ItemType;
 use App\Models\CatalogItem;
+use App\Models\Set;
 use App\Support\Catalog\StampMatcher;
+use App\Support\Catalog\Subsets;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Decides whether an eBay sold candidate is a genuine single-card sale of THIS
@@ -20,6 +23,9 @@ class SoldCompClassifier
 
     /** @var array<int, array<int, string>> set id => the normalised names of its singles */
     private array $setSingleNameCache = [];
+
+    /** @var array<int, array<int, int>> set id => that set and the subsets beside it */
+    private array $setFamilyCache = [];
 
     public function __construct(
         private StampMatcher $stamps = new StampMatcher,
@@ -187,9 +193,18 @@ class SoldCompClassifier
 
         // Multi-quantity / lots. Note "sets" (plural) only — singular "Set" is
         // part of set names like "Base Set".
-        if (preg_match('/\b(lot|sets|playset|bulk|joblot)\b/', $lower)
+        // "8 Pokemon Pikachu … Cards" is a lot; the count needed two digits, so
+        // a handful was read as one card. "Holos" plural is the same tell
+        // without a number in front of it.
+        // "complete set" is a lot however it is spelled; the plural "sets" was
+        // the only form caught, because "Set" singular is part of set names
+        // like Base Set.
+        if (preg_match('/\b(lot|sets|playset|bulk|joblot|holos)\b|\b(complete|full|master)\s+set\b/', $lower)
             || preg_match('/\bx\s?\d{2,}\b/', $lower)
-            || preg_match('/\b\d{2,}\s*cards?\b/', $lower)) {
+            || preg_match('/\b([2-9]|\d{2,})\s*cards?\b/', $lower)
+            // "8 Pokemon Pikachu … Cards" — the count leads the title and the
+            // noun trails it, with the whole description in between.
+            || preg_match('/^\s*([2-9]|\d{2,})\s+\S.*\bcards\b/', $lower)) {
             return 'multi-quantity lot';
         }
 
@@ -202,6 +217,15 @@ class SoldCompClassifier
         $primary = mb_strtolower((string) preg_replace('/[^a-z0-9]/i', '', (string) strtok($item->name, ' ')));
         if ($primary !== '' && ! str_contains((string) preg_replace('/[^a-z0-9]/', '', $lower), $primary)) {
             return 'title does not name this card';
+        }
+
+        // A loose single is not sold sealed. The 30th Celebration's promos ship
+        // in sealed packs and their listings say so — "Pikachu ex Day MEP 107
+        // Promo Holo sealed" — and two of those were priced as sales of a
+        // different Pikachu entirely. Sealed products have their own gates
+        // above and never reach this.
+        if (preg_match('/\bsealed\b/', $lower)) {
+            return 'sealed product, not a loose single';
         }
 
         // A card of ours that this listing is more specifically about.
@@ -636,7 +660,7 @@ class SoldCompClassifier
     private function siblingSingleCores(CatalogItem $item): array
     {
         return $this->setSingleNameCache[$item->set_id] ??= CatalogItem::query()
-            ->where('set_id', $item->set_id)
+            ->whereIn('set_id', $this->family($item))
             ->where('item_type', ItemType::Single)
             ->pluck('name')
             ->map(fn ($n) => $this->nameCore((string) $n))
@@ -644,6 +668,53 @@ class SoldCompClassifier
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * This card's set and the subsets alongside it.
+     *
+     * A set's Classic Collection and its promo run are separate sets that share
+     * a numbering space with it, and one set's worth of siblings cannot see
+     * across that gap. The 30th Celebration has a Pikachu at 33 and a Pikachu &
+     * Zekrom GX at 33 in its Classic Collection, so twelve sales of the tag team
+     * were recorded as sales of the Pikachu: the numerator matched, and the card
+     * that would have explained the title was one set over.
+     *
+     * The home page, the intraday readings and the price race already treat
+     * these three as one thing. So does this now.
+     *
+     * @return array<int, int>
+     */
+    private function family(CatalogItem $item): array
+    {
+        return $this->setFamilyCache[$item->set_id] ??= (function () use ($item) {
+            $set = $item->set;
+
+            if (! $set) {
+                return [$item->set_id];
+            }
+
+            return Set::query()
+                ->where('product_line_id', $set->product_line_id)
+                ->where('language', $set->language)
+                ->where(fn (Builder $q) => $q
+                    ->whereKey($set->getKey())
+                    // The parent, if this card is IN a subset …
+                    ->orWhere('name', $this->parentName($set->name))
+                    // … or the subsets, if this card is in the parent.
+                    ->orWhereIn('name', array_map(
+                        fn (string $suffix) => $set->name.' '.$suffix,
+                        Subsets::SUFFIXES,
+                    )))
+                ->pluck('id')
+                ->all();
+        })();
+    }
+
+    /** "30th Celebration Promos" → "30th Celebration"; anything else → itself. */
+    private function parentName(string $name): string
+    {
+        return Subsets::split($name)[0] ?? $name;
     }
 
     /**
@@ -663,10 +734,23 @@ class SoldCompClassifier
             ->all();
     }
 
-    /** A title reduced to space-separated words, padded so phrases match whole. */
+    /**
+     * A title reduced to space-separated words, padded so phrases match whole.
+     *
+     * "and" is dropped because it is the word form of "&", which punctuation
+     * stripping already removes: we hold the card as "Pikachu & Zekrom-GX", so a
+     * seller writing "Pikachu And Zekrom GX" would otherwise not match the name
+     * of the very card they are selling.
+     */
     private static function flatten(string $lower): string
     {
-        return ' '.trim((string) preg_replace('/[^a-z0-9]+/', ' ', $lower)).' ';
+        $words = (string) preg_replace('/[^a-z0-9]+/', ' ', $lower);
+        $words = (string) preg_replace('/\band\b/', ' ', $words);
+
+        // Collapse afterwards, or the gap the joiner left keeps the two names
+        // apart: "pikachu and zekrom" became "pikachu   zekrom", and the phrase
+        // being hunted has one space in it.
+        return ' '.trim((string) preg_replace('/\s+/', ' ', $words)).' ';
     }
 
     /**
@@ -750,6 +834,7 @@ class SoldCompClassifier
         // Articuno and Zapdos was therefore read as a single-card sale — three
         // times over, once per card.
         $s = (string) preg_replace('/[\(\[][^\)\]]*[\)\]]/', ' ', $s);
+        $s = (string) preg_replace('/\band\b/', ' ', $s);
         $s = (string) preg_replace('/\b(ex|gx|v|vmax|vstar|v-union|vunion|prime|break|lv|tag team)\b/', ' ', $s);
 
         return trim((string) preg_replace('/[^a-z0-9]+/', ' ', $s));
