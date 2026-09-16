@@ -221,3 +221,80 @@ test('a sealed product gets a for-sale value from its SEALED state', function ()
         ->and($mv->combined)->not->toBeNull()
         ->and(ListingObservation::where('catalog_item_id', $box->id)->count())->toBe(2);
 });
+
+/** A Browse client that answers differently depending on the sort, as eBay does. */
+function fakeBrowseBySort(array $priced, array $relevance): void
+{
+    app()->instance(EbayBrowseClient::class, new class($priced, $relevance) extends EbayBrowseClient
+    {
+        public function __construct(private array $priced, private array $relevance) {}
+
+        public function search(string $query, int $limit = 6, ?string $sort = 'price'): array
+        {
+            return array_slice($sort === 'price' ? $this->priced : $this->relevance, 0, $limit);
+        }
+    });
+}
+
+test('a price-sorted window that did not fill is topped up from relevance', function () {
+    // eBay matches strictly when sorted by price, so each keyword we add narrows
+    // it toward nothing — a brand-new card can come back with one ask or none
+    // while the same query unsorted returns a full page.
+    config(['valuation.for_sale.ebay_limit' => 5]);
+
+    fakeBrowseBySort(
+        priced: [listing(10000, 'Mega Darkrai ex 116 cheap')],
+        relevance: [
+            listing(10000, 'Mega Darkrai ex 116 cheap'),   // the same listing, same url
+            listing(12000, 'Mega Darkrai ex 116 second'),
+            listing(13000, 'Mega Darkrai ex 116 third'),
+        ],
+    );
+
+    app(IngestForSaleListings::class)($this->item);
+
+    // Four distinct listings existed; the price sort could only see one. The
+    // duplicate is not counted twice.
+    expect(ListingObservation::where('catalog_item_id', $this->item->id)->where('venue', 'ebay')->count())
+        ->toBe(3);
+});
+
+test('a full price-sorted window is left alone', function () {
+    // 61% of the catalog fills its window, and those asks feed the low
+    // percentile. Re-sampling them would move the for-sale figure everywhere.
+    config(['valuation.for_sale.ebay_limit' => 2]);
+
+    fakeBrowseBySort(
+        priced: [listing(10000, 'Mega Darkrai ex 116 a'), listing(11000, 'Mega Darkrai ex 116 b')],
+        relevance: [listing(99000, 'Mega Darkrai ex 116 expensive')],
+    );
+
+    app(IngestForSaleListings::class)($this->item);
+
+    $prices = ListingObservation::where('catalog_item_id', $this->item->id)
+        ->where('venue', 'ebay')->pluck('price')->sort()->values()->all();
+
+    expect($prices)->toBe([10000, 11000]);
+});
+
+test('an ask is held to the same identity gates a sold comp is', function () {
+    // Asking relevance for the rest of the page exposed this at once: "Umbreon
+    // ex 092/128", the Double Rare from the main set, arrived as an ask for the
+    // promo numbered 110, and eighteen such listings put that promo at $6.27.
+    config(['valuation.for_sale.ebay_limit' => 5]);
+
+    fakeBrowseBySort(
+        priced: [],
+        relevance: [
+            listing(500, 'Mega Darkrai ex 092/128 Double Rare Pokemon TCG'),   // another card
+            listing(30000, 'Mega Darkrai ex 116 Special Illustration Rare'),   // this one
+        ],
+    );
+
+    app(IngestForSaleListings::class)($this->item);
+
+    $asks = ListingObservation::where('catalog_item_id', $this->item->id)->where('venue', 'ebay')->get();
+
+    expect($asks)->toHaveCount(1)
+        ->and($asks->first()->price)->toBe(30000);
+});

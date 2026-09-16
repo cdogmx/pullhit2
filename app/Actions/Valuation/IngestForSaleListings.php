@@ -7,6 +7,7 @@ use App\Models\CatalogItem;
 use App\Support\Ebay\CardSearchTerms;
 use App\Support\Ebay\EbayBrowseClient;
 use App\Support\Ebay\SealedSearch;
+use App\Support\Ebay\SoldCompClassifier;
 use App\Support\Valuation\CombinedValue;
 use App\Support\Valuation\ForSaleEngine;
 use App\Support\Valuation\TcgplayerLowPrice;
@@ -47,9 +48,10 @@ class IngestForSaleListings
      * cheap tail is entirely other SKUs — Troves, loose packs, the other
      * language's box — so a cheapest-first window filters down to nothing.
      *
-     * Singles deliberately keep the cheapest-first sampling: their asks feed
-     * ForSaleEngine's low percentile, and re-sampling them would move the
-     * for-sale figure on every card in the catalog at once.
+     * Singles are sampled cheapest-first for the same reason — their asks feed
+     * ForSaleEngine's low percentile — but only while that window fills. When it
+     * does not, the rest of the page is asked for unsorted and merged in; see
+     * ingestAsks for why a price-sorted search goes empty.
      */
     private const SEALED_EBAY_LIMIT = 50;
 
@@ -57,6 +59,7 @@ class IngestForSaleListings
         protected EbayBrowseClient $browse,
         protected TcgplayerLowPrice $tcgplayer,
         protected ForSaleEngine $engine,
+        protected SoldCompClassifier $classifier,
     ) {}
 
     public function __invoke(CatalogItem $item): void
@@ -153,11 +156,40 @@ class IngestForSaleListings
             sort: $sealed ? null : 'price',
         );
 
+        // eBay's Browse API matches strictly when the results are sorted by
+        // price and loosely when they are not, so each keyword we add narrows a
+        // price-sorted search toward nothing. Measured on one card:
+        //
+        //   Pikachu ex 149 30th Celebration                  price 72  relev 105
+        //     + Special Illustration Rare                    price  6  relev  73
+        //     + Near Mint                                    price  0  relev  72
+        //
+        // Cheapest-first is still the right sample when there are enough asks to
+        // sample from — it is what feeds ForSaleEngine's low percentile, and
+        // 61% of the catalog fills its window. But a window that did not fill is
+        // not a cheap slice of a big market; it is the whole of a small one, and
+        // eBay will hand over more of it if we stop sorting. So we ask again and
+        // keep both, rather than re-sampling every card in the catalog at once.
+        if (! $sealed && count($results) < $limit) {
+            $results = $this->merge($results, $this->browse->search($query, $limit, sort: null));
+        }
+
         foreach ($results as $listing) {
             $title = (string) ($listing['title'] ?? '');
 
             // Another language's printing is a different market — never an ask.
             if (! CardSearchTerms::matchesLanguage($item, $title)) {
+                continue;
+            }
+
+            // The same identity gates a sold comp is held to. The panel has
+            // always applied these; this path never did, and it did not show
+            // while a price-sorted search was returning almost nothing. Asking
+            // relevance for the rest of the page exposed it at once: "Umbreon ex
+            // 092/128" — the Double Rare from the main set — arrived as an ask
+            // for the promo numbered 110, and eighteen such listings put the
+            // promo's asking price at $6.27.
+            if ($this->classifier->titleRejectReason($item, $title) !== null) {
                 continue;
             }
 
@@ -221,6 +253,35 @@ class IngestForSaleListings
      *
      * @return array<string, array<string, mixed>>
      */
+    /**
+     * Two Browse pulls of the same query, as one list. Keyed on the listing URL,
+     * which is the only identifier a summary reliably carries — the two sorts
+     * overlap heavily, and counting one ask twice would drag the low percentile
+     * toward whichever price happened to appear in both.
+     *
+     * @param  array<int, array<string, mixed>>  $first
+     * @param  array<int, array<string, mixed>>  $second
+     * @return array<int, array<string, mixed>>
+     */
+    protected function merge(array $first, array $second): array
+    {
+        $seen = [];
+        $merged = [];
+
+        foreach ([...$first, ...$second] as $listing) {
+            $key = $listing['url'] ?? json_encode($listing);
+
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $merged[] = $listing;
+        }
+
+        return $merged;
+    }
+
     protected function statesFor(CatalogItem $item): array
     {
         return $item->item_type === ItemType::Sealed
