@@ -37,6 +37,15 @@ Schedule::command('valuation:sweep-ebay')->everyTenMinutes()->withoutOverlapping
 // queued or in flight is never queued twice.
 Schedule::command('ebay:enqueue-sweeps')->everyFiveMinutes()->withoutOverlapping(10);
 
+// Intraday value readings for whatever set is currently featured. eBay dates a
+// sold listing without a time, so an hourly SOLD price cannot be reconstructed
+// at any cadence — what this records is our own estimate moving as sales are
+// found, plus the asking prices, which really do change through the day.
+//
+// Every fifteen minutes is the resolution of the series. Nothing is written when
+// no set is featured, which is most of the time.
+Schedule::command('valuation:tick')->everyFifteenMinutes()->withoutOverlapping(14);
+
 // Proactive sealed-product comps. The broad sweep is collector-number-based and
 // skips sealed, so warm the valuable, stale sealed SKUs by name in small hourly
 // batches under the shared daily Oxylabs cap.
