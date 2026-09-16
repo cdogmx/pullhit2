@@ -25,6 +25,9 @@ class PruneBadCompsCommand extends Command
     protected $signature = 'valuation:prune-bad-comps
         {--card= : only this catalog_item_id}
         {--set= : only the cards in this set, by slug}
+        {--from-id= : only observations above this id}
+        {--to-id= : only observations up to this id}
+        {--limit= : stop after this many observations, and report where to resume}
         {--dry-run : report what would be removed, delete nothing}';
 
     protected $description = 'Remove stored eBay comps that no longer pass the classifier (multi-card sets, lots, …)';
@@ -47,6 +50,8 @@ class PruneBadCompsCommand extends Command
         $affected = [];
         $removed = 0;
         $checked = 0;
+        $limit = (int) $this->option('limit');
+        $lastId = (int) $this->option('from-id');
 
         SaleObservation::query()
             ->where('is_synthetic', false)
@@ -59,7 +64,15 @@ class PruneBadCompsCommand extends Command
                 'catalog_item_id',
                 CatalogItem::where('set_id', $set->id)->select('id'),
             ))
-            ->chunkById(500, function ($rows) use ($classifier, $recompute, $dryRun, &$affected, &$removed, &$checked) {
+            // Sliceable by id so the pass can be run in bounded runs and picked
+            // up where it stopped. The table holds 1.2M comps over a remote
+            // connection; one uninterruptible multi-hour pass is a thing nobody
+            // can schedule around, and the reject rate climbs the further back
+            // you go — 0% in September, 12.8% in mid-August, 20.7% before that
+            // — so the oldest slices are worth doing first.
+            ->when($this->option('from-id'), fn (Builder $q, $id) => $q->where('id', '>', (int) $id))
+            ->when($this->option('to-id'), fn (Builder $q, $id) => $q->where('id', '<=', (int) $id))
+            ->chunkById(500, function ($rows) use ($classifier, $recompute, $dryRun, $limit, &$affected, &$removed, &$checked, &$lastId) {
                 $items = CatalogItem::whereIn('id', $rows->pluck('catalog_item_id')->unique())
                     ->get()->keyBy('id');
                 $touched = [];
@@ -101,12 +114,23 @@ class PruneBadCompsCommand extends Command
                     }
                 }
 
+                $lastId = $rows->last()->id ?? $lastId;
+
                 $this->line(sprintf(
-                    '  %s checked, %s removed…',
+                    '  %s checked, %s removed… (id %s)',
                     number_format($checked),
                     number_format($removed),
+                    number_format((int) $lastId),
                 ), null, OutputInterface::VERBOSITY_VERBOSE);
+
+                // Stop cleanly on the chunk boundary rather than mid-card: the
+                // recompute above has already run for everything touched.
+                return ! ($limit > 0 && $checked >= $limit);
             });
+
+        if ($limit > 0 && $checked >= $limit) {
+            $this->info("Stopped at the limit. Resume with --from-id={$lastId}");
+        }
 
         $verb = $dryRun ? 'would remove' : 'removed';
         $this->info("checked {$checked} comps; {$verb} {$removed} bad comp(s) across ".count($affected).' card(s)'.

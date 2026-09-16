@@ -81,3 +81,46 @@ test('a card is revalued in the same pass that strips it', function () {
         ->and($value->n_sales)->toBe(1)
         ->and($value->median)->toBeLessThan(6000);
 });
+
+test('the pass can be run in slices and resumed', function () {
+    // 1.2M comps over a remote connection is not one sitting. The reject rate
+    // also climbs the further back you go — 0% in September, 20.7% before
+    // mid-August — so the oldest slices are the ones worth doing first.
+    $set = Set::factory()->create();
+    $card = CatalogItem::factory()->create(['name' => 'Chikorita', 'number' => '46', 'set_id' => $set->id,
+        'attributes' => ['language' => 'en', 'variant' => 'holo']]);
+    CatalogItem::factory()->create(['name' => 'Cyndaquil', 'number' => '47', 'set_id' => $set->id, 'attributes' => ['language' => 'en']]);
+    CatalogItem::factory()->create(['name' => 'Totodile', 'number' => '48', 'set_id' => $set->id, 'attributes' => ['language' => 'en']]);
+
+    $bad = collect(range(1, 4))->map(fn ($n) => SaleObservation::create([
+        'catalog_item_id' => $card->id, 'venue' => 'ebay', 'price' => 9000, 'currency' => 'USD',
+        'condition' => 'NM', 'observed_at' => now(), 'is_synthetic' => false, 'source_listing_id' => "bad{$n}",
+        'raw' => ['title' => 'First Partner Johto Starter Set Chikorita Cyndaquil Totodile', 'source' => 'ebay'],
+    ]));
+
+    // Only the observations above the third id are in scope.
+    $this->artisan('valuation:prune-bad-comps', [
+        '--card' => $card->id, '--from-id' => $bad[1]->id,
+    ])->assertSuccessful();
+
+    expect(SaleObservation::find($bad[0]->id))->not->toBeNull()
+        ->and(SaleObservation::find($bad[1]->id))->not->toBeNull()
+        ->and(SaleObservation::find($bad[2]->id))->toBeNull()
+        ->and(SaleObservation::find($bad[3]->id))->toBeNull();
+});
+
+test('a slice stops at its limit on a chunk boundary', function () {
+    $card = CatalogItem::factory()->create(['name' => 'Pikachu', 'number' => '58']);
+
+    SaleObservation::create([
+        'catalog_item_id' => $card->id, 'venue' => 'ebay', 'price' => 5000, 'currency' => 'USD',
+        'condition' => 'NM', 'observed_at' => now(), 'is_synthetic' => false, 'source_listing_id' => 'x1',
+        'raw' => ['title' => 'Lot of 50 Pokemon cards Pikachu bulk', 'source' => 'ebay'],
+    ]);
+
+    $this->artisan('valuation:prune-bad-comps', ['--card' => $card->id, '--limit' => 1])
+        ->assertSuccessful();
+
+    // Whatever it reached is still fully handled — the recompute runs per chunk.
+    expect(SaleObservation::where('catalog_item_id', $card->id)->count())->toBe(0);
+});
