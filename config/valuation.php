@@ -230,6 +230,23 @@ return [
                     'interval_minutes' => 20,
                     'url' => 'https://www.ebay.com/sch/i.html?_nkw=pokemon+psa+10&_sacat=0&LH_Sold=1&LH_Complete=1&Language=English&_dcat=183454&_ipg=240',
                 ],
+                // A set in its first week, swept hard. One page of "pokemon
+                // 30th" sold is a few hundred sales across the set at once,
+                // which is the cheapest way to price a release whose whole
+                // market is being discovered in the same fortnight. The URL is
+                // as supplied — eBay's own Set facet, category in the path —
+                // with _ipg and LH_Complete added to pull a full page of
+                // completed sales rather than a default-sized one.
+                //
+                // Turn this off once the set settles; a ten-minute sweep on a
+                // quiet set is the agent's daily budget spent on nothing.
+                [
+                    'label' => 'pokemon-30th',
+                    'language' => 'en',
+                    'line' => 'pokemon',
+                    'interval_minutes' => 10,
+                    'url' => 'https://www.ebay.com/sch/183454/i.html?_nkw=pokemon+30th&_from=R40&Language=English&Set=30th%2520Anniversary%2520Edition&_dcat=2536&rt=nc&LH_Sold=1&LH_Complete=1&_ipg=240',
+                ],
                 [
                     'label' => 'onepiece-psa10',
                     'language' => 'en',
