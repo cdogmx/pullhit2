@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Valuation\BuildPriceRace;
+use App\Actions\Valuation\ResolveRaceSources;
 use App\Models\CatalogItem;
 use App\Models\ProductLine;
 use App\Models\SaleObservation;
@@ -29,6 +30,14 @@ beforeEach(function () {
     ]);
 });
 
+/** Resolve a set to its cards and race them, the way the controller does. */
+function raceSet(string $slug = '30th-celebration'): ?array
+{
+    $ids = app(ResolveRaceSources::class)([['type' => 'set', 'slug' => $slug]])['ids'];
+
+    return app(BuildPriceRace::class)($ids);
+}
+
 /** Give a card enough sales on enough days to clear the window's minimum. */
 function race(callable $sale, CatalogItem $card, array $days, int $cents): void
 {
@@ -44,7 +53,7 @@ test('a single sale is not a price', function () {
     $solo = ($this->card)('Lonely');
     ($this->sale)($solo, '2026-09-01', 50000);
 
-    expect(app(BuildPriceRace::class)($this->set))->toBeNull();
+    expect(raceSet())->toBeNull();
 });
 
 test('the race starts when there is a field to race', function () {
@@ -61,7 +70,7 @@ test('the race starts when there is a field to race', function () {
         race($this->sale, $card, $days, 10000 * ($i + 1));
     }
 
-    $result = app(BuildPriceRace::class)($this->set);
+    $result = raceSet();
 
     expect($result['frames'][0]['day'])->toBe('2026-09-01')
         // The volume ribbon still covers the quiet weeks before it.
@@ -75,7 +84,7 @@ test('bars are ranked by value, highest first', function () {
         race($this->sale, $card, ['2026-09-01'], 10000 * ($i + 1));
     }
 
-    $frame = app(BuildPriceRace::class)($this->set)['frames'][0];
+    $frame = raceSet()['frames'][0];
     $values = array_column($frame['bars'], 'value');
 
     expect($values)->toBe([60000, 50000, 40000, 30000, 20000, 10000]);
@@ -89,7 +98,7 @@ test('a day with no sales still counts as a day', function () {
         race($this->sale, $card, ['2026-09-01', '2026-09-04'], 10000 * ($i + 1));
     }
 
-    $days = array_column(app(BuildPriceRace::class)($this->set)['frames'], 'day');
+    $days = array_column(raceSet()['frames'], 'day');
 
     expect($days)->toBe(['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04']);
 });
@@ -105,7 +114,7 @@ test('the page renders for the featured set with no slug', function () {
 
     $this->get('/price-race')->assertOk()->assertInertia(fn (Assert $p) => $p
         ->component('price-race')
-        ->where('race.set.name', '30th Celebration')
+        ->where('race.title', '30th Celebration')
         ->has('race.frames')
         ->has('race.volume'));
 });

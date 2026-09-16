@@ -19,11 +19,18 @@ type Frame = { day: string; volume: number; bars: Bar[] };
 
 type Props = {
     race: {
-        set: { name: string; slug: string; released: string | null };
+        title: string;
+        description?: string | null;
+        owner?: string | null;
+        slug?: string | null;
+        editable?: boolean;
         cards: Record<string, Card>;
         frames: Frame[];
         volume: { day: string; sales: number }[];
         window: number;
+        step: number;
+        capped?: boolean;
+        considered?: number;
     };
 };
 
@@ -73,7 +80,7 @@ function VolumeRibbon({
 }
 
 export default function PriceRace({ race }: Props) {
-    const { frames, cards, volume, set } = race;
+    const { frames, cards, volume } = race;
 
     const [index, setIndex] = useState(0);
     const [playing, setPlaying] = useState(true);
@@ -121,7 +128,7 @@ export default function PriceRace({ race }: Props) {
 
     return (
         <>
-            <Head title={`${set.name} — price race`} />
+            <Head title={`${race.title} — price race`} />
 
             <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
                 <div className="flex flex-wrap items-end justify-between gap-4">
@@ -130,13 +137,21 @@ export default function PriceRace({ race }: Props) {
                             Price race
                         </p>
                         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                            {set.name}
+                            {race.title}
                         </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            The top 30 cards, day by day, from real sold prices.
-                            Each day is a {race.window}-day median, because one
-                            sale is not a price.
+                            {race.description ??
+                                'Real sold prices, in order, as they moved.'}{' '}
+                            Each frame is a {race.window}-day median, because
+                            one sale is not a price.
+                            {race.step > 1 &&
+                                ` One frame per ${race.step} days.`}
                         </p>
+                        {race.owner && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                by {race.owner}
+                            </p>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -250,17 +265,38 @@ export default function PriceRace({ race }: Props) {
                     })}
                 </div>
 
-                <p className="mt-8 text-xs text-muted-foreground">
-                    Built from completed sales only, never asking prices. eBay
-                    dates a sold listing without a time, so a day is the finest
-                    honest resolution here.{' '}
-                    <Link
-                        href={`/browse/pokemon/${set.slug}`}
-                        className="font-semibold text-primary hover:underline"
-                    >
-                        Browse the set &rarr;
-                    </Link>
-                </p>
+                <div className="mt-8 space-y-2 text-xs text-muted-foreground">
+                    <p>
+                        Built from completed sales only, never asking prices.
+                        eBay dates a sold listing without a time, so a day is
+                        the finest honest resolution here.
+                    </p>
+                    {race.capped && (
+                        <p>
+                            {race.considered?.toLocaleString()} cards matched
+                            this selection. The race runs the most valuable that
+                            actually trade — a card has to sell to have a price,
+                            and the least liquid would sit still for the whole
+                            tape.
+                        </p>
+                    )}
+                    <p className="flex flex-wrap gap-3 pt-1">
+                        <Link
+                            href="/races"
+                            className="font-semibold text-primary hover:underline"
+                        >
+                            All races &rarr;
+                        </Link>
+                        {race.editable && race.slug && (
+                            <Link
+                                href={`/races/${race.slug}/edit`}
+                                className="font-semibold text-primary hover:underline"
+                            >
+                                Edit this race
+                            </Link>
+                        )}
+                    </p>
+                </div>
             </div>
         </>
     );

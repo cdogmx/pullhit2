@@ -3,54 +3,63 @@
 namespace App\Actions\Valuation;
 
 use App\Models\CatalogItem;
-use App\Models\Set;
-use App\Support\Catalog\Subsets;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * A set's first weeks as a running race: what each card was worth on each day,
- * and how the order changed.
+ * A run of cards as a race: what each was worth on each frame, and how the
+ * order changed.
  *
- * Built from sold comps rather than from value_snapshots, which keep one row per
- * card per day and only began for this set two days ago — the comps go back a
- * month. The price on a given day is a trailing median, not that day's sales:
- * the 19th of August saw eight sales across eight cards, and a median of one
- * sale is not a price, it is an anecdote. A window smooths that into something
- * that can be read without lying about how much is known.
+ * Built from sold comps rather than from value_snapshots, which keep one row
+ * per card per day and start whenever a card was first valued — the comps go
+ * back to whenever it first sold. A frame's price is a trailing median, not
+ * that frame's sales: the 19th of August saw eight sales across eight cards,
+ * and the median of one sale is an anecdote wearing a price tag.
  *
- * Sales volume rides along per day, because for a new set that curve is the
- * story — this one runs from eight sales a day in mid-August to twelve hundred.
+ * Sales volume rides along per frame, because for a new set that curve is the
+ * story — the 30th Celebration runs from eight sales a day in mid-August to
+ * twelve hundred.
  */
 class BuildPriceRace
 {
-    /** Days of sales that inform one day's price. */
-    private const WINDOW = 7;
+    /** Days of sales that inform one frame's price. */
+    public const WINDOW = 7;
 
     /** Sales needed inside the window before a card is worth plotting. */
     private const MIN_SALES = 2;
 
-    /** Bars per frame. */
-    private const BARS = 30;
-
-    /** Bars needed before a day counts as part of the race. */
+    /** Bars needed before a frame counts as part of the race. */
     private const MIN_FIELD = 5;
 
     /**
+     * Frames a race may run to. Beyond this the step widens from days to weeks
+     * to months: five years of daily frames is a twenty-seven minute tape, and
+     * nobody watches a chart for twenty-seven minutes.
+     */
+    private const MAX_FRAMES = 120;
+
+    /**
+     * @param  array<int, int>  $cardIds
+     * @param  array<string, mixed>  $options
      * @return array<string, mixed>|null
      */
-    public function __invoke(Set $set): ?array
+    public function __invoke(array $cardIds, array $options = []): ?array
     {
-        $ids = $this->family($set);
+        if ($cardIds === []) {
+            return null;
+        }
+
+        $bars = max(3, min(50, (int) ($options['top'] ?? 30)));
+        $window = max(1, min(30, (int) ($options['window'] ?? self::WINDOW)));
 
         $sales = DB::table('sale_observations')
-            ->whereIn('catalog_item_id', $ids)
+            ->whereIn('catalog_item_id', $cardIds)
             ->where('is_synthetic', false)
             ->whereNull('grading_company_id')
             ->where('price', '>', 0)
+            ->when($options['from'] ?? null, fn ($q, $from) => $q->whereDate('observed_at', '>=', $from))
+            ->when($options['to'] ?? null, fn ($q, $to) => $q->whereDate('observed_at', '<=', $to))
             ->selectRaw('catalog_item_id, date(observed_at) d, price')
-            ->orderBy('d')
             ->get();
 
         if ($sales->isEmpty()) {
@@ -66,24 +75,17 @@ class BuildPriceRace
         }
 
         $days = $this->days(array_keys($volume));
+
+        $standings = $this->sweep($byCardDay, $days, $window);
+
         $frames = [];
         $roster = [];
 
         foreach ($days as $day) {
-            $standing = [];
-
-            foreach ($byCardDay as $cardId => $daily) {
-                $prices = $this->window($daily, $day);
-
-                if (count($prices) < self::MIN_SALES) {
-                    continue;
-                }
-
-                $standing[] = ['id' => $cardId, 'value' => $this->median($prices), 'sales' => count($prices)];
-            }
+            $standing = $standings[$day] ?? [];
 
             usort($standing, fn ($a, $b) => $b['value'] <=> $a['value']);
-            $standing = array_slice($standing, 0, self::BARS);
+            $standing = array_slice($standing, 0, $bars);
 
             foreach ($standing as $bar) {
                 $roster[$bar['id']] = true;
@@ -102,33 +104,77 @@ class BuildPriceRace
             return null;
         }
 
+        // Step is decided after the trim, not before. A handful of stray old
+        // sales can stretch the full range over months while the race itself
+        // covers a fortnight, and stepping on the full range would coarsen the
+        // part anyone is actually watching.
+        $step = $this->step(count($racing));
+        $racing = $this->downsample($racing, $step, $volume);
+
         return [
-            'set' => ['name' => $set->name, 'slug' => $set->slug, 'released' => $set->released_at?->toDateString()],
             'cards' => $this->cards(array_keys($roster)),
             'frames' => $racing,
             // Every day, including the ones before the race starts. The ramp
-            // from single sales in August to twelve hundred a day is the story
-            // of the release, and it is finished before the race begins.
+            // from single sales to hundreds a day is the story of a release, and
+            // it is finished before any card has enough sales to be plotted.
             'volume' => array_map(
-                fn (array $f) => ['day' => $f['day'], 'sales' => $f['volume']],
-                $frames,
+                fn (string $day) => ['day' => $day, 'sales' => $volume[$day] ?? 0],
+                $days,
             ),
-            'window' => self::WINDOW,
+            'window' => $window,
+            'step' => $step,
         ];
+    }
+
+    /**
+     * Keep every Nth frame, and always the last one — a race that stops three
+     * days short of today reads as stale rather than stepped. A kept frame
+     * reports the sales of every day it now stands for.
+     *
+     * @param  array<int, array<string, mixed>>  $frames
+     * @param  array<string, int>  $volume
+     * @return array<int, array<string, mixed>>
+     */
+    private function downsample(array $frames, int $step, array $volume): array
+    {
+        if ($step <= 1) {
+            return $frames;
+        }
+
+        $last = count($frames) - 1;
+        $kept = [];
+
+        foreach ($frames as $i => $frame) {
+            if ($i % $step !== 0 && $i !== $last) {
+                continue;
+            }
+
+            $frame['volume'] = $this->volumeOver($volume, $frame['day'], $step);
+            $kept[] = $frame;
+        }
+
+        return $kept;
+    }
+
+    /**
+     * Days per frame. A set's first month is daily; five years of a brand is
+     * not, and widening the step is better than dropping the early history.
+     */
+    private function step(int $days): int
+    {
+        return max(1, (int) ceil($days / self::MAX_FRAMES));
     }
 
     /**
      * The race starts when there is a field to race.
      *
      * A set's first fortnight is a handful of presale sales: three bars, then
-     * eight, then — across two days in late August with no sales at all — none,
-     * which draws a chart that has gone blank rather than a market that is
-     * quiet. Carrying the last price forward would fill those frames, but a
-     * price no sale supports is exactly the invention the rest of this codebase
-     * spends its time rejecting.
-     *
-     * So the tape begins at the first day from which the field never thins
-     * again, and the weeks before it are told by the volume ribbon instead,
+     * eight, then — across two days with no sales at all — none, which draws a
+     * chart that has gone blank rather than a market that is quiet. Carrying the
+     * last price forward would fill those frames, but a price no sale supports
+     * is exactly the invention the rest of this codebase spends its time
+     * rejecting. So the tape begins at the first frame from which the field
+     * never thins again, and the time before it is told by the volume ribbon,
      * which needs no such minimum.
      *
      * @param  array<int, array<string, mixed>>  $frames
@@ -148,30 +194,21 @@ class BuildPriceRace
             $start = null;   // thinned out again — that was not the start
         }
 
-        return $start === null ? [] : array_values(array_slice($frames, $start));
-    }
+        // A race whose field never reaches the minimum is still a race if it
+        // has bars at all; a hand-picked list of four cards is a legitimate one.
+        if ($start === null) {
+            $withBars = array_values(array_filter($frames, fn (array $f) => $f['bars'] !== []));
 
-    /** The featured set plus its subsets, the way the home page counts them. */
-    private function family(Set $set): array
-    {
-        $sets = Set::query()
-            ->where('product_line_id', $set->product_line_id)
-            ->where('language', $set->language)
-            ->where(fn (Builder $q) => $q
-                ->whereKey($set->getKey())
-                ->orWhereIn('name', array_map(
-                    fn (string $suffix) => $set->name.' '.$suffix,
-                    Subsets::SUFFIXES,
-                )))
-            ->pluck('id');
+            return count($withBars) >= 2 ? $withBars : [];
+        }
 
-        return CatalogItem::whereIn('set_id', $sets)->pluck('id')->all();
+        return array_values(array_slice($frames, $start));
     }
 
     /**
      * Every day from the first sale to the last, including the quiet ones — a
-     * gap in a race reads as time passing, and skipping it speeds the tape up
-     * exactly where the market was slowest.
+     * gap reads as time passing, and skipping it speeds the tape up exactly
+     * where the market was slowest.
      *
      * @param  array<int, string>  $seen
      * @return array<int, string>
@@ -192,26 +229,73 @@ class BuildPriceRace
     }
 
     /**
-     * The prices inside the trailing window ending on $day.
+     * Sales across the days this frame stands for, so a weekly frame reports its
+     * whole week rather than one day of it.
      *
-     * @param  array<string, array<int, int>>  $daily
-     * @return array<int, int>
+     * @param  array<string, int>  $volume
      */
-    private function window(array $daily, string $day): array
+    private function volumeOver(array $volume, string $day, int $step): int
     {
         $end = Carbon::parse($day);
-        $start = $end->copy()->subDays(self::WINDOW - 1);
-        $prices = [];
+        $total = 0;
 
-        foreach ($daily as $d => $dayPrices) {
-            $at = Carbon::parse($d);
+        for ($i = 0; $i < $step; $i++) {
+            $total += $volume[$end->copy()->subDays($i)->toDateString()] ?? 0;
+        }
 
-            if ($at->betweenIncluded($start, $end)) {
-                $prices = array_merge($prices, $dayPrices);
+        return $total;
+    }
+
+    /**
+     * Every card's trailing median on every day, in one pass per card.
+     *
+     * Asking each card for each day separately meant rescanning that card's
+     * whole sales history once per day of the race — fine for a set over a
+     * fortnight, twenty-six seconds for a brand over five years. Sweeping
+     * forward and evicting what has aged out holds at most `window` days in
+     * hand, so the cost stops depending on how long the card has been trading.
+     *
+     * @param  array<int, array<string, array<int, int>>>  $byCardDay
+     * @param  array<int, string>  $days
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    private function sweep(array $byCardDay, array $days, int $window): array
+    {
+        $standings = [];
+
+        foreach ($byCardDay as $cardId => $daily) {
+            $held = [];   // day => prices, only those still inside the window
+
+            foreach ($days as $i => $day) {
+                if (isset($daily[$day])) {
+                    $held[$day] = $daily[$day];
+                }
+
+                // Anything older than the window has aged out. At most `window`
+                // entries are ever held, so this stays cheap.
+                $oldest = $days[max(0, $i - $window + 1)];
+
+                foreach (array_keys($held) as $d) {
+                    if ($d < $oldest) {
+                        unset($held[$d]);
+                    }
+                }
+
+                $prices = $held === [] ? [] : array_merge(...array_values($held));
+
+                if (count($prices) < self::MIN_SALES) {
+                    continue;
+                }
+
+                $standings[$day][] = [
+                    'id' => $cardId,
+                    'value' => $this->median($prices),
+                    'sales' => count($prices),
+                ];
             }
         }
 
-        return $prices;
+        return $standings;
     }
 
     /** @param  array<int, int>  $prices */

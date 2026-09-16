@@ -18,6 +18,7 @@ use App\Http\Controllers\Web\MarketplaceThreadController;
 use App\Http\Controllers\Web\MoversController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\PriceRaceController;
+use App\Http\Controllers\Web\RaceController;
 use App\Http\Controllers\Web\RankingsController;
 use App\Http\Controllers\Web\RipOrKeepController;
 use App\Http\Controllers\Web\ScanController;
@@ -92,7 +93,24 @@ Route::get('rankings', RankingsController::class)->name('rankings');
 */
 // A featured set's first weeks as a bar-chart race. No slug means whatever is
 // featured, so the home page link survives the next release.
+// A brand or series raced without saving anything. Declared before the bare
+// {set?} form, or "brand" is read as a set slug.
+Route::get('price-race/{scope}/{value}', [PriceRaceController::class, 'scope'])
+    ->whereIn('scope', ['set', 'series', 'brand'])
+    ->name('price-race.scope');
 Route::get('price-race/{set?}', [PriceRaceController::class, 'show'])->name('price-race');
+
+// Saved races. "mine" and "new" come before {race:slug}, or they are read as
+// somebody's race called mine.
+Route::get('races', [RaceController::class, 'index'])->name('races.index');
+Route::middleware('auth')->group(function () {
+    Route::get('races/new', [RaceController::class, 'create'])->name('races.create');
+    Route::post('races', [RaceController::class, 'store'])->name('races.store');
+    Route::get('races/{race:slug}/edit', [RaceController::class, 'edit'])->name('races.edit');
+    Route::put('races/{race:slug}', [RaceController::class, 'update'])->name('races.update');
+    Route::delete('races/{race:slug}', [RaceController::class, 'destroy'])->name('races.destroy');
+});
+Route::get('races/{race:slug}', [RaceController::class, 'show'])->name('races.show');
 
 Route::get('marketplace', [MarketplaceController::class, 'index'])->name('marketplace.index');
 
