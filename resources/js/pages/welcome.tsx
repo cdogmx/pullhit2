@@ -69,8 +69,17 @@ type Giveaway = {
     total_entries: number;
 };
 
+type Featured = {
+    name: string;
+    blurb: string | null;
+    href: string | null;
+    released: string | null;
+    cards: CardTileData[];
+};
+
 type Props = {
     brands: Brand[];
+    featured: Featured | null;
     trending: CardTileData[];
     movers: CardTileData[];
     recent: CardTileData[];
@@ -238,6 +247,7 @@ function Section({
 
 export default function Welcome({
     brands,
+    featured,
     trending,
     movers,
     recent,
@@ -376,6 +386,24 @@ export default function Welcome({
             {/* Live catalog sections */}
             <section className="border-b border-border">
                 <div className="mx-auto flex w-full max-w-7xl flex-col gap-14 px-4 py-14 sm:px-6 lg:px-8">
+                    {featured && featured.cards.length > 0 && (
+                        <Section
+                            title={featured.name}
+                            sub={
+                                featured.blurb ??
+                                'Just landed — the chase cards, priced from real sold comps.'
+                            }
+                            href={featured.href ?? undefined}
+                            cta="See the set"
+                        >
+                            <HScroller>
+                                {featured.cards.map((c, i) => (
+                                    <CardTile key={i} card={c} />
+                                ))}
+                            </HScroller>
+                        </Section>
+                    )}
+
                     {trending.length > 0 && (
                         <Section
                             title="Trending cards"
@@ -553,7 +581,7 @@ export default function Welcome({
                         </div>
 
                         <div className="rounded-2xl border border-border bg-card p-6">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                                 Levels
                             </p>
                             <ol className="mt-3 space-y-1.5">
@@ -578,8 +606,8 @@ export default function Welcome({
                                 <Gift className="mt-0.5 size-4 shrink-0 text-primary" />
                                 <span className="text-muted-foreground">
                                     Points earned this month are your entries in
-                                    the {community.month} giveaway — the more you
-                                    contribute, the better your odds.
+                                    the {community.month} giveaway — the more
+                                    you contribute, the better your odds.
                                 </span>
                             </div>
                         </div>

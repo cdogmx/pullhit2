@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\SetFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,6 +30,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'released_at',
     'refresh_minutes',
     'refresh_boost_until',
+    'featured_until',
+    'featured_blurb',
     'external_ids',
 ])]
 class Set extends Model
@@ -41,6 +44,7 @@ class Set extends Model
         return [
             'released_at' => 'date',
             'refresh_boost_until' => 'datetime',
+            'featured_until' => 'datetime',
             'og_image_at' => 'datetime',
             'external_ids' => 'array',
         ];
@@ -61,6 +65,18 @@ class Set extends Model
         }
 
         return $this->refresh_boost_until->isFuture() ? (int) $this->refresh_minutes : null;
+    }
+
+    /**
+     * Sets with a live spot on the home page, newest first.
+     *
+     * @param  Builder<Set>  $query
+     */
+    public function scopeFeatured(Builder $query): void
+    {
+        $query->whereNotNull('featured_until')
+            ->where('featured_until', '>', now())
+            ->orderByDesc('released_at');
     }
 
     /** @return BelongsTo<ProductLine, $this> */

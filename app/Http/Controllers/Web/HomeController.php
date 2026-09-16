@@ -8,6 +8,7 @@ use App\Models\Giveaway;
 use App\Models\MarketValue;
 use App\Models\ProductLine;
 use App\Models\Set;
+use App\Support\Catalog\Subsets;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -24,8 +25,10 @@ class HomeController extends Controller
 {
     public function index(): Response
     {
-        $sections = Cache::remember('home:sections:v3', Carbon::now()->addMinutes(10), fn () => [
+        // v4: the featured-set section is new to the payload.
+        $sections = Cache::remember('home:sections:v4', Carbon::now()->addMinutes(10), fn () => [
             'brands' => $this->brands(),
+            'featured' => $this->featured(),
             'trending' => $this->trending(),
             'movers' => $this->movers(),
             'recent' => $this->recent(),
@@ -38,6 +41,71 @@ class HomeController extends Controller
             'community' => $this->community(),
             'giveaway' => Giveaway::current()?->toCard(),
         ]);
+    }
+
+    /**
+     * The set we are currently putting on the front page, and its best cards.
+     *
+     * Featuring the parent set brings its subsets with it: the 30th Celebration
+     * ships a Classic Collection and a promo run as separate sets, and someone
+     * told to look at the 30th Celebration means all three. Subsets already
+     * knows how those names are built, so nothing has to be featured twice.
+     *
+     * Ordered by value rather than by views, which is the opposite of Trending
+     * and the whole point of the section: a set a week old has no view history,
+     * and what people came to see is what pulled big.
+     */
+    private function featured(): ?array
+    {
+        $set = Set::query()->featured()->with('productLine:id,slug')->first();
+
+        if (! $set) {
+            return null;
+        }
+
+        $family = Set::query()
+            ->where('product_line_id', $set->product_line_id)
+            ->where('language', $set->language)
+            ->where(fn (Builder $q) => $q
+                ->whereKey($set->getKey())
+                ->orWhereIn('name', array_map(
+                    fn (string $suffix) => $set->name.' '.$suffix,
+                    Subsets::SUFFIXES,
+                )))
+            ->pluck('id');
+
+        // Real prices only, the same bar Movers and Recently-updated hold to. A
+        // card nobody has sold yet still carries a synthetic placeholder, and
+        // the most expensive of those is a guess — putting it on the front page
+        // under "what pulled big" would be inventing a headline number.
+        $cards = MarketValue::query()
+            ->whereNull('grading_company_id')
+            ->where('is_estimated', false)
+            ->where('median', '>', 0)
+            ->whereHas('catalogItem', fn (Builder $q) => $q
+                ->whereIn('set_id', $family)
+                ->whereNotNull('primary_image_path'))
+            ->with(['catalogItem' => fn ($q) => $q->with('set:id,name,slug', 'productLine:id,slug')])
+            ->orderByDesc('median')
+            ->limit(60)
+            ->get()
+            ->unique('catalog_item_id')
+            ->take(14)
+            ->map(fn (MarketValue $mv) => $this->tile($mv->catalogItem, $mv))
+            ->values()
+            ->all();
+
+        if ($cards === []) {
+            return null;
+        }
+
+        return [
+            'name' => $set->name,
+            'blurb' => $set->featured_blurb,
+            'href' => $set->productLine ? "/browse/{$set->productLine->slug}/{$set->slug}" : null,
+            'released' => $set->released_at?->toDateString(),
+            'cards' => $cards,
+        ];
     }
 
     /** Product lines as quick-nav chips, busiest first. */
