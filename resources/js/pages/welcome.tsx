@@ -401,6 +401,13 @@ export default function Welcome({
                                     <CardTile key={i} card={c} />
                                 ))}
                             </HScroller>
+                            <Link
+                                href="/price-race"
+                                className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+                            >
+                                <LineChart className="size-4" />
+                                Watch the price race &rarr;
+                            </Link>
                         </Section>
                     )}
 

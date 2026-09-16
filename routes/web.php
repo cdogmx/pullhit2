@@ -17,6 +17,7 @@ use App\Http\Controllers\Web\MarketplaceController;
 use App\Http\Controllers\Web\MarketplaceThreadController;
 use App\Http\Controllers\Web\MoversController;
 use App\Http\Controllers\Web\NotificationController;
+use App\Http\Controllers\Web\PriceRaceController;
 use App\Http\Controllers\Web\RankingsController;
 use App\Http\Controllers\Web\RipOrKeepController;
 use App\Http\Controllers\Web\ScanController;
@@ -89,6 +90,10 @@ Route::get('rankings', RankingsController::class)->name('rankings');
 | already the retail deal tracker. Browsing is open; listing requires an
 | account. CardFoo is a venue — no route here moves money.
 */
+// A featured set's first weeks as a bar-chart race. No slug means whatever is
+// featured, so the home page link survives the next release.
+Route::get('price-race/{set?}', [PriceRaceController::class, 'show'])->name('price-race');
+
 Route::get('marketplace', [MarketplaceController::class, 'index'])->name('marketplace.index');
 
 Route::middleware(['auth', 'verified'])->group(function () {

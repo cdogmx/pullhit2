@@ -20,6 +20,7 @@ createInertiaApp({
             case name === 'rankings':
             case name === 'deals':
             case name === 'movers':
+            case name === 'price-race':
             case name === 'rip-or-keep/index':
             case name === 'profile/show':
             case name === 'profile/follows':
