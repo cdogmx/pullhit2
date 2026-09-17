@@ -574,3 +574,38 @@ test('a complete set is a lot however it is spelled', function () {
         candidate('Pikachu Base Set 33/102 Holo Pokemon', 9000), $item, 9000, $this->companies,
     ))->not->toBeNull();
 });
+
+test('a set code carrying its number is a stated number', function () {
+    // Promo sellers write "SWSH144" or "OP02-051" rather than a fraction. Those
+    // read as stating no number at all, so the number gate had nothing to judge
+    // and a different card's sale went through.
+    $card = CatalogItem::factory()->create([
+        'name' => 'Lucario VSTAR', 'number' => 'SWSH291',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    // Its own code still matches, in either spelling we store.
+    expect($this->classifier->classify(
+        candidate('Lucario VSTAR Swsh291 Crown Zenith ETB Promo', 5000), $card, 5000, $this->companies,
+    ))->not->toBeNull();
+
+    // A different card's code does not.
+    expect($this->classifier->classify(
+        candidate('Lucario VSTAR SWSH144 Celebrations Promo', 5000), $card, 5000, $this->companies,
+    ))->toBeNull();
+});
+
+test('a word followed by a digit is not a collector number', function () {
+    // Allowing a space between the letters and the number made every such pair
+    // a card number: "SECRET RARE 1/20k PACK HIT" claimed card 1, and six tests
+    // said so at once. The two have to be one token.
+    $card = CatalogItem::factory()->create([
+        'name' => 'Mew', 'number' => '30C',
+        'attributes' => ['language' => 'en', 'variant' => 'holo', 'finish' => 'blue_rgb'],
+    ]);
+
+    expect($this->classifier->classify(
+        candidate('Pokemon 30TH CELEBRATIONS MEW B/RGB SECRET RARE 1/20k PACK HIT', 2_000_000),
+        $card, 1_500_000, $this->companies,
+    ))->not->toBeNull();
+});

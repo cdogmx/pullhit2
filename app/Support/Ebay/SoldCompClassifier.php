@@ -378,10 +378,39 @@ class SoldCompClassifier
             }
         }
 
-        // "… Burning Shadows #84" — the other way sellers write it. Requires the
-        // hash, so an HP or a year can't be mistaken for a collector number.
+        // "… Burning Shadows #84" — the other way sellers write it. The hash is
+        // required for a bare number, so an HP or a year cannot be mistaken for
+        // a collector number.
         if (preg_match_all('/#\s*([0-9]{1,4})\b/u', $lower, $matches)) {
             $stated = array_merge($stated, $matches[1]);
+        }
+
+        // "SWSH144", "XY183", "OP02-031" — a set code carrying its number, which
+        // sellers of promos often give instead of a fraction. Invisible until
+        // now, and not a quiet gap: such a title read as stating no number at
+        // all, so the number gate had nothing to judge.
+        //
+        // The code and the number have to be ONE token — joined, or hyphenated.
+        // Allowing a space between them made every word followed by a digit a
+        // collector number: "SECRET RARE 1/20k" stated card 1, and six tests
+        // said so immediately. It costs the spaced form ("MEP 107"), which is
+        // the right trade — a gate that reads numbers that are not there is
+        // worse than one that misses some that are.
+        foreach (['/\b([a-z]{2,5})([0-9]{1,4})\b/u', '/\b([a-z]{2,4}[0-9]{1,2})-([0-9]{1,4})\b/u'] as $pattern) {
+            if (! preg_match_all($pattern, $lower, $matches, PREG_SET_ORDER)) {
+                continue;
+            }
+
+            foreach ($matches as $match) {
+                if (in_array($match[1], self::NOT_A_SET_CODE, true)) {
+                    continue;
+                }
+
+                // Both readings. We store "SM168" with its prefix and "149"
+                // without one, and a title saying SM168 has to satisfy either.
+                $stated[] = $match[1].$match[2];
+                $stated[] = $match[2];
+            }
         }
 
         return $stated;
@@ -516,6 +545,17 @@ class SoldCompClassifier
      *  - it names 2+ OTHER cards from this card's own set (e.g. a First Partners
      *    listing that lists "Chikorita Cyndaquil Totodile" — only one is ours).
      */
+    /**
+     * Letter runs that precede a number without being a set code: graders, the
+     * condition ladder, and the units a card's own stats are written in. "PSA
+     * 10" is not card number 10.
+     */
+    private const NOT_A_SET_CODE = [
+        'psa', 'bgs', 'cgc', 'sgc', 'ace', 'tag', 'gma', 'hga', 'csg', 'ksa', 'isa', 'pgc',
+        'nm', 'lp', 'mp', 'hp', 'dmg', 'vg', 'gem', 'mint', 'ex', 'gx', 'vmax', 'vstar',
+        'lot', 'x', 'no', 'vol', 'pt', 'lv', 'qty', 'pcs', 'set', 'of', 'and', 'or', 'the',
+    ];
+
     /** How far apart two stated numbers may sit and still read as a pair. */
     private const JOIN_DISTANCE = 40;
 
