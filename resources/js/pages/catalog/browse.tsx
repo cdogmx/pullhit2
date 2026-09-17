@@ -268,11 +268,24 @@ export default function Browse({
     // you mean" jump, a suggestion click landing back here, Back/Forward). Done
     // during render (not in an effect) per React's "adjust state on prop change"
     // pattern — no cascading effect render.
+    //
+    // The echo of our own search is not such a change. Inside a set every
+    // keystroke sends a debounced request, and the reply for "char" arrives
+    // after someone has finished typing "charizard" — adopting it put "char"
+    // back in the box and ate the rest. So the term we sent is remembered, and
+    // a response carrying it back is a round trip completing rather than
+    // somebody else's idea of what the query should be.
+    // State rather than a ref: this is read while rendering, which a ref may
+    // not be.
+    const [sentQ, setSentQ] = useState<string | null>(null);
     const [syncedQ, setSyncedQ] = useState(filters.q ?? '');
 
     if ((filters.q ?? '') !== syncedQ) {
         setSyncedQ(filters.q ?? '');
-        setQ(filters.q ?? '');
+
+        if ((filters.q ?? '') !== sentQ) {
+            setQ(filters.q ?? '');
+        }
     }
 
     // Scroll memory: remember where the user was in this browse view so that
@@ -390,10 +403,10 @@ export default function Browse({
             return;
         }
 
-        const t = setTimeout(
-            () => update({ q: term || null }, { replace: true }),
-            250,
-        );
+        const t = setTimeout(() => {
+            setSentQ(term);
+            update({ q: term || null }, { replace: true });
+        }, 250);
 
         return () => clearTimeout(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps
