@@ -124,3 +124,23 @@ test('a set with nothing sold is a 404, not an empty chart', function () {
 
     $this->get('/price-race/30th-celebration')->assertNotFound();
 });
+
+test('the bar count is honoured, and clamped at both ends', function () {
+    // 30 is the default, not the ceiling — a race can be built with up to 50.
+    $cards = collect(range(1, 12))->map(fn ($n) => ($this->card)("Card {$n}"));
+
+    // Two days, so a race too narrow to reach the field minimum still has the
+    // two frames the short-race branch needs.
+    foreach ($cards as $i => $card) {
+        race($this->sale, $card, ['2026-09-01', '2026-09-02'], 1000 * ($i + 1));
+    }
+
+    $ids = app(ResolveRaceSources::class)([['type' => 'set', 'slug' => '30th-celebration']])['ids'];
+    $widest = fn (?array $r) => $r ? max(array_map(fn ($f) => count($f['bars']), $r['frames'])) : 0;
+
+    expect($widest(app(BuildPriceRace::class)($ids, ['top' => 5])))->toBe(5)
+        // Above the ceiling it clamps rather than obeying.
+        ->and($widest(app(BuildPriceRace::class)($ids, ['top' => 80])))->toBe(12)
+        // Below the floor, likewise: a two-bar race is not a race.
+        ->and($widest(app(BuildPriceRace::class)($ids, ['top' => 1])))->toBe(3);
+});

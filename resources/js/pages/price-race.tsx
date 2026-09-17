@@ -95,6 +95,15 @@ export default function PriceRace({ race }: Props) {
         [frames],
     );
 
+    // The tallest the field ever gets. Fixing this at thirty was wrong in both
+    // directions: a race can be built with up to fifty bars, which overflowed
+    // whatever followed, and a race of four cards left a gap the size of the
+    // twenty-six it did not have.
+    const rows = useMemo(
+        () => Math.max(...frames.map((f) => f.bars.length), 1),
+        [frames],
+    );
+
     useEffect(() => {
         if (!playing) {
             return;
@@ -205,7 +214,7 @@ export default function PriceRace({ race }: Props) {
                     Rows are absolutely positioned and animate to their new rank,
                     so overtaking reads as movement rather than as a redraw.
                 */}
-                <div className="relative mt-8" style={{ height: 30 * ROW_H }}>
+                <div className="relative mt-8" style={{ height: rows * ROW_H }}>
                     {frame.bars.map((bar, rank) => {
                         const card = cards[String(bar.id)];
 
