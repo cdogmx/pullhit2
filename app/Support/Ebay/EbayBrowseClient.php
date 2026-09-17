@@ -201,6 +201,15 @@ class EbayBrowseClient
     }
 
     /** Cached app access token (client-credentials grant; eBay tokens last ~2h). */
+    /**
+     * The OAuth token, for the taxonomy client — which calls a different eBay
+     * API with the same credentials and has no business minting its own.
+     */
+    public function accessToken(): ?string
+    {
+        return $this->token();
+    }
+
     protected function token(): ?string
     {
         $env = (string) config('services.ebay.env', 'production');
