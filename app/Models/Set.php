@@ -23,6 +23,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'og_image_at',
     'description',
     'code',
+    'ebay_set',
+    'ebay_set_learned_at',
     'language',
     'series',
     'set_family',
@@ -43,6 +45,7 @@ class Set extends Model
     {
         return [
             'released_at' => 'date',
+            'ebay_set_learned_at' => 'datetime',
             'refresh_boost_until' => 'datetime',
             'featured_until' => 'datetime',
             'og_image_at' => 'datetime',

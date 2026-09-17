@@ -141,6 +141,15 @@ class EbaySoldSource
             $params['_dcat'] = $category;
         }
 
+        // eBay's own answer to which set this is, where we have recorded it.
+        // Worth more than any keyword: the 30th Celebration's Sylveon returns
+        // 126 listings on keywords and 22 with the Set pinned, the other 104
+        // being a Sylveon from Celebrations — a 2021 set sharing nearly every
+        // word. The keywords stay, so a set we have not mapped is unaffected.
+        if ($item->item_type === ItemType::Single && $ebaySet = $item->set?->ebay_set) {
+            $params['Set'] = $ebaySet;
+        }
+
         // Ship-to US postal code so eBay ranks/estimates from a domestic buyer's
         // vantage (matches the geo we scrape from). Configurable; default US ZIP.
         if ($postal = config('valuation.ebay.postal', '53094')) {

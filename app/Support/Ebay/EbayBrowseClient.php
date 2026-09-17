@@ -31,6 +31,59 @@ class EbayBrowseClient
      * @return array<int, array{title: string, price_cents: int, currency: string, image: ?string, condition: ?string, url: string, item_id: ?string}>
      */
     /**
+     * The "Set" values eBay offers for a query, with how many listings carry
+     * each — its own answer to "which set is this card from", which is worth
+     * more than any keyword because it is structured rather than written by
+     * hand into a title.
+     *
+     * @return array<string, int> value => listings carrying it
+     */
+    public function setAspectValues(string $query, string $categoryId): array
+    {
+        if (! $this->configured() || trim($query) === '') {
+            return [];
+        }
+
+        $c = config('services.ebay');
+        $token = $this->token();
+
+        if ($token === null) {
+            return [];
+        }
+
+        $response = Http::withToken($token)
+            ->withHeaders(array_filter(['X-EBAY-C-MARKETPLACE-ID' => $c['marketplace_id']]))
+            ->timeout(30)
+            ->retry(1, 1000, throw: false)
+            ->get($c['base_url'].'/buy/browse/v1/item_summary/search', [
+                'q' => $query,
+                'category_ids' => $categoryId,
+                'fieldgroups' => 'ASPECT_REFINEMENTS',
+                'limit' => 1,
+            ]);
+
+        if (! $response->successful()) {
+            return [];
+        }
+
+        foreach ($response->json('refinement.aspectDistributions') ?? [] as $aspect) {
+            if (($aspect['localizedAspectName'] ?? null) !== 'Set') {
+                continue;
+            }
+
+            $out = [];
+
+            foreach ($aspect['aspectValueDistributions'] ?? [] as $value) {
+                $out[(string) $value['localizedAspectValue']] = (int) ($value['matchCount'] ?? 0);
+            }
+
+            return $out;
+        }
+
+        return [];
+    }
+
+    /**
      * @param  string|null  $categoryId  eBay category to search inside — the
      *                                   "CCG Individual Cards" id for a single,
      *                                   so a box named after the card is out at
