@@ -17,7 +17,7 @@ function fakeBrowse(array $byMatch): void
     {
         public function __construct(private array $byMatch) {}
 
-        public function search(string $query, int $limit = 6, ?string $sort = 'price'): array
+        public function search(string $query, int $limit = 6, ?string $sort = 'price', ?string $categoryId = null): array
         {
             foreach ($this->byMatch as $needle => $listings) {
                 if (str_contains($query, $needle)) {
@@ -229,7 +229,7 @@ function fakeBrowseBySort(array $priced, array $relevance): void
     {
         public function __construct(private array $priced, private array $relevance) {}
 
-        public function search(string $query, int $limit = 6, ?string $sort = 'price'): array
+        public function search(string $query, int $limit = 6, ?string $sort = 'price', ?string $categoryId = null): array
         {
             return array_slice($sort === 'price' ? $this->priced : $this->relevance, 0, $limit);
         }

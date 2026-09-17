@@ -146,7 +146,16 @@ class GetCardListings
      */
     protected function fetch(CatalogItem $item, string $query, array $option): array
     {
-        $raw = $this->browse->search($query, self::FETCH_LIMIT, sort: null);
+        // A single is searched inside "CCG Individual Cards" so the panel does
+        // not offer a box named after the card as a place to buy the card.
+        $raw = $this->browse->search(
+            $query,
+            self::FETCH_LIMIT,
+            sort: null,
+            categoryId: $item->item_type === ItemType::Single
+                ? config('valuation.ebay.singles_category')
+                : null,
+        );
 
         // Prefer listings that state the collector number — that's what tells
         // one Charmander from every other Charmander. But plenty of sellers

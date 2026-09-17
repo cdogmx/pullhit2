@@ -199,6 +199,19 @@ return [
         // Reject listings whose title contains any of these (mystery boxes, lots,
         // proxies, codes, repacks, multi-qty, etc.) — they aren't a genuine
         // single-card sale even when they name the card.
+        // eBay's "CCG Individual Cards" category. Restricting a single's search
+        // to it excludes the sealed products, lots and accessories that share a
+        // card's name at the source, which is where they are cheapest to
+        // exclude — a "Sylveon ex Box" is not filed as an individual card, and
+        // eighteen of them were setting that card's price.
+        //
+        // Measured before it was switched on: against an unrestricted search it
+        // keeps 99% of the listings for a modern single, 94% for a vintage one
+        // and 86% for One Piece, and what it drops is the boxes.
+        //
+        // Singles only. A sealed product genuinely is not an individual card.
+        'singles_category' => env('EBAY_SINGLES_CATEGORY', '183454'),
+
         'blocklist' => [
             'mystery', 'chance', 'random', 'grab bag', 'lot of', 'bundle',
             'proxy', 'custom', 'fake', 'orica', 'repack', 'rip ', 'break',

@@ -150,10 +150,15 @@ class IngestForSaleListings
         $sealed = $rules['sealed'] ?? false;
         $query = trim($baseQuery.' '.$rules['suffix']);
 
+        // Singles search inside "CCG Individual Cards"; a sealed product is not
+        // one, and genuinely belongs in whatever category eBay files boxes under.
+        $category = $sealed ? null : config('valuation.ebay.singles_category');
+
         $results = $this->browse->search(
             $query,
             $sealed ? self::SEALED_EBAY_LIMIT : $limit,
             sort: $sealed ? null : 'price',
+            categoryId: $category,
         );
 
         // eBay's Browse API matches strictly when the results are sorted by
@@ -171,7 +176,7 @@ class IngestForSaleListings
         // eBay will hand over more of it if we stop sorting. So we ask again and
         // keep both, rather than re-sampling every card in the catalog at once.
         if (! $sealed && count($results) < $limit) {
-            $results = $this->merge($results, $this->browse->search($query, $limit, sort: null));
+            $results = $this->merge($results, $this->browse->search($query, $limit, sort: null, categoryId: $category));
         }
 
         foreach ($results as $listing) {

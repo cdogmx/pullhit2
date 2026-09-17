@@ -30,7 +30,13 @@ class EbayBrowseClient
      *                             never in the 12 cheapest of 247 matches).
      * @return array<int, array{title: string, price_cents: int, currency: string, image: ?string, condition: ?string, url: string, item_id: ?string}>
      */
-    public function search(string $query, int $limit = 6, ?string $sort = 'price'): array
+    /**
+     * @param  string|null  $categoryId  eBay category to search inside — the
+     *                                   "CCG Individual Cards" id for a single,
+     *                                   so a box named after the card is out at
+     *                                   the source rather than after the fact.
+     */
+    public function search(string $query, int $limit = 6, ?string $sort = 'price', ?string $categoryId = null): array
     {
         if (! $this->configured() || trim($query) === '') {
             return [];
@@ -61,6 +67,7 @@ class EbayBrowseClient
                 // Omitted entirely for best match — eBay rejects sort=null.
                 'sort' => $sort,
                 'limit' => $limit,
+                'category_ids' => $categoryId,
             ], fn ($v) => $v !== null));
 
         if (! $response->successful()) {

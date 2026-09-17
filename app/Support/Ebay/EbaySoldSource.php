@@ -133,6 +133,14 @@ class EbaySoldSource
             '_ipg' => config('valuation.ebay.max_results', 60),
         ];
 
+        // Search inside "CCG Individual Cards" rather than all of eBay. A box
+        // named after its headline card matches a card's keywords perfectly and
+        // is not filed as an individual card, so the category does at the source
+        // what the title gates were left to do afterwards.
+        if ($item->item_type === ItemType::Single && $category = config('valuation.ebay.singles_category')) {
+            $params['_dcat'] = $category;
+        }
+
         // Ship-to US postal code so eBay ranks/estimates from a domestic buyer's
         // vantage (matches the geo we scrape from). Configurable; default US ZIP.
         if ($postal = config('valuation.ebay.postal', '53094')) {
