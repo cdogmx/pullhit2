@@ -609,3 +609,47 @@ test('a word followed by a digit is not a collector number', function () {
         $card, 1_500_000, $this->companies,
     ))->not->toBeNull();
 });
+
+test('a box named after a card is not a sale of that card', function () {
+    // Sets name a box after their headline card. Eighteen "Sylveon ex Box"
+    // sales at $55 were setting the price of a single worth about eight.
+    $card = CatalogItem::factory()->create([
+        'name' => 'Sylveon ex', 'number' => '071',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    foreach ([
+        'Pokemon TCG 30th Anniversary Celebration Sylveon ex Box',
+        'Pokemon 30th Celebration ex Tin Sylveon or Greninja',
+        'Pokemon JP Booster Box Set Black Bolt White Flare',
+    ] as $title) {
+        expect($this->classifier->classify(candidate($title, 5500), $card, 1000, $this->companies))
+            ->toBeNull($title);
+    }
+
+    // The card itself still sells.
+    expect($this->classifier->classify(
+        candidate('Sylveon ex 071/128 30th Celebration NM', 1499), $card, 1000, $this->companies,
+    ))->not->toBeNull();
+});
+
+test('a word that says where a card came from is not a sealed product', function () {
+    // "Black Star Promo … ETB" is the promo out of the box, and a box topper is
+    // a card that sat on top of one. Both were being read as the box itself.
+    $promo = CatalogItem::factory()->create([
+        'name' => 'Nidorina', 'number' => '101',
+        'attributes' => ['language' => 'en', 'rarity' => 'Promo', 'variant' => 'holo'],
+    ]);
+    $topper = CatalogItem::factory()->create([
+        'name' => 'Yorinobu Arasaka', 'number' => '12',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    expect($this->classifier->classify(
+        candidate('Pokemon Nidorina 101 Black Star 30th Anniversary Promo ETB', 2000), $promo, 2000, $this->companies,
+    ))->not->toBeNull();
+
+    expect($this->classifier->classify(
+        candidate('Cyberpunk TCG Yorinobu Arasaka Box Topper', 2000), $topper, 2000, $this->companies,
+    ))->not->toBeNull();
+});

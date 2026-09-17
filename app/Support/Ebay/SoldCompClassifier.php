@@ -224,7 +224,7 @@ class SoldCompClassifier
         // Promo Holo sealed" — and two of those were priced as sales of a
         // different Pikachu entirely. Sealed products have their own gates
         // above and never reach this.
-        if (preg_match('/\bsealed\b/', $lower)) {
+        if ($this->isSealedProduct($lower)) {
             return 'sealed product, not a loose single';
         }
 
@@ -640,6 +640,48 @@ class SoldCompClassifier
         }
 
         return false;
+    }
+
+    /**
+     * Is this listing the sealed product rather than a card out of it?
+     *
+     * Sets name a box after their headline card — "Sylveon ex Box", the "30th
+     * Celebration Tin (Sylveon or Greninja)" — and those sold at $55 against a
+     * single worth about eight, eighteen of them, setting its price.
+     *
+     * Three conditions, and the last two are what make it safe. Measured over
+     * 100,000 singles' comps it rejects 169 (0.17%), and every one is a box, a
+     * tin, a blister or a booster set:
+     *
+     * - It names a sealed form. On its own that catches 533 and is far too
+     *   blunt, because those words also describe where a CARD came from.
+     * - It states no collector number anywhere. A card listing almost always
+     *   gives one; a box has none to give. This only became usable once the
+     *   parser learned to read "SWSH144" and "OP02-031", without which real
+     *   promo singles looked numberless and were condemned.
+     * - It does not name a card by its origin — a Black Star promo, a promo
+     *   card, a box topper. A bare "promo" will not do: a box can be full of
+     *   them, and "30th Celebration Box … Birds Promo Booster" is the box.
+     */
+    private function isSealedProduct(string $lower): bool
+    {
+        if (preg_match('/\bsealed\b/', $lower)) {
+            return true;
+        }
+
+        if (! preg_match('/\b(boxes|box|tins|tin|etb|elite trainer|booster bundle|blister)\b/', $lower)) {
+            return false;
+        }
+
+        // A bare "promo" is not the discriminator — a box can be full of them:
+        // "30th Celebration Box … Birds Promo Booster" is the box. What names a
+        // CARD by its origin is the specific wording: a Black Star promo, a
+        // promo card, a box topper.
+        if (preg_match('/\bblack\s+star\b|\bpromo\s+cards?\b|\bbox\s+topper\b/', $lower)) {
+            return false;
+        }
+
+        return $this->statedNumbers($lower) === [];
     }
 
     /**
