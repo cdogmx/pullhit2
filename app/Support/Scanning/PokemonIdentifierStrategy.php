@@ -17,19 +17,25 @@ class PokemonIdentifierStrategy implements IdentifierStrategy
         protected AnthropicVisionClient $vision,
         protected ImageCropper $cropper,
         protected FingerprintCache $cache,
+        protected ScanTimer $timer,
     ) {}
 
     public function identifySingle(string $base64, string $mediaType): IdentifiedCard
     {
-        $binary = base64_decode($base64);
-        $phash = PerceptualHash::fromBinary($binary);
+        $hit = $this->timer->time('fingerprint', function () use ($base64) {
+            $phash = PerceptualHash::fromBinary(base64_decode($base64));
 
-        if ($phash !== null && ($hit = $this->cache->lookup($phash)) !== null) {
-            return IdentifiedCard::fromCache($hit['item'], $phash);
+            return [$phash, $phash !== null ? $this->cache->lookup($phash) : null];
+        });
+
+        [$phash, $cached] = $hit;
+
+        if ($cached !== null) {
+            return IdentifiedCard::fromCache($cached['item'], $phash);
         }
 
         return IdentifiedCard::fromVision(
-            $this->vision->identifyCard($base64, $mediaType),
+            $this->timer->time('identify', fn () => $this->vision->identifyCard($base64, $mediaType)),
             phash: $phash,
         );
     }
@@ -37,7 +43,7 @@ class PokemonIdentifierStrategy implements IdentifierStrategy
     /** @return array<int, IdentifiedCard> */
     public function identifyBulk(string $base64, string $mediaType): array
     {
-        $boxes = $this->vision->detectCards($base64, $mediaType);
+        $boxes = $this->timer->time('detect', fn () => $this->vision->detectCards($base64, $mediaType));
         if ($boxes === []) {
             return [];
         }
@@ -50,17 +56,18 @@ class PokemonIdentifierStrategy implements IdentifierStrategy
         // and check the recognition cache so seen-before cards skip the AI read.
         $crops = [];
         foreach ($boxes as $box) {
-            $jpeg = $this->cropper->crop($binary, $box, $pad);
-            $phash = PerceptualHash::fromBinary($jpeg);
-            $thumbnail = 'data:image/jpeg;base64,'.base64_encode($jpeg);
+            $crops[] = $this->timer->time('fingerprint', function () use ($binary, $box, $pad) {
+                $jpeg = $this->cropper->crop($binary, $box, $pad);
+                $phash = PerceptualHash::fromBinary($jpeg);
 
-            $crops[] = [
-                'box' => $box,
-                'b64' => base64_encode($jpeg),
-                'thumbnail' => $thumbnail,
-                'phash' => $phash,
-                'cached' => $phash !== null ? $this->cache->lookup($phash) : null,
-            ];
+                return [
+                    'box' => $box,
+                    'b64' => base64_encode($jpeg),
+                    'thumbnail' => 'data:image/jpeg;base64,'.base64_encode($jpeg),
+                    'phash' => $phash,
+                    'cached' => $phash !== null ? $this->cache->lookup($phash) : null,
+                ];
+            });
         }
 
         // Only crops without a cache hit need a vision call. Keep their original
@@ -74,7 +81,7 @@ class PokemonIdentifierStrategy implements IdentifierStrategy
 
         $results = $toIdentify === []
             ? []
-            : $this->vision->identifyMany(array_values($toIdentify));
+            : $this->timer->time('identify', fn () => $this->vision->identifyMany(array_values($toIdentify)));
 
         // Map the compacted result list back onto the original crop indexes.
         $byIndex = [];

@@ -12,6 +12,7 @@ use App\Support\Scanning\CandidateMatcher;
 use App\Support\Scanning\IdentifiedCard;
 use App\Support\Scanning\IdentifierStrategy;
 use App\Support\Scanning\ScanArchive;
+use App\Support\Scanning\ScanTimer;
 
 /**
  * Orchestrates a scan: enforce the user's monthly quota, identify the card(s) via
@@ -26,6 +27,7 @@ class ScanCards
         protected CandidateMatcher $matcher,
         protected ScanArchive $archive,
         protected AwardPoints $award,
+        protected ScanTimer $timer,
     ) {}
 
     /**
@@ -35,6 +37,13 @@ class ScanCards
     {
         $quota = ScanQuota::for($user);
         $quota->ensure();
+
+        // Timed from here rather than from the request, so the number measures
+        // the scan and not the upload sitting in front of it. Reset first: the
+        // timer is request-scoped, but a caller that scans twice in one request
+        // would otherwise report the first scan's time again.
+        $this->timer->reset();
+        $startedAt = hrtime(true);
 
         $cards = $mode === 'bulk'
             ? $this->strategy->identifyBulk($base64, $mediaType)
@@ -61,6 +70,19 @@ class ScanCards
                 'ai_reads' => $aiReads,
                 'cache_hits' => $total - $aiReads,
                 'credits_spent' => $creditsSpent,
+
+                // Where the time went. The phases are nullable because not every
+                // scan runs all of them: single mode never detects, and a scan
+                // answered entirely from cache never identifies — recording a
+                // zero there would read as "instant" rather than "did not run".
+                'duration_ms' => (int) round((hrtime(true) - $startedAt) / 1_000_000),
+                'detect_ms' => $this->timer->ms('detect'),
+                'identify_ms' => $this->timer->ms('identify'),
+                'fingerprint_ms' => $this->timer->ms('fingerprint'),
+                'match_ms' => $this->timer->ms('match'),
+                // Decoded size of the upload, from the base64 length — close
+                // enough without decoding a multi-megabyte photo again.
+                'image_bytes' => intdiv(strlen($base64) * 3, 4),
             ]);
 
             // One-time "first scan" milestone (once ever per user).
@@ -73,7 +95,7 @@ class ScanCards
     /** @return array<string, mixed> */
     protected function present(IdentifiedCard $card): array
     {
-        $matches = $this->matcher->match($card);
+        $matches = $this->timer->time('match', fn () => $this->matcher->match($card));
 
         // A cache-recognised card already knows its exact item — pin it to the top
         // (the matcher's name/number ranking still supplies alternatives).

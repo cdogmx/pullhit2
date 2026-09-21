@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Listeners\AwardReferralOnVerified;
 use App\Support\Scanning\IdentifierStrategy;
 use App\Support\Scanning\PokemonIdentifierStrategy;
+use App\Support\Scanning\ScanTimer;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -25,6 +26,11 @@ class AppServiceProvider extends ServiceProvider
     {
         // The TCG vertical is the only scan identifier today (§3 seam).
         $this->app->bind(IdentifierStrategy::class, PokemonIdentifierStrategy::class);
+
+        // Scoped, not singleton: the strategy and the action both write phases
+        // into the same timer, so they must share one instance — but a queue
+        // worker handling scan after scan must not accumulate them forever.
+        $this->app->scoped(ScanTimer::class);
     }
 
     /**

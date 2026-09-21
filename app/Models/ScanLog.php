@@ -24,6 +24,12 @@ class ScanLog extends Model
         'ai_reads',
         'cache_hits',
         'credits_spent',
+        'duration_ms',
+        'detect_ms',
+        'identify_ms',
+        'fingerprint_ms',
+        'match_ms',
+        'image_bytes',
     ];
 
     protected function casts(): array
