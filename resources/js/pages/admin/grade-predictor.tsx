@@ -1,5 +1,5 @@
-import { Head } from '@inertiajs/react';
-import { AlertTriangle, Info, Upload, X } from 'lucide-react';
+import { Head, router } from '@inertiajs/react';
+import { AlertTriangle, Info, Save, Upload, X } from 'lucide-react';
 import { useState } from 'react';
 import {
     AttributeTiles,
@@ -8,6 +8,8 @@ import {
 } from '@/components/grading/breakdown';
 import type { CropRect } from '@/components/grading/crop-box';
 import type { Guides } from '@/components/grading/guide-overlay';
+import type { SavedRun } from '@/components/grading/saved-runs';
+import { SavedRuns } from '@/components/grading/saved-runs';
 import {
     cropFile,
     EMPTY_SPLIT,
@@ -19,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { csrf } from '@/lib/csrf';
 import { cn } from '@/lib/utils';
 
 type Defect = {
@@ -75,12 +78,13 @@ type Prediction = {
 type Props = {
     defaults: { max_input: number; canvas_width: number };
     sides: string[];
+    saved: SavedRun[];
 };
 
 const EDGES = ['left', 'right', 'top', 'bottom'] as const;
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
-export default function GradePredictor({ defaults, sides }: Props) {
+export default function GradePredictor({ defaults, sides, saved }: Props) {
     const [files, setFiles] = useState<Record<string, File[]>>({});
     const [crops, setCrops] = useState<Record<string, CropRect | null>>({});
     const [guides, setGuides] = useState<Record<string, Guides | null>>({});
@@ -94,6 +98,54 @@ export default function GradePredictor({ defaults, sides }: Props) {
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [result, setResult] = useState<Prediction | null>(null);
+    const [label, setLabel] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    // Whether the guides were proposed, and whether anybody moved them after.
+    // It decides if a saved run can calibrate anything.
+    const [proposed, setProposed] = useState<Record<string, boolean>>({});
+    const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+    function guidesSource(): 'ai' | 'ai-adjusted' | 'manual' {
+        const anyProposed = Object.values(proposed).some(Boolean);
+
+        if (!anyProposed) {
+            return 'manual';
+        }
+
+        return Object.values(touched).some(Boolean) ? 'ai-adjusted' : 'ai';
+    }
+
+    async function save() {
+        if (!result) {
+            return;
+        }
+
+        setSaving(true);
+
+        try {
+            await fetch('/admin/grade-predictor/predictions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrf(),
+                },
+                body: JSON.stringify({
+                    label: label || null,
+                    sides: result.sides,
+                    estimate: result.estimate,
+                    observed: result.observed,
+                    guides_source: guidesSource(),
+                }),
+            });
+
+            setLabel('');
+            router.reload({ only: ['saved'] });
+        } finally {
+            setSaving(false);
+        }
+    }
 
     const given = sides.filter((s) => (files[s]?.length ?? 0) > 0);
 
@@ -227,9 +279,25 @@ export default function GradePredictor({ defaults, sides }: Props) {
                             onCrop={(c) =>
                                 setCrops((prev) => ({ ...prev, [side]: c }))
                             }
-                            onGuides={(g) =>
-                                setGuides((prev) => ({ ...prev, [side]: g }))
-                            }
+                            onGuides={(g) => {
+                                setGuides((prev) => ({ ...prev, [side]: g }));
+                                setTouched((prev) => ({
+                                    ...prev,
+                                    [side]: true,
+                                }));
+                            }}
+                            onProposed={(g) => {
+                                setGuides((prev) => ({ ...prev, [side]: g }));
+                                setProposed((prev) => ({
+                                    ...prev,
+                                    [side]: true,
+                                }));
+                                // A fresh proposal nobody has moved yet.
+                                setTouched((prev) => ({
+                                    ...prev,
+                                    [side]: false,
+                                }));
+                            }}
                             onSplit={(edge, value) =>
                                 setSplits((prev) => ({
                                     ...prev,
@@ -284,7 +352,46 @@ export default function GradePredictor({ defaults, sides }: Props) {
                     </div>
                 )}
 
+                {result && (
+                    <Card>
+                        <CardContent className="flex flex-wrap items-end gap-3 pt-6">
+                            <div className="flex flex-col gap-1.5">
+                                <Label htmlFor="run-label">
+                                    Keep this run as
+                                </Label>
+                                <Input
+                                    id="run-label"
+                                    value={label}
+                                    onChange={(e) => setLabel(e.target.value)}
+                                    placeholder="Milotic ex 237/191"
+                                    className="w-72"
+                                />
+                            </div>
+                            <Button
+                                variant="outline"
+                                disabled={saving}
+                                onClick={save}
+                            >
+                                {saving ? (
+                                    <Spinner className="size-4" />
+                                ) : (
+                                    <Save className="size-4" />
+                                )}
+                                Save prediction
+                            </Button>
+                            <p className="max-w-md text-xs text-muted-foreground">
+                                Saved as <strong>{guidesSource()}</strong>{' '}
+                                guides. Send the card off, then record what came
+                                back — a run beside its real grade is the only
+                                thing that says whether any of this works.
+                            </p>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {result && <Results result={result} />}
+
+                <SavedRuns runs={saved} />
             </div>
         </>
     );

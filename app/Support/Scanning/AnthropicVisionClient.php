@@ -82,6 +82,22 @@ class AnthropicVisionClient
         return $out;
     }
 
+    /**
+     * Run any tool against one image and return its parsed input.
+     *
+     * Public because the grading bench needs the same plumbing — one image, one
+     * forced tool, parsed input — for a tool that has nothing to do with
+     * identifying a card. The alternative was a second copy of the auth,
+     * retry and parse handling, free to drift from this one.
+     *
+     * @param  array<string, mixed>  $tool
+     * @return array<string, mixed>
+     */
+    public function runTool(string $base64, string $mediaType, array $tool, string $toolName, string $instruction): array
+    {
+        return $this->parse($this->call($base64, $mediaType, $tool, $instruction), $toolName);
+    }
+
     protected function call(string $base64, string $mediaType, array $tool, string $instruction): Response
     {
         $response = Http::withHeaders($this->headers())

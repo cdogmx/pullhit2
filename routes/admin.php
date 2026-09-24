@@ -91,6 +91,9 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     // has only ever seen synthetic ones.
     Route::get('grade-predictor', [GradePredictorController::class, 'index'])->name('grade-predictor.index');
     Route::post('grade-predictor', [GradePredictorController::class, 'predict'])->name('grade-predictor.predict');
+    Route::post('grade-predictor/guides', [GradePredictorController::class, 'propose'])->name('grade-predictor.guides');
+    Route::post('grade-predictor/predictions', [GradePredictorController::class, 'store'])->name('grade-predictor.store');
+    Route::patch('grade-predictor/predictions/{gradePrediction}', [GradePredictorController::class, 'update'])->name('grade-predictor.update');
 
     // Scan-detection feedback review (cache vs AI accuracy).
     Route::get('scan-feedback', [ScanFeedbackController::class, 'index'])->name('scan-feedback.index');

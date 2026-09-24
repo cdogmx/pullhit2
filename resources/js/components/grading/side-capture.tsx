@@ -1,5 +1,5 @@
-import { Crop, RotateCcw, Ruler } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { Crop, RotateCcw, Ruler, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { CropBox } from '@/components/grading/crop-box';
 import type { CropRect } from '@/components/grading/crop-box';
 import {
@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { csrf } from '@/lib/csrf';
 
 export type Split = {
     left: string;
@@ -39,6 +41,7 @@ type Props = {
     onCrop: (crop: CropRect | null) => void;
     onSplit: (edge: string, value: string) => void;
     onGuides: (guides: Guides | null) => void;
+    onProposed: (guides: Guides) => void;
 };
 
 /**
@@ -59,6 +62,7 @@ export function SideCapture({
     onCrop,
     onSplit,
     onGuides,
+    onProposed,
 }: Props) {
     // Preview the first frame — the crop is judged on it and applied to all.
     // Derived rather than set from an effect, so the URL exists on the same
@@ -67,6 +71,51 @@ export function SideCapture({
         () => (files.length > 0 ? URL.createObjectURL(files[0]) : null),
         [files],
     );
+
+    const [asking, setAsking] = useState(false);
+    const [proposeError, setProposeError] = useState<string | null>(null);
+
+    /**
+     * Ask the model where the card and its border are.
+     *
+     * A starting point, never a measurement. It lands close, and it is
+     * routinely a percent or two out — which at 9.06 points per percentage
+     * point is twenty score points. The handles exist to be moved afterwards,
+     * and a saved run records whether anybody moved them.
+     */
+    async function propose() {
+        if (files.length === 0) {
+            return;
+        }
+
+        setAsking(true);
+        setProposeError(null);
+
+        try {
+            const body = new FormData();
+            body.append('photo', files[0]);
+
+            const response = await fetch('/admin/grade-predictor/guides', {
+                method: 'POST',
+                body,
+                headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf() },
+            });
+
+            const payload = await response.json();
+
+            if (!response.ok) {
+                setProposeError(payload.message ?? 'That did not work.');
+
+                return;
+            }
+
+            onProposed(payload);
+        } catch {
+            setProposeError('The request failed before it reached the model.');
+        } finally {
+            setAsking(false);
+        }
+    }
 
     // The object URL holds the file in memory until it is let go.
     useEffect(() => {
@@ -142,15 +191,34 @@ export function SideCapture({
                             onChange={onGuides}
                             alt={`${side} guides`}
                         />
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="self-start"
-                            onClick={() => onGuides(null)}
-                        >
-                            <RotateCcw className="size-3.5" />
-                            Remove guides
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={asking}
+                                onClick={propose}
+                            >
+                                {asking ? (
+                                    <Spinner className="size-3.5" />
+                                ) : (
+                                    <Sparkles className="size-3.5" />
+                                )}
+                                Re-place with AI
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onGuides(null)}
+                            >
+                                <RotateCcw className="size-3.5" />
+                                Remove guides
+                            </Button>
+                            {proposeError && (
+                                <span className="text-xs text-destructive">
+                                    {proposeError}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -176,6 +244,19 @@ export function SideCapture({
                             >
                                 <Ruler className="size-3.5" />
                                 Measure centering
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={asking}
+                                onClick={propose}
+                            >
+                                {asking ? (
+                                    <Spinner className="size-3.5" />
+                                ) : (
+                                    <Sparkles className="size-3.5" />
+                                )}
+                                Place guides with AI
                             </Button>
                             {crop && (
                                 <Button
