@@ -215,8 +215,20 @@ class SenseiChat
             }
         }
 
+        $level = ($costs['tier'] ?? null)
+            ? ' at PSA '.$costs['tier'].' service'
+                .(($costs['turnaround'] ?? null) ? ', '.$costs['turnaround'].' turnaround' : '')
+            : '';
+
         $lines[] = 'Grading cost: '.$money(($costs['fee'] ?? 0) + ($costs['shipping'] ?? 0))
-            .' (fee + shipping), plus ~'.round((float) ($costs['sale_fee_pct'] ?? 0) * 100).'% marketplace fee on the sale.';
+            .' (fee + shipping)'.$level
+            .', plus ~'.round((float) ($costs['sale_fee_pct'] ?? 0) * 100).'% marketplace fee on the sale.';
+
+        if ($costs['tier'] ?? null) {
+            // The tier is decided by the card's value, not chosen, and people
+            // routinely assume the cheapest advertised price applies to them.
+            $lines[] = 'That service level is forced by what the card is worth — PSA caps the insured value each level accepts, so a more valuable card cannot use a cheaper tier.';
+        }
 
         if ($advice) {
             $lines[] = 'BREAK-EVEN: you need at least a '.$pct($advice['breakeven_p10'] ?? null)

@@ -5,6 +5,7 @@ namespace App\Actions\Grading;
 use App\Models\CatalogItem;
 use App\Models\MarketValue;
 use App\Support\Grading\GradeAdvisor;
+use App\Support\Grading\SubmissionTiers;
 use Illuminate\Support\Collection;
 
 /**
@@ -46,6 +47,16 @@ class BuildGradingDossier
 
         $attributes = $item->getAttribute('attributes') ?? [];
 
+        // With no raw value there is nothing to measure the cap against, so the
+        // cheapest tier is a floor rather than a quote — keep the money, drop
+        // the service level, and the Sensei stops naming one it cannot know.
+        $cost = SubmissionTiers::costFor((int) ($rawCents ?? 0));
+
+        if ($rawCents === null) {
+            $cost['tier'] = null;
+            $cost['turnaround'] = null;
+        }
+
         return [
             'kind' => 'grade',
             'card' => [
@@ -65,9 +76,15 @@ class BuildGradingDossier
                 'trend_7d' => $raw->trend_7d,
             ] : null,
             'graded' => $graded,
+            // Priced at the tier this card's raw value actually qualifies for,
+            // the same one the advisor spends against — the Sensei is handed
+            // these numbers verbatim, so a flat fee here becomes a flat fee
+            // said out loud next to a verdict computed from the real one.
             'costs' => [
-                'fee' => (int) round((float) config('grading.fee') * 100),
-                'shipping' => (int) round((float) config('grading.shipping') * 100),
+                'fee' => $cost['per_card'],
+                'shipping' => $cost['shipping'],
+                'tier' => $cost['tier'],
+                'turnaround' => $cost['turnaround'],
                 'sale_fee_pct' => (float) config('grading.sale_fee_pct'),
             ],
             'advice' => $advice,

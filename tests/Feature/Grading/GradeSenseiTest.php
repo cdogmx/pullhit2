@@ -44,8 +44,13 @@ test('the dossier assembles raw + graded values and the EV advice', function () 
         ->and($d['graded']['9']['value'])->toBeGreaterThan(0)
         ->and($d['advice'])->not->toBeNull()
         ->and($d['advice']['verdict'])->toBe('grade')
-        // Break-even = (fee+ship)/(psa10 - raw) = 3500 / (40000-5000) = 0.1.
-        ->and($d['advice']['breakeven_p10'])->toBe(0.1);
+        // Break-even = (fee+ship)/(psa10 - raw). A $50 raw card qualifies for
+        // PSA's Standard tier at $59.99, so 6999 / (40000-5000) = 0.2 — twice
+        // what the old flat $25 guess implied. The fee IS the decision on a
+        // cheap card, which is why the tier had to stop being a guess.
+        ->and($d['advice']['breakeven_p10'])->toBe(0.2)
+        ->and($d['costs']['tier'])->toBe('Standard')
+        ->and($d['costs']['fee'])->toBe(5999);
 });
 
 test('advice is null when there is no PSA 10 comp to anchor on', function () {

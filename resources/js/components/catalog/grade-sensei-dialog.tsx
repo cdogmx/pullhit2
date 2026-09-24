@@ -20,6 +20,8 @@ type Advice = {
     breakeven_p10: number | null;
     verdict: 'grade' | 'sell' | 'toss_up';
     fee: number;
+    tier: string | null;
+    turnaround: string | null;
 };
 
 type Dossier = {
@@ -173,6 +175,22 @@ export function GradeSenseiDialog({
                                     : '—'
                             }
                         />
+                    </div>
+                )}
+
+                {/* The fee above is not a price anyone chooses — PSA caps the
+                    insured value each service level accepts, so the card's own
+                    worth picks the tier. Saying which one avoids the reasonable
+                    assumption that the cheapest advertised price applies. */}
+                {advice?.tier && (
+                    <div className="border-b border-border px-4 py-2 text-xs text-muted-foreground">
+                        Costed at PSA{' '}
+                        <span className="font-medium text-foreground">
+                            {advice.tier}
+                        </span>{' '}
+                        — {formatMoney(advice.fee)} including shipping
+                        {advice.turnaround ? `, ${advice.turnaround}` : ''}. The
+                        card's value decides the tier.
                     </div>
                 )}
 

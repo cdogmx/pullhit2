@@ -34,7 +34,16 @@ class GradeAdvisor
         $probs ??= $this->normalizeProbs($this->config['default_probs']);
         $probs = $this->normalizeProbs($probs);
 
-        $feeCents = (int) round(((float) $this->config['fee'] + (float) $this->config['shipping']) * 100);
+        // The tier a card of THIS value must actually use, where tiers have
+        // been filled in. The declared value is the raw card being sent, not
+        // the graded one somebody hopes to get back — that is what the caps are
+        // measured against, and under-declaring to reach a cheaper tier breaks
+        // every company's terms besides. Falls back to the flat fee until a
+        // tier list exists, so this is safe before any is configured.
+        // Its own config, not the global one: this class is constructed with an
+        // array precisely so it can be reasoned about without a booted app.
+        $cost = SubmissionTiers::costFor($raw, 'psa', $this->config);
+        $feeCents = $cost['cents'];
         $saleFee = (float) $this->config['sale_fee_pct'];
 
         $net = fn (int $value): float => $value * (1 - $saleFee);
@@ -73,6 +82,8 @@ class GradeAdvisor
             breakevenP10: $breakeven !== null ? round($breakeven, 3) : null,
             verdict: $verdict,
             feeCents: $feeCents,
+            tier: $cost['tier'],
+            turnaround: $cost['turnaround'],
             probs: $probs,
         );
     }

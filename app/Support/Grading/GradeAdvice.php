@@ -22,12 +22,17 @@ readonly class GradeAdvice
         public string $verdict,
         public int $feeCents,
         public array $probs,
+        /** The service level this fee assumes, once tiers are configured. */
+        public ?string $tier = null,
+        public ?string $turnaround = null,
     ) {}
 
     /** @return array<string, mixed> */
     public function toArray(): array
     {
         return [
+            'tier' => $this->tier,
+            'turnaround' => $this->turnaround,
             'raw' => $this->raw,
             'ev_grade' => $this->evGrade,
             'ev_raw' => $this->evRaw,

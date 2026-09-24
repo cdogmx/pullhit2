@@ -27,6 +27,45 @@ return [
         '8' => 0.25,
     ],
 
+    // ---- Submission tiers -----------------------------------------------
+    //
+    // A tier is not really a choice. Every company caps the declared value
+    // each service level accepts, so a card worth more than the cheap tier
+    // allows must go up a level. That decides most of the answer on a cheap
+    // card: the flat 'fee' above is a guess, and a guess that is low says yes
+    // to submissions that lose money.
+    //
+    // 'max_insured_value' is PSA's own column name, in dollars, measured
+    // against the RAW card being sent rather than its hoped-for graded value.
+    // Null means no cap — the top of the range. 'fee' is per card, excluding
+    // shipping, which stays separate above because it is per submission.
+    //
+    // These change several times a year and differ by country. When they move,
+    // update them here and say so in 'source' — a stale figure becomes a
+    // recommendation to send a card that should have stayed raw. costFor()
+    // falls back to the flat 'fee' above for any company with no tiers.
+    'submission_tiers' => [
+        'psa' => [
+            'name' => 'PSA',
+            'source' => 'PSA Grading Services price list (United States)',
+            'tiers' => [
+                ['name' => 'Standard', 'fee' => 59.99, 'max_insured_value' => 1000, 'turnaround' => '90–100 business days'],
+                ['name' => 'Priority', 'fee' => 79.99, 'max_insured_value' => 1500, 'turnaround' => '70–80 business days'],
+                ['name' => 'Express', 'fee' => 199, 'max_insured_value' => 2500, 'turnaround' => '20–30 business days'],
+                ['name' => 'Super Express', 'fee' => 349, 'max_insured_value' => 5000, 'turnaround' => '10–15 business days'],
+                ['name' => 'Premier', 'fee' => 599, 'max_insured_value' => 10000, 'turnaround' => '7–10 business days'],
+                // Premium is "$999+" against "$25,000+" — open at both ends, so
+                // it takes anything above Premier and quotes the floor. A card
+                // over $25,000 costs more than this says, which is the right
+                // way round for a number the advisor spends against.
+                ['name' => 'Premium', 'fee' => 999, 'max_insured_value' => null, 'turnaround' => '5–7 business days'],
+
+                // Value and Value Bulk are listed but shown as unavailable, so
+                // they are not here. A tier nobody can book is not a price.
+            ],
+        ],
+    ],
+
     // ---- Published centering tolerances ---------------------------------
     //
     // Centering is the one attribute graders put numbers on, and the numbers
