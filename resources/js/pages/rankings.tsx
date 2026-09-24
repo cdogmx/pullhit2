@@ -112,7 +112,7 @@ export default function Rankings({
                                     </span>
                                 )}
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                                    <p className="text-xs font-semibold tracking-wide text-primary uppercase">
                                         {giveaway.period_label} giveaway
                                     </p>
                                     <p className="text-lg font-bold">
@@ -210,7 +210,7 @@ export default function Rankings({
                                         <p className="text-sm font-medium">
                                             {m.label}
                                             {m.once && (
-                                                <span className="ml-1.5 rounded bg-muted px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                                <span className="ml-1.5 rounded bg-muted px-1 py-0.5 text-[9px] font-semibold tracking-wide text-muted-foreground uppercase">
                                                     once
                                                 </span>
                                             )}
@@ -219,7 +219,7 @@ export default function Rankings({
                                             {m.how}
                                         </p>
                                     </div>
-                                    <span className="shrink-0 text-sm font-bold tabular-nums text-primary">
+                                    <span className="shrink-0 text-sm font-bold text-primary tabular-nums">
                                         +{m.points}
                                     </span>
                                 </div>
@@ -332,7 +332,12 @@ function ReferralLink({ handle }: { handle: string }) {
                     cardfoo.com{path}
                 </p>
             </div>
-            <Button size="sm" variant="secondary" className="h-8" onClick={copy}>
+            <Button
+                size="sm"
+                variant="secondary"
+                className="h-8"
+                onClick={copy}
+            >
                 {copied ? (
                     <>
                         <Check className="size-3.5 text-emerald-600" /> Copied

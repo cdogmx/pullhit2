@@ -27,13 +27,16 @@ export default function ChooseUsername({ suggestion }: { suggestion: string }) {
                         required
                         autoFocus
                         value={form.data.username}
-                        onChange={(e) => form.setData('username', e.target.value)}
+                        onChange={(e) =>
+                            form.setData('username', e.target.value)
+                        }
                         placeholder="username"
                         pattern="[A-Za-z0-9_\-]{3,30}"
                     />
                     <p className="text-xs text-muted-foreground">
                         Your public handle (collection &amp; wishlist URLs).
-                        Letters, numbers, dashes and underscores; 3–30 characters.
+                        Letters, numbers, dashes and underscores; 3–30
+                        characters.
                     </p>
                     <InputError message={form.errors.username} />
                 </div>

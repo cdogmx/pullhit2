@@ -84,7 +84,10 @@ export default function Brand() {
                 <div className="mt-8 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-8">
                     <span
                         className="flex aspect-square size-24 shrink-0 items-center justify-center rounded-2xl sm:size-32"
-                        style={{ backgroundColor: BRAND_GOLD, color: BELT_BLACK }}
+                        style={{
+                            backgroundColor: BRAND_GOLD,
+                            color: BELT_BLACK,
+                        }}
                     >
                         <AppLogoIcon className="size-16 fill-current sm:size-20" />
                     </span>

@@ -5,7 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
-type DiffRow = { field: string; from: string | number | null; to: string | number | null };
+type DiffRow = {
+    field: string;
+    from: string | number | null;
+    to: string | number | null;
+};
 
 type Suggestion = {
     id: number;

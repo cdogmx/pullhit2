@@ -37,7 +37,14 @@ const STATUS_STYLE: Record<string, string> = {
     rejected: 'text-red-600 dark:text-red-400',
 };
 
-const DETAIL_ORDER = ['number', 'set', 'brand', 'language', 'source_url', 'notes'];
+const DETAIL_ORDER = [
+    'number',
+    'set',
+    'brand',
+    'language',
+    'source_url',
+    'notes',
+];
 
 export default function AdminCardReports({
     reports,
@@ -104,7 +111,9 @@ export default function AdminCardReports({
                         <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-start sm:justify-between">
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-medium">{r.name}</span>
+                                    <span className="font-medium">
+                                        {r.name}
+                                    </span>
                                     <Badge
                                         variant="secondary"
                                         className="text-[10px] capitalize"

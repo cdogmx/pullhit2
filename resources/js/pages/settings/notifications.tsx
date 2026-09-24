@@ -10,7 +10,11 @@ type NotificationType = {
     enabled: boolean;
 };
 
-export default function Notifications({ types }: { types: NotificationType[] }) {
+export default function Notifications({
+    types,
+}: {
+    types: NotificationType[];
+}) {
     const form = useForm<{ preferences: Record<string, boolean> }>({
         preferences: Object.fromEntries(types.map((t) => [t.key, t.enabled])),
     });

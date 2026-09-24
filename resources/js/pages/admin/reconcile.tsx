@@ -26,7 +26,9 @@ type Change = {
 type Props = { sets: SetRow[]; applied: number; pending: number };
 
 const money = (cents: number | null) =>
-    cents ? `$${(cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '—';
+    cents
+        ? `$${(cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+        : '—';
 
 const reload = { preserveScroll: true, only: ['sets', 'applied', 'pending'] };
 
@@ -66,7 +68,9 @@ export default function AdminReconcile({ sets, applied, pending }: Props) {
                     <span className="text-muted-foreground">
                         PriceCharting reconciliation queue
                     </span>
-                    <Badge variant="secondary">{applied.toLocaleString()} applied</Badge>
+                    <Badge variant="secondary">
+                        {applied.toLocaleString()} applied
+                    </Badge>
                     <Badge>{pending.toLocaleString()} pending</Badge>
                 </div>
 
@@ -91,36 +95,54 @@ export default function AdminReconcile({ sets, applied, pending }: Props) {
                                         <ChevronDown
                                             className={`size-4 transition-transform ${open === s.set_id ? 'rotate-180' : ''}`}
                                         />
-                                        <span className="font-medium">{s.set_name}</span>
+                                        <span className="font-medium">
+                                            {s.set_name}
+                                        </span>
                                     </span>
                                     <span className="flex items-center gap-1.5">
-                                        {Object.entries(s.counts).map(([action, n]) => (
-                                            <Badge key={action} variant="outline" className="text-[10px]">
-                                                {action.replace('add_', '')}: {n}
-                                            </Badge>
-                                        ))}
+                                        {Object.entries(s.counts).map(
+                                            ([action, n]) => (
+                                                <Badge
+                                                    key={action}
+                                                    variant="outline"
+                                                    className="text-[10px]"
+                                                >
+                                                    {action.replace('add_', '')}
+                                                    : {n}
+                                                </Badge>
+                                            ),
+                                        )}
                                     </span>
                                 </button>
 
                                 {open === s.set_id && (
                                     <div className="mt-4 space-y-3">
                                         <div className="flex flex-wrap gap-2">
-                                            {Object.keys(s.counts).map((action) => (
-                                                <Button
-                                                    key={action}
-                                                    size="sm"
-                                                    variant="secondary"
-                                                    onClick={() =>
-                                                        act('/admin/reconcile/approve-batch', {
-                                                            set_id: s.set_id,
-                                                            action,
-                                                        })
-                                                    }
-                                                >
-                                                    <Check className="size-4" /> Approve all{' '}
-                                                    {action.replace('add_', '')}
-                                                </Button>
-                                            ))}
+                                            {Object.keys(s.counts).map(
+                                                (action) => (
+                                                    <Button
+                                                        key={action}
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        onClick={() =>
+                                                            act(
+                                                                '/admin/reconcile/approve-batch',
+                                                                {
+                                                                    set_id: s.set_id,
+                                                                    action,
+                                                                },
+                                                            )
+                                                        }
+                                                    >
+                                                        <Check className="size-4" />{' '}
+                                                        Approve all{' '}
+                                                        {action.replace(
+                                                            'add_',
+                                                            '',
+                                                        )}
+                                                    </Button>
+                                                ),
+                                            )}
                                         </div>
 
                                         {loading ? (
@@ -137,12 +159,20 @@ export default function AdminReconcile({ sets, applied, pending }: Props) {
                                                                 variant="outline"
                                                                 className="mr-2 text-[10px]"
                                                             >
-                                                                {c.action.replace('add_', '')}
+                                                                {c.action.replace(
+                                                                    'add_',
+                                                                    '',
+                                                                )}
                                                             </Badge>
                                                             {c.label}
                                                             <span className="ml-2 text-xs text-muted-foreground">
-                                                                raw {money(c.ungraded)} · PSA10{' '}
-                                                                {money(c.psa10)} · {c.reason}
+                                                                raw{' '}
+                                                                {money(
+                                                                    c.ungraded,
+                                                                )}{' '}
+                                                                · PSA10{' '}
+                                                                {money(c.psa10)}{' '}
+                                                                · {c.reason}
                                                             </span>
                                                         </span>
                                                         <span className="flex shrink-0 gap-1">
@@ -151,7 +181,9 @@ export default function AdminReconcile({ sets, applied, pending }: Props) {
                                                                 variant="ghost"
                                                                 className="size-7"
                                                                 onClick={() =>
-                                                                    act(`/admin/reconcile/${c.id}/approve`)
+                                                                    act(
+                                                                        `/admin/reconcile/${c.id}/approve`,
+                                                                    )
                                                                 }
                                                                 aria-label="Approve"
                                                             >
@@ -162,7 +194,9 @@ export default function AdminReconcile({ sets, applied, pending }: Props) {
                                                                 variant="ghost"
                                                                 className="size-7"
                                                                 onClick={() =>
-                                                                    act(`/admin/reconcile/${c.id}/skip`)
+                                                                    act(
+                                                                        `/admin/reconcile/${c.id}/skip`,
+                                                                    )
                                                                 }
                                                                 aria-label="Skip"
                                                             >

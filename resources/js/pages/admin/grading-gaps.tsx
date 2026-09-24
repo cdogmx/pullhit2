@@ -174,9 +174,7 @@ export default function AdminGradingGaps({
                             id="min_value"
                             value={minValue}
                             onChange={(e) => setMinValue(e.target.value)}
-                            onBlur={() =>
-                                apply({ min_value: minValue || '0' })
-                            }
+                            onBlur={() => apply({ min_value: minValue || '0' })}
                             onKeyDown={(e) =>
                                 e.key === 'Enter' &&
                                 apply({ min_value: minValue || '0' })
@@ -263,8 +261,8 @@ export default function AdminGradingGaps({
                                         colSpan={6}
                                         className="px-3 py-10 text-center text-muted-foreground"
                                     >
-                                        No cards clear the grading fee with these
-                                        filters.
+                                        No cards clear the grading fee with
+                                        these filters.
                                     </td>
                                 </tr>
                             ) : (

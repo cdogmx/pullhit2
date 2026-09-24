@@ -195,7 +195,9 @@ export default function Dashboard({
                         </p>
                     </div>
                     <Badge
-                        variant={user.is_admin || !isFree ? 'default' : 'secondary'}
+                        variant={
+                            user.is_admin || !isFree ? 'default' : 'secondary'
+                        }
                         className="capitalize"
                     >
                         {user.tier_label} plan
@@ -216,7 +218,9 @@ export default function Dashboard({
                                     <span
                                         className={cn(
                                             'font-medium',
-                                            gainColor(portfolio.unrealized_gain),
+                                            gainColor(
+                                                portfolio.unrealized_gain,
+                                            ),
                                         )}
                                     >
                                         {signedMoney(
@@ -336,8 +340,12 @@ export default function Dashboard({
                                                             >
                                                                 {a.brand && (
                                                                     <span className="font-normal text-muted-foreground">
-                                                                        {a.brand}{' '}
-                                                                        <span aria-hidden>
+                                                                        {
+                                                                            a.brand
+                                                                        }{' '}
+                                                                        <span
+                                                                            aria-hidden
+                                                                        >
                                                                             →
                                                                         </span>{' '}
                                                                     </span>
@@ -348,8 +356,12 @@ export default function Dashboard({
                                                             <span className="min-w-0 truncate pr-2 font-medium">
                                                                 {a.brand && (
                                                                     <span className="font-normal text-muted-foreground">
-                                                                        {a.brand}{' '}
-                                                                        <span aria-hidden>
+                                                                        {
+                                                                            a.brand
+                                                                        }{' '}
+                                                                        <span
+                                                                            aria-hidden
+                                                                        >
                                                                             →
                                                                         </span>{' '}
                                                                     </span>
@@ -383,7 +395,10 @@ export default function Dashboard({
 
                         {/* Your collections → folders hierarchy */}
                         {collectionsTree.length > 0 && (
-                            <CollectionsCard tree={collectionsTree} currency={c} />
+                            <CollectionsCard
+                                tree={collectionsTree}
+                                currency={c}
+                            />
                         )}
 
                         {/* Community standing */}
@@ -687,7 +702,8 @@ function MoverList({
                                     gainColor(m.gain ?? 0),
                                 )}
                             >
-                                {m.gain !== null && signedMoney(m.gain, currency)}
+                                {m.gain !== null &&
+                                    signedMoney(m.gain, currency)}
                                 {m.pct !== null &&
                                     ` (${m.pct > 0 ? '+' : ''}${m.pct}%)`}
                             </span>

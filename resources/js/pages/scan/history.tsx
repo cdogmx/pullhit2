@@ -202,7 +202,7 @@ function ResultRow({ result }: { result: ScanResult }) {
                     {m?.name ?? result.name ?? 'Unknown card'}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
-                    {(m?.number ?? result.number) ?? ''}
+                    {m?.number ?? result.number ?? ''}
                     {m?.set ? ` · ${m.set}` : ''}
                 </p>
             </div>
@@ -213,7 +213,9 @@ function ResultRow({ result }: { result: ScanResult }) {
                     </span>
                 )}
                 <Badge
-                    variant={result.source === 'cache' ? 'secondary' : 'outline'}
+                    variant={
+                        result.source === 'cache' ? 'secondary' : 'outline'
+                    }
                     className="text-[10px]"
                 >
                     {result.source === 'cache' ? 'Cache' : 'AI'}

@@ -22,18 +22,18 @@ function pct(part: number, total: number): number {
 /** Green at full coverage, amber for partial, red for none. */
 function coverageColor(value: number, total: number): string {
     if (total === 0) {
-return 'text-muted-foreground';
-}
+        return 'text-muted-foreground';
+    }
 
     const p = pct(value, total);
 
     if (p >= 99) {
-return 'text-emerald-600 dark:text-emerald-400';
-}
+        return 'text-emerald-600 dark:text-emerald-400';
+    }
 
     if (p >= 1) {
-return 'text-amber-600 dark:text-amber-400';
-}
+        return 'text-amber-600 dark:text-amber-400';
+    }
 
     return 'text-red-600 dark:text-red-400';
 }
@@ -47,7 +47,9 @@ export default function AdminDashboard({ stats, health }: Props) {
                     {CARDS.map((c) => (
                         <Card key={c.key}>
                             <CardContent className="pt-6">
-                                <p className="text-xs text-muted-foreground">{c.label}</p>
+                                <p className="text-xs text-muted-foreground">
+                                    {c.label}
+                                </p>
                                 <p className="mt-1 text-2xl font-bold tracking-tight">
                                     {stats[c.key].toLocaleString()}
                                 </p>
@@ -60,19 +62,32 @@ export default function AdminDashboard({ stats, health }: Props) {
                 <Card>
                     <CardContent className="overflow-x-auto pt-6">
                         <div className="mb-3 flex items-center justify-between">
-                            <h2 className="text-sm font-semibold">Catalog health</h2>
+                            <h2 className="text-sm font-semibold">
+                                Catalog health
+                            </h2>
                             <span className="text-xs text-muted-foreground">
-                                {pct(stats.valued, stats.items)}% of items valued
+                                {pct(stats.valued, stats.items)}% of items
+                                valued
                             </span>
                         </div>
                         <table className="w-full text-sm">
                             <thead className="text-left text-xs text-muted-foreground">
                                 <tr className="border-b border-border">
-                                    <th className="py-2 pr-3 font-medium">Set</th>
-                                    <th className="py-2 pr-3 text-right font-medium">Items</th>
-                                    <th className="py-2 pr-3 text-right font-medium">Valued</th>
-                                    <th className="py-2 pr-3 text-right font-medium">Images</th>
-                                    <th className="py-2 text-right font-medium">Coverage</th>
+                                    <th className="py-2 pr-3 font-medium">
+                                        Set
+                                    </th>
+                                    <th className="py-2 pr-3 text-right font-medium">
+                                        Items
+                                    </th>
+                                    <th className="py-2 pr-3 text-right font-medium">
+                                        Valued
+                                    </th>
+                                    <th className="py-2 pr-3 text-right font-medium">
+                                        Images
+                                    </th>
+                                    <th className="py-2 text-right font-medium">
+                                        Coverage
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -82,18 +97,25 @@ export default function AdminDashboard({ stats, health }: Props) {
                                         className="border-b border-border/60 last:border-0"
                                     >
                                         <td className="py-2 pr-3">
-                                            <span className="font-medium">{s.name}</span>
+                                            <span className="font-medium">
+                                                {s.name}
+                                            </span>
                                             {s.code && (
                                                 <span className="ml-1 text-xs text-muted-foreground">
                                                     {s.code}
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="py-2 pr-3 text-right">{s.items}</td>
+                                        <td className="py-2 pr-3 text-right">
+                                            {s.items}
+                                        </td>
                                         <td
                                             className={cn(
                                                 'py-2 pr-3 text-right font-medium',
-                                                coverageColor(s.valued, s.items),
+                                                coverageColor(
+                                                    s.valued,
+                                                    s.items,
+                                                ),
                                             )}
                                         >
                                             {s.valued}
@@ -104,7 +126,10 @@ export default function AdminDashboard({ stats, health }: Props) {
                                         <td
                                             className={cn(
                                                 'py-2 text-right font-semibold',
-                                                coverageColor(s.valued, s.items),
+                                                coverageColor(
+                                                    s.valued,
+                                                    s.items,
+                                                ),
                                             )}
                                         >
                                             {pct(s.valued, s.items)}%

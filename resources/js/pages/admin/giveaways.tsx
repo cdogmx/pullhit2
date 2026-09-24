@@ -155,7 +155,10 @@ export default function AdminGiveaways({
                                     <Input
                                         value={form.data.title}
                                         onChange={(e) =>
-                                            form.setData('title', e.target.value)
+                                            form.setData(
+                                                'title',
+                                                e.target.value,
+                                            )
                                         }
                                         placeholder="June 2026 Giveaway"
                                     />
@@ -236,37 +239,40 @@ export default function AdminGiveaways({
                                         />
                                     )}
                                     <div className="min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-medium">
-                                            {g.title}
-                                        </span>
-                                        <span
-                                            className={cn(
-                                                'text-xs font-medium capitalize',
-                                                g.status === 'drawn'
-                                                    ? 'text-emerald-600 dark:text-emerald-400'
-                                                    : 'text-amber-600 dark:text-amber-400',
-                                            )}
-                                        >
-                                            {g.status}
-                                        </span>
-                                    </div>
-                                    <p className="mt-0.5 text-xs text-muted-foreground">
-                                        {g.period_label} · {g.prize}
-                                    </p>
-                                    {g.status === 'drawn' && (
-                                        <p className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                                            <Trophy className="size-3.5" />
-                                            {g.winner ?? 'no eligible entrants'}
-                                            {g.winner && (
-                                                <span className="text-xs font-normal text-muted-foreground">
-                                                    · {g.winner_entries} of{' '}
-                                                    {g.total_entries} entries (
-                                                    {g.entrant_count} entrants)
-                                                </span>
-                                            )}
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">
+                                                {g.title}
+                                            </span>
+                                            <span
+                                                className={cn(
+                                                    'text-xs font-medium capitalize',
+                                                    g.status === 'drawn'
+                                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                                        : 'text-amber-600 dark:text-amber-400',
+                                                )}
+                                            >
+                                                {g.status}
+                                            </span>
+                                        </div>
+                                        <p className="mt-0.5 text-xs text-muted-foreground">
+                                            {g.period_label} · {g.prize}
                                         </p>
-                                    )}
+                                        {g.status === 'drawn' && (
+                                            <p className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                                                <Trophy className="size-3.5" />
+                                                {g.winner ??
+                                                    'no eligible entrants'}
+                                                {g.winner && (
+                                                    <span className="text-xs font-normal text-muted-foreground">
+                                                        · {g.winner_entries} of{' '}
+                                                        {g.total_entries}{' '}
+                                                        entries (
+                                                        {g.entrant_count}{' '}
+                                                        entrants)
+                                                    </span>
+                                                )}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex shrink-0 gap-2">

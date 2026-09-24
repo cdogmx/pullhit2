@@ -474,6 +474,22 @@ export function SideCapture({
                             }}
                         />
 
+                        {files.length === 0 && (
+                            <p className="text-xs text-muted-foreground">
+                                Plain background, whole card in frame, and move
+                                the light rather than the card between shots.{' '}
+                                <a
+                                    href="/grading-photos"
+                                    target="_blank"
+                                    rel="noopener"
+                                    className="underline underline-offset-2 hover:text-foreground"
+                                >
+                                    The full guide
+                                </a>
+                                .
+                            </p>
+                        )}
+
                         {files.length === 1 && (
                             <p className="rounded border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-500">
                                 One photo. Centering and the straightened card

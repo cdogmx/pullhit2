@@ -20,11 +20,7 @@ export default function Notifications({
     const hasUnread = notifications.some((n) => !n.read);
 
     const markAllRead = () => {
-        router.post(
-            '/notifications/read-all',
-            {},
-            { preserveScroll: true },
-        );
+        router.post('/notifications/read-all', {}, { preserveScroll: true });
     };
 
     return (
@@ -35,7 +31,11 @@ export default function Notifications({
                 <div className="mb-4 flex items-center justify-between gap-3">
                     <h1 className="text-xl font-semibold">Notifications</h1>
                     {hasUnread && (
-                        <Button variant="outline" size="sm" onClick={markAllRead}>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={markAllRead}
+                        >
                             Mark all as read
                         </Button>
                     )}

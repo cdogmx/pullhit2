@@ -31,7 +31,11 @@ type Report = {
 
 type Props = {
     reports: Report[];
-    points: { missing_card: number; missing_set: number; edit_suggestion: number };
+    points: {
+        missing_card: number;
+        missing_set: number;
+        edit_suggestion: number;
+    };
     level: Level;
     monthlyEntries: number;
 };
@@ -86,12 +90,13 @@ export default function Contribute({
                         </span>
                         <div>
                             <p className="text-sm font-semibold">
-                                {level.name} · {level.points.toLocaleString()} pts
+                                {level.name} · {level.points.toLocaleString()}{' '}
+                                pts
                             </p>
                             <p className="text-xs text-muted-foreground">
                                 {monthlyEntries.toLocaleString()} giveaway{' '}
-                                {monthlyEntries === 1 ? 'entry' : 'entries'} this
-                                month
+                                {monthlyEntries === 1 ? 'entry' : 'entries'}{' '}
+                                this month
                                 {level.to_next != null &&
                                     ` · ${level.to_next} to next level`}
                             </p>
@@ -111,8 +116,8 @@ export default function Contribute({
                     <p className="mt-1 text-sm text-muted-foreground">
                         Help us complete the catalog. Accepted reports earn
                         points — {points.missing_card} for a card,{' '}
-                        {points.missing_set} for a set. Spotted a wrong detail on
-                        a card?{' '}
+                        {points.missing_set} for a set. Spotted a wrong detail
+                        on a card?{' '}
                         <span className="text-foreground">
                             Use “Suggest an edit” on the card
                         </span>{' '}
@@ -182,7 +187,9 @@ export default function Contribute({
                                             />
                                         </div>
                                         <div className="grid gap-1.5">
-                                            <Label className="text-xs">Set</Label>
+                                            <Label className="text-xs">
+                                                Set
+                                            </Label>
                                             <Input
                                                 value={form.data.set}
                                                 onChange={(e) =>
@@ -197,11 +204,16 @@ export default function Contribute({
                                     </>
                                 )}
                                 <div className="grid gap-1.5">
-                                    <Label className="text-xs">Brand / game</Label>
+                                    <Label className="text-xs">
+                                        Brand / game
+                                    </Label>
                                     <Input
                                         value={form.data.brand}
                                         onChange={(e) =>
-                                            form.setData('brand', e.target.value)
+                                            form.setData(
+                                                'brand',
+                                                e.target.value,
+                                            )
                                         }
                                         placeholder="e.g. Pokémon"
                                     />
@@ -238,7 +250,9 @@ export default function Contribute({
                             </div>
 
                             <div className="grid gap-1.5">
-                                <Label className="text-xs">Notes (optional)</Label>
+                                <Label className="text-xs">
+                                    Notes (optional)
+                                </Label>
                                 <Textarea
                                     value={form.data.notes}
                                     onChange={(e) =>

@@ -184,10 +184,10 @@ export default function AdminUsers({
                                         <td className="py-2 pr-3 capitalize">
                                             {u.tier}
                                         </td>
-                                        <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">
+                                        <td className="py-2 pr-3 text-right text-muted-foreground tabular-nums">
                                             {u.credits.toLocaleString()}
                                         </td>
-                                        <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">
+                                        <td className="py-2 pr-3 text-right text-muted-foreground tabular-nums">
                                             {u.lifetime_amount
                                                 ? formatMoney(u.lifetime_amount)
                                                 : '—'}

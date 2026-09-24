@@ -598,7 +598,9 @@ function ProductCard({
                                             rel="noreferrer"
                                             className="inline-flex items-center gap-0.5 text-primary hover:underline"
                                         >
-                                            📇 {product.catalog_name ?? 'catalog item'}
+                                            📇{' '}
+                                            {product.catalog_name ??
+                                                'catalog item'}
                                             <ExternalLink className="size-3" />
                                         </a>
                                     </>

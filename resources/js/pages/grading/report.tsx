@@ -416,6 +416,20 @@ export default function GradeReport({
                         </CardContent>
                     </Card>
                 )}
+
+                {/* Whoever was sent this link is looking at a read of someone
+                    else's card. The most likely next thought is doing it to
+                    their own, and the photos are the part they can get wrong. */}
+                <p className="text-xs text-muted-foreground">
+                    Reads are only as good as the photographs behind them.{' '}
+                    <a
+                        href="/grading-photos"
+                        className="underline underline-offset-2 hover:text-foreground"
+                    >
+                        How to photograph a card
+                    </a>
+                    .
+                </p>
             </div>
         </>
     );

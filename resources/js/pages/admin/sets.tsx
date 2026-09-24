@@ -69,7 +69,9 @@ export default function AdminSets({
     const [sealedSet, setSealedSet] = useState<AdminSet | null>(null);
     // Manage-sealed is keyed by id so it reflects fresh props after an edit/delete.
     const [managingSetId, setManagingSetId] = useState<number | null>(null);
-    const [editingSealed, setEditingSealed] = useState<CatalogItem | null>(null);
+    const [editingSealed, setEditingSealed] = useState<CatalogItem | null>(
+        null,
+    );
     const [editingSet, setEditingSet] = useState<AdminSet | null>(null);
     const [creatingSet, setCreatingSet] = useState(false);
     const [lang, setLang] = useState('');
@@ -274,7 +276,8 @@ export default function AdminSets({
                         variant="ghost"
                         onClick={() => setManagingSetId(s.id)}
                     >
-                        <Package className="size-4" /> Sealed ({s.sealed?.length ?? 0})
+                        <Package className="size-4" /> Sealed (
+                        {s.sealed?.length ?? 0})
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => resync(s)}>
                         <RefreshCw className="size-4" /> Re-sync

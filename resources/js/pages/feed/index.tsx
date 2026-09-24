@@ -39,7 +39,8 @@ export default function Feed({ items, followingCount, pagination }: Props) {
                         Following
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Recent activity from the {followingCount.toLocaleString()}{' '}
+                        Recent activity from the{' '}
+                        {followingCount.toLocaleString()}{' '}
                         {followingCount === 1 ? 'collector' : 'collectors'} you
                         follow.
                     </p>

@@ -239,7 +239,9 @@ export default function RipOrKeep() {
                                             </div>
                                             {r.sealed_value != null && (
                                                 <span className="shrink-0 text-sm font-medium tabular-nums">
-                                                    {formatMoney(r.sealed_value)}
+                                                    {formatMoney(
+                                                        r.sealed_value,
+                                                    )}
                                                 </span>
                                             )}
                                         </button>
@@ -306,7 +308,9 @@ export default function RipOrKeep() {
                                 >
                                     <Input
                                         value={draft}
-                                        onChange={(e) => setDraft(e.target.value)}
+                                        onChange={(e) =>
+                                            setDraft(e.target.value)
+                                        }
                                         placeholder="Tell the Sensei your goal…"
                                         maxLength={1000}
                                         disabled={thinking}
@@ -495,4 +499,3 @@ function Bubble({ message }: { message: ChatMessage }) {
         </div>
     );
 }
-

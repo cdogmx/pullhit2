@@ -1,5 +1,12 @@
 import { Head, router } from '@inertiajs/react';
-import { AlertTriangle, Info, Save, Upload, X } from 'lucide-react';
+import {
+    AlertTriangle,
+    ChevronRight,
+    Info,
+    Save,
+    Upload,
+    X,
+} from 'lucide-react';
 import { useState } from 'react';
 import {
     AttributeTiles,
@@ -10,6 +17,7 @@ import {
 import type { StandardVerdict } from '@/components/grading/breakdown';
 import type { Guides, Quad } from '@/components/grading/guide-overlay';
 import type { SavedRun } from '@/components/grading/saved-runs';
+import { PhotoGuide } from '@/components/grading/photo-guide';
 import { SavedRuns } from '@/components/grading/saved-runs';
 import { EMPTY_SPLIT, SideCapture } from '@/components/grading/side-capture';
 import type { Split } from '@/components/grading/side-capture';
@@ -282,22 +290,31 @@ export default function GradePredictor({ defaults, sides, saved }: Props) {
                     </h1>
                     <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
                         For a surface read, shoot 3&ndash;5 photos per side and
-                        move the LIGHT between them, not the card. Prop the
-                        phone, lay the card down, and walk a lamp or a torch
-                        around it so the glare sweeps across the surface. That
-                        moving reflection is the entire signal.
+                        move the LIGHT between them, not the card. That moving
+                        reflection is the entire signal.
                     </p>
-                    <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-                        Tilting the card works too, but less well: the frames
-                        are differenced against each other, so a card that
-                        stayed still is aligned perfectly by construction, while
-                        a card that moved is aligned only as well as its corners
-                        were found. A misalignment of a pixel or two draws an
-                        edge along every printed line and reads as dozens of
-                        scratches. One photo is fine for centering and still
-                        gives you the straightened card — it simply cannot say
-                        anything at all about surface.
-                    </p>
+
+                    {/* Folded away rather than cut: it is the thing to read
+                        once and never again, and it was two paragraphs sitting
+                        on top of the tool for everybody who already had. */}
+                    <details className="group mt-3 max-w-3xl">
+                        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+                            <ChevronRight className="size-4 transition-transform group-open:rotate-90" />
+                            How to photograph a card, and why
+                        </summary>
+
+                        <div className="mt-4 flex flex-col gap-3">
+                            <PhotoGuide />
+                            <a
+                                href="/grading-photos"
+                                target="_blank"
+                                rel="noopener"
+                                className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                            >
+                                Open as a page to send to somebody
+                            </a>
+                        </div>
+                    </details>
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-2">

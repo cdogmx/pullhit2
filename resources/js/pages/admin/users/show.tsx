@@ -274,7 +274,8 @@ export default function AdminUserShow({
                                                 <td
                                                     className="py-1.5 pr-3 text-muted-foreground"
                                                     title={
-                                                        s.user_agent ?? undefined
+                                                        s.user_agent ??
+                                                        undefined
                                                     }
                                                 >
                                                     {device(s.user_agent)}
@@ -338,7 +339,7 @@ export default function AdminUserShow({
                                                         t.currency ?? 'USD',
                                                     )}
                                                 </td>
-                                                <td className="py-1.5 text-xs capitalize text-muted-foreground">
+                                                <td className="py-1.5 text-xs text-muted-foreground capitalize">
                                                     {t.status}
                                                 </td>
                                             </tr>
@@ -432,7 +433,9 @@ export default function AdminUserShow({
                                                                     </span>
                                                                     {sub && (
                                                                         <span className="block truncate text-[10px] text-muted-foreground">
-                                                                            {sub}
+                                                                            {
+                                                                                sub
+                                                                            }
                                                                         </span>
                                                                     )}
                                                                 </span>

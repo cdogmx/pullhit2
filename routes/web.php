@@ -40,6 +40,15 @@ Route::inertia('terms', 'terms', ['meta' => [
     'title' => 'Terms of Service | CardFoo',
     'description' => 'The terms that govern your use of CardFoo, the trading card price guide and collection tracker.',
 ]])->name('terms');
+// How to photograph a card so the grading read can actually use it. Public
+// because it is linked from shared reports, which land on people with no
+// account — and because somebody deciding whether this is worth their time
+// should be able to see what it asks of them first.
+Route::inertia('grading-photos', 'grading/photo-guide', ['meta' => [
+    'title' => 'How to photograph a card for grading | CardFoo',
+    'description' => 'What the CardFoo grading read needs from your photos — background, lighting, and why moving the light instead of the card is what makes a surface read possible.',
+]])->name('grading-photos');
+
 Route::inertia('privacy', 'privacy', ['meta' => [
     'title' => 'Privacy Policy | CardFoo',
     'description' => 'How CardFoo collects, uses, and protects your data — the trading card price guide and collection tracker.',

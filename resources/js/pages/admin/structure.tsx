@@ -1,5 +1,11 @@
 import { Head, useForm } from '@inertiajs/react';
-import { ChevronRight, Image as ImageIcon, Layers, Library, Pencil } from 'lucide-react';
+import {
+    ChevronRight,
+    Image as ImageIcon,
+    Layers,
+    Library,
+    Pencil,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { ImageUploadField } from '@/components/admin/image-upload-field';
@@ -66,7 +72,11 @@ export default function AdminStructure({ brands }: Props) {
 
                 <div className="space-y-3">
                     {brands.map((b) => (
-                        <BrandTree key={b.slug} brand={b} onRename={setRename} />
+                        <BrandTree
+                            key={b.slug}
+                            brand={b}
+                            onRename={setRename}
+                        />
                     ))}
                 </div>
             </div>
@@ -135,9 +145,9 @@ function RenameSeriesDialog({
                         <DialogTitle>Edit series</DialogTitle>
                         <DialogDescription>
                             Applies to all {target.count} set
-                            {target.count === 1 ? '' : 's'} in this series. Rename
-                            to an existing series to merge; leave the name blank to
-                            ungroup.
+                            {target.count === 1 ? '' : 's'} in this series.
+                            Rename to an existing series to merge; leave the
+                            name blank to ungroup.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -168,8 +178,8 @@ function RenameSeriesDialog({
                                 onChange={(u) => form.setData('logo_url', u)}
                             />
                             <p className="text-xs text-muted-foreground">
-                                Shown on the series tile in browse. Falls back to a
-                                card from the series when empty.
+                                Shown on the series tile in browse. Falls back
+                                to a card from the series when empty.
                             </p>
                         </div>
                     </div>
@@ -203,7 +213,10 @@ function Explainer() {
                 <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/40 p-3 font-medium">
                     {['Brand', 'Series', 'Set', 'Subset', 'Card'].map(
                         (level, i) => (
-                            <span key={level} className="flex items-center gap-2">
+                            <span
+                                key={level}
+                                className="flex items-center gap-2"
+                            >
                                 {i > 0 && (
                                     <ChevronRight className="size-4 text-muted-foreground" />
                                 )}

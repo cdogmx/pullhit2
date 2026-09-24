@@ -189,7 +189,9 @@ export default function Compare({ items, maxItems }: Props) {
                                                 className="inline-block size-2.5 shrink-0 rounded-full"
                                                 style={{
                                                     backgroundColor:
-                                                        COLORS[i % COLORS.length],
+                                                        COLORS[
+                                                            i % COLORS.length
+                                                        ],
                                                 }}
                                             />
                                             {/* Card thumbnail — makes each series
@@ -219,7 +221,9 @@ export default function Compare({ items, maxItems }: Props) {
                                                 </p>
                                                 <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                                     {item.latest != null
-                                                        ? formatMoney(item.latest)
+                                                        ? formatMoney(
+                                                              item.latest,
+                                                          )
                                                         : 'No value'}
                                                     {pct != null && (
                                                         <span
@@ -235,7 +239,9 @@ export default function Compare({ items, maxItems }: Props) {
                                                             ) : (
                                                                 <TrendingDown className="size-3" />
                                                             )}
-                                                            {pct >= 0 ? '+' : ''}
+                                                            {pct >= 0
+                                                                ? '+'
+                                                                : ''}
                                                             {pct.toFixed(0)}%
                                                         </span>
                                                     )}

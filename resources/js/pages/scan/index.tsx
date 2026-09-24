@@ -57,9 +57,15 @@ function readStoredScan(): ScanDetected[] | null {
             return null;
         }
 
-        const parsed = JSON.parse(raw) as { at: number; detected: ScanDetected[] };
+        const parsed = JSON.parse(raw) as {
+            at: number;
+            detected: ScanDetected[];
+        };
 
-        if (!parsed?.detected?.length || Date.now() - parsed.at > STORAGE_TTL_MS) {
+        if (
+            !parsed?.detected?.length ||
+            Date.now() - parsed.at > STORAGE_TTL_MS
+        ) {
             return null;
         }
 
@@ -267,7 +273,11 @@ export default function ScanIndex({
                     image,
                     media_type: 'image/jpeg',
                     // Live capture reads one card at a time.
-                    mode: append ? 'single' : mode === 'bulk' ? 'bulk' : 'single',
+                    mode: append
+                        ? 'single'
+                        : mode === 'bulk'
+                          ? 'bulk'
+                          : 'single',
                 }),
             });
 
@@ -292,7 +302,9 @@ export default function ScanIndex({
                 const entry = result.detected[0];
 
                 if (!entry) {
-                    toast.message('No card detected — line it up and try again.');
+                    toast.message(
+                        'No card detected — line it up and try again.',
+                    );
 
                     return;
                 }
@@ -502,170 +514,181 @@ export default function ScanIndex({
                 {detected &&
                     detected.length > 0 &&
                     (mode !== 'live' || phase === 'review') && (
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-3">
-                            <h2 className="text-sm font-semibold text-muted-foreground">
-                                {fromStorage
-                                    ? 'Your recent scan'
-                                    : `${detected.length} ${detected.length === 1 ? 'card' : 'cards'} scanned — confirm and add`}
-                            </h2>
-                            <div className="flex items-center gap-1">
-                                {mode === 'live' && phase === 'review' && (
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between gap-3">
+                                <h2 className="text-sm font-semibold text-muted-foreground">
+                                    {fromStorage
+                                        ? 'Your recent scan'
+                                        : `${detected.length} ${detected.length === 1 ? 'card' : 'cards'} scanned — confirm and add`}
+                                </h2>
+                                <div className="flex items-center gap-1">
+                                    {mode === 'live' && phase === 'review' && (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setPhase('capture')}
+                                        >
+                                            <Camera className="size-4" />
+                                            Scan more
+                                        </Button>
+                                    )}
                                     <Button
                                         type="button"
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => setPhase('capture')}
+                                        onClick={clearScan}
                                     >
-                                        <Camera className="size-4" />
-                                        Scan more
+                                        <X className="size-4" />
+                                        Clear
                                     </Button>
-                                )}
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={clearScan}
-                                >
-                                    <X className="size-4" />
-                                    Clear
-                                </Button>
+                                </div>
                             </div>
-                        </div>
-                        {fromStorage && (
-                            <p className="text-xs text-muted-foreground">
-                                Picked up where you left off. Confirm and add, or
-                                clear to start a new scan.
-                            </p>
-                        )}
+                            {fromStorage && (
+                                <p className="text-xs text-muted-foreground">
+                                    Picked up where you left off. Confirm and
+                                    add, or clear to start a new scan.
+                                </p>
+                            )}
 
-                        {/* Scanned-value summary + a horizontal strip of every
+                            {/* Scanned-value summary + a horizontal strip of every
                             detected card; tap a tile to jump to its row. */}
-                        {total > 0 && (
-                            <Card>
-                                <CardContent className="space-y-3 py-4">
-                                    <div className="flex items-baseline justify-between gap-3">
-                                        <span className="text-sm text-muted-foreground">
-                                            Scanned value
-                                        </span>
-                                        <span className="text-xl font-bold tracking-tight tabular-nums">
-                                            {formatMoney(total)}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        {pricedCount} of {detected.length}{' '}
-                                        {detected.length === 1 ? 'card' : 'cards'}{' '}
-                                        priced · headline near-mint value
-                                    </p>
-
-                                    {/* Quick % of value — for buylist / trade
-                                        offers (e.g. "I'll pay 70%"). */}
-                                    <div className="flex items-center gap-2 border-t border-border/60 pt-3">
-                                        <label
-                                            htmlFor="scan-pct"
-                                            className="text-sm text-muted-foreground"
-                                        >
-                                            % of value
-                                        </label>
-                                        <div className="relative">
-                                            <Input
-                                                id="scan-pct"
-                                                type="number"
-                                                min={0}
-                                                max={1000}
-                                                inputMode="decimal"
-                                                value={pct}
-                                                onChange={(e) =>
-                                                    setPct(e.target.value)
-                                                }
-                                                placeholder="100"
-                                                className="h-8 w-20 pr-6 tabular-nums"
-                                            />
-                                            <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-sm text-muted-foreground">
-                                                %
+                            {total > 0 && (
+                                <Card>
+                                    <CardContent className="space-y-3 py-4">
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <span className="text-sm text-muted-foreground">
+                                                Scanned value
+                                            </span>
+                                            <span className="text-xl font-bold tracking-tight tabular-nums">
+                                                {formatMoney(total)}
                                             </span>
                                         </div>
-                                        <span className="ml-auto text-lg font-bold tracking-tight tabular-nums">
-                                            {formatMoney(
-                                                Math.round((total * pctNum) / 100),
-                                            )}
-                                        </span>
-                                    </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            {pricedCount} of {detected.length}{' '}
+                                            {detected.length === 1
+                                                ? 'card'
+                                                : 'cards'}{' '}
+                                            priced · headline near-mint value
+                                        </p>
 
-                                    {detected.length > 1 && (
-                                        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-                                            {detected.map((d, i) => {
-                                                const card = chosenCards[i] ?? null;
-                                                const img =
-                                                    card?.image_url ??
-                                                    d.thumbnail ??
-                                                    photo;
-                                                const median =
-                                                    card?.market_value?.median;
+                                        {/* Quick % of value — for buylist / trade
+                                        offers (e.g. "I'll pay 70%"). */}
+                                        <div className="flex items-center gap-2 border-t border-border/60 pt-3">
+                                            <label
+                                                htmlFor="scan-pct"
+                                                className="text-sm text-muted-foreground"
+                                            >
+                                                % of value
+                                            </label>
+                                            <div className="relative">
+                                                <Input
+                                                    id="scan-pct"
+                                                    type="number"
+                                                    min={0}
+                                                    max={1000}
+                                                    inputMode="decimal"
+                                                    value={pct}
+                                                    onChange={(e) =>
+                                                        setPct(e.target.value)
+                                                    }
+                                                    placeholder="100"
+                                                    className="h-8 w-20 pr-6 tabular-nums"
+                                                />
+                                                <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-sm text-muted-foreground">
+                                                    %
+                                                </span>
+                                            </div>
+                                            <span className="ml-auto text-lg font-bold tracking-tight tabular-nums">
+                                                {formatMoney(
+                                                    Math.round(
+                                                        (total * pctNum) / 100,
+                                                    ),
+                                                )}
+                                            </span>
+                                        </div>
 
-                                                return (
-                                                    <button
-                                                        key={i}
-                                                        type="button"
-                                                        onClick={() =>
-                                                            scrollToCard(i)
-                                                        }
-                                                        className="flex w-24 shrink-0 flex-col items-center gap-1 rounded-md border border-border bg-card p-1.5 text-center transition-colors hover:border-primary"
-                                                        title={
-                                                            card?.display_name ??
-                                                            card?.name ??
-                                                            d.identified.name ??
-                                                            'Unknown card'
-                                                        }
-                                                    >
-                                                        {img ? (
-                                                            <img
-                                                                src={img}
-                                                                alt=""
-                                                                className="h-20 w-auto rounded"
-                                                            />
-                                                        ) : (
-                                                            <div className="flex h-20 w-14 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground">
-                                                                ?
-                                                            </div>
-                                                        )}
-                                                        <span className="w-full truncate text-[10px] font-medium">
-                                                            {card?.display_name ??
+                                        {detected.length > 1 && (
+                                            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                                                {detected.map((d, i) => {
+                                                    const card =
+                                                        chosenCards[i] ?? null;
+                                                    const img =
+                                                        card?.image_url ??
+                                                        d.thumbnail ??
+                                                        photo;
+                                                    const median =
+                                                        card?.market_value
+                                                            ?.median;
+
+                                                    return (
+                                                        <button
+                                                            key={i}
+                                                            type="button"
+                                                            onClick={() =>
+                                                                scrollToCard(i)
+                                                            }
+                                                            className="flex w-24 shrink-0 flex-col items-center gap-1 rounded-md border border-border bg-card p-1.5 text-center transition-colors hover:border-primary"
+                                                            title={
+                                                                card?.display_name ??
                                                                 card?.name ??
                                                                 d.identified
                                                                     .name ??
-                                                                'Unknown'}
-                                                        </span>
-                                                        <span className="text-[10px] tabular-nums text-muted-foreground">
-                                                            {median != null
-                                                                ? formatMoney(
-                                                                      median,
-                                                                  )
-                                                                : '—'}
-                                                        </span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
+                                                                'Unknown card'
+                                                            }
+                                                        >
+                                                            {img ? (
+                                                                <img
+                                                                    src={img}
+                                                                    alt=""
+                                                                    className="h-20 w-auto rounded"
+                                                                />
+                                                            ) : (
+                                                                <div className="flex h-20 w-14 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground">
+                                                                    ?
+                                                                </div>
+                                                            )}
+                                                            <span className="w-full truncate text-[10px] font-medium">
+                                                                {card?.display_name ??
+                                                                    card?.name ??
+                                                                    d.identified
+                                                                        .name ??
+                                                                    'Unknown'}
+                                                            </span>
+                                                            <span className="text-[10px] text-muted-foreground tabular-nums">
+                                                                {median != null
+                                                                    ? formatMoney(
+                                                                          median,
+                                                                      )
+                                                                    : '—'}
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
 
-                        {detected.map((d, i) => (
-                            <div key={i} id={`scan-card-${i}`} className="scroll-mt-4">
-                                <ScanConfirmCard
-                                    detected={d}
-                                    index={i}
-                                    onChosenChange={handleChosen}
-                                    scanPhoto={photo}
-                                    gradingCompanies={gradingCompanies}
-                                    targets={targets}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                )}
+                            {detected.map((d, i) => (
+                                <div
+                                    key={i}
+                                    id={`scan-card-${i}`}
+                                    className="scroll-mt-4"
+                                >
+                                    <ScanConfirmCard
+                                        detected={d}
+                                        index={i}
+                                        onChosenChange={handleChosen}
+                                        scanPhoto={photo}
+                                        gradingCompanies={gradingCompanies}
+                                        targets={targets}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )}
             </div>
         </>
     );

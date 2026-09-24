@@ -1,12 +1,7 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatMoney } from '@/lib/format';
 
 type ImportableRow = {
@@ -74,10 +69,7 @@ export default function ImportCollection({
                         onSubmit={submitUpload}
                         className="mt-8 rounded-xl border border-border bg-card p-6"
                     >
-                        <label
-                            htmlFor="csv"
-                            className="text-sm font-medium"
-                        >
+                        <label htmlFor="csv" className="text-sm font-medium">
                             PriceCharting CSV
                         </label>
                         <input
@@ -85,7 +77,10 @@ export default function ImportCollection({
                             type="file"
                             accept=".csv,text/csv"
                             onChange={(e) =>
-                                upload.setData('file', e.target.files?.[0] ?? null)
+                                upload.setData(
+                                    'file',
+                                    e.target.files?.[0] ?? null,
+                                )
                             }
                             className="mt-2 block w-full text-sm text-muted-foreground file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-foreground hover:file:bg-primary/90"
                         />
@@ -123,7 +118,8 @@ export default function ImportCollection({
                             We&rsquo;ll import {importableCount} cards.
                             {counts.ambiguous > 0 &&
                                 ` ${counts.ambiguous} matched more than one printing — confirm each (highlighted) before importing.`}{' '}
-                            Cards from sets we don&rsquo;t carry yet are skipped.
+                            Cards from sets we don&rsquo;t carry yet are
+                            skipped.
                         </p>
 
                         {/* Keyed by the upload's token so the editable form
@@ -269,8 +265,8 @@ function ImportPreview({
                     <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
                         {skipped.map((s) => (
                             <li key={s.bucket}>
-                                <span className="tabular-nums">{s.count}</span> ·{' '}
-                                {s.bucket}
+                                <span className="tabular-nums">{s.count}</span>{' '}
+                                · {s.bucket}
                             </li>
                         ))}
                     </ul>
@@ -287,7 +283,9 @@ function ImportPreview({
                     Import {commit.data.rows.length} cards
                 </Button>
                 <Button asChild variant="ghost">
-                    <Link href="/collection/import">Upload a different file</Link>
+                    <Link href="/collection/import">
+                        Upload a different file
+                    </Link>
                 </Button>
             </div>
         </>

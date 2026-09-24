@@ -201,7 +201,10 @@ export default function Profile({
                                     placeholder="A line or two about you and your collection."
                                     className="mt-1 block w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                 />
-                                <InputError className="mt-2" message={errors.bio} />
+                                <InputError
+                                    className="mt-2"
+                                    message={errors.bio}
+                                />
                             </div>
 
                             <div className="grid gap-2 sm:grid-cols-2">
@@ -229,7 +232,9 @@ export default function Profile({
 
                             <div className="grid gap-2 sm:grid-cols-2">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="x_handle">X (Twitter)</Label>
+                                    <Label htmlFor="x_handle">
+                                        X (Twitter)
+                                    </Label>
                                     <Input
                                         id="x_handle"
                                         name="x_handle"
@@ -370,9 +375,7 @@ export default function Profile({
                                 )
                             }
                         />
-                        <span className="text-sm">
-                            Make my wishlist public
-                        </span>
+                        <span className="text-sm">Make my wishlist public</span>
                     </label>
                     <InputError
                         message={collection.errors.is_collection_public}

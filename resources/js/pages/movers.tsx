@@ -99,9 +99,9 @@ export default function Movers({
                         Biggest movers
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        The largest {WINDOW_TEXT[activeWindow] ?? '30-day'} swings
-                        on real sold-price data — ungraded values re-priced
-                        recently, with at least a few sales.
+                        The largest {WINDOW_TEXT[activeWindow] ?? '30-day'}{' '}
+                        swings on real sold-price data — ungraded values
+                        re-priced recently, with at least a few sales.
                     </p>
                 </div>
 
@@ -284,7 +284,12 @@ function MoverRow({ rank, mover }: { rank: number; mover: Mover }) {
                 <p className="text-sm font-semibold tabular-nums">
                     {mover.value != null ? formatMoney(mover.value) : '—'}
                 </p>
-                <p className={cn('text-xs font-medium tabular-nums', trendColor)}>
+                <p
+                    className={cn(
+                        'text-xs font-medium tabular-nums',
+                        trendColor,
+                    )}
+                >
                     {up ? '↑' : '↓'}
                     {Math.abs(mover.trend)}%
                     {mover.change != null && (

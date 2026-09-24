@@ -89,7 +89,9 @@ export default function AdminScanFeedback({
                                     </span>
                                 </div>
                                 <p className="mt-1 text-2xl font-bold tracking-tight">
-                                    {s.accuracy === null ? '—' : `${s.accuracy}%`}
+                                    {s.accuracy === null
+                                        ? '—'
+                                        : `${s.accuracy}%`}
                                 </p>
                                 <p className="mt-0.5 text-xs text-muted-foreground">
                                     <span className="text-emerald-600 dark:text-emerald-400">
@@ -213,7 +215,9 @@ export default function AdminScanFeedback({
                                                     : 'text-red-600 dark:text-red-400',
                                             )}
                                         >
-                                            {f.was_correct ? 'Correct' : 'Wrong'}
+                                            {f.was_correct
+                                                ? 'Correct'
+                                                : 'Wrong'}
                                         </td>
                                         <td className="py-2 pr-3">
                                             {f.identified || '—'}

@@ -86,7 +86,10 @@ const REASON_HELP: Record<string, string> = {
 };
 
 const money = (cents: number | null) =>
-    cents == null ? '—' : '$' + (cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
+    cents == null
+        ? '—'
+        : '$' +
+          (cents / 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
 /** A labelled image panel (or a "no image" placeholder) for the compare view. */
 function ImagePanel({
@@ -117,7 +120,7 @@ function ImagePanel({
 
     return (
         <div className="flex-1 space-y-1">
-            <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
                 {label}
             </div>
             {href ? (
@@ -304,15 +307,17 @@ export default function AdminEbaySweep({
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums">
+                                        <td className="px-3 py-2 text-right font-semibold whitespace-nowrap tabular-nums">
                                             {money(a.price)}
                                         </td>
-                                        <td className="whitespace-nowrap px-3 py-2 text-right">
+                                        <td className="px-3 py-2 text-right whitespace-nowrap">
                                             <div className="flex justify-end gap-1">
                                                 <Button
                                                     size="sm"
                                                     variant="ghost"
-                                                    onClick={() => setReassign(a)}
+                                                    onClick={() =>
+                                                        setReassign(a)
+                                                    }
                                                 >
                                                     Reassign
                                                 </Button>
@@ -428,10 +433,10 @@ export default function AdminEbaySweep({
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-muted-foreground">
+                                        <td className="px-3 py-2 text-right whitespace-nowrap text-muted-foreground tabular-nums">
                                             {money(m.price)}
                                         </td>
-                                        <td className="whitespace-nowrap px-3 py-2 text-right">
+                                        <td className="px-3 py-2 text-right whitespace-nowrap">
                                             <div className="flex justify-end gap-1">
                                                 {m.best_id && (
                                                     <Button
@@ -493,7 +498,9 @@ export default function AdminEbaySweep({
                             <Button
                                 variant="outline"
                                 size="sm"
-                                disabled={pagination.page >= pagination.last_page}
+                                disabled={
+                                    pagination.page >= pagination.last_page
+                                }
                                 onClick={() =>
                                     router.get(
                                         '/admin/ebay-sweep',
@@ -515,7 +522,9 @@ export default function AdminEbaySweep({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Reassign sale to the correct card</DialogTitle>
+                        <DialogTitle>
+                            Reassign sale to the correct card
+                        </DialogTitle>
                     </DialogHeader>
                     {reassign && (
                         <div className="space-y-3">
@@ -549,8 +558,8 @@ export default function AdminEbaySweep({
                                 </div>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                Search for the correct card — the sale moves there
-                                and future sweeps of this listing follow.
+                                Search for the correct card — the sale moves
+                                there and future sweeps of this listing follow.
                             </p>
                             <CatalogSearchSelect onSelect={pickCorrect} />
                         </div>
@@ -655,8 +664,9 @@ export default function AdminEbaySweep({
                                 </Button>
                             )}
                             <p className="text-xs text-muted-foreground">
-                                …or search for the correct card. It's ingested as a
-                                real comp and future sweeps of this listing follow.
+                                …or search for the correct card. It's ingested
+                                as a real comp and future sweeps of this listing
+                                follow.
                             </p>
                             <CatalogSearchSelect onSelect={pickForMiss} />
                             <div className="border-t border-border pt-2">

@@ -185,7 +185,8 @@ export default function Billing({
                             ) : !usage.unlimited ? (
                                 <p className="text-xs text-muted-foreground">
                                     {usage.used.toLocaleString()} /{' '}
-                                    {usage.cap?.toLocaleString()} scans this month
+                                    {usage.cap?.toLocaleString()} scans this
+                                    month
                                     {(usage.credits ?? 0) > 0 &&
                                         ` · ${usage.credits?.toLocaleString()} credits`}
                                 </p>
@@ -230,12 +231,12 @@ export default function Billing({
                                         )}
                                     >
                                         {popular && !current && (
-                                            <span className="absolute -top-2.5 left-5 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground">
+                                            <span className="absolute -top-2.5 left-5 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold tracking-wide text-primary-foreground uppercase">
                                                 Most popular
                                             </span>
                                         )}
                                         {current && (
-                                            <span className="absolute -top-2.5 left-5 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-background">
+                                            <span className="absolute -top-2.5 left-5 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold tracking-wide text-background uppercase">
                                                 Current
                                             </span>
                                         )}
@@ -438,17 +439,16 @@ export default function Billing({
                 </div>
             </div>
 
-            <Dialog
-                open={confirmingCancel}
-                onOpenChange={setConfirmingCancel}
-            >
+            <Dialog open={confirmingCancel} onOpenChange={setConfirmingCancel}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Cancel your subscription?</DialogTitle>
                         <DialogDescription>
                             Your plan stays active until{' '}
                             <span className="font-medium text-foreground">
-                                {renewsAt ? formatDate(renewsAt) : 'the end of the current period'}
+                                {renewsAt
+                                    ? formatDate(renewsAt)
+                                    : 'the end of the current period'}
                             </span>
                             . You keep all benefits until then, and you won't be
                             charged again.
