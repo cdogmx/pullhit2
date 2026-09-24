@@ -1,11 +1,6 @@
-import {
-    Move,
-    MoveDiagonal,
-    MoveDiagonal2,
-    MoveHorizontal,
-    MoveVertical,
-} from 'lucide-react';
+import { Move } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { Crosshair } from '@/components/grading/crosshair';
 import {
     ZOOM_MIN,
     ZoomControls,
@@ -38,31 +33,19 @@ export const DEFAULT_GUIDES: Guides = {
     frame: insetQuad(0.16),
 };
 
-const CORNERS: { name: string; Icon: typeof MoveDiagonal; cursor: string }[] = [
-    { name: 'top left', Icon: MoveDiagonal2, cursor: 'nwse-resize' },
-    { name: 'top right', Icon: MoveDiagonal, cursor: 'nesw-resize' },
-    { name: 'bottom right', Icon: MoveDiagonal2, cursor: 'nwse-resize' },
-    { name: 'bottom left', Icon: MoveDiagonal, cursor: 'nesw-resize' },
+const CORNERS: { name: string; cursor: string }[] = [
+    { name: 'top left', cursor: 'nwse-resize' },
+    { name: 'top right', cursor: 'nesw-resize' },
+    { name: 'bottom right', cursor: 'nwse-resize' },
+    { name: 'bottom left', cursor: 'nesw-resize' },
 ];
 
 /** Each side, as the pair of corners it joins. */
-const SIDES: {
-    name: string;
-    from: number;
-    to: number;
-    cursor: string;
-    Icon: typeof MoveVertical;
-}[] = [
-    { name: 'top', from: 0, to: 1, cursor: 'ns-resize', Icon: MoveVertical },
-    {
-        name: 'right',
-        from: 1,
-        to: 2,
-        cursor: 'ew-resize',
-        Icon: MoveHorizontal,
-    },
-    { name: 'bottom', from: 2, to: 3, cursor: 'ns-resize', Icon: MoveVertical },
-    { name: 'left', from: 3, to: 0, cursor: 'ew-resize', Icon: MoveHorizontal },
+const SIDES: { name: string; from: number; to: number; cursor: string }[] = [
+    { name: 'top', from: 0, to: 1, cursor: 'ns-resize' },
+    { name: 'right', from: 1, to: 2, cursor: 'ew-resize' },
+    { name: 'bottom', from: 2, to: 3, cursor: 'ns-resize' },
+    { name: 'left', from: 3, to: 0, cursor: 'ew-resize' },
 ];
 
 /**
@@ -71,10 +54,14 @@ const SIDES: {
  * chunky handle covers the edge it is being aligned to, which is the one pixel
  * that matters.
  */
+/**
+ * The handle is only a hit target now. It draws nothing itself — the crosshair
+ * inside it does, and it is deliberately larger than what it draws so a border
+ * this fine is still grabbable with a thumb.
+ */
 const HANDLE =
-    'absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full ' +
-    'bg-black/55 text-white ring-1 ring-white/70 backdrop-blur-[1px] ' +
-    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
+    'absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center ' +
+    'rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
 
 const clamp = (v: number) => Math.min(1.2, Math.max(-0.2, v));
 
@@ -294,24 +281,21 @@ export function GuideOverlay({
                                                     e,
                                                 )
                                             }
-                                            className={cn(
-                                                HANDLE,
-                                                ring,
-                                                'size-6',
-                                                held?.which === which &&
-                                                    held.kind === 'side' &&
-                                                    held.index === i &&
-                                                    'scale-110',
-                                            )}
+                                            className={cn(HANDLE, 'size-8')}
                                             style={{
                                                 left: `${p.x * 100}%`,
                                                 top: `${p.y * 100}%`,
                                                 cursor: side.cursor,
                                             }}
                                         >
-                                            <side.Icon
-                                                className="size-3.5"
-                                                strokeWidth={1.5}
+                                            <Crosshair
+                                                tone={which}
+                                                active={
+                                                    held?.which === which &&
+                                                    held.kind === 'side' &&
+                                                    held.index === i
+                                                }
+                                                className="size-7"
                                             />
                                         </button>
                                     );
@@ -332,31 +316,22 @@ export function GuideOverlay({
                                                 e,
                                             )
                                         }
-                                        className={cn(
-                                            HANDLE,
-                                            ring,
-                                            'size-6',
-                                            held?.which === which &&
-                                                held.kind === 'corner' &&
-                                                held.index === i &&
-                                                'scale-110',
-                                        )}
+                                        className={cn(HANDLE, 'size-9')}
                                         style={{
                                             left: `${p.x * 100}%`,
                                             top: `${p.y * 100}%`,
                                             cursor: CORNERS[i].cursor,
                                         }}
                                     >
-                                        {(() => {
-                                            const Icon = CORNERS[i].Icon;
-
-                                            return (
-                                                <Icon
-                                                    className="size-3.5"
-                                                    strokeWidth={1.5}
-                                                />
-                                            );
-                                        })()}
+                                        <Crosshair
+                                            tone={which}
+                                            active={
+                                                held?.which === which &&
+                                                held.kind === 'corner' &&
+                                                held.index === i
+                                            }
+                                            className="size-8"
+                                        />
                                     </button>
                                 ))}
                             </div>
