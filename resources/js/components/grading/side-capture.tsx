@@ -136,6 +136,15 @@ export function SideCapture({
     onStraightened,
 }: Props) {
     const [step, setStep] = useState(0);
+
+    // Which frame the card is framed and measured on.
+    //
+    // Not necessarily the first. A tilt sequence moves the glare deliberately,
+    // and on some frame of it the highlight is sitting straight across the
+    // border that centering is measured to. Every frame shows the same card,
+    // so any of them can carry the geometry — pick the one where the border is
+    // actually visible.
+    const [reference, setReference] = useState(0);
     const [asking, setAsking] = useState(false);
     const [finding, setFinding] = useState(false);
     const [proposeError, setProposeError] = useState<string | null>(null);
@@ -154,9 +163,11 @@ export function SideCapture({
 
     // The first frame, which the crop is judged on. Derived rather than set
     // from an effect, so the URL exists on the same render as its file.
+    const referenceFile = files[reference] ?? files[0];
+
     const original = useMemo(
-        () => (files.length > 0 ? URL.createObjectURL(files[0]) : null),
-        [files],
+        () => (referenceFile ? URL.createObjectURL(referenceFile) : null),
+        [referenceFile],
     );
 
     useEffect(() => {
@@ -182,7 +193,7 @@ export function SideCapture({
     // picture, and the model reads a crooked card as a card with a crooked
     // border.
     useEffect(() => {
-        if (!crop || files.length === 0) {
+        if (!crop || !referenceFile) {
             return;
         }
 
@@ -199,7 +210,7 @@ export function SideCapture({
 
                 try {
                     const body = new FormData();
-                    body.append('photo', files[0]);
+                    body.append('photo', referenceFile);
                     body.append('width', '700');
                     crop.forEach((p, i) => {
                         body.append(`quad[${i}][x]`, String(p.x));
@@ -265,7 +276,7 @@ export function SideCapture({
         // cropKey stands in for crop: the object is new on every pointer move,
         // its contents are not.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cropKey, files]);
+    }, [cropKey, referenceFile]);
 
     // Once framed, every later step works on the straightened card — but only
     // the one warped from the corners currently set. Showing the previous one
@@ -273,7 +284,27 @@ export function SideCapture({
     // a guide placed on the wrong card measures nothing.
     const fresh = straight && straight.key === cropKey ? straight : null;
     const working = crop ? (fresh?.url ?? null) : original;
-    const workingFile = crop ? fresh?.file : files[0];
+    const workingFile = crop ? fresh?.file : referenceFile;
+
+    /**
+     * Work from a different frame.
+     *
+     * The crop and the guides were placed on a picture; they mean nothing on
+     * another one, even of the same card, because the camera moved between
+     * them. Clearing them is the honest response — quietly carrying them over
+     * would measure the new frame against the old frame's border.
+     */
+    function useFrame(index: number) {
+        if (index === reference) {
+            return;
+        }
+
+        setReference(index);
+        onCrop(null);
+        onGuides(null);
+        setStraight(null);
+        setStep(1);
+    }
 
     /**
      * Find the card and crop to it.
@@ -432,6 +463,9 @@ export function SideCapture({
                                 onGuides(null);
                                 setStraight(null);
                                 setDetected(null);
+                                // A new set of photos has a new first frame,
+                                // and possibly fewer of them.
+                                setReference(0);
                                 setStep(1);
 
                                 if (picked.length > 0) {
@@ -453,13 +487,23 @@ export function SideCapture({
                         )}
 
                         {files.length > 1 && (
-                            <p className="text-xs text-muted-foreground">
-                                <Images className="mr-1 inline size-3.5" />
-                                The crop and the guides are set on the first
-                                frame and applied to all of them — cropping them
-                                differently would misalign the frames the
-                                surface read compares.
-                            </p>
+                            <div className="flex flex-col gap-2">
+                                <p className="text-xs text-muted-foreground">
+                                    <Images className="mr-1 inline size-3.5" />
+                                    All {files.length} frames are read for
+                                    surface. Pick the one to frame and measure
+                                    the card on — the glare moves between shots,
+                                    so choose one where the border is clear of
+                                    it. That crop is applied to every frame,
+                                    because cropping them differently would
+                                    misalign the sequence.
+                                </p>
+                                <FramePicker
+                                    files={files}
+                                    reference={reference}
+                                    onPick={useFrame}
+                                />
+                            </div>
                         )}
                     </>
                 )}
@@ -530,8 +574,8 @@ export function SideCapture({
                             <Button
                                 variant="outline"
                                 size="sm"
-                                disabled={finding || files.length === 0}
-                                onClick={() => void findCard(files[0])}
+                                disabled={finding || !referenceFile}
+                                onClick={() => void findCard(referenceFile)}
                             >
                                 {finding ? (
                                     <Spinner className="size-3.5" />
@@ -744,6 +788,56 @@ function LiveReadout({
             <span className="text-muted-foreground">
                 {reading.worst.toFixed(1)} off centre · scores {reading.score}
             </span>
+        </div>
+    );
+}
+
+/** Thumbnails of a side's frames, one of them the one being measured on. */
+function FramePicker({
+    files,
+    reference,
+    onPick,
+}: {
+    files: File[];
+    reference: number;
+    onPick: (index: number) => void;
+}) {
+    const urls = useMemo(
+        () => files.map((f) => URL.createObjectURL(f)),
+        [files],
+    );
+
+    useEffect(() => {
+        return () => urls.forEach((u) => URL.revokeObjectURL(u));
+    }, [urls]);
+
+    return (
+        <div className="flex flex-wrap gap-2">
+            {urls.map((url, i) => (
+                <button
+                    key={url}
+                    type="button"
+                    onClick={() => onPick(i)}
+                    aria-label={`Measure on photo ${i + 1}`}
+                    aria-pressed={i === reference}
+                    className={cn(
+                        'relative overflow-hidden rounded border-2 transition',
+                        i === reference
+                            ? 'border-primary'
+                            : 'border-transparent opacity-70 hover:opacity-100',
+                    )}
+                >
+                    <img src={url} alt="" className="h-24 w-auto" />
+                    <span className="absolute bottom-0 left-0 rounded-tr bg-black/70 px-1 text-[10px] text-white tabular-nums">
+                        {i + 1}
+                    </span>
+                    {i === reference && (
+                        <span className="absolute top-0 right-0 rounded-bl bg-primary px-1 text-[10px] font-medium text-primary-foreground">
+                            measuring
+                        </span>
+                    )}
+                </button>
+            ))}
         </div>
     );
 }
