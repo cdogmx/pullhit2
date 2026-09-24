@@ -260,7 +260,12 @@ class CollectionController extends Controller
         abort_unless($folder && $folder->is_public, 404);
 
         $owner = auth()->id() === $user->id;
-        $data = $build($collection, $owner, $folder);
+
+        // request() rather than an injected Request: these render methods are
+        // reached from four route actions whose signatures Laravel resolves
+        // positionally, and threading one more argument through all of them to
+        // read two query keys is not worth the churn.
+        $data = $build($collection, $owner, $folder, ListControls::fromRequest(request()));
 
         $data['meta'] = [
             'title' => "{$user->username}'s {$folder->name} folder",
@@ -285,7 +290,7 @@ class CollectionController extends Controller
 
         // The owner viewing their own public page can edit holdings in place.
         $owner = auth()->id() === $user->id;
-        $data = $build($collection, $owner);
+        $data = $build($collection, $owner, null, ListControls::fromRequest(request()));
 
         // Server-rendered share meta (social scrapers don't run JS).
         $title = $collection->is_default

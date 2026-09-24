@@ -1,12 +1,16 @@
 import { Head } from '@inertiajs/react';
-import { Award, Pencil, Search } from 'lucide-react';
+import { Award, Pencil } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { EditHoldingDialog } from '@/components/collection/edit-holding-dialog';
 import { ProfileLinks } from '@/components/profile-links';
 import type { ProfileSocials } from '@/components/profile-links';
+import { ListControlsBar } from '@/components/shared/list-controls';
+import type {
+    ListFilters,
+    RarityOption,
+} from '@/components/shared/list-controls';
 import { OwnerLink } from '@/components/shared/owner-link';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -61,6 +65,8 @@ type Props = {
     canEdit?: boolean;
     collections?: { id: number; name: string; slug: string }[];
     gradingCompanies?: GradingCompanyOption[];
+    filters: ListFilters;
+    rarityOptions: RarityOption[];
 };
 
 const ALL = '__all__';
@@ -104,14 +110,23 @@ export default function PublicCollection({
     holdings,
     canEdit = false,
     gradingCompanies = [],
+    filters,
+    rarityOptions,
 }: Props) {
+    // Where the bar points. A public collection is reached by three different
+    // shapes of URL, and the filter has to land back on the same one.
+    const publicUrl = folder
+        ? `/collection/${owner.username}/${collection.slug}/folder/${folder.slug}`
+        : collection.is_default
+          ? `/collection/${owner.username}`
+          : `/collection/${owner.username}/${collection.slug}`;
+
     const title = folder
         ? `${owner.username} · ${folder.name}`
         : collection.is_default
           ? `${owner.username}'s collection`
           : `${owner.username} · ${collection.name}`;
 
-    const [q, setQ] = useState('');
     const [set, setSet] = useState(ALL);
     const [sort, setSort] = useState('value_desc');
     const [editing, setEditing] = useState<Holding | null>(null);
@@ -128,23 +143,7 @@ export default function PublicCollection({
     );
 
     const visible = useMemo(() => {
-        const needle = q.trim().toLowerCase();
-
-        const filtered = holdings.filter((h) => {
-            if (set !== ALL && h.set !== set) {
-                return false;
-            }
-
-            if (needle === '') {
-                return true;
-            }
-
-            return (
-                (h.name ?? '').toLowerCase().includes(needle) ||
-                (h.number ?? '').toLowerCase().includes(needle) ||
-                (h.set ?? '').toLowerCase().includes(needle)
-            );
-        });
+        const filtered = holdings.filter((h) => set === ALL || h.set === set);
 
         const sorted = [...filtered];
         sorted.sort((a, b) => {
@@ -165,14 +164,16 @@ export default function PublicCollection({
         });
 
         return sorted;
-    }, [holdings, q, set, sort]);
+    }, [holdings, set, sort]);
 
     // Narrowing the list should narrow the headline with it — otherwise
     // "$4,182 total value" sits above six cards and reads as their worth.
     // Sorting isn't a filter: same cards, different order.
-    const isFiltered = q.trim() !== '' || set !== ALL;
+    // The server's filters already narrowed `summary`; only the set filter
+    // is ours to re-total for.
+    const isFiltered = set !== ALL || !!filters.q || filters.rarity.length > 0;
     const shown = useMemo(
-        () => (isFiltered ? summarizeValue(visible) : summary),
+        () => (set !== ALL ? summarizeValue(visible) : summary),
         [isFiltered, visible, summary],
     );
 
@@ -239,18 +240,21 @@ export default function PublicCollection({
                     </div>
                 ) : (
                     <>
-                        {/* Controls */}
-                        <div className="mb-4 flex flex-wrap items-center gap-2">
-                            <div className="relative">
-                                <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-                                <Input
-                                    value={q}
-                                    onChange={(e) => setQ(e.target.value)}
-                                    placeholder="Search cards"
-                                    className="w-52 pl-8"
-                                />
-                            </div>
+                        {/* Search and rarity are the server's, and live in the
+                            URL so a filtered view is a share link. Set and sort
+                            stay client-side over the list already held. */}
+                        <div className="mb-4">
+                            <ListControlsBar
+                                url={publicUrl}
+                                filters={filters}
+                                rarityOptions={rarityOptions}
+                                setOptions={[]}
+                                showSort={false}
+                                only={['holdings', 'summary', 'filters']}
+                            />
+                        </div>
 
+                        <div className="mb-4 flex flex-wrap items-center gap-2">
                             {sets.length > 1 && (
                                 <Select value={set} onValueChange={setSet}>
                                     <SelectTrigger className="w-44">

@@ -73,6 +73,12 @@ type Props = {
     folders?: FolderOption[];
     /** Offer the "for sale" toggle. Collection only. */
     forSaleFilter?: boolean;
+    /**
+     * Show the sort control. Off for the public pages, which order themselves
+     * client-side over a list they already hold in full — two sort controls on
+     * one page is the mess this component was made to end.
+     */
+    showSort?: boolean;
 };
 
 /**
@@ -93,6 +99,7 @@ export function ListControlsBar({
     portfolioSorts = false,
     folders,
     forSaleFilter = false,
+    showSort = true,
 }: Props) {
     const sorts = portfolioSorts ? [...SORTS, ...PORTFOLIO_SORTS] : SORTS;
     const selected = filters.rarity ?? [];
@@ -102,7 +109,7 @@ export function ListControlsBar({
         !!filters.set ||
         !!filters.folder ||
         filters.for_sale;
-    const isSorted = filters.sort !== 'recent';
+    const isSorted = showSort && filters.sort !== 'recent';
 
     // The search box is typed into locally and only then sent, so a keystroke
     // never waits on a round trip.
@@ -333,22 +340,27 @@ export function ListControlsBar({
                 </Button>
             )}
 
-            <Select value={filters.sort} onValueChange={(sort) => go({ sort })}>
-                <SelectTrigger
-                    size="sm"
-                    className="w-[11.5rem]"
-                    aria-label="Sort"
+            {showSort && (
+                <Select
+                    value={filters.sort}
+                    onValueChange={(sort) => go({ sort })}
                 >
-                    <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                    {sorts.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+                    <SelectTrigger
+                        size="sm"
+                        className="w-[11.5rem]"
+                        aria-label="Sort"
+                    >
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {sorts.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            )}
 
             {/* The ticked rarities, each removable on its own — so what is being
                 filtered stays visible without opening the menu. */}

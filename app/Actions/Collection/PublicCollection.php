@@ -6,6 +6,7 @@ use App\Models\Collection;
 use App\Models\CollectionFolder;
 use App\Models\CollectionItem;
 use App\Models\GradingCompany;
+use App\Support\Lists\ListControls;
 
 /**
  * Build the PUBLIC view of a named collection: cards, states, quantities, and
@@ -21,11 +22,21 @@ class PublicCollection
     /**
      * @return array<string, mixed>
      */
-    public function __invoke(Collection $collection, bool $owner = false, ?CollectionFolder $folder = null): array
-    {
+    public function __invoke(
+        Collection $collection,
+        bool $owner = false,
+        ?CollectionFolder $folder = null,
+        ?ListControls $controls = null,
+    ): array {
         $user = $collection->user;
-        $items = $collection->items()
-            ->when($folder, fn ($q) => $q->where('folder', $folder->name))
+
+        $base = $collection->items()
+            ->when($folder, fn ($q) => $q->where('folder', $folder->name));
+
+        // A public page's filter is a share link — "here is the part of my
+        // collection worth looking at" — so it narrows the headline figures
+        // with the list, not just the rows under them.
+        $items = ($controls?->apply(clone $base) ?? $base)
             ->with(['catalogItem.set', 'catalogItem.productLine', 'catalogItem.marketValues', 'gradingCompany'])
             ->get();
 
@@ -70,6 +81,9 @@ class PublicCollection
         $totalValue = (int) $rows->sum('value');
 
         return [
+            'filters' => $controls?->toArray(),
+            // From the whole collection, so a ticked box can still be unticked.
+            'rarityOptions' => ListControls::rarityOptions(clone $base),
             'owner' => [
                 // Public pages identify the owner by their handle, never their real name.
                 'username' => $user->username,

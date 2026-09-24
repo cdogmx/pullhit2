@@ -252,3 +252,46 @@ test('filters compose rather than replace one another', function () {
         ->assertInertia(fn ($p) => $p->has('holdings', 1)
             ->where('holdings.0.catalog_item.name', 'Pikachu ex'));
 });
+
+test('a public collection page filters by search and rarity', function () {
+    $this->user->forceFill(['username' => 'CardFoo'])->save();
+    $collection = $this->user->collections()->create([
+        'name' => 'For sale', 'slug' => 'for-sale', 'is_public' => true, 'is_default' => false,
+    ]);
+
+    $add = app(AddToCollection::class);
+    $add($this->user, ($this->card)('Pikachu ex', 'Illustration Rare', 5000),
+        ['condition' => 'NM', 'quantity' => 1, 'collection_id' => $collection->id]);
+    $add($this->user, ($this->card)('Bulbasaur', 'Common', 100),
+        ['condition' => 'NM', 'quantity' => 1, 'collection_id' => $collection->id]);
+
+    $this->get('/collection/CardFoo/for-sale?rarity%5B%5D=Illustration+Rare')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('holdings', 1)
+            ->where('holdings.0.name', 'Pikachu ex')
+            // The headline follows the filter: a share link says "here is the
+            // part worth looking at", and a whole-collection total above two
+            // cards reads as their worth.
+            ->where('summary.total_value', 5000)
+            ->has('rarityOptions', 2)
+        );
+
+    $this->get('/collection/CardFoo/for-sale?q=bulba')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('holdings', 1)
+            ->where('holdings.0.name', 'Bulbasaur'));
+});
+
+test('a filter cannot prise open a collection that is not public', function () {
+    // The filter runs inside the page, so it must never become a way to read a
+    // list the owner has not shared.
+    $this->user->forceFill(['username' => 'Private'])->save();
+    $collection = $this->user->collections()->create([
+        'name' => 'Hidden', 'slug' => 'hidden', 'is_public' => false, 'is_default' => false,
+    ]);
+    app(AddToCollection::class)($this->user, ($this->card)('Pikachu', 'Common', 100),
+        ['condition' => 'NM', 'quantity' => 1, 'collection_id' => $collection->id]);
+
+    $this->get('/collection/Private/hidden?q=pikachu')->assertNotFound();
+});
