@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/react';
 import { AlertTriangle, Info, Upload, X } from 'lucide-react';
 import { useState } from 'react';
+import type { Guides } from '@/components/grading/guide-overlay';
 import {
     cropFile,
     EMPTY_SPLIT,
@@ -75,6 +76,7 @@ const pct = (n: number) => `${Math.round(n * 100)}%`;
 export default function GradePredictor({ defaults, sides }: Props) {
     const [files, setFiles] = useState<Record<string, File[]>>({});
     const [crops, setCrops] = useState<Record<string, CropRect | null>>({});
+    const [guides, setGuides] = useState<Record<string, Guides | null>>({});
     const [splits, setSplits] = useState<Record<string, Split>>(
         Object.fromEntries(sides.map((s) => [s, { ...EMPTY_SPLIT }])),
     );
@@ -121,6 +123,23 @@ export default function GradePredictor({ defaults, sides }: Props) {
 
                     if (v.trim() !== '') {
                         body.append(`centering[${side}][${edge}]`, v.trim());
+                    }
+                }
+
+                const g = guides[side];
+
+                if (g) {
+                    for (const which of ['outline', 'frame'] as const) {
+                        g[which].forEach((p, i) => {
+                            body.append(
+                                `guides[${side}][${which}][${i}][x]`,
+                                String(p.x),
+                            );
+                            body.append(
+                                `guides[${side}][${which}][${i}][y]`,
+                                String(p.y),
+                            );
+                        });
                     }
                 }
             }
@@ -181,11 +200,15 @@ export default function GradePredictor({ defaults, sides }: Props) {
                             files={files[side] ?? []}
                             crop={crops[side] ?? null}
                             split={splits[side] ?? EMPTY_SPLIT}
+                            guides={guides[side] ?? null}
                             onFiles={(f) =>
                                 setFiles((prev) => ({ ...prev, [side]: f }))
                             }
                             onCrop={(c) =>
                                 setCrops((prev) => ({ ...prev, [side]: c }))
+                            }
+                            onGuides={(g) =>
+                                setGuides((prev) => ({ ...prev, [side]: g }))
                             }
                             onSplit={(edge, value) =>
                                 setSplits((prev) => ({

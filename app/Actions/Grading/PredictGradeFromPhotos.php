@@ -7,8 +7,11 @@ use App\Support\Grading\Centering;
 use App\Support\Grading\CenteringMeasurer;
 use App\Support\Grading\ConditionRollup;
 use App\Support\Grading\FrameWarper;
+use App\Support\Grading\Homography;
 use App\Support\Grading\PhotoSequence;
+use App\Support\Grading\Rect;
 use App\Support\Grading\SurfaceAnalyzer;
+use InvalidArgumentException;
 
 /**
  * Runs the photo pipeline over a card's sides and turns what was observed into
@@ -53,6 +56,7 @@ class PredictGradeFromPhotos
         int $maxInput = 1400,
         int $canvasWidth = 500,
         array $centering = [],
+        array $guides = [],
     ): array {
         // The pipeline is memory-hungry by nature — several full-frame luma
         // arrays at once — and the default limit is not enough for a phone photo.
@@ -70,6 +74,7 @@ class PredictGradeFromPhotos
                 $maxInput,
                 $canvasWidth,
                 $centering[$side] ?? null,
+                $guides[$side] ?? null,
             );
         }
 
@@ -130,13 +135,23 @@ class PredictGradeFromPhotos
         int $maxInput,
         int $canvasWidth,
         ?array $split,
+        ?array $guides,
     ): array {
         $photos = PhotoSequence::fromBinaries($binaries, $maxInput);
 
-        $corners = array_map(
-            fn (array $luma) => $this->outline->detect($luma, $photos->width, $photos->height),
-            $photos->frames,
-        );
+        // A dragged outline overrides detection. It is applied to every frame,
+        // which suits a steady camera — the case where detection failed and a
+        // person is correcting it. If the card moved a lot between shots, leave
+        // the guide off and let detection follow it frame by frame; the
+        // rectified frames on screen show immediately which is happening.
+        $outline = $this->pixelQuad($guides['outline'] ?? null, $photos->width, $photos->height);
+
+        $corners = $outline !== null
+            ? array_fill(0, count($photos->frames), $outline)
+            : array_map(
+                fn (array $luma) => $this->outline->detect($luma, $photos->width, $photos->height),
+                $photos->frames,
+            );
 
         $rect = $this->warper->rectifySequence(
             $photos->frames,
@@ -166,7 +181,14 @@ class PredictGradeFromPhotos
         // pipeline finds the inner one yet, so it is only measured when a
         // person has marked it — and it is marked per side, because the front
         // and back of the same card are cut differently.
-        $centering = $split !== null ? $this->centeringFromSplit($split) : null;
+        // Guides first: two rectangles is what CenteringMeasurer was built to
+        // take, and dragging them is a measurement. A typed split is a figure
+        // read off somebody else's report — useful for checking ourselves
+        // against one, but not a measurement of these photos.
+        $centering = $this->centeringFromGuides(
+            $outline ?? ($corners[0] ?? null),
+            $this->pixelQuad($guides['frame'] ?? null, $photos->width, $photos->height),
+        ) ?? ($split !== null ? $this->centeringFromSplit($split) : null);
 
         $observed = [];
 
@@ -232,6 +254,75 @@ class PredictGradeFromPhotos
         }
 
         return $out;
+    }
+
+    /**
+     * A guide quad, given as fractions of the image, in pixels.
+     *
+     * @param  array<int, array{x: float, y: float}>|null  $quad
+     * @return array<int, array{0: float, 1: float}>|null
+     */
+    private function pixelQuad(?array $quad, int $width, int $height): ?array
+    {
+        if ($quad === null || count($quad) !== 4) {
+            return null;
+        }
+
+        return array_map(
+            fn (array $p) => [(float) $p['x'] * $width, (float) $p['y'] * $height],
+            array_values($quad),
+        );
+    }
+
+    /**
+     * Centering from two dragged quads.
+     *
+     * The inner frame is mapped through the homography that flattens the card,
+     * so the margins are measured on the card rather than in the photograph. It
+     * matters: a card shot at an angle has a near edge that photographs wider
+     * than the far one, and measuring margins in the photo would read that
+     * perspective as a centering fault.
+     *
+     * The mapped frame is then squared off to its bounding box, because
+     * CenteringMeasurer compares rectangles. A frame so skewed that its bounding
+     * box misrepresents it means the guides were dragged wrong, and the
+     * rectified image on screen will show that.
+     *
+     * @param  array<int, array{0: float, 1: float}>|null  $outline
+     * @param  array<int, array{0: float, 1: float}>|null  $frame
+     */
+    private function centeringFromGuides(?array $outline, ?array $frame): ?Centering
+    {
+        if ($outline === null || $frame === null) {
+            return null;
+        }
+
+        // The card, flattened to a unit square, clockwise from the top left.
+        $toCard = Homography::between($outline, [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
+
+        $xs = [];
+        $ys = [];
+
+        foreach ($frame as [$x, $y]) {
+            [$cx, $cy] = $toCard->apply($x, $y);
+            $xs[] = $cx;
+            $ys[] = $cy;
+        }
+
+        $rect = new Rect(
+            min($xs),
+            min($ys),
+            max($xs) - min($xs),
+            max($ys) - min($ys),
+        );
+
+        try {
+            return $this->centering->measure(new Rect(0.0, 0.0, 1.0, 1.0), $rect);
+        } catch (InvalidArgumentException) {
+            // The frame landed outside the card, or flush to an edge. That is a
+            // misdragged guide, and a bogus ratio is worse than none.
+            return null;
+        }
     }
 
     /**

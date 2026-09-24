@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Support\Grading\Homography;
 use App\Support\Grading\PhotoSequence;
 use Illuminate\Http\UploadedFile;
 
@@ -168,4 +169,115 @@ test('a luma map becomes a PNG that can actually be looked at', function () {
     $map[3] = 255.0;
 
     expect(PhotoSequence::toDataUri($map, 2, 2))->toStartWith('data:image/png;base64,');
+});
+
+test('guides measure centering on the flattened card, not in the photograph', function () {
+    // A card shot square-on, with its frame deliberately off-centre: margins of
+    // 0.10 left and 0.14 right inside an outline spanning 0.1..0.9.
+    // left share = 0.10 / (0.10 + 0.14) = 41.7%
+    $square = [
+        ['x' => 0.1, 'y' => 0.1], ['x' => 0.9, 'y' => 0.1],
+        ['x' => 0.9, 'y' => 0.9], ['x' => 0.1, 'y' => 0.9],
+    ];
+    $frame = [
+        ['x' => 0.20, 'y' => 0.30], ['x' => 0.76, 'y' => 0.30],
+        ['x' => 0.76, 'y' => 0.70], ['x' => 0.20, 'y' => 0.70],
+    ];
+
+    $response = $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor', [
+            'front' => [cardPhoto(300, 400, 90, 'a.png'), cardPhoto(300, 400, 180, 'b.png')],
+            'canvas_width' => 200,
+            'guides' => ['front' => ['outline' => $square, 'frame' => $frame]],
+        ])
+        ->assertOk();
+
+    expect($response->json('sides.front.centering.left'))->toBeGreaterThan(41.0)
+        ->and($response->json('sides.front.centering.left'))->toBeLessThan(42.5)
+        ->and($response->json('estimate.unseen'))->not->toContain('centering');
+});
+
+test('a card shot at an angle is not read as off-centre', function () {
+    // The same perfectly centred frame, photographed at a slant. Measured in
+    // the photograph this reads as a centering fault; measured on the flattened
+    // card it is 50/50, which is the whole reason the frame is mapped through
+    // the homography rather than measured where it was drawn.
+    $slanted = [
+        ['x' => 0.15, 'y' => 0.10], ['x' => 0.85, 'y' => 0.18],
+        ['x' => 0.85, 'y' => 0.82], ['x' => 0.15, 'y' => 0.90],
+    ];
+
+    // Built by mapping a centred frame OUT of card space into the photo — the
+    // projective way. Interpolating along the quad's edges instead (bilinear)
+    // is not the same transform, and on this slant it lands at 41/59: an 80
+    // point centering error from a mapping that looks plausible.
+    $toPhoto = Homography::between(
+        [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+        array_map(fn ($p) => [$p['x'], $p['y']], $slanted),
+    );
+
+    $inner = array_map(function (array $uv) use ($toPhoto) {
+        [$x, $y] = $toPhoto->apply($uv[0], $uv[1]);
+
+        return ['x' => $x, 'y' => $y];
+    }, [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]]);
+
+    $response = $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor', [
+            'front' => [cardPhoto(300, 400, 90, 'a.png'), cardPhoto(300, 400, 180, 'b.png')],
+            'canvas_width' => 200,
+            'guides' => ['front' => ['outline' => $slanted, 'frame' => $inner]],
+        ])
+        ->assertOk();
+
+    // Dead centre, despite the slant.
+    expect($response->json('sides.front.centering.left'))->toBeGreaterThan(48.0)
+        ->and($response->json('sides.front.centering.left'))->toBeLessThan(52.0)
+        ->and($response->json('sides.front.centering.score'))->toBeGreaterThan(970);
+});
+
+test('a frame dragged outside the card is refused, not reported', function () {
+    // A misdragged guide must not produce a confident bogus ratio.
+    $outline = [
+        ['x' => 0.3, 'y' => 0.3], ['x' => 0.7, 'y' => 0.3],
+        ['x' => 0.7, 'y' => 0.7], ['x' => 0.3, 'y' => 0.7],
+    ];
+    $outside = [
+        ['x' => 0.0, 'y' => 0.0], ['x' => 1.0, 'y' => 0.0],
+        ['x' => 1.0, 'y' => 1.0], ['x' => 0.0, 'y' => 1.0],
+    ];
+
+    $response = $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor', [
+            'front' => [cardPhoto(300, 400, 90, 'a.png'), cardPhoto(300, 400, 180, 'b.png')],
+            'canvas_width' => 200,
+            'guides' => ['front' => ['outline' => $outline, 'frame' => $outside]],
+        ])
+        ->assertOk();
+
+    expect($response->json('sides.front.centering'))->toBeNull()
+        ->and($response->json('estimate.unseen'))->toContain('centering');
+});
+
+test('dragged guides beat a typed split, because one is a measurement', function () {
+    $square = [
+        ['x' => 0.1, 'y' => 0.1], ['x' => 0.9, 'y' => 0.1],
+        ['x' => 0.9, 'y' => 0.9], ['x' => 0.1, 'y' => 0.9],
+    ];
+    $centred = [
+        ['x' => 0.25, 'y' => 0.25], ['x' => 0.75, 'y' => 0.25],
+        ['x' => 0.75, 'y' => 0.75], ['x' => 0.25, 'y' => 0.75],
+    ];
+
+    $response = $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor', [
+            'front' => [cardPhoto(300, 400, 90, 'a.png'), cardPhoto(300, 400, 180, 'b.png')],
+            'canvas_width' => 200,
+            'guides' => ['front' => ['outline' => $square, 'frame' => $centred]],
+            'centering' => ['front' => ['left' => 30, 'right' => 70, 'top' => 50, 'bottom' => 50]],
+        ])
+        ->assertOk();
+
+    // The guides say 50/50; the typed split said 30/70 and must not win.
+    expect($response->json('sides.front.centering.left'))->toEqual(50);
 });

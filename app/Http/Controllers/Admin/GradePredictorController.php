@@ -55,6 +55,14 @@ class GradePredictorController extends Controller
             foreach (['left', 'right', 'top', 'bottom'] as $edge) {
                 $rules["centering.{$side}.{$edge}"] = ['nullable', 'numeric', 'min:0', 'max:100'];
             }
+
+            // Dragged guides: the card's outline and its artwork frame, four
+            // corners each, as fractions of the image.
+            foreach (['outline', 'frame'] as $guide) {
+                $rules["guides.{$side}.{$guide}"] = ['nullable', 'array', 'size:4'];
+                $rules["guides.{$side}.{$guide}.*.x"] = ['required_with:guides.'.$side.'.'.$guide, 'numeric', 'min:-0.5', 'max:1.5'];
+                $rules["guides.{$side}.{$guide}.*.y"] = ['required_with:guides.'.$side.'.'.$guide, 'numeric', 'min:-0.5', 'max:1.5'];
+            }
         }
 
         $validator = validator($request->all(), $rules);
@@ -78,6 +86,7 @@ class GradePredictorController extends Controller
 
         $sides = [];
         $centering = [];
+        $guides = [];
 
         foreach (PredictGradeFromPhotos::SIDES as $side) {
             if (($files = $request->file($side)) === null) {
@@ -96,6 +105,10 @@ class GradePredictorController extends Controller
             if ($marked !== []) {
                 $centering[$side] = $data['centering'][$side];
             }
+
+            if (($data['guides'][$side] ?? []) !== []) {
+                $guides[$side] = $data['guides'][$side];
+            }
         }
 
         $started = hrtime(true);
@@ -106,6 +119,7 @@ class GradePredictorController extends Controller
                 (int) ($data['max_input'] ?? 1400),
                 (int) ($data['canvas_width'] ?? 500),
                 $centering,
+                $guides,
             );
         } catch (RuntimeException $e) {
             // The capture rules — two photos, same size, readable — are the

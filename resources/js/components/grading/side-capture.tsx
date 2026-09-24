@@ -1,5 +1,10 @@
-import { Crop, RotateCcw } from 'lucide-react';
+import { Crop, RotateCcw, Ruler } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+    DEFAULT_GUIDES,
+    GuideOverlay,
+} from '@/components/grading/guide-overlay';
+import type { Guides } from '@/components/grading/guide-overlay';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,9 +35,11 @@ type Props = {
     files: File[];
     crop: CropRect | null;
     split: Split;
+    guides: Guides | null;
     onFiles: (files: File[]) => void;
     onCrop: (crop: CropRect | null) => void;
     onSplit: (edge: string, value: string) => void;
+    onGuides: (guides: Guides | null) => void;
 };
 
 /**
@@ -48,9 +55,11 @@ export function SideCapture({
     files,
     crop,
     split,
+    guides,
     onFiles,
     onCrop,
     onSplit,
+    onGuides,
 }: Props) {
     const [dragging, setDragging] = useState<CropRect | null>(null);
     const boxRef = useRef<HTMLDivElement>(null);
@@ -109,9 +118,10 @@ export function SideCapture({
                     aria-label={`${side} photos`}
                     onChange={(e) => {
                         onFiles(Array.from(e.target.files ?? []));
-                        // A crop drawn on the old first frame means nothing on
-                        // a new one.
+                        // A crop or guides drawn on the old first frame mean
+                        // nothing on a new one.
                         onCrop(null);
+                        onGuides(null);
                     }}
                 />
 
@@ -128,7 +138,35 @@ export function SideCapture({
                     </p>
                 )}
 
-                {preview && (
+                {preview && guides && (
+                    <div className="flex flex-col gap-2">
+                        <p className="text-xs text-muted-foreground">
+                            Drag the <span className="text-primary">blue</span>{' '}
+                            corners onto the card&rsquo;s edge and the{' '}
+                            <span className="text-amber-600">amber</span> ones
+                            onto its artwork frame. Centering is measured from
+                            the two, on the flattened card — so a card shot at
+                            an angle is not read as off-centre.
+                        </p>
+                        <GuideOverlay
+                            src={preview}
+                            guides={guides}
+                            onChange={onGuides}
+                            alt={`${side} guides`}
+                        />
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="self-start"
+                            onClick={() => onGuides(null)}
+                        >
+                            <RotateCcw className="size-3.5" />
+                            Remove guides
+                        </Button>
+                    </div>
+                )}
+
+                {preview && !guides && (
                     <div className="flex flex-col gap-2">
                         <p className="text-xs text-muted-foreground">
                             Drag on the first frame to crop. The same crop is
@@ -190,26 +228,35 @@ export function SideCapture({
                                 />
                             )}
                         </div>
-                        {crop && (
+                        <div className="flex flex-wrap gap-2">
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
-                                className="self-start"
-                                onClick={() => onCrop(null)}
+                                onClick={() => onGuides(DEFAULT_GUIDES)}
                             >
-                                <RotateCcw className="size-3.5" />
-                                Clear crop
+                                <Ruler className="size-3.5" />
+                                Measure centering
                             </Button>
-                        )}
+                            {crop && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => onCrop(null)}
+                                >
+                                    <RotateCcw className="size-3.5" />
+                                    Clear crop
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 )}
 
                 <div>
                     <p className="mb-2 text-xs text-muted-foreground">
-                        Centering, as a grading report writes it — TAG prints
-                        this side as e.g. <code>46L/54R 47T/53B</code>. Nothing
-                        detects it yet, and the two sides are cut differently,
-                        so each is typed on its own.
+                        Or type centering, as a grading report writes it — TAG
+                        prints this side as e.g. <code>46L/54R 47T/53B</code>.
+                        Nothing detects it yet, and the two sides are cut
+                        differently, so each is typed on its own.
                     </p>
                     <div className="flex flex-wrap gap-3">
                         {EDGES.map((edge) => (
