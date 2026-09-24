@@ -9,6 +9,7 @@ use App\Support\Grading\CardOutline;
 use App\Support\Grading\GuideProposer;
 use App\Support\Grading\ImageRectifier;
 use App\Support\Grading\PhotoSequence;
+use App\Support\Grading\PredictionArchive;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -199,14 +200,22 @@ class GradePredictorController extends Controller
     }
 
     /** Keep a run, so it can be compared with the grade that comes back. */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, PredictionArchive $archive): JsonResponse
     {
         $validator = validator($request->all(), [
             'label' => ['nullable', 'string', 'max:120'],
             'sides' => ['required', 'array'],
             'estimate' => ['required', 'array'],
-            'observed' => ['required', 'array'],
+            // present, not required: "required" fails an EMPTY array in
+            // Laravel, and a run that observed nothing is exactly the case
+            // worth keeping — one photo, no centering typed, an honest
+            // record of having seen none of the four attributes.
+            'observed' => ['present', 'array'],
             'guides_source' => ['nullable', 'in:ai,ai-adjusted,manual'],
+            // Where the guide sat, so it can be drawn back over the picture.
+            'sides.*.guide' => ['nullable', 'array', 'size:4'],
+            'sides.*.guide.*.x' => ['required_with:sides.*.guide', 'numeric'],
+            'sides.*.guide.*.y' => ['required_with:sides.*.guide', 'numeric'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
@@ -216,12 +225,19 @@ class GradePredictorController extends Controller
 
         $data = $validator->validated();
 
-        // The images are not kept. They are megabytes apiece and the thing
-        // worth keeping is the reading, not the photograph of it.
-        foreach ($data['sides'] as $name => $side) {
-            unset($side['images']);
-            $data['sides'][$name] = $side;
-        }
+        // The pictures are kept now, small: a straightened card with its guide
+        // drawn over it is the only thing that answers "was the guide on the
+        // border", and that is the first question whenever a number looks off.
+        // The full-size data URIs still never reach the database.
+        // Read from the request, not from validated(): adding rules for
+        // sides.*.guide made validated() rebuild "sides" out of just the leaves
+        // those rules matched, which on a payload without a guide is nothing at
+        // all. The array is validated as required+array above; this takes it
+        // whole.
+        $data['sides'] = $archive->store(
+            $request->user()->id,
+            (array) $request->input('sides', []),
+        );
 
         $prediction = GradePrediction::create($data + ['user_id' => $request->user()->id]);
 

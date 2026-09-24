@@ -25,6 +25,9 @@ createInertiaApp({
             case name === 'rip-or-keep/index':
             case name === 'profile/show':
             case name === 'profile/follows':
+            // A shared grade report is read by whoever was sent the link.
+            // They have no account and no business in the dashboard chrome.
+            case name === 'grading/report':
             case name === 'collection/public':
             case name === 'wishlist/public':
             case name.startsWith('catalog/'):

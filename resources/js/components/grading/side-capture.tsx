@@ -52,6 +52,8 @@ type Props = {
     onSplit: (edge: string, value: string) => void;
     onGuides: (guides: Guides | null) => void;
     onProposed: (guides: Guides) => void;
+    /** The straightened card, so the saved run can keep it. */
+    onStraightened: (dataUri: string) => void;
 };
 
 /**
@@ -82,6 +84,7 @@ export function SideCapture({
     onSplit,
     onGuides,
     onProposed,
+    onStraightened,
 }: Props) {
     const [step, setStep] = useState(0);
     const [asking, setAsking] = useState(false);
@@ -179,6 +182,11 @@ export function SideCapture({
                     if (stale) {
                         return;
                     }
+
+                    // Hand the picture up as a data URI too: the saved run
+                    // keeps it, and a guide is only meaningful against the
+                    // picture it was placed on.
+                    onStraightened(payload.image as string);
 
                     url = URL.createObjectURL(file);
 

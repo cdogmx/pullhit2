@@ -2,6 +2,7 @@
 
 use App\Models\GradePrediction;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     $this->admin = User::factory()->create(['email_verified_at' => now()]);
@@ -126,4 +127,77 @@ test('saved runs are listed on the bench', function () {
             // JSON renders 10.0 as 10; the value matters, not its notation.
             ->where('saved.0.actual_grade', fn ($v) => (float) $v === 10.0)
         );
+});
+
+test('saving keeps a small picture of the card and drops the big one', function () {
+    Storage::fake('s3');
+
+    // A data URI of a real image, as the bench sends it.
+    $img = imagecreatetruecolor(1200, 1680);
+    imagefill($img, 0, 0, imagecolorallocate($img, 200, 30, 30));
+    ob_start();
+    imagepng($img);
+    $png = (string) ob_get_clean();
+    imagedestroy($img);
+
+    $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor/predictions', [
+            'label' => 'Milotic ex',
+            'sides' => ['front' => [
+                'usable' => true,
+                'surface' => ['score' => 910],
+                'images' => ['card' => 'data:image/png;base64,'.base64_encode($png)],
+                'guide' => [
+                    ['x' => 0.07, 'y' => 0.06], ['x' => 0.93, 'y' => 0.06],
+                    ['x' => 0.93, 'y' => 0.94], ['x' => 0.07, 'y' => 0.94],
+                ],
+            ]],
+            'estimate' => ['score' => 874, 'probs' => ['10' => 0.3]],
+            'observed' => ['centering'],
+            'guides_source' => 'manual',
+        ])
+        ->assertOk();
+
+    $saved = GradePrediction::sole();
+
+    // The megabytes never reach the row; a URL does.
+    expect($saved->sides['front'])->not->toHaveKey('images')
+        ->and($saved->sides['front']['stored_images']['card'])->toBeString()
+        // And the guide, without which the picture proves nothing.
+        ->and($saved->sides['front']['guide'])->toHaveCount(4);
+
+    expect(Storage::disk('s3')->allFiles())->toHaveCount(1);
+});
+
+test('a shared report carries the picture and the guide that was on it', function () {
+    $prediction = GradePrediction::factory()->create([
+        'user_id' => $this->admin->id,
+        'sides' => ['front' => [
+            'centering' => ['score' => 964, 'left' => 46, 'right' => 54, 'top' => 47, 'bottom' => 53],
+            'stored_images' => ['card' => 'https://example.test/card.jpg'],
+            'guide' => [
+                ['x' => 0.07, 'y' => 0.06], ['x' => 0.93, 'y' => 0.06],
+                ['x' => 0.93, 'y' => 0.94], ['x' => 0.07, 'y' => 0.94],
+            ],
+        ]],
+    ]);
+
+    $this->get($prediction->share())
+        ->assertInertia(fn ($page) => $page
+            ->where('sides.front.images.card', 'https://example.test/card.jpg')
+            ->has('sides.front.guide', 4)
+        );
+});
+
+test('a run saved without pictures still saves', function () {
+    // Best-effort: a prediction missing its pictures is worse, not broken.
+    $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor/predictions', [
+            'sides' => ['front' => ['usable' => true]],
+            'estimate' => ['score' => 800],
+            'observed' => [],
+        ])
+        ->assertOk();
+
+    expect(GradePrediction::sole()->sides['front']['stored_images'])->toBe([]);
 });

@@ -96,6 +96,12 @@ export default function GradePredictor({ defaults, sides, saved }: Props) {
     const [label, setLabel] = useState('');
     const [saving, setSaving] = useState(false);
 
+    // The straightened card per side, as a data URI, reported up by the step
+    // that made it — the picture the guides were placed on.
+    const [straightened, setStraightened] = useState<Record<string, string>>(
+        {},
+    );
+
     // Whether the guides were proposed, and whether anybody moved them after.
     // It decides if a saved run can calibrate anything.
     const [proposed, setProposed] = useState<Record<string, boolean>>({});
@@ -128,7 +134,22 @@ export default function GradePredictor({ defaults, sides, saved }: Props) {
                 },
                 body: JSON.stringify({
                     label: label || null,
-                    sides: result.sides,
+                    // The straightened card as it was actually worked on, plus
+                    // the guide that was placed on it. Without the pair, a
+                    // centering figure cannot be checked by anyone later.
+                    sides: Object.fromEntries(
+                        Object.entries(result.sides).map(([name, side]) => [
+                            name,
+                            {
+                                ...side,
+                                images: {
+                                    card: straightened[name] ?? null,
+                                    detail: side.images?.detail ?? null,
+                                },
+                                guide: guides[name]?.frame ?? null,
+                            },
+                        ]),
+                    ),
                     estimate: result.estimate,
                     observed: result.observed,
                     guides_source: guidesSource(),
@@ -285,6 +306,12 @@ export default function GradePredictor({ defaults, sides, saved }: Props) {
                                     [side]: true,
                                 }));
                             }}
+                            onStraightened={(dataUri) =>
+                                setStraightened((prev) => ({
+                                    ...prev,
+                                    [side]: dataUri,
+                                }))
+                            }
                             onProposed={(g) => {
                                 setGuides((prev) => ({ ...prev, [side]: g }));
                                 setProposed((prev) => ({

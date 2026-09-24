@@ -104,6 +104,11 @@ class GradePrediction extends Model
                 'frames_used' => $side['frames_used'] ?? null,
                 'specular_range' => $side['specular_range'] ?? null,
                 'canvas' => $side['canvas'] ?? null,
+                // The pictures, and where the guide sat on them. A centering
+                // figure is only as good as the border it was measured to, and
+                // this is the only way to see whether it was.
+                'images' => $side['stored_images'] ?? [],
+                'guide' => $side['guide'] ?? null,
             ])->all(),
             'actual_company' => $this->actual_company,
             'actual_grade' => $this->actual_grade,

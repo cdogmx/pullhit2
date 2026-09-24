@@ -259,3 +259,147 @@ export function DefectMap({
         </figure>
     );
 }
+
+export type Guide = { x: number; y: number }[];
+
+/**
+ * The straightened card with its border measured on it.
+ *
+ * The numbers on a report are the conclusion; this is the evidence. A centering
+ * figure is only as good as the border it was measured to, and the one thing no
+ * amount of stored arithmetic can settle is whether that border was the border.
+ * Drawing the margins back onto the card answers it at a glance — and it is the
+ * same picture a grading report shows, for the same reason.
+ *
+ * Geometry comes from the guide; the percentages come from the measurement that
+ * was actually taken. They agree, and where they ever disagree the number is
+ * what the grade used and the picture is what went wrong.
+ */
+export function MeasuredCard({
+    src,
+    guide,
+    centering,
+    alt,
+}: {
+    src: string;
+    guide: Guide | null;
+    centering: {
+        left: number;
+        right: number;
+        top: number;
+        bottom: number;
+    } | null;
+    alt: string;
+}) {
+    // The card was straightened, so its own edge IS the frame — the margins are
+    // simply how far the guide sits inside it.
+    const box = guide?.length
+        ? {
+              left: Math.min(...guide.map((p) => p.x)),
+              right: 1 - Math.max(...guide.map((p) => p.x)),
+              top: Math.min(...guide.map((p) => p.y)),
+              bottom: 1 - Math.max(...guide.map((p) => p.y)),
+          }
+        : null;
+
+    return (
+        <div className="relative overflow-hidden rounded border border-border">
+            <img src={src} alt={alt} className="w-full" />
+
+            {box && (
+                <>
+                    {/* The margins themselves, shaded. Opposite sides share a
+                        tone so the eye compares the pair rather than reading
+                        four separate bands. */}
+                    <div
+                        className="pointer-events-none absolute inset-y-0 left-0 bg-amber-400/25"
+                        style={{ width: `${box.left * 100}%` }}
+                    />
+                    <div
+                        className="pointer-events-none absolute inset-y-0 right-0 bg-amber-400/25"
+                        style={{ width: `${box.right * 100}%` }}
+                    />
+                    <div
+                        className="pointer-events-none absolute inset-x-0 top-0 bg-sky-400/25"
+                        style={{ height: `${box.top * 100}%` }}
+                    />
+                    <div
+                        className="pointer-events-none absolute inset-x-0 bottom-0 bg-sky-400/25"
+                        style={{ height: `${box.bottom * 100}%` }}
+                    />
+
+                    <svg
+                        className="pointer-events-none absolute inset-0 size-full"
+                        viewBox="0 0 1 1"
+                        preserveAspectRatio="none"
+                    >
+                        <polygon
+                            points={guide!
+                                .map((p) => `${p.x},${p.y}`)
+                                .join(' ')}
+                            fill="none"
+                            stroke="#f59e0b"
+                            strokeWidth={1.5}
+                            strokeDasharray="6 4"
+                            vectorEffect="non-scaling-stroke"
+                        />
+                    </svg>
+
+                    {centering && (
+                        <>
+                            <Reading
+                                value={centering.left}
+                                style={{
+                                    left: `${(box.left / 2) * 100}%`,
+                                    top: '50%',
+                                }}
+                            />
+                            <Reading
+                                value={centering.right}
+                                style={{
+                                    left: `${(1 - box.right / 2) * 100}%`,
+                                    top: '50%',
+                                }}
+                            />
+                            <Reading
+                                value={centering.top}
+                                style={{
+                                    left: '50%',
+                                    top: `${(box.top / 2) * 100}%`,
+                                }}
+                            />
+                            <Reading
+                                value={centering.bottom}
+                                style={{
+                                    left: '50%',
+                                    top: `${(1 - box.bottom / 2) * 100}%`,
+                                }}
+                            />
+                        </>
+                    )}
+                </>
+            )}
+        </div>
+    );
+}
+
+/** One margin's share, as a report prints it. */
+function Reading({
+    value,
+    style,
+}: {
+    value: number;
+    style: React.CSSProperties;
+}) {
+    return (
+        <span
+            className={cn(
+                'pointer-events-none absolute -translate-x-1/2 -translate-y-1/2',
+                'rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white tabular-nums',
+            )}
+            style={style}
+        >
+            {value.toFixed(1)}
+        </span>
+    );
+}

@@ -1,6 +1,10 @@
 import { Head } from '@inertiajs/react';
 import { Info, Sparkles } from 'lucide-react';
-import { AttributeTiles, CenteringBars } from '@/components/grading/breakdown';
+import {
+    AttributeTiles,
+    CenteringBars,
+    MeasuredCard,
+} from '@/components/grading/breakdown';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -12,6 +16,8 @@ type SideSummary = {
     frames_used: number | null;
     specular_range: number | null;
     canvas: { width: number; height: number } | null;
+    images: { card?: string; detail?: string };
+    guide: { x: number; y: number }[] | null;
     centering: {
         score: number;
         left: number;
@@ -45,6 +51,70 @@ type Props = {
 };
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
+
+/**
+ * The card as it was read, with the guide drawn back on it.
+ *
+ * The one thing a centering figure cannot tell you is whether the border it
+ * measured to was the border. Putting the guide back over the picture it was
+ * placed on answers that in a glance, and it is the first thing worth checking
+ * whenever a number looks wrong.
+ */
+function ReadCard({ side, name }: { side: SideSummary; name: string }) {
+    const card = side.images?.card;
+    const detail = side.images?.detail;
+
+    if (!card && !detail) {
+        return null;
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-sm capitalize">
+                    {name} — as it was read
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+                {card && (
+                    <figure className="flex flex-col gap-2">
+                        <MeasuredCard
+                            src={card}
+                            guide={side.guide}
+                            centering={side.centering}
+                            alt={`${name}, straightened and measured`}
+                        />
+                        <figcaption className="text-xs text-muted-foreground">
+                            Straightened, with the border it was measured to.
+                            Each number is that margin&rsquo;s share of its axis
+                            — a perfectly centred card reads 50 on all four. The{' '}
+                            <span className="text-amber-600">amber</span> bands
+                            are the left and right margins, the{' '}
+                            <span className="text-sky-600">blue</span> top and
+                            bottom.
+                        </figcaption>
+                    </figure>
+                )}
+
+                {detail && (
+                    <figure className="flex flex-col gap-2">
+                        <img
+                            src={detail}
+                            alt={`${name}, surface detail`}
+                            className="w-full rounded border border-border bg-black/20"
+                        />
+                        <figcaption className="text-xs text-muted-foreground">
+                            The surface map. Near-black except for scratches is
+                            a clean read; artwork showing through means the
+                            frames never aligned, and the defect count below is
+                            measuring that instead of the card.
+                        </figcaption>
+                    </figure>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
 
 export default function GradeReport({
     label,
@@ -211,6 +281,10 @@ export default function GradeReport({
                         limitedBy={{}}
                     />
                 </div>
+
+                {Object.entries(sides).map(([name, side]) => (
+                    <ReadCard key={`img-${name}`} side={side} name={name} />
+                ))}
 
                 {Object.entries(sides).map(
                     ([name, side]) =>
