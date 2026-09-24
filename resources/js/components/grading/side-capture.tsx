@@ -1,5 +1,7 @@
 import { Crop, RotateCcw, Ruler } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo } from 'react';
+import { CropBox } from '@/components/grading/crop-box';
+import type { CropRect } from '@/components/grading/crop-box';
 import {
     DEFAULT_GUIDES,
     GuideOverlay,
@@ -10,9 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
-/** A crop as fractions of the image, so it applies to every frame alike. */
-export type CropRect = { x: number; y: number; w: number; h: number };
 
 export type Split = {
     left: string;
@@ -61,9 +60,6 @@ export function SideCapture({
     onSplit,
     onGuides,
 }: Props) {
-    const [dragging, setDragging] = useState<CropRect | null>(null);
-    const boxRef = useRef<HTMLDivElement>(null);
-
     // Preview the first frame — the crop is judged on it and applied to all.
     // Derived rather than set from an effect, so the URL exists on the same
     // render as the files it came from.
@@ -80,17 +76,6 @@ export function SideCapture({
 
         return () => URL.revokeObjectURL(preview);
     }, [preview]);
-
-    function pointIn(event: React.MouseEvent): { x: number; y: number } {
-        const box = boxRef.current!.getBoundingClientRect();
-
-        return {
-            x: Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)),
-            y: Math.min(1, Math.max(0, (event.clientY - box.top) / box.height)),
-        };
-    }
-
-    const shown = dragging ?? crop;
 
     return (
         <Card>
@@ -141,12 +126,15 @@ export function SideCapture({
                 {preview && guides && (
                     <div className="flex flex-col gap-2">
                         <p className="text-xs text-muted-foreground">
-                            Drag the <span className="text-primary">blue</span>{' '}
-                            corners onto the card&rsquo;s edge and the{' '}
-                            <span className="text-amber-600">amber</span> ones
-                            onto its artwork frame. Centering is measured from
-                            the two, on the flattened card — so a card shot at
-                            an angle is not read as off-centre.
+                            Place the <span className="text-primary">blue</span>{' '}
+                            guide on the OUTER edge of the border — the
+                            card&rsquo;s own edge — and the{' '}
+                            <span className="text-amber-600">amber</span> one on
+                            its INNER edge, where the artwork starts. Drag
+                            corners, sides, or the middle to move the whole
+                            thing. Centering is measured between the two on the
+                            flattened card, so a card shot at an angle is not
+                            read as off-centre.
                         </p>
                         <GuideOverlay
                             src={preview}
@@ -169,65 +157,17 @@ export function SideCapture({
                 {preview && !guides && (
                     <div className="flex flex-col gap-2">
                         <p className="text-xs text-muted-foreground">
-                            Drag on the first frame to crop. The same crop is
-                            applied to every photo of this side — cropping them
-                            differently would misalign the frames.
+                            Drag to crop, then nudge the edges and corners until
+                            it sits on the card. The same crop is applied to
+                            every photo of this side — cropping them differently
+                            would misalign the frames.
                         </p>
-                        <div
-                            ref={boxRef}
-                            className="relative w-full cursor-crosshair overflow-hidden rounded border border-border select-none"
-                            onMouseDown={(e) => {
-                                const p = pointIn(e);
-                                setDragging({ x: p.x, y: p.y, w: 0, h: 0 });
-                            }}
-                            onMouseMove={(e) => {
-                                if (!dragging) {
-                                    return;
-                                }
-
-                                const p = pointIn(e);
-                                setDragging((d) =>
-                                    d
-                                        ? {
-                                              x: Math.min(d.x, p.x),
-                                              y: Math.min(d.y, p.y),
-                                              w: Math.abs(p.x - d.x),
-                                              h: Math.abs(p.y - d.y),
-                                          }
-                                        : d,
-                                );
-                            }}
-                            onMouseUp={() => {
-                                // A stray click is not a crop.
-                                if (
-                                    dragging &&
-                                    dragging.w > 0.02 &&
-                                    dragging.h > 0.02
-                                ) {
-                                    onCrop(dragging);
-                                }
-
-                                setDragging(null);
-                            }}
-                            onMouseLeave={() => setDragging(null)}
-                        >
-                            <img
-                                src={preview}
-                                alt={`${side} first frame`}
-                                className="pointer-events-none w-full"
-                            />
-                            {shown && shown.w > 0 && (
-                                <div
-                                    className="pointer-events-none absolute border-2 border-primary bg-primary/10"
-                                    style={{
-                                        left: `${shown.x * 100}%`,
-                                        top: `${shown.y * 100}%`,
-                                        width: `${shown.w * 100}%`,
-                                        height: `${shown.h * 100}%`,
-                                    }}
-                                />
-                            )}
-                        </div>
+                        <CropBox
+                            src={preview}
+                            crop={crop}
+                            onChange={onCrop}
+                            alt={`${side} first frame`}
+                        />
                         <div className="flex flex-wrap gap-2">
                             <Button
                                 variant="outline"

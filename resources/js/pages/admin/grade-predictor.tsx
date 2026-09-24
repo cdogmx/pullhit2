@@ -1,13 +1,14 @@
 import { Head } from '@inertiajs/react';
 import { AlertTriangle, Info, Upload, X } from 'lucide-react';
 import { useState } from 'react';
+import type { CropRect } from '@/components/grading/crop-box';
 import type { Guides } from '@/components/grading/guide-overlay';
 import {
     cropFile,
     EMPTY_SPLIT,
     SideCapture,
 } from '@/components/grading/side-capture';
-import type { CropRect, Split } from '@/components/grading/side-capture';
+import type { Split } from '@/components/grading/side-capture';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -129,8 +130,21 @@ export default function GradePredictor({ defaults, sides }: Props) {
                 const g = guides[side];
 
                 if (g) {
+                    // Guides are drawn on the whole photo; the server receives
+                    // the cropped one. Without this the two disagree by exactly
+                    // the crop, and the centering would be measured against a
+                    // card outline sitting somewhere off the image.
+                    const toSent = (p: { x: number; y: number }) =>
+                        crop
+                            ? {
+                                  x: (p.x - crop.x) / crop.w,
+                                  y: (p.y - crop.y) / crop.h,
+                              }
+                            : p;
+
                     for (const which of ['outline', 'frame'] as const) {
-                        g[which].forEach((p, i) => {
+                        g[which].forEach((point, i) => {
+                            const p = toSent(point);
                             body.append(
                                 `guides[${side}][${which}][${i}][x]`,
                                 String(p.x),

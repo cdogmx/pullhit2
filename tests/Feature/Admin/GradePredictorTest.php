@@ -281,3 +281,38 @@ test('dragged guides beat a typed split, because one is a measurement', function
     // The guides say 50/50; the typed split said 30/70 and must not win.
     expect($response->json('sides.front.centering.left'))->toEqual(50);
 });
+
+test('a guide dragged by a side moves both of its corners', function () {
+    // The server reads four corners; the UI offers sides as a convenience that
+    // translates the two they join. This pins the shape that arrives: a quad,
+    // not a rectangle, because a hand-held photo is not square-on and squaring
+    // it off would throw away the perspective the homography needs.
+    $skewed = [
+        ['x' => 0.12, 'y' => 0.08], ['x' => 0.88, 'y' => 0.14],
+        ['x' => 0.88, 'y' => 0.86], ['x' => 0.12, 'y' => 0.92],
+    ];
+
+    $toPhoto = Homography::between(
+        [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+        array_map(fn ($p) => [$p['x'], $p['y']], $skewed),
+    );
+
+    // An inner border sitting 30/70 across on the flattened card.
+    $inner = array_map(function (array $uv) use ($toPhoto) {
+        [$x, $y] = $toPhoto->apply($uv[0], $uv[1]);
+
+        return ['x' => $x, 'y' => $y];
+    }, [[0.12, 0.2], [0.72, 0.2], [0.72, 0.8], [0.12, 0.8]]);
+
+    $response = $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor', [
+            'front' => [cardPhoto(300, 400, 90, 'a.png'), cardPhoto(300, 400, 180, 'b.png')],
+            'canvas_width' => 200,
+            'guides' => ['front' => ['outline' => $skewed, 'frame' => $inner]],
+        ])
+        ->assertOk();
+
+    // left margin 0.12, right margin 0.28 -> 30% left share.
+    expect($response->json('sides.front.centering.left'))->toBeGreaterThan(29.0)
+        ->and($response->json('sides.front.centering.left'))->toBeLessThan(31.0);
+});
