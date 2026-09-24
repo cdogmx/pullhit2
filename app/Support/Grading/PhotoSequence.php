@@ -9,9 +9,13 @@ use RuntimeException;
  * surface pipeline requires of them.
  *
  * The warper differences frames against each other, so every frame has to share
- * a source geometry — and the whole method rests on the glare having MOVED
- * between shots, which is why one photo is not a sequence. Both rules are
- * enforced here rather than left to each caller to remember.
+ * a source geometry. Frames that disagree are scaled to match rather than
+ * refused: phones crop differently between shots, and the homography fitted
+ * afterwards absorbs the change.
+ *
+ * How MANY frames there are is not this class's business. One photo is a valid
+ * thing to hold — it simply cannot carry surface information, which is a fact
+ * about the surface read, not about the photo.
  *
  * Extracted from the diagnostic command so the CLI and the web tester decode
  * photos the same way. Two implementations of "turn a JPEG into luma" is two
@@ -34,16 +38,18 @@ class PhotoSequence
      *
      * @throws RuntimeException
      */
+    /**
+     * @param  array<int, string>  $binaries  raw image bytes, one per photo
+     *
+     * @throws RuntimeException
+     */
     public static function fromBinaries(array $binaries, int $maxWidth = 1400): self
     {
-        if (count($binaries) < 2) {
-            throw new RuntimeException(
-                'Need at least two photos — a single image carries no specular information.',
-            );
+        if ($binaries === []) {
+            throw new RuntimeException('No photos given.');
         }
 
-        $frames = [];
-        $w0 = $h0 = null;
+        $images = [];
 
         foreach (array_values($binaries) as $i => $bytes) {
             $img = @imagecreatefromstring($bytes);
@@ -52,37 +58,48 @@ class PhotoSequence
                 throw new RuntimeException('Photo '.($i + 1).' could not be read as an image.');
             }
 
-            $w = imagesx($img);
-            $h = imagesy($img);
-
             // Downscale first: the pipeline is O(pixels) and a phone photo is
             // twelve megapixels of detail the warp throws away anyway.
-            if ($w > $maxWidth) {
+            if (imagesx($img) > $maxWidth) {
                 $scaled = imagescale($img, $maxWidth);
 
                 if ($scaled !== false) {
                     imagedestroy($img);
                     $img = $scaled;
-                    $w = imagesx($img);
-                    $h = imagesy($img);
                 }
             }
 
-            $w0 ??= $w;
-            $h0 ??= $h;
+            $images[] = $img;
+        }
 
-            if ($w !== $w0 || $h !== $h0) {
-                imagedestroy($img);
+        // Match the frames to a common geometry rather than refusing them.
+        //
+        // The warper differences frames pixel-for-pixel, so they must agree on
+        // size — but phones crop differently between shots and a person
+        // shooting a tilt sequence should not have to fight that. Scaling is
+        // safe here because the homography that follows is fitted to corners
+        // detected AFTER this, so it absorbs the change.
+        $width = min(array_map('imagesx', $images));
+        $height = min(array_map('imagesy', $images));
 
-                throw new RuntimeException(
-                    'Every photo must be the same size. Photo '.($i + 1)." is {$w}×{$h}, expected {$w0}×{$h0}.",
+        $frames = [];
+
+        foreach ($images as $img) {
+            if (imagesx($img) !== $width || imagesy($img) !== $height) {
+                $fitted = imagecreatetruecolor($width, $height);
+                imagecopyresampled(
+                    $fitted, $img,
+                    0, 0, 0, 0,
+                    $width, $height, imagesx($img), imagesy($img),
                 );
+                imagedestroy($img);
+                $img = $fitted;
             }
 
             $luma = [];
 
-            for ($y = 0; $y < $h; $y++) {
-                for ($x = 0; $x < $w; $x++) {
+            for ($y = 0; $y < $height; $y++) {
+                for ($x = 0; $x < $width; $x++) {
                     $rgb = imagecolorat($img, $x, $y);
                     // Rec. 601 luma — the standard perceptual weighting.
                     $luma[] = 0.299 * (($rgb >> 16) & 0xFF)
@@ -95,7 +112,7 @@ class PhotoSequence
             $frames[] = $luma;
         }
 
-        return new self($frames, (int) $w0, (int) $h0);
+        return new self($frames, $width, $height);
     }
 
     /**

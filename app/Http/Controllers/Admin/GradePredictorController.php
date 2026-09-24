@@ -30,6 +30,7 @@ class GradePredictorController extends Controller
                 'max_input' => 1400,
                 'canvas_width' => 500,
             ],
+            'sides' => PredictGradeFromPhotos::SIDES,
         ]);
     }
 
@@ -38,19 +39,36 @@ class GradePredictorController extends Controller
         // Validated by hand and answered as JSON: this is a fetch endpoint on a
         // non-api route, and Laravel's default redirect-on-failure would arrive
         // at the front end as an opaque 302.
-        $validator = validator($request->all(), [
-            'photos' => ['required', 'array', 'min:2', 'max:8'],
-            'photos.*' => ['file', 'image', 'max:12288'],
+        $rules = [
             'max_input' => ['nullable', 'integer', 'min:400', 'max:3000'],
             'canvas_width' => ['nullable', 'integer', 'min:200', 'max:1200'],
-            'inner' => ['nullable', 'array'],
-            'inner.left' => ['nullable', 'numeric', 'min:0', 'max:0.49'],
-            'inner.right' => ['nullable', 'numeric', 'min:0', 'max:0.49'],
-            'inner.top' => ['nullable', 'numeric', 'min:0', 'max:0.49'],
-            'inner.bottom' => ['nullable', 'numeric', 'min:0', 'max:0.49'],
-        ], [
-            'photos.min' => 'Two or more photos — one image carries no surface information.',
-        ]);
+        ];
+
+        foreach (PredictGradeFromPhotos::SIDES as $side) {
+            // One photo is allowed. It cannot carry a surface read, and the
+            // pipeline says so rather than refusing the upload — a rectified
+            // card and a centering figure are still worth having.
+            $rules[$side] = ['nullable', 'array', 'min:1', 'max:8'];
+            $rules["{$side}.*"] = ['file', 'image', 'max:12288'];
+
+            // The centering split as a report prints it: 46 left / 54 right.
+            foreach (['left', 'right', 'top', 'bottom'] as $edge) {
+                $rules["centering.{$side}.{$edge}"] = ['nullable', 'numeric', 'min:0', 'max:100'];
+            }
+        }
+
+        $validator = validator($request->all(), $rules);
+
+        $validator->after(function ($v) use ($request) {
+            $given = array_filter(
+                PredictGradeFromPhotos::SIDES,
+                fn (string $s) => $request->file($s) !== null,
+            );
+
+            if ($given === []) {
+                $v->errors()->add('front', 'Give at least one side — a front or a back tilt sequence.');
+            }
+        });
 
         if ($validator->fails()) {
             return response()->json(['message' => $validator->errors()->first()], 422);
@@ -58,21 +76,36 @@ class GradePredictorController extends Controller
 
         $data = $validator->validated();
 
-        $binaries = array_map(
-            fn ($file) => (string) file_get_contents($file->getRealPath()),
-            $request->file('photos'),
-        );
+        $sides = [];
+        $centering = [];
+
+        foreach (PredictGradeFromPhotos::SIDES as $side) {
+            if (($files = $request->file($side)) === null) {
+                continue;
+            }
+
+            $sides[$side] = array_map(
+                fn ($file) => (string) file_get_contents($file->getRealPath()),
+                $files,
+            );
+
+            // Only pass a split that was actually typed; an all-zero split is
+            // "not measured", not "perfectly centred".
+            $marked = array_filter($data['centering'][$side] ?? []);
+
+            if ($marked !== []) {
+                $centering[$side] = $data['centering'][$side];
+            }
+        }
 
         $started = hrtime(true);
 
         try {
             $result = $predict(
-                $binaries,
+                $sides,
                 (int) ($data['max_input'] ?? 1400),
                 (int) ($data['canvas_width'] ?? 500),
-                // Only pass an inner frame when one was actually marked; an
-                // all-zero frame is "not measured", not "perfectly centred".
-                array_filter($data['inner'] ?? []) !== [] ? $data['inner'] : null,
+                $centering,
             );
         } catch (RuntimeException $e) {
             // The capture rules — two photos, same size, readable — are the

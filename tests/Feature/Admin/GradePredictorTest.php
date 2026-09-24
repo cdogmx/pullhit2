@@ -15,7 +15,6 @@ function cardPhoto(int $w, int $h, int $glareX, string $name): UploadedFile
     $img = imagecreatetruecolor($w, $h);
     imagefill($img, 0, 0, imagecolorallocate($img, 20, 20, 20));
 
-    // The card.
     imagefilledrectangle($img, 40, 30, $w - 40, $h - 30, imagecolorallocate($img, 200, 200, 200));
 
     // The highlight, which is the whole signal — it has to MOVE between frames.
@@ -40,36 +39,47 @@ test('the bench is admin-only', function () {
     $this->actingAs($this->admin)->get('/admin/grade-predictor')->assertOk();
 });
 
-test('one photo is refused, because one photo carries no surface information', function () {
-    // The whole method is differencing frames against each other. A single
-    // image cannot be differenced, and answering it with a score would be
-    // inventing one.
-    $this->actingAs($this->admin)
-        ->postJson('/admin/grade-predictor', [
-            'photos' => [cardPhoto(300, 400, 100, 'a.png')],
-        ])
-        ->assertStatus(422)
-        ->assertJsonPath('message', 'Two or more photos — one image carries no surface information.');
-});
-
-test('photos of different sizes are refused with a message, not a 500', function () {
-    // The warper differences frames pixel-for-pixel, so a mismatched frame is a
-    // capture mistake to explain — the most likely one a person will make.
-    $this->actingAs($this->admin)
-        ->postJson('/admin/grade-predictor', [
-            'photos' => [
-                cardPhoto(300, 400, 100, 'a.png'),
-                cardPhoto(320, 400, 160, 'b.png'),
-            ],
-        ])
-        ->assertStatus(422)
-        ->assertJsonPath('message', fn (string $m) => str_contains($m, 'same size'));
-});
-
-test('a sequence with a moving highlight runs the pipeline and returns a distribution', function () {
+test('one photo is accepted but reports surface as not assessed', function () {
+    // The method differences frames against each other, so a single image
+    // carries no surface information. That is a fact to report, not a reason to
+    // refuse the upload — the rectified card and centering still work.
     $response = $this->actingAs($this->admin)
         ->postJson('/admin/grade-predictor', [
-            'photos' => [
+            'front' => [cardPhoto(300, 400, 100, 'a.png')],
+            'canvas_width' => 200,
+        ])
+        ->assertOk();
+
+    expect($response->json('sides.front.surface_assessable'))->toBeFalse()
+        ->and($response->json('sides.front.surface'))->toBeNull()
+        // Crucially NOT reported as a clean surface.
+        ->and($response->json('observed'))->not->toContain('surface')
+        ->and($response->json('estimate.unseen'))->toContain('surface')
+        // The rectified card is still worth having.
+        ->and($response->json('sides.front.images.frames'))->toHaveCount(1);
+});
+
+test('photos of different sizes are matched rather than refused', function () {
+    // A phone crops differently between shots. The homography is fitted after
+    // this, so scaling the frames to agree costs nothing and saves the person
+    // shooting from fighting their camera.
+    $response = $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor', [
+            'front' => [
+                cardPhoto(300, 400, 90, 'a.png'),
+                cardPhoto(320, 420, 160, 'b.png'),
+            ],
+            'canvas_width' => 200,
+        ])
+        ->assertOk();
+
+    expect($response->json('sides.front.frames_used'))->toBe(2);
+});
+
+test('a sequence with a moving highlight returns a distribution and the maps', function () {
+    $response = $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor', [
+            'front' => [
                 cardPhoto(300, 400, 90, 'a.png'),
                 cardPhoto(300, 400, 150, 'b.png'),
                 cardPhoto(300, 400, 210, 'c.png'),
@@ -79,8 +89,8 @@ test('a sequence with a moving highlight runs the pipeline and returns a distrib
         ->assertOk();
 
     $response->assertJsonStructure([
-        'usable', 'frames_used', 'specular_range', 'surface', 'estimate',
-        'observed', 'images' => ['albedo', 'detail', 'frames'], 'took_ms',
+        'sides' => ['front' => ['usable', 'frames_used', 'surface', 'images']],
+        'estimate', 'observed', 'took_ms',
     ]);
 
     // Always a distribution, never a grade.
@@ -93,52 +103,64 @@ test('a sequence with a moving highlight runs the pipeline and returns a distrib
 
     // The maps have to reach a screen: a detail map showing artwork is how you
     // tell misalignment from a scratched card, and it looks the same in numbers.
-    expect($response->json('images.albedo'))->toStartWith('data:image/png;base64,')
-        ->and($response->json('images.detail'))->toStartWith('data:image/png;base64,');
+    expect($response->json('sides.front.images.albedo'))->toStartWith('data:image/png;base64,')
+        ->and($response->json('sides.front.images.detail'))->toStartWith('data:image/png;base64,');
 });
 
 test('a still highlight reports unusable rather than a clean card', function () {
     // Identical frames difference to nothing. That reads as a flawless surface
-    // unless it is called out, which is the worst possible failure here.
-    $frames = [
-        cardPhoto(300, 400, 150, 'a.png'),
-        cardPhoto(300, 400, 150, 'b.png'),
-    ];
-
+    // unless it is called out, which is the worst failure available here.
     $response = $this->actingAs($this->admin)
-        ->postJson('/admin/grade-predictor', ['photos' => $frames, 'canvas_width' => 200])
-        ->assertOk();
-
-    expect($response->json('usable'))->toBeFalse()
-        // Nothing was observed, so surface must not appear as evidence.
-        ->and($response->json('observed'))->not->toContain('surface');
-});
-
-test('centering is measured only when somebody marks the inner frame', function () {
-    $photos = [
-        cardPhoto(300, 400, 90, 'a.png'),
-        cardPhoto(300, 400, 180, 'b.png'),
-    ];
-
-    $without = $this->actingAs($this->admin)
-        ->postJson('/admin/grade-predictor', ['photos' => $photos, 'canvas_width' => 200])
-        ->assertOk();
-
-    expect($without->json('centering'))->toBeNull();
-
-    $with = $this->actingAs($this->admin)
         ->postJson('/admin/grade-predictor', [
-            'photos' => [
-                cardPhoto(300, 400, 90, 'a.png'),
-                cardPhoto(300, 400, 180, 'b.png'),
+            'front' => [
+                cardPhoto(300, 400, 150, 'a.png'),
+                cardPhoto(300, 400, 150, 'b.png'),
             ],
             'canvas_width' => 200,
-            'inner' => ['left' => 0.08, 'right' => 0.06, 'top' => 0.07, 'bottom' => 0.07],
         ])
         ->assertOk();
 
-    expect($with->json('centering.score'))->toBeInt()
-        ->and($with->json('estimate.unseen'))->not->toContain('centering');
+    expect($response->json('sides.front.usable'))->toBeFalse()
+        // It COULD have carried surface and did not — a re-shoot, not physics.
+        ->and($response->json('sides.front.surface_assessable'))->toBeTrue()
+        ->and($response->json('observed'))->not->toContain('surface');
+});
+
+test('both sides are read separately', function () {
+    $response = $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor', [
+            'front' => [cardPhoto(300, 400, 90, 'a.png'), cardPhoto(300, 400, 180, 'b.png')],
+            'back' => [cardPhoto(300, 400, 100, 'c.png'), cardPhoto(300, 400, 200, 'd.png')],
+            'canvas_width' => 200,
+        ])
+        ->assertOk();
+
+    expect($response->json('sides'))->toHaveKeys(['front', 'back']);
+});
+
+test('centering is read as a grading report writes it', function () {
+    // TAG prints the Milotic (cert D7145734, GEM MINT 10) as 46L/54R 47T/53B.
+    // Those four numbers are a RATIO between the margins. Read as margins they
+    // describe a card of zero width — which is how the first version of this
+    // form could not accept the very report it exists to be checked against.
+    $response = $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor', [
+            'front' => [cardPhoto(300, 400, 90, 'a.png'), cardPhoto(300, 400, 180, 'b.png')],
+            'canvas_width' => 200,
+            'centering' => ['front' => ['left' => 46, 'right' => 54, 'top' => 47, 'bottom' => 53]],
+        ])
+        ->assertOk();
+
+    expect($response->json('sides.front.centering.left'))->toEqual(46)
+        // 1000 - 9.06 * 4 = 964, the same line that fits TAG's other cert.
+        ->and($response->json('sides.front.centering.score'))->toBe(964)
+        ->and($response->json('estimate.unseen'))->not->toContain('centering');
+});
+
+test('no photos at all is refused', function () {
+    $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor', ['canvas_width' => 200])
+        ->assertStatus(422);
 });
 
 test('a luma map becomes a PNG that can actually be looked at', function () {

@@ -1,7 +1,12 @@
 import { Head } from '@inertiajs/react';
-import { AlertTriangle, Upload, X } from 'lucide-react';
+import { AlertTriangle, Info, Upload, X } from 'lucide-react';
 import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import {
+    cropFile,
+    EMPTY_SPLIT,
+    SideCapture,
+} from '@/components/grading/side-capture';
+import type { CropRect, Split } from '@/components/grading/side-capture';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,60 +22,76 @@ type Defect = {
     strength: number;
 };
 
-type Prediction = {
+type SideResult = {
+    surface_assessable: boolean;
     usable: boolean;
     frames_used: number;
-    specular_range: number;
+    specular_range: number | null;
     canvas: { width: number; height: number };
     surface: {
         defects: Defect[];
         defect_count: number;
         score: number;
         bucket: string;
-        usable: boolean;
+    } | null;
+    centering: {
+        score: number;
+        left: number;
+        right: number;
+        top: number;
+        bottom: number;
+    } | null;
+    images: {
+        albedo: string | null;
+        detail: string | null;
+        frames: string[];
     };
-    centering: { score: number; describe?: string } | null;
+};
+
+type Prediction = {
+    sides: Record<string, SideResult>;
     estimate: {
         score: number;
         sigma: number;
-        attributes: Record<string, number>;
         unseen: string[];
         probs: Record<string, number>;
         limiting_attribute: string | null;
         confident: boolean;
-        caveats: string[];
+        caveats: Record<string, string>;
     };
     observed: string[];
-    images: { albedo: string; detail: string; frames: string[] };
+    limited_by_side: Record<string, string>;
     took_ms: number;
 };
 
 type Props = {
     defaults: { max_input: number; canvas_width: number };
+    sides: string[];
 };
 
+const EDGES = ['left', 'right', 'top', 'bottom'] as const;
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
-export default function GradePredictor({ defaults }: Props) {
-    const [files, setFiles] = useState<File[]>([]);
+export default function GradePredictor({ defaults, sides }: Props) {
+    const [files, setFiles] = useState<Record<string, File[]>>({});
+    const [crops, setCrops] = useState<Record<string, CropRect | null>>({});
+    const [splits, setSplits] = useState<Record<string, Split>>(
+        Object.fromEntries(sides.map((s) => [s, { ...EMPTY_SPLIT }])),
+    );
     const [maxInput, setMaxInput] = useState(String(defaults.max_input));
     const [canvasWidth, setCanvasWidth] = useState(
         String(defaults.canvas_width),
     );
-    const [inner, setInner] = useState({
-        left: '',
-        right: '',
-        top: '',
-        bottom: '',
-    });
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [result, setResult] = useState<Prediction | null>(null);
 
+    const given = sides.filter((s) => (files[s]?.length ?? 0) > 0);
+
     async function run() {
-        if (files.length < 2) {
+        if (given.length === 0) {
             setError(
-                'Two or more photos — a single image carries no surface information.',
+                'Give at least one side — a front or a back set of photos.',
             );
 
             return;
@@ -81,19 +102,29 @@ export default function GradePredictor({ defaults }: Props) {
         setResult(null);
 
         const body = new FormData();
-        files.forEach((f) => body.append('photos[]', f));
         body.append('max_input', maxInput);
         body.append('canvas_width', canvasWidth);
 
-        for (const [k, v] of Object.entries(inner)) {
-            if (v.trim() !== '') {
-                // Entered as percentages because that is how a grading report
-                // writes them; the pipeline wants a fraction.
-                body.append(`inner[${k}]`, String(Number(v) / 100));
-            }
-        }
-
         try {
+            for (const side of given) {
+                const crop = crops[side];
+
+                for (const file of files[side]) {
+                    body.append(
+                        `${side}[]`,
+                        crop ? await cropFile(file, crop) : file,
+                    );
+                }
+
+                for (const edge of EDGES) {
+                    const v = splits[side]?.[edge] ?? '';
+
+                    if (v.trim() !== '') {
+                        body.append(`centering[${side}][${edge}]`, v.trim());
+                    }
+                }
+            }
+
             const response = await fetch('/admin/grade-predictor', {
                 method: 'POST',
                 body,
@@ -133,120 +164,73 @@ export default function GradePredictor({ defaults }: Props) {
                         Grade predictor bench
                     </h1>
                     <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-                        Shoot 3–5 photos of one card, tilting it between shots
-                        so the glare sweeps across the surface. That moving
-                        reflection is the entire signal — evenly lit, glare-free
-                        photos carry no surface information at all. Every photo
-                        must be the same pixel size.
+                        For a surface read, shoot 3–5 photos per side, tilting
+                        the card between shots so the glare sweeps across it.
+                        That moving reflection is the entire signal. One photo
+                        is accepted and still gives you the rectified card and
+                        centering — it just cannot say anything about surface.
+                        Photos of different sizes are matched automatically.
                     </p>
                 </div>
 
+                <div className="grid gap-4 lg:grid-cols-2">
+                    {sides.map((side) => (
+                        <SideCapture
+                            key={side}
+                            side={side}
+                            files={files[side] ?? []}
+                            crop={crops[side] ?? null}
+                            split={splits[side] ?? EMPTY_SPLIT}
+                            onFiles={(f) =>
+                                setFiles((prev) => ({ ...prev, [side]: f }))
+                            }
+                            onCrop={(c) =>
+                                setCrops((prev) => ({ ...prev, [side]: c }))
+                            }
+                            onSplit={(edge, value) =>
+                                setSplits((prev) => ({
+                                    ...prev,
+                                    [side]: {
+                                        ...(prev[side] ?? EMPTY_SPLIT),
+                                        [edge]: value,
+                                    },
+                                }))
+                            }
+                        />
+                    ))}
+                </div>
+
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-sm">Capture</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-col gap-4">
-                        <div className="flex flex-wrap items-end gap-4">
-                            <div className="flex flex-col gap-1.5">
-                                <Label htmlFor="photos">Photos (2–8)</Label>
-                                <Input
-                                    id="photos"
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    className="w-80"
-                                    onChange={(e) =>
-                                        setFiles(
-                                            Array.from(e.target.files ?? []),
-                                        )
-                                    }
-                                />
-                            </div>
-
-                            <div className="flex flex-col gap-1.5">
-                                <Label htmlFor="max-input">
-                                    Downscale to (px)
-                                </Label>
-                                <Input
-                                    id="max-input"
-                                    value={maxInput}
-                                    onChange={(e) =>
-                                        setMaxInput(e.target.value)
-                                    }
-                                    className="w-32"
-                                />
-                            </div>
-
-                            <div className="flex flex-col gap-1.5">
-                                <Label htmlFor="canvas">
-                                    Canvas width (px)
-                                </Label>
-                                <Input
-                                    id="canvas"
-                                    value={canvasWidth}
-                                    onChange={(e) =>
-                                        setCanvasWidth(e.target.value)
-                                    }
-                                    className="w-32"
-                                />
-                            </div>
-
-                            <Button onClick={run} disabled={busy}>
-                                {busy ? (
-                                    <Spinner className="size-4" />
-                                ) : (
-                                    <Upload className="size-4" />
-                                )}
-                                Run pipeline
-                            </Button>
+                    <CardContent className="flex flex-wrap items-end gap-4 pt-6">
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="max-input">Downscale to (px)</Label>
+                            <Input
+                                id="max-input"
+                                value={maxInput}
+                                onChange={(e) => setMaxInput(e.target.value)}
+                                className="w-32"
+                            />
                         </div>
 
-                        {files.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                                {files.map((f) => (
-                                    <Badge key={f.name} variant="secondary">
-                                        {f.name}
-                                    </Badge>
-                                ))}
-                            </div>
-                        )}
-
-                        <div>
-                            <p className="mb-2 text-xs text-muted-foreground">
-                                Optional — the artwork border as a percentage of
-                                the card, for centering. Nothing detects this
-                                yet, so it is measured only if you type it.
-                            </p>
-                            <div className="flex flex-wrap gap-3">
-                                {(
-                                    ['left', 'right', 'top', 'bottom'] as const
-                                ).map((side) => (
-                                    <div
-                                        key={side}
-                                        className="flex flex-col gap-1.5"
-                                    >
-                                        <Label
-                                            htmlFor={`inner-${side}`}
-                                            className="capitalize"
-                                        >
-                                            {side}
-                                        </Label>
-                                        <Input
-                                            id={`inner-${side}`}
-                                            value={inner[side]}
-                                            placeholder="%"
-                                            className="w-24"
-                                            onChange={(e) =>
-                                                setInner((prev) => ({
-                                                    ...prev,
-                                                    [side]: e.target.value,
-                                                }))
-                                            }
-                                        />
-                                    </div>
-                                ))}
-                            </div>
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="canvas">Canvas width (px)</Label>
+                            <Input
+                                id="canvas"
+                                value={canvasWidth}
+                                onChange={(e) => setCanvasWidth(e.target.value)}
+                                className="w-32"
+                            />
                         </div>
+
+                        <Button onClick={run} disabled={busy}>
+                            {busy ? (
+                                <Spinner className="size-4" />
+                            ) : (
+                                <Upload className="size-4" />
+                            )}
+                            Run pipeline
+                            {given.length > 0 && ` (${given.join(' + ')})`}
+                        </Button>
                     </CardContent>
                 </Card>
 
@@ -265,45 +249,11 @@ export default function GradePredictor({ defaults }: Props) {
 
 function Results({ result }: { result: Prediction }) {
     const dist = result.estimate.probs ?? {};
+    const caveats = Object.values(result.estimate.caveats ?? {});
+    const limiting = result.estimate.limiting_attribute;
 
     return (
         <div className="flex flex-col gap-6">
-            {/* The capture check comes first, because an unusable sequence makes
-                every number under it meaningless rather than merely uncertain. */}
-            {!result.usable && (
-                <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm">
-                    <AlertTriangle className="mt-0.5 size-4 text-amber-600" />
-                    <div>
-                        <p className="font-medium">
-                            Unusable capture — not a clean card
-                        </p>
-                        <p className="text-muted-foreground">
-                            The highlight barely moved between frames (specular
-                            range {result.specular_range}), so there was nothing
-                            to difference. Re-shoot, tilting more so the glare
-                            visibly sweeps across the card.
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <Stat label="Specular range" value={result.specular_range} />
-                <Stat
-                    label="Frames used"
-                    value={`${result.frames_used} · ${result.canvas.width}×${result.canvas.height}`}
-                />
-                <Stat
-                    label="Surface"
-                    value={
-                        result.usable
-                            ? `${result.surface.bucket} (${result.surface.score})`
-                            : '—'
-                    }
-                />
-                <Stat label="Took" value={`${result.took_ms} ms`} />
-            </div>
-
             <Card>
                 <CardHeader>
                     <CardTitle className="text-sm">
@@ -312,17 +262,9 @@ function Results({ result }: { result: Prediction }) {
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3">
                     <p className="text-xs text-muted-foreground">
-                        A distribution, never a grade. Observed:{' '}
-                        {result.observed.length > 0
-                            ? result.observed.join(', ')
-                            : 'nothing'}
-                        {result.estimate.unseen.length > 0 && (
-                            <>
-                                {' '}
-                                · unseen (penalised):{' '}
-                                {result.estimate.unseen.join(', ')}
-                            </>
-                        )}
+                        A distribution, never a grade. Across both sides the
+                        worst reading of each attribute counts — a scratch on
+                        the back holds a card back exactly as one on the front.
                     </p>
 
                     {Object.entries(dist).map(([grade, p]) => (
@@ -350,16 +292,21 @@ function Results({ result }: { result: Prediction }) {
                     <p className="text-xs text-muted-foreground">
                         Condition score {result.estimate.score} ±{' '}
                         {Math.round(result.estimate.sigma)}
-                        {result.estimate.limiting_attribute &&
-                            ` · limited by ${result.estimate.limiting_attribute}`}
-                        {result.centering &&
-                            ` · centering ${result.centering.score}`}
-                        {!result.estimate.confident && ' · low confidence'}
+                        {limiting && (
+                            <>
+                                {' '}
+                                · limited by {limiting}
+                                {result.limited_by_side?.[limiting] &&
+                                    ` on the ${result.limited_by_side[limiting]}`}
+                            </>
+                        )}
+                        {!result.estimate.confident && ' · low confidence'} ·{' '}
+                        {result.took_ms} ms
                     </p>
 
-                    {result.estimate.caveats.length > 0 && (
-                        <ul className="flex flex-col gap-1 text-xs text-muted-foreground">
-                            {result.estimate.caveats.map((c) => (
+                    {caveats.length > 0 && (
+                        <ul className="flex flex-col gap-1.5 border-t border-border pt-3 text-xs text-muted-foreground">
+                            {caveats.map((c) => (
                                 <li key={c}>· {c}</li>
                             ))}
                         </ul>
@@ -367,55 +314,105 @@ function Results({ result }: { result: Prediction }) {
                 </CardContent>
             </Card>
 
-            {/* The docblock is explicit that these must be judged by eye: a
-                detail map showing artwork means the frames did not align, and
-                that is indistinguishable from a scratched card in the numbers. */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-sm">
-                        Intermediates — judge these by eye
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4">
+            {Object.entries(result.sides).map(([name, side]) => (
+                <SideResults key={name} name={name} side={side} />
+            ))}
+        </div>
+    );
+}
+
+function SideResults({ name, side }: { name: string; side: SideResult }) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-sm capitalize">
+                    {name}
+                    <span className="ml-2 font-normal text-muted-foreground">
+                        {side.usable && side.surface
+                            ? `${side.surface.bucket} · score ${side.surface.score} · ${side.surface.defect_count} defect${side.surface.defect_count === 1 ? '' : 's'}`
+                            : side.surface_assessable
+                              ? 'unusable capture'
+                              : 'surface not assessed'}
+                        {side.centering &&
+                            ` · centering ${side.centering.score} (${side.centering.left}/${side.centering.right}, ${side.centering.top}/${side.centering.bottom})`}
+                    </span>
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+                {/* Two different failures, kept apart. One photo CANNOT show a
+                    surface — physics, not a bad shot. Several photos that never
+                    moved the glare COULD have — that is a re-shoot. */}
+                {!side.surface_assessable && (
+                    <div className="flex items-start gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                        <Info className="mt-0.5 size-4 text-muted-foreground" />
+                        <div>
+                            <p className="font-medium">Surface not assessed</p>
+                            <p className="text-muted-foreground">
+                                One photo of this side. The surface read
+                                compares frames as the glare moves across the
+                                card, so a single image carries no surface
+                                information at all — this is not a claim the
+                                card is clean. Add a second, tilted shot.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {side.surface_assessable && !side.usable && (
+                    <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm">
+                        <AlertTriangle className="mt-0.5 size-4 text-amber-600" />
+                        <div>
+                            <p className="font-medium">
+                                Not a clean card — an unreadable capture
+                            </p>
+                            <p className="text-muted-foreground">
+                                The highlight barely moved between frames
+                                (specular range {side.specular_range}), so there
+                                was nothing to difference. Re-shoot this side,
+                                tilting more so the glare visibly sweeps across
+                                it.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {side.images.albedo && side.images.detail && (
                     <div className="grid gap-4 sm:grid-cols-2">
                         <Figure
-                            src={result.images.albedo}
+                            src={side.images.albedo}
                             title="Albedo"
                             caption="Should look like a clean, flat, glare-free card."
                         />
                         <Figure
-                            src={result.images.detail}
+                            src={side.images.detail}
                             title="Detail"
                             caption="Should be near-black except for scratches. Artwork here means the frames did not align."
                         />
                     </div>
+                )}
 
-                    <div>
-                        <p className="mb-2 text-xs text-muted-foreground">
-                            Rectified frames
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                            {result.images.frames.map((src, i) => (
-                                <img
-                                    key={i}
-                                    src={src}
-                                    alt={`Rectified frame ${i + 1}`}
-                                    className="h-40 rounded border border-border"
-                                />
-                            ))}
-                        </div>
+                <div>
+                    <p className="mb-2 text-xs text-muted-foreground">
+                        Rectified · {side.frames_used} frame
+                        {side.frames_used === 1 ? '' : 's'} ·{' '}
+                        {side.canvas.width}×{side.canvas.height}
+                        {side.specular_range !== null &&
+                            ` · specular range ${side.specular_range}`}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        {side.images.frames.map((src, i) => (
+                            <img
+                                key={i}
+                                src={src}
+                                alt={`${name} rectified frame ${i + 1}`}
+                                className="h-40 rounded border border-border"
+                            />
+                        ))}
                     </div>
-                </CardContent>
-            </Card>
+                </div>
 
-            {result.surface.defect_count > 0 && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-sm">
-                            Defects ({result.surface.defect_count})
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="overflow-x-auto">
+                {(side.surface?.defect_count ?? 0) > 0 && (
+                    <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead className="text-left text-xs text-muted-foreground">
                                 <tr className="border-b border-border">
@@ -427,8 +424,8 @@ function Results({ result }: { result: Prediction }) {
                                 </tr>
                             </thead>
                             <tbody className="tabular-nums">
-                                {result.surface.defects
-                                    .slice(0, 40)
+                                {side
+                                    .surface!.defects.slice(0, 40)
                                     .map((d, i) => (
                                         <tr
                                             key={i}
@@ -453,21 +450,8 @@ function Results({ result }: { result: Prediction }) {
                                     ))}
                             </tbody>
                         </table>
-                    </CardContent>
-                </Card>
-            )}
-        </div>
-    );
-}
-
-function Stat({ label, value }: { label: string; value: string | number }) {
-    return (
-        <Card>
-            <CardContent className="pt-6">
-                <p className="text-xs text-muted-foreground">{label}</p>
-                <p className="mt-1 text-xl font-bold tracking-tight tabular-nums">
-                    {value}
-                </p>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
