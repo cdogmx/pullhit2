@@ -73,6 +73,55 @@ type Props = {
  * mapping that exists only to reconcile two views is a mapping that can be
  * wrong.
  */
+
+/**
+ * The centering the guide currently describes, as it is dragged.
+ *
+ * Placing a border blind and reading the answer afterwards is the whole
+ * difficulty: on a 700px card a two-pixel slip is three points of split and
+ * roughly thirty of score, which is more than the gap between a real TAG
+ * report and our first measurement of the same card. Shown live, the eye can
+ * close that — nudge until the numbers stop moving and the line sits on the
+ * border.
+ *
+ * The same arithmetic the server does: the card is straightened, so its own
+ * edge is the frame and the margins are simply how far the guide sits inside.
+ */
+function liveCentering(quad: Guides['frame'] | undefined) {
+    if (!quad || quad.length !== 4) {
+        return null;
+    }
+
+    const left = Math.min(...quad.map((p) => p.x));
+    const right = 1 - Math.max(...quad.map((p) => p.x));
+    const top = Math.min(...quad.map((p) => p.y));
+    const bottom = 1 - Math.max(...quad.map((p) => p.y));
+
+    if (left + right <= 0 || top + bottom <= 0) {
+        return null;
+    }
+
+    const leftPct = (left / (left + right)) * 100;
+    const topPct = (top / (top + bottom)) * 100;
+
+    return {
+        left: leftPct,
+        right: 100 - leftPct,
+        top: topPct,
+        bottom: 100 - topPct,
+        worst: Math.max(Math.abs(leftPct - 50), Math.abs(topPct - 50)),
+        // The same line CenteringMeasurer uses: 1000 less 9.06 a point.
+        score: Math.max(
+            0,
+            Math.round(
+                1000 -
+                    9.06 *
+                        Math.max(Math.abs(leftPct - 50), Math.abs(topPct - 50)),
+            ),
+        ),
+    };
+}
+
 export function SideCapture({
     side,
     files,
@@ -587,6 +636,9 @@ export function SideCapture({
                                     placed it: a percent out is twenty points of
                                     centering.
                                 </p>
+                                <LiveReadout
+                                    reading={liveCentering(guides.frame)}
+                                />
                                 <GuideOverlay
                                     src={working}
                                     guides={guides}
@@ -668,5 +720,30 @@ export function SideCapture({
                 )}
             </CardContent>
         </Card>
+    );
+}
+
+/** The live split, in the shape a grading report prints it. */
+function LiveReadout({
+    reading,
+}: {
+    reading: ReturnType<typeof liveCentering>;
+}) {
+    if (!reading) {
+        return null;
+    }
+
+    return (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs tabular-nums">
+            <span className="font-medium">
+                {reading.left.toFixed(1)}L / {reading.right.toFixed(1)}R
+            </span>
+            <span className="font-medium">
+                {reading.top.toFixed(1)}T / {reading.bottom.toFixed(1)}B
+            </span>
+            <span className="text-muted-foreground">
+                {reading.worst.toFixed(1)} off centre · scores {reading.score}
+            </span>
+        </div>
     );
 }

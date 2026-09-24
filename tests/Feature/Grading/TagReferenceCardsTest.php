@@ -65,3 +65,16 @@ test('what TAG saw and we cannot is exactly what the caveats say', function () {
     expect($estimate->caveats())->toHaveKey('surface')
         ->and($estimate->caveats()['surface'])->toContain('not assessed');
 });
+
+test('the live readout uses the same centering line the server does', function () {
+    // The bench shows a score while a guide is dragged, which means the formula
+    // exists twice. Retuning the constant in config without the front end would
+    // leave the number moving under the cursor disagreeing with the number in
+    // the saved run — the exact confusion this bench exists to remove.
+    $tsx = file_get_contents(resource_path('js/components/grading/side-capture.tsx'));
+
+    preg_match('/1000 -\s*([0-9.]+)\s*\*/', $tsx, $m);
+
+    expect($m[1] ?? null)->not->toBeNull()
+        ->and((float) $m[1])->toBe((float) config('grading.centering_penalty_per_point'));
+});
