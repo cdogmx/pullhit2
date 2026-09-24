@@ -56,6 +56,7 @@ class CollectionController extends Controller
 
         // From the unfiltered collection, so a ticked box can still be unticked.
         $rarityOptions = ListControls::rarityOptions($active->items());
+        $setOptions = ListControls::setOptions($active->items());
 
         $portfolio = $build($user, $active->id, controls: $controls);
 
@@ -81,6 +82,7 @@ class CollectionController extends Controller
             'decliners' => $portfolio['decliners'],
             'filters' => $controls->toArray(),
             'rarityOptions' => $rarityOptions,
+            'setOptions' => $setOptions,
             'publicUrl' => $publicUrl,
             'folders' => $this->buildFolders($active, $user),
             // Options for the full-edit modal's graded-state picker.
@@ -164,7 +166,14 @@ class CollectionController extends Controller
         $collection = $collectionFolder->collection;
         abort_unless($collection->user_id === $user->id, 403);
 
-        $portfolio = $build($user, $collection->id, $collectionFolder->name);
+        $controls = ListControls::fromRequest($request);
+
+        // Scoped to this folder already, so the options describe the folder.
+        $scoped = $collection->items()->where('folder', $collectionFolder->name);
+        $rarityOptions = ListControls::rarityOptions($scoped);
+        $setOptions = ListControls::setOptions($scoped);
+
+        $portfolio = $build($user, $collection->id, $collectionFolder->name, $controls);
 
         $publicUrl = $collectionFolder->is_public && $user->username
             ? url("/collection/{$user->username}/{$collection->slug}/folder/{$collectionFolder->slug}")
@@ -186,6 +195,9 @@ class CollectionController extends Controller
             ],
             'holdings' => CollectionItemResource::collection($portfolio['items'])->resolve(),
             'summary' => $portfolio['summary'],
+            'filters' => $controls->toArray(),
+            'rarityOptions' => $rarityOptions,
+            'setOptions' => $setOptions,
             'gradingCompanies' => GradingCompany::orderBy('name')
                 ->get(['id', 'slug', 'name', 'scale_max', 'supports_half_grades']),
         ]);

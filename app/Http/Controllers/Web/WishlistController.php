@@ -43,6 +43,7 @@ class WishlistController extends Controller
         // Options come from the whole wishlist, not the filtered one, so a
         // ticked box can still be unticked.
         $rarityOptions = ListControls::rarityOptions($active->items());
+        $setOptions = ListControls::setOptions($active->items());
 
         $items = $controls->apply($active->items())
             ->with(['catalogItem.set', 'catalogItem.productLine', 'catalogItem.defaultMarketValue'])
@@ -81,6 +82,7 @@ class WishlistController extends Controller
             ],
             'filters' => $controls->toArray(),
             'rarityOptions' => $rarityOptions,
+            'setOptions' => $setOptions,
             'publicUrl' => $publicUrl,
         ]);
     }

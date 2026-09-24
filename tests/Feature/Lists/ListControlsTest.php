@@ -178,3 +178,77 @@ test('every sort the bar offers is one the server accepts', function () {
     expect($m[1])->not->toBeEmpty()
         ->and(array_diff($m[1], ListControls::SORTS))->toBe([]);
 });
+
+test('search matches the card name, its number, or its set', function () {
+    $add = app(AddToCollection::class);
+    $add($this->user, ($this->card)('Pikachu ex', 'Common', 100, '238'), ['condition' => 'NM', 'quantity' => 1]);
+    $add($this->user, ($this->card)('Snorlax', 'Common', 100, '145'), ['condition' => 'NM', 'quantity' => 1]);
+
+    $find = fn (string $term) => $this->actingAs($this->user)
+        ->get('/collection?q='.urlencode($term));
+
+    $find('pikachu')->assertInertia(fn ($p) => $p->has('holdings', 1)
+        ->where('holdings.0.catalog_item.name', 'Pikachu ex'));
+    $find('145')->assertInertia(fn ($p) => $p->has('holdings', 1)
+        ->where('holdings.0.catalog_item.name', 'Snorlax'));
+    // The set both cards share.
+    $find('Surging')->assertInertia(fn ($p) => $p->has('holdings', 2));
+});
+
+test('a wildcard typed into search is a literal, not a pattern', function () {
+    // "%" unescaped turns a narrowing search into one that matches everything —
+    // the search would quietly stop working exactly when someone typed a symbol.
+    app(AddToCollection::class)($this->user, ($this->card)('Pikachu', 'Common', 100), ['condition' => 'NM', 'quantity' => 1]);
+
+    $this->actingAs($this->user)
+        ->get('/collection?q=%25')
+        ->assertInertia(fn ($p) => $p->has('holdings', 0));
+});
+
+test('search narrows the wishlist the same way', function () {
+    $add = app(AddToWishlist::class);
+    $add($this->user, ($this->card)('Pikachu ex', 'Common', 100), []);
+    $add($this->user, ($this->card)('Snorlax', 'Common', 100), []);
+
+    $this->actingAs($this->user)
+        ->get('/wishlist?q=snorlax')
+        ->assertInertia(fn ($p) => $p->has('items', 1)
+            ->where('items.0.catalog_item.name', 'Snorlax'));
+});
+
+test('the set list comes from the whole collection, not the filtered one', function () {
+    // Same trap as the rarity boxes: derive it from the filtered rows and the
+    // dropdown ends up holding only the set already chosen.
+    $other = Set::factory()->create(['name' => 'Prismatic Evolutions']);
+    $add = app(AddToCollection::class);
+    $add($this->user, ($this->card)('Pikachu', 'Common', 100), ['condition' => 'NM', 'quantity' => 1]);
+
+    $second = CatalogItem::factory()->for($other)->create([
+        'name' => 'Eevee', 'number' => '5', 'attributes' => ['language' => 'en', 'rarity' => 'Common'],
+    ]);
+    $add($this->user, $second, ['condition' => 'NM', 'quantity' => 1]);
+
+    $this->actingAs($this->user)
+        ->get('/collection?set=Surging+Sparks')
+        ->assertInertia(fn ($p) => $p->has('holdings', 1)->has('setOptions', 2));
+});
+
+test('a wishlist URL carrying a collection-only filter does not break it', function () {
+    // The bar is shared, so ?folder= and ?for_sale=1 can be pasted onto a list
+    // whose table has neither column.
+    app(AddToWishlist::class)($this->user, ($this->card)('Pikachu', 'Common', 100), []);
+
+    $this->actingAs($this->user)->get('/wishlist?folder=Binder&for_sale=1')->assertOk();
+});
+
+test('filters compose rather than replace one another', function () {
+    $add = app(AddToCollection::class);
+    $add($this->user, ($this->card)('Pikachu ex', 'Illustration Rare', 100), ['condition' => 'NM', 'quantity' => 1]);
+    $add($this->user, ($this->card)('Pikachu', 'Common', 100), ['condition' => 'NM', 'quantity' => 1]);
+    $add($this->user, ($this->card)('Snorlax', 'Illustration Rare', 100), ['condition' => 'NM', 'quantity' => 1]);
+
+    $this->actingAs($this->user)
+        ->get('/collection?q=pikachu&rarity%5B%5D=Illustration+Rare')
+        ->assertInertia(fn ($p) => $p->has('holdings', 1)
+            ->where('holdings.0.catalog_item.name', 'Pikachu ex'));
+});

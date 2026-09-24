@@ -11,17 +11,17 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { ListControlsBar } from '@/components/shared/list-controls';
+import type {
+    ListFilters,
+    RarityOption,
+} from '@/components/shared/list-controls';
 import { ListTabs } from '@/components/shared/list-tabs';
 import type { ListSummary } from '@/components/shared/list-tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
-import { ListControlsBar } from '@/components/shared/list-controls';
-import type {
-    ListFilters,
-    RarityOption,
-} from '@/components/shared/list-controls';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { EditWishlistItemDialog } from '@/components/wishlist/edit-wishlist-item-dialog';
 import { cardHref, formatMoney } from '@/lib/format';
@@ -36,6 +36,7 @@ type Props = {
     summary: WishlistSummary;
     filters: ListFilters;
     rarityOptions: RarityOption[];
+    setOptions: string[];
     publicUrl: string | null;
 };
 
@@ -62,6 +63,7 @@ export default function WishlistIndex({
     summary,
     filters,
     rarityOptions,
+    setOptions,
     publicUrl,
 }: Props) {
     const active = wishlists.find((w) => w.slug === activeWishlist);
@@ -175,12 +177,15 @@ export default function WishlistIndex({
                     />
                 </div>
 
-                {(items.length > 0 || filters.rarity.length > 0) && (
+                {(items.length > 0 ||
+                    filters.rarity.length > 0 ||
+                    !!filters.q) && (
                     <div className="mb-4">
                         <ListControlsBar
                             url="/wishlist"
                             filters={filters}
                             rarityOptions={rarityOptions}
+                            setOptions={setOptions}
                             keep={{ wishlist: activeWishlist }}
                             only={['items', 'summary', 'filters']}
                         />

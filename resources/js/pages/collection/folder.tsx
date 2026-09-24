@@ -1,12 +1,16 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { ChevronRight, Copy, Folder, Globe, Lock } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { HoldingsTable } from '@/components/collection/holdings-table';
+import { ListControlsBar } from '@/components/shared/list-controls';
+import type {
+    ListFilters,
+    RarityOption,
+} from '@/components/shared/list-controls';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatMoney } from '@/lib/format';
-import { summarize } from '@/lib/portfolio';
 import { cn } from '@/lib/utils';
 import type { GradingCompanyOption, Holding, PortfolioSummary } from '@/types';
 
@@ -27,6 +31,9 @@ type Props = {
     holdings: Holding[];
     summary: PortfolioSummary;
     gradingCompanies: GradingCompanyOption[];
+    filters: ListFilters;
+    rarityOptions: RarityOption[];
+    setOptions: string[];
 };
 
 const gainClass = (n: number | null | undefined) =>
@@ -63,6 +70,9 @@ export default function CollectionFolderPage({
     holdings,
     summary,
     gradingCompanies,
+    filters,
+    rarityOptions,
+    setOptions,
 }: Props) {
     const c = summary.currency;
     const collectionHref = collection.is_default
@@ -71,14 +81,14 @@ export default function CollectionFolderPage({
 
     const [copied, setCopied] = useState(false);
 
-    // Same deal as the collection page: the table owns the filters, so it hands
-    // up what's visible and the tiles total that instead of the whole folder.
-    const [filtered, setFiltered] = useState<Holding[] | null>(null);
-    const isFiltered = filtered !== null;
-    const shown = useMemo(
-        () => (filtered ? summarize(filtered, c) : summary),
-        [filtered, summary, c],
-    );
+    // The server totals what it returned, so these already describe what is on
+    // screen; the tint just says out loud that it is narrower than the folder.
+    const isFiltered =
+        filters.rarity.length > 0 ||
+        !!filters.q ||
+        !!filters.set ||
+        filters.for_sale;
+    const shown = summary;
 
     const togglerPublic = () =>
         router.patch(
@@ -246,12 +256,24 @@ export default function CollectionFolderPage({
                         </CardContent>
                     </Card>
                 ) : (
-                    <HoldingsTable
-                        holdings={holdings}
-                        gradingCompanies={gradingCompanies}
-                        otherCollections={[]}
-                        onFilteredChange={setFiltered}
-                    />
+                    <>
+                        <div className="mb-4">
+                            <ListControlsBar
+                                url={`/collection/folders/${folder.id}`}
+                                filters={filters}
+                                rarityOptions={rarityOptions}
+                                setOptions={setOptions}
+                                portfolioSorts
+                                forSaleFilter
+                                only={['holdings', 'summary', 'filters']}
+                            />
+                        </div>
+                        <HoldingsTable
+                            holdings={holdings}
+                            gradingCompanies={gradingCompanies}
+                            otherCollections={[]}
+                        />
+                    </>
                 )}
             </div>
         </>

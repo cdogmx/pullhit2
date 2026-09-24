@@ -36,7 +36,7 @@ class BuildPortfolio
         // same way the folder filter above already does. Showing a total for
         // the whole collection above a list of one rarity would read as an
         // error in the numbers.
-        $items = ($controls?->apply(clone $base) ?? $base)
+        $items = ($controls?->applyPortfolio(clone $base) ?? $base)
             ->with(['catalogItem.set', 'catalogItem.productLine', 'catalogItem.vertical', 'catalogItem.marketValues', 'gradingCompany', 'acquisitionLots'])
             ->get();
 

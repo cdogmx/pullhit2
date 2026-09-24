@@ -3,6 +3,7 @@
 namespace App\Support\Lists;
 
 use App\Models\CatalogItem;
+use App\Models\Set;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
@@ -36,6 +37,10 @@ final class ListControls
     private function __construct(
         public readonly array $rarities,
         public readonly string $sort,
+        public readonly ?string $q = null,
+        public readonly ?string $set = null,
+        public readonly ?string $folder = null,
+        public readonly bool $forSale = false,
     ) {}
 
     public static function fromRequest(Request $request): self
@@ -51,18 +56,41 @@ final class ListControls
 
         $sort = (string) $request->query('sort', self::DEFAULT_SORT);
 
+        $text = fn (string $key) => ($v = trim((string) $request->query($key, ''))) !== '' ? $v : null;
+
         return new self(
             $rarities,
             // An unknown sort is the default, not an error: these values live in
             // URLs people edit, bookmark and share, and a 500 for a typo in a
             // link is a worse answer than the list they expected.
             in_array($sort, self::SORTS, true) ? $sort : self::DEFAULT_SORT,
+            $text('q'),
+            $text('set'),
+            $text('folder'),
+            $request->boolean('for_sale'),
         );
     }
 
     public function isFiltered(): bool
     {
-        return $this->rarities !== [];
+        return $this->rarities !== []
+            || $this->q !== null
+            || $this->set !== null
+            || $this->folder !== null
+            || $this->forSale;
+    }
+
+    /** @return array<string, mixed> */
+    public function queryParams(): array
+    {
+        return array_filter([
+            'rarity' => $this->rarities,
+            'sort' => $this->sort === self::DEFAULT_SORT ? null : $this->sort,
+            'q' => $this->q,
+            'set' => $this->set,
+            'folder' => $this->folder,
+            'for_sale' => $this->forSale ? 1 : null,
+        ], fn ($v) => $v !== null && $v !== []);
     }
 
     /**
@@ -84,10 +112,56 @@ final class ListControls
      */
     public function apply(Builder|Relation $query): Builder|Relation
     {
-        return $query->when($this->rarities !== [], fn ($q) => $q->whereHas(
-            'catalogItem',
-            fn (Builder $c) => $c->whereIn('rarity', $this->rarities),
-        ));
+        return $query
+            ->when($this->rarities !== [], fn ($q) => $q->whereHas(
+                'catalogItem',
+                fn (Builder $c) => $c->whereIn('rarity', $this->rarities),
+            ))
+            ->when($this->set !== null, fn ($q) => $q->whereHas(
+                'catalogItem.set',
+                fn (Builder $s) => $s->where('name', $this->set),
+            ))
+            // Name, collector number, or the set it came from — the three
+            // things somebody types when hunting for a card they own.
+            ->when($this->q !== null, fn ($q) => $q->whereHas(
+                'catalogItem',
+                fn (Builder $c) => $c
+                    ->where(fn (Builder $w) => $w
+                        ->where('name', 'like', '%'.$this->escapeLike($this->q).'%')
+                        ->orWhere('number', 'like', '%'.$this->escapeLike($this->q).'%')
+                        ->orWhereHas('set', fn (Builder $s) => $s
+                            ->where('name', 'like', '%'.$this->escapeLike($this->q).'%')),
+                    ),
+            ));
+    }
+
+    /**
+     * The filters only a collection has: its folders, and what is up for sale.
+     *
+     * Separate because a wishlist has neither column, and a shared bar means a
+     * URL carrying ?folder= can be pasted from one page to the other.
+     *
+     * @template TQuery of Builder<covariant \Illuminate\Database\Eloquent\Model>|Relation<covariant \Illuminate\Database\Eloquent\Model, covariant \Illuminate\Database\Eloquent\Model, *>
+     *
+     * @param  TQuery  $query
+     * @return TQuery
+     */
+    public function applyPortfolio(Builder|Relation $query): Builder|Relation
+    {
+        return $this->apply($query)
+            ->when($this->folder !== null, fn ($q) => $q->where('folder', $this->folder))
+            ->when($this->forSale, fn ($q) => $q->where('is_for_sale', true));
+    }
+
+    /**
+     * A user's search term is a literal, not a pattern.
+     *
+     * "Pikachu %" should find nothing rather than everything — an unescaped
+     * wildcard in a LIKE quietly turns a narrowing search into a widening one.
+     */
+    private function escapeLike(string $term): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term);
     }
 
     /**
@@ -171,10 +245,40 @@ final class ListControls
             ->all();
     }
 
-    /** @return array{rarity: array<int, string>, sort: string} */
+    /**
+     * Every set present in a list, alphabetically.
+     *
+     * From the unfiltered list for the same reason the rarities are: the table
+     * used to derive this from the rows it had been handed, which was harmless
+     * while filtering was client-side and the rows were all of them. Now that
+     * the server returns only matches, deriving it from those would leave one
+     * set in the dropdown — the one already chosen.
+     *
+     * @param  Builder<covariant \Illuminate\Database\Eloquent\Model>|Relation<covariant \Illuminate\Database\Eloquent\Model, covariant \Illuminate\Database\Eloquent\Model, *>  $unfiltered
+     * @return array<int, string>
+     */
+    public static function setOptions(Builder|Relation $unfiltered): array
+    {
+        return Set::query()
+            ->whereIn('id', CatalogItem::query()
+                ->whereIn('id', $unfiltered->clone()->select('catalog_item_id'))
+                ->select('set_id'))
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+    }
+
+    /** @return array<string, mixed> */
     public function toArray(): array
     {
-        return ['rarity' => $this->rarities, 'sort' => $this->sort];
+        return [
+            'rarity' => $this->rarities,
+            'sort' => $this->sort,
+            'q' => $this->q,
+            'set' => $this->set,
+            'folder' => $this->folder,
+            'for_sale' => $this->forSale,
+        ];
     }
 
     /**

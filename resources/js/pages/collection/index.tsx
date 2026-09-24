@@ -1,6 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Download, Flag, Globe, Lock, Upload } from 'lucide-react';
-import { useMemo, useState } from 'react';
+
 import { toast } from 'sonner';
 import { CollectionFolders } from '@/components/collection/collection-folders';
 import { HoldingsTable } from '@/components/collection/holdings-table';
@@ -15,7 +15,6 @@ import type { ListSummary } from '@/components/shared/list-tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatMoney } from '@/lib/format';
-import { summarize } from '@/lib/portfolio';
 import { cn } from '@/lib/utils';
 import type {
     Allocation,
@@ -38,6 +37,7 @@ type Props = {
     decliners: PortfolioMover[];
     filters: ListFilters;
     rarityOptions: RarityOption[];
+    setOptions: string[];
     publicUrl: string | null;
     folders: FolderRow[];
     gradingCompanies: GradingCompanyOption[];
@@ -74,6 +74,7 @@ export default function CollectionIndex({
     decliners,
     filters,
     rarityOptions,
+    setOptions,
     publicUrl,
     folders,
     gradingCompanies,
@@ -84,15 +85,16 @@ export default function CollectionIndex({
         (x) => x.slug !== activeCollection,
     );
 
-    // The holdings table owns the filters and reports what's visible; totalling
-    // that here means the tiles answer "what am I looking at" rather than always
-    // "what do I own". Null = unfiltered, so the server's own figures stand.
-    const [filtered, setFiltered] = useState<Holding[] | null>(null);
-    const isFiltered = filtered !== null;
-    const shown = useMemo(
-        () => (filtered ? summarize(filtered, c) : summary),
-        [filtered, summary, c],
-    );
+    // The server totals what it returned, so the tiles already answer "what am
+    // I looking at" rather than always "what do I own". The filter badge just
+    // says out loud that they are narrower than the whole collection.
+    const isFiltered =
+        filters.rarity.length > 0 ||
+        !!filters.q ||
+        !!filters.set ||
+        !!filters.folder ||
+        filters.for_sale;
+    const shown = summary;
 
     const toggleActivePublic = () => {
         if (!active) {
@@ -329,6 +331,8 @@ export default function CollectionIndex({
                             portfolioSorts
                             filters={filters}
                             rarityOptions={rarityOptions}
+                            setOptions={setOptions}
+                            forSaleFilter
                             keep={{ collection: activeCollection }}
                             only={[
                                 'holdings',
@@ -347,8 +351,6 @@ export default function CollectionIndex({
                                 id: col.id,
                                 name: col.name,
                             }))}
-                            folders={folders}
-                            onFilteredChange={setFiltered}
                         />
                     </>
                 )}

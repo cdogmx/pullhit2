@@ -2,13 +2,12 @@ import { Link, router } from '@inertiajs/react';
 import {
     FolderInput,
     Pencil,
-    Search,
     StickyNote,
     Store,
     Tag,
     Trash2,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { CollectionFolderPicker } from '@/components/collection/collection-folder-picker';
 import type { CollectionFolderChoice } from '@/components/collection/collection-folder-picker';
@@ -26,14 +25,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { cardHref, formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { GradingCompanyOption, Holding } from '@/types';
@@ -47,8 +38,6 @@ export type FolderRow = {
     items_count: number;
     public_url: string | null;
 };
-
-const ALL = '__all__';
 
 const gainClass = (n: number | null | undefined) =>
     n == null
@@ -73,7 +62,7 @@ function formatGain(cents: number | null, currency = 'USD'): string {
 /**
  * The holdings table (toolbar + rows + inline edits) shared by the collection
  * page and a single-folder page. Client-side search/set/sort with per-row edit,
- * for-sale toggle, move-to-collection and delete. When `folders` is provided a
+ * move-to-collection and delete. Filtering and sorting live in the URL and are
  * folder filter is shown (the collection view); the folder page omits it since
  * it's already scoped.
  */
@@ -81,20 +70,10 @@ export function HoldingsTable({
     holdings,
     gradingCompanies,
     otherCollections,
-    folders,
-    onFilteredChange,
 }: {
     holdings: Holding[];
     gradingCompanies: GradingCompanyOption[];
     otherCollections: { id: number; name: string }[];
-    /** When set, renders a folder filter; omit on an already-folder-scoped page. */
-    folders?: FolderRow[];
-    /**
-     * Reports the currently-visible rows (null when no filter is on) so the page
-     * above can total them. The filters live here, so the summary has to be
-     * pushed up rather than pulled.
-     */
-    onFilteredChange?: (visible: Holding[] | null) => void;
 }) {
     const [editing, setEditing] = useState<Holding | null>(null);
     // Bulk selection + the actions it enables.
@@ -108,78 +87,11 @@ export function HoldingsTable({
         newCollectionName: null,
         folder: null,
     });
-    const [q, setQ] = useState('');
-    const [setFilter, setSetFilter] = useState(ALL);
-    const [folderFilter, setFolderFilter] = useState(ALL);
-    const [forSaleOnly, setForSaleOnly] = useState(false);
 
-    const sets = useMemo(
-        () =>
-            Array.from(
-                new Set(
-                    holdings
-                        .map((h) => h.catalog_item?.set?.name)
-                        .filter((s): s is string => !!s),
-                ),
-            ).sort((a, b) => a.localeCompare(b)),
-        [holdings],
-    );
-
-    const showFolderFilter = !!folders && folders.length > 0;
-
-    const visible = useMemo(() => {
-        const needle = q.trim().toLowerCase();
-
-        const filtered = holdings.filter((h) => {
-            if (forSaleOnly && !h.is_for_sale) {
-                return false;
-            }
-
-            if (setFilter !== ALL && h.catalog_item?.set?.name !== setFilter) {
-                return false;
-            }
-
-            if (
-                showFolderFilter &&
-                folderFilter !== ALL &&
-                (h.folder ?? '') !== folderFilter
-            ) {
-                return false;
-            }
-
-            if (needle === '') {
-                return true;
-            }
-
-            const ci = h.catalog_item;
-
-            return (
-                (ci?.display_name ?? ci?.name ?? '')
-                    .toLowerCase()
-                    .includes(needle) ||
-                (ci?.number ?? '').toLowerCase().includes(needle) ||
-                (ci?.set?.name ?? '').toLowerCase().includes(needle)
-            );
-        });
-
-        // Order is the server's — it comes from the sort in the URL. This
-        // only narrows the rows; re-sorting here would silently override it.
-        return filtered;
-    }, [holdings, q, setFilter, folderFilter, forSaleOnly, showFolderFilter]);
-
-    const filtersActive =
-        q.trim() !== '' ||
-        setFilter !== ALL ||
-        folderFilter !== ALL ||
-        forSaleOnly;
-
-    // Push the filtered view up so the page's totals can follow it. Sort order
-    // doesn't change the set, so an unfiltered table reports null and the page
-    // keeps the server's own figures.
-    useEffect(() => {
-        onFilteredChange?.(filtersActive ? visible : null);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [visible, filtersActive]);
+    // The rows the server sent, in the order it sent them. Filtering and
+    // sorting both live in the URL now, so re-deriving either here would only
+    // let the two disagree.
+    const visible = holdings;
 
     const clearSelection = () => setSelected(new Set());
 
@@ -308,87 +220,6 @@ export function HoldingsTable({
                             </Button>
                         </div>
                     )}
-                    <div className="flex flex-wrap items-center gap-2">
-                        <div className="relative">
-                            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                value={q}
-                                onChange={(e) => setQ(e.target.value)}
-                                placeholder="Search cards"
-                                className="h-8 w-48 pl-8"
-                            />
-                        </div>
-
-                        {sets.length > 1 && (
-                            <Select
-                                value={setFilter}
-                                onValueChange={setSetFilter}
-                            >
-                                <SelectTrigger className="h-8 w-40">
-                                    <SelectValue placeholder="All sets" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value={ALL}>
-                                        All sets
-                                    </SelectItem>
-                                    {sets.map((s) => (
-                                        <SelectItem key={s} value={s}>
-                                            {s}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        )}
-
-                        {showFolderFilter && (
-                            <Select
-                                value={folderFilter}
-                                onValueChange={setFolderFilter}
-                            >
-                                <SelectTrigger className="h-8 w-40">
-                                    <SelectValue placeholder="All folders" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value={ALL}>
-                                        All folders
-                                    </SelectItem>
-                                    {folders!.map((f) => (
-                                        <SelectItem key={f.id} value={f.name}>
-                                            {f.name} ({f.items_count})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        )}
-
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant={forSaleOnly ? 'default' : 'outline'}
-                            onClick={() => setForSaleOnly((v) => !v)}
-                            className="h-8"
-                        >
-                            <Tag className="size-4" />
-                            For sale
-                        </Button>
-
-                        {filtersActive && (
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                    setQ('');
-                                    setSetFilter(ALL);
-                                    setFolderFilter(ALL);
-                                    setForSaleOnly(false);
-                                }}
-                                className="h-8"
-                            >
-                                Clear
-                            </Button>
-                        )}
-                    </div>
                 </CardHeader>
                 <CardContent className="overflow-x-auto">
                     <table className="w-full text-sm">
