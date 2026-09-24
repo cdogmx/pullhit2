@@ -95,6 +95,8 @@ export function SideCapture({
     const [straight, setStraight] = useState<{
         file: File;
         url: string;
+        /** The corners this was warped from. */
+        key: string;
     } | null>(null);
     const [straightening, setStraightening] = useState(false);
 
@@ -113,6 +115,11 @@ export function SideCapture({
         return () => URL.revokeObjectURL(original);
     }, [original]);
 
+    // Which corners are being asked about right now. A straightened card is
+    // only the answer to the corners it was made from: move one and the
+    // picture on screen is of a crop that no longer exists.
+    const cropKey = crop ? JSON.stringify(crop) : null;
+
     // The card, straightened out of the photo. This is what the guides are
     // placed on, what the model is shown, and what the server is sent.
     //
@@ -130,62 +137,86 @@ export function SideCapture({
         let stale = false;
         let url: string | null = null;
 
-        void (async () => {
-            setStraightening(true);
+        // Dragging a corner changes `crop` on every pointer move. Without this
+        // wait that is one request per mouse move — a flood the server answers
+        // slower and slower, while the button that depends on the last of them
+        // stays spinning. Straighten once the hand stops.
+        const timer = setTimeout(() => {
+            void (async () => {
+                setStraightening(true);
 
-            try {
-                const body = new FormData();
-                body.append('photo', files[0]);
-                body.append('width', '700');
-                crop.forEach((p, i) => {
-                    body.append(`quad[${i}][x]`, String(p.x));
-                    body.append(`quad[${i}][y]`, String(p.y));
-                });
+                try {
+                    const body = new FormData();
+                    body.append('photo', files[0]);
+                    body.append('width', '700');
+                    crop.forEach((p, i) => {
+                        body.append(`quad[${i}][x]`, String(p.x));
+                        body.append(`quad[${i}][y]`, String(p.y));
+                    });
 
-                const response = await fetch('/admin/grade-predictor/deskew', {
-                    method: 'POST',
-                    body,
-                    headers: {
-                        Accept: 'application/json',
-                        'X-CSRF-TOKEN': csrf(),
-                    },
-                });
+                    const response = await fetch(
+                        '/admin/grade-predictor/deskew',
+                        {
+                            method: 'POST',
+                            body,
+                            headers: {
+                                Accept: 'application/json',
+                                'X-CSRF-TOKEN': csrf(),
+                            },
+                        },
+                    );
 
-                if (!response.ok || stale) {
-                    return;
-                }
+                    if (!response.ok || stale) {
+                        return;
+                    }
 
-                const payload = await response.json();
-                const blob = await (await fetch(payload.image)).blob();
-                const file = new File([blob], 'straight.png', {
-                    type: 'image/png',
-                });
+                    const payload = await response.json();
+                    const blob = await (await fetch(payload.image)).blob();
+                    const file = new File([blob], 'straight.png', {
+                        type: 'image/png',
+                    });
 
-                if (stale) {
-                    return;
-                }
+                    if (stale) {
+                        return;
+                    }
 
-                url = URL.createObjectURL(file);
-                setStraight({ file, url });
-            } finally {
-                if (!stale) {
+                    url = URL.createObjectURL(file);
+
+                    // Replace, and release the one being replaced. Revoking on
+                    // effect cleanup instead killed the URL that state was
+                    // still displaying, which is a broken image rather than a
+                    // stale one.
+                    setStraight((previous) => {
+                        if (previous) {
+                            URL.revokeObjectURL(previous.url);
+                        }
+
+                        return { file, url: url!, key: cropKey! };
+                    });
+                } finally {
+                    // Cleared whatever happened. Leaving it set on a superseded
+                    // or failed request is what pinned the spinner on.
                     setStraightening(false);
                 }
-            }
-        })();
+            })();
+        }, 350);
 
         return () => {
             stale = true;
-
-            if (url) {
-                URL.revokeObjectURL(url);
-            }
+            clearTimeout(timer);
         };
-    }, [crop, files]);
+        // cropKey stands in for crop: the object is new on every pointer move,
+        // its contents are not.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cropKey, files]);
 
-    // Once framed, every later step works on the straightened card.
-    const working = crop && straight ? straight.url : original;
-    const workingFile = crop && straight ? straight.file : files[0];
+    // Once framed, every later step works on the straightened card — but only
+    // the one warped from the corners currently set. Showing the previous one
+    // while a new warp is in flight puts the wrong card under the guides, and
+    // a guide placed on the wrong card measures nothing.
+    const fresh = straight && straight.key === cropKey ? straight : null;
+    const working = crop ? (fresh?.url ?? null) : original;
+    const workingFile = crop ? fresh?.file : files[0];
 
     /**
      * Find the card and crop to it.
@@ -412,29 +443,30 @@ export function SideCapture({
                             alt={`${side} first frame`}
                         />
 
-                        {straight && (
+                        {(fresh || straightening) && (
                             <div className="flex flex-col gap-2">
-                                <p className="text-xs text-muted-foreground">
-                                    Straightened:
+                                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    Straightened
+                                    {straightening && (
+                                        <Spinner className="size-3" />
+                                    )}
                                 </p>
-                                <img
-                                    src={straight.url}
-                                    alt={`${side} straightened`}
-                                    className="w-40 rounded border border-border"
-                                />
+                                {fresh && (
+                                    <img
+                                        src={fresh.url}
+                                        alt={`${side} straightened`}
+                                        className={cn(
+                                            'w-40 rounded border border-border transition-opacity',
+                                            straightening && 'opacity-50',
+                                        )}
+                                    />
+                                )}
                             </div>
                         )}
 
                         <div className="flex flex-wrap gap-2">
                             {crop && (
-                                <Button
-                                    size="sm"
-                                    disabled={straightening}
-                                    onClick={() => setStep(2)}
-                                >
-                                    {straightening ? (
-                                        <Spinner className="size-3.5" />
-                                    ) : null}
+                                <Button size="sm" onClick={() => setStep(2)}>
                                     Next: guides
                                 </Button>
                             )}
@@ -482,6 +514,13 @@ export function SideCapture({
                                     Frame it first
                                 </button>
                                 .
+                            </p>
+                        )}
+
+                        {crop && !fresh && (
+                            <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Spinner className="size-3.5" />
+                                Straightening the card…
                             </p>
                         )}
 
