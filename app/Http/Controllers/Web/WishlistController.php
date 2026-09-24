@@ -13,6 +13,7 @@ use App\Http\Resources\WishlistItemResource;
 use App\Models\CatalogItem;
 use App\Models\User;
 use App\Models\WishlistItem;
+use App\Support\Lists\ListControls;
 use App\Support\Membership\Entitlements;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -37,10 +38,23 @@ class WishlistController extends Controller
 
         $active = $wishlists->firstWhere('slug', $request->query('wishlist')) ?? $default;
 
-        $items = $active->items()
+        $controls = ListControls::fromRequest($request);
+
+        // Options come from the whole wishlist, not the filtered one, so a
+        // ticked box can still be unticked.
+        $rarityOptions = ListControls::rarityOptions($active->items());
+
+        $items = $controls->apply($active->items())
             ->with(['catalogItem.set', 'catalogItem.productLine', 'catalogItem.defaultMarketValue'])
-            ->latest()
             ->get();
+
+        // A wishlist has no cost basis and holds one of each, so the sorts that
+        // need those report null and fall to the end rather than being hidden.
+        $items = $controls->sort($items, fn (WishlistItem $i) => [
+            'value' => $i->currentValue(),
+            'gain' => null,
+            'quantity' => 1,
+        ]);
 
         $resolved = WishlistItemResource::collection($items)->resolve();
 
@@ -65,6 +79,8 @@ class WishlistController extends Controller
                 'below_target' => collect($resolved)->where('below_target', true)->count(),
                 'currency' => 'USD',
             ],
+            'filters' => $controls->toArray(),
+            'rarityOptions' => $rarityOptions,
             'publicUrl' => $publicUrl,
         ]);
     }

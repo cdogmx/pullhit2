@@ -4,6 +4,7 @@ namespace App\Actions\Collection;
 
 use App\Models\CollectionItem;
 use App\Models\User;
+use App\Support\Lists\ListControls;
 use Illuminate\Support\Collection;
 
 /**
@@ -21,13 +22,37 @@ class BuildPortfolio
     /**
      * @return array{items: Collection<int, CollectionItem>, summary: array<string, mixed>, allocation: array<int, array<string, mixed>>, gainers: array<int, array<string, mixed>>, decliners: array<int, array<string, mixed>>}
      */
-    public function __invoke(User $user, ?int $collectionId = null, ?string $folder = null): array
-    {
-        $items = $user->collectionItems()
+    public function __invoke(
+        User $user,
+        ?int $collectionId = null,
+        ?string $folder = null,
+        ?ListControls $controls = null,
+    ): array {
+        $base = $user->collectionItems()
             ->when($collectionId, fn ($q) => $q->where('collection_id', $collectionId))
-            ->when($folder !== null, fn ($q) => $q->where('folder', $folder))
+            ->when($folder !== null, fn ($q) => $q->where('folder', $folder));
+
+        // The filter narrows the portfolio, not just the list under it — the
+        // same way the folder filter above already does. Showing a total for
+        // the whole collection above a list of one rarity would read as an
+        // error in the numbers.
+        $items = ($controls?->apply(clone $base) ?? $base)
             ->with(['catalogItem.set', 'catalogItem.productLine', 'catalogItem.vertical', 'catalogItem.marketValues', 'gradingCompany', 'acquisitionLots'])
             ->get();
+
+        if ($controls !== null) {
+            $items = $controls->sort($items, function (CollectionItem $ci) {
+                $unit = $ci->currentUnitValue();
+                $value = $unit !== null ? $unit * $ci->quantity : null;
+                $cost = $ci->costBasisCents();
+
+                return [
+                    'value' => $value,
+                    'gain' => $value !== null ? $value - $cost : null,
+                    'quantity' => $ci->quantity,
+                ];
+            });
+        }
 
         // Memoize the per-holding numbers once.
         $rows = $items->map(function (CollectionItem $ci) {

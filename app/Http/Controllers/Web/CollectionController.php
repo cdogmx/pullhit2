@@ -25,6 +25,7 @@ use App\Models\CollectionFolder;
 use App\Models\CollectionItem;
 use App\Models\GradingCompany;
 use App\Models\User;
+use App\Support\Lists\ListControls;
 use App\Support\Membership\Entitlements;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -51,7 +52,12 @@ class CollectionController extends Controller
 
         $active = $collections->firstWhere('slug', $request->query('collection')) ?? $default;
 
-        $portfolio = $build($user, $active->id);
+        $controls = ListControls::fromRequest($request);
+
+        // From the unfiltered collection, so a ticked box can still be unticked.
+        $rarityOptions = ListControls::rarityOptions($active->items());
+
+        $portfolio = $build($user, $active->id, controls: $controls);
 
         $publicUrl = $active->is_public && $user->username
             ? url('/collection/'.$user->username.($active->is_default ? '' : '/'.$active->slug))
@@ -73,6 +79,8 @@ class CollectionController extends Controller
             'allocation' => $portfolio['allocation'],
             'gainers' => $portfolio['gainers'],
             'decliners' => $portfolio['decliners'],
+            'filters' => $controls->toArray(),
+            'rarityOptions' => $rarityOptions,
             'publicUrl' => $publicUrl,
             'folders' => $this->buildFolders($active, $user),
             // Options for the full-edit modal's graded-state picker.

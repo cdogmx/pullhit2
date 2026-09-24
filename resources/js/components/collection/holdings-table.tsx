@@ -50,38 +50,6 @@ export type FolderRow = {
 
 const ALL = '__all__';
 
-const SORTS = [
-    { value: 'value_desc', label: 'Value: high to low' },
-    { value: 'value_asc', label: 'Value: low to high' },
-    { value: 'pl_desc', label: 'P&L: best first' },
-    { value: 'pl_asc', label: 'P&L: worst first' },
-    { value: 'name', label: 'Name: A to Z' },
-    { value: 'quantity', label: 'Quantity' },
-    { value: 'newest', label: 'Date added: newest' },
-    { value: 'oldest', label: 'Date added: oldest' },
-];
-
-/** Compare nullable numbers, always sorting nulls last. */
-function nullableCompare(
-    a: number | null,
-    b: number | null,
-    dir: 1 | -1,
-): number {
-    if (a == null && b == null) {
-        return 0;
-    }
-
-    if (a == null) {
-        return 1;
-    }
-
-    if (b == null) {
-        return -1;
-    }
-
-    return (a - b) * dir;
-}
-
 const gainClass = (n: number | null | undefined) =>
     n == null
         ? 'text-muted-foreground'
@@ -144,7 +112,6 @@ export function HoldingsTable({
     const [setFilter, setSetFilter] = useState(ALL);
     const [folderFilter, setFolderFilter] = useState(ALL);
     const [forSaleOnly, setForSaleOnly] = useState(false);
-    const [sort, setSort] = useState('value_desc');
 
     const sets = useMemo(
         () =>
@@ -195,48 +162,10 @@ export function HoldingsTable({
             );
         });
 
-        const sorted = [...filtered];
-        sorted.sort((a, b) => {
-            switch (sort) {
-                case 'value_asc':
-                    return nullableCompare(a.market_value, b.market_value, 1);
-                case 'pl_desc':
-                    return nullableCompare(
-                        a.unrealized_gain,
-                        b.unrealized_gain,
-                        -1,
-                    );
-                case 'pl_asc':
-                    return nullableCompare(
-                        a.unrealized_gain,
-                        b.unrealized_gain,
-                        1,
-                    );
-                case 'name':
-                    return (a.catalog_item?.name ?? '').localeCompare(
-                        b.catalog_item?.name ?? '',
-                    );
-                case 'quantity':
-                    return b.quantity - a.quantity;
-                case 'newest':
-                    return (b.added_at ?? '').localeCompare(a.added_at ?? '');
-                case 'oldest':
-                    return (a.added_at ?? '').localeCompare(b.added_at ?? '');
-                default:
-                    return nullableCompare(a.market_value, b.market_value, -1);
-            }
-        });
-
-        return sorted;
-    }, [
-        holdings,
-        q,
-        setFilter,
-        folderFilter,
-        forSaleOnly,
-        sort,
-        showFolderFilter,
-    ]);
+        // Order is the server's — it comes from the sort in the URL. This
+        // only narrows the rows; re-sorting here would silently override it.
+        return filtered;
+    }, [holdings, q, setFilter, folderFilter, forSaleOnly, showFolderFilter]);
 
     const filtersActive =
         q.trim() !== '' ||
@@ -431,19 +360,6 @@ export function HoldingsTable({
                                 </SelectContent>
                             </Select>
                         )}
-
-                        <Select value={sort} onValueChange={setSort}>
-                            <SelectTrigger className="h-8 w-44">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {SORTS.map((s) => (
-                                    <SelectItem key={s.value} value={s.value}>
-                                        Sort: {s.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
 
                         <Button
                             type="button"

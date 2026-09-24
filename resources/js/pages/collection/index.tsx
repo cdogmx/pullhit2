@@ -5,6 +5,11 @@ import { toast } from 'sonner';
 import { CollectionFolders } from '@/components/collection/collection-folders';
 import { HoldingsTable } from '@/components/collection/holdings-table';
 import type { FolderRow } from '@/components/collection/holdings-table';
+import { ListControlsBar } from '@/components/shared/list-controls';
+import type {
+    ListFilters,
+    RarityOption,
+} from '@/components/shared/list-controls';
 import { ListTabs } from '@/components/shared/list-tabs';
 import type { ListSummary } from '@/components/shared/list-tabs';
 import { Button } from '@/components/ui/button';
@@ -31,6 +36,8 @@ type Props = {
     allocation: Allocation[];
     gainers: PortfolioMover[];
     decliners: PortfolioMover[];
+    filters: ListFilters;
+    rarityOptions: RarityOption[];
     publicUrl: string | null;
     folders: FolderRow[];
     gradingCompanies: GradingCompanyOption[];
@@ -65,6 +72,8 @@ export default function CollectionIndex({
     allocation,
     gainers,
     decliners,
+    filters,
+    rarityOptions,
     publicUrl,
     folders,
     gradingCompanies,
@@ -313,6 +322,22 @@ export default function CollectionIndex({
                             collectionId={active?.id ?? 0}
                             collectionName={active?.name ?? 'this collection'}
                             folders={folders}
+                        />
+
+                        <ListControlsBar
+                            url="/collection"
+                            portfolioSorts
+                            filters={filters}
+                            rarityOptions={rarityOptions}
+                            keep={{ collection: activeCollection }}
+                            only={[
+                                'holdings',
+                                'summary',
+                                'allocation',
+                                'gainers',
+                                'decliners',
+                                'filters',
+                            ]}
                         />
 
                         <HoldingsTable
