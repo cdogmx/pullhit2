@@ -10,17 +10,14 @@ import type { CropRect } from '@/components/grading/crop-box';
 import type { Guides } from '@/components/grading/guide-overlay';
 import type { SavedRun } from '@/components/grading/saved-runs';
 import { SavedRuns } from '@/components/grading/saved-runs';
-import {
-    cropFile,
-    EMPTY_SPLIT,
-    SideCapture,
-} from '@/components/grading/side-capture';
+import { EMPTY_SPLIT, SideCapture } from '@/components/grading/side-capture';
 import type { Split } from '@/components/grading/side-capture';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { cropFile } from '@/lib/crop-image';
 import { csrf } from '@/lib/csrf';
 import { cn } from '@/lib/utils';
 
@@ -188,21 +185,13 @@ export default function GradePredictor({ defaults, sides, saved }: Props) {
                 const g = guides[side];
 
                 if (g) {
-                    // Guides are drawn on the whole photo; the server receives
-                    // the cropped one. Without this the two disagree by exactly
-                    // the crop, and the centering would be measured against a
-                    // card outline sitting somewhere off the image.
-                    const toSent = (p: { x: number; y: number }) =>
-                        crop
-                            ? {
-                                  x: (p.x - crop.x) / crop.w,
-                                  y: (p.y - crop.y) / crop.h,
-                              }
-                            : p;
-
+                    // No mapping needed: the guides were placed on the cropped
+                    // image, which is the image being sent. That was not true
+                    // when crop and guides were two views of the same photo,
+                    // and the transform reconciling them was a bug waiting to
+                    // happen.
                     for (const which of ['outline', 'frame'] as const) {
-                        g[which].forEach((point, i) => {
-                            const p = toSent(point);
+                        g[which].forEach((p, i) => {
                             body.append(
                                 `guides[${side}][${which}][${i}][x]`,
                                 String(p.x),

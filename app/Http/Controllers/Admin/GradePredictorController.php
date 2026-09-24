@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Grading\PredictGradeFromPhotos;
 use App\Http\Controllers\Controller;
 use App\Models\GradePrediction;
+use App\Support\Grading\CardOutline;
 use App\Support\Grading\GuideProposer;
+use App\Support\Grading\PhotoSequence;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -51,6 +53,68 @@ class GradePredictorController extends Controller
                     'probability_of_actual' => $p->probabilityOfActual(),
                     'notes' => $p->notes,
                 ]),
+        ]);
+    }
+
+    /**
+     * Find the card in a photo, so nobody has to cut the background out by hand.
+     *
+     * This is the pipeline's own detector — Otsu threshold, largest quad — not
+     * a model. It is deterministic, it costs nothing, and on the case that
+     * actually matters here (a card on a plain background) it is better at
+     * finding an edge than anything that has to be asked in words.
+     *
+     * Returns both what it found and the box around it: the box pre-fills the
+     * crop, and the quad pre-places the outer guide once cropped.
+     */
+    public function detect(Request $request, CardOutline $outline): JsonResponse
+    {
+        $validator = validator($request->all(), [
+            'photo' => ['required', 'file', 'image', 'max:12288'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
+        @ini_set('memory_limit', '1024M');
+
+        try {
+            $photo = PhotoSequence::fromBinaries(
+                [(string) file_get_contents($request->file('photo')->getRealPath())],
+                1400,
+            );
+
+            $quad = $outline->detect($photo->frames[0], $photo->width, $photo->height);
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        if (count($quad) !== 4) {
+            return response()->json(['message' => 'Could not find a card in that photo.'], 422);
+        }
+
+        $xs = array_map(fn ($p) => $p[0] / $photo->width, $quad);
+        $ys = array_map(fn ($p) => $p[1] / $photo->height, $quad);
+
+        // A hair of margin. Cropping exactly to the detected edge risks shaving
+        // the card's own border off, and the border is what centering measures.
+        $pad = 0.012;
+
+        $x = max(0.0, min($xs) - $pad);
+        $y = max(0.0, min($ys) - $pad);
+
+        return response()->json([
+            'outline' => array_map(
+                fn ($p) => ['x' => $p[0] / $photo->width, 'y' => $p[1] / $photo->height],
+                $quad,
+            ),
+            'crop' => [
+                'x' => $x,
+                'y' => $y,
+                'w' => min(1.0 - $x, max($xs) - min($xs) + $pad * 2),
+                'h' => min(1.0 - $y, max($ys) - min($ys) + $pad * 2),
+            ],
         ]);
     }
 

@@ -316,3 +316,44 @@ test('a guide dragged by a side moves both of its corners', function () {
     expect($response->json('sides.front.centering.left'))->toBeGreaterThan(29.0)
         ->and($response->json('sides.front.centering.left'))->toBeLessThan(31.0);
 });
+
+test('the detector finds the card and crops to it', function () {
+    // The pipeline's own detector, not a model: a card on a plain background
+    // is exactly the case Otsu-plus-largest-quad is good at, and it saves the
+    // user cutting the background out by hand.
+    $response = $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor/detect', [
+            'photo' => cardPhoto(300, 400, 150, 'a.png'),
+        ])
+        ->assertOk();
+
+    // cardPhoto() draws the card at 40..260 x 30..370 of a 300x400 frame.
+    expect($response->json('crop.x'))->toBeLessThan(0.2)
+        ->and($response->json('crop.x'))->toBeGreaterThan(0.08)
+        ->and($response->json('crop.w'))->toBeGreaterThan(0.6)
+        ->and($response->json('outline'))->toHaveCount(4);
+});
+
+test('a photo with no card in it is refused rather than guessed at', function () {
+    // A flat field has no largest quad to find. Returning a crop anyway would
+    // silently frame the whole picture and look like it had worked.
+    $img = imagecreatetruecolor(200, 200);
+    imagefill($img, 0, 0, imagecolorallocate($img, 128, 128, 128));
+    $path = tempnam(sys_get_temp_dir(), 'flat').'.png';
+    imagepng($img, $path);
+    imagedestroy($img);
+
+    $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor/detect', [
+            'photo' => new UploadedFile($path, 'flat.png', 'image/png', null, true),
+        ])
+        ->assertStatus(422);
+});
+
+test('detecting is admin-only', function () {
+    $this->actingAs(User::factory()->create(['email_verified_at' => now()]))
+        ->postJson('/admin/grade-predictor/detect', [
+            'photo' => cardPhoto(300, 400, 150, 'a.png'),
+        ])
+        ->assertForbidden();
+});
