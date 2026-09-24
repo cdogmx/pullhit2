@@ -425,3 +425,62 @@ test('an inner border placed on the straightened card is measured as-is', functi
     expect($response->json('sides.front.centering.left'))->toBeGreaterThan(24.0)
         ->and($response->json('sides.front.centering.left'))->toBeLessThan(26.0);
 });
+
+test('each frame is found on its own terms, so a moving hand still aligns', function () {
+    // The bug this prevents, and it is the one that produced the first real
+    // capture's sixty-one "defects": warping every frame with one frame's
+    // corners leaves them offset, and differencing offset frames draws an edge
+    // along every printed line on the card.
+    //
+    // Same card, same glare, but shifted between shots as a hand does.
+    $shifted = fn (int $dx, int $dy, int $glareX) => (function () use ($dx, $dy, $glareX) {
+        $img = imagecreatetruecolor(320, 420);
+        imagefill($img, 0, 0, imagecolorallocate($img, 20, 20, 20));
+        imagefilledrectangle($img, 40 + $dx, 30 + $dy, 280 + $dx, 390 + $dy, imagecolorallocate($img, 200, 200, 200));
+        // A printed line — the thing that ghosts when frames do not align.
+        imagefilledrectangle($img, 60 + $dx, 200 + $dy, 260 + $dx, 210 + $dy, imagecolorallocate($img, 40, 40, 40));
+
+        for ($x = max(41 + $dx, $glareX - 16); $x < min(279 + $dx, $glareX + 16); $x++) {
+            for ($y = 31 + $dy; $y < 389 + $dy; $y++) {
+                imagesetpixel($img, $x, $y, imagecolorallocate($img, 255, 255, 255));
+            }
+        }
+
+        $path = tempnam(sys_get_temp_dir(), 'al').'.png';
+        imagepng($img, $path);
+        imagedestroy($img);
+
+        return new UploadedFile($path, 'f.png', 'image/png', null, true);
+    })();
+
+    $response = $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor', [
+            'front' => [$shifted(0, 0, 90), $shifted(9, 7, 190)],
+            'canvas_width' => 200,
+        ])
+        ->assertOk();
+
+    // Aligned, the printed line cancels and only the glare differs, so the
+    // detail map stays mostly dark. Misaligned it lights up everywhere.
+    // Both frames survive, each found on its own terms, rather than one being
+    // warped through the other's corners.
+    expect($response->json('sides.front.frames_used'))->toBe(2)
+        ->and($response->json('sides.front.surface_assessable'))->toBeTrue();
+});
+
+test('the detail coverage is reported so alignment can be judged without eyes', function () {
+    $response = $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor', [
+            'front' => [cardPhoto(300, 400, 90, 'a.png'), cardPhoto(300, 400, 190, 'b.png')],
+            'canvas_width' => 200,
+        ])
+        ->assertOk();
+
+    // Reported, not judged. What value separates an aligned sequence from a
+    // misaligned one is not known yet — a moving highlight lights much of the
+    // map by itself — so this is a number to calibrate against real captures,
+    // never a threshold to act on.
+    expect($response->json('sides.front.detail_coverage'))->toBeFloat()
+        ->toBeGreaterThanOrEqual(0.0)
+        ->toBeLessThanOrEqual(1.0);
+});

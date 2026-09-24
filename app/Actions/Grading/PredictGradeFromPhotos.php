@@ -108,6 +108,7 @@ class PredictGradeFromPhotos
             'sides' => array_map(
                 fn (array $s) => [
                     'surface_assessable' => $s['surface_assessable'],
+                    'detail_coverage' => $s['detail_coverage'],
                     'usable' => $s['usable'],
                     'frames_used' => $s['frames_used'],
                     'specular_range' => $s['specular_range'],
@@ -140,22 +141,49 @@ class PredictGradeFromPhotos
     ): array {
         $photos = PhotoSequence::fromBinaries($binaries, $maxInput);
 
-        // A dragged outline overrides detection. It is applied to every frame,
-        // which suits a steady camera — the case where detection failed and a
-        // person is correcting it. If the card moved a lot between shots, leave
-        // the guide off and let detection follow it frame by frame; the
-        // rectified frames on screen show immediately which is happening.
+        // Every frame is found on its own terms, and this is not a detail.
+        //
+        // The surface read differences the frames against each other, so they
+        // have to be rectified to the same card — which means each needs the
+        // corners of the card IN IT. A hand holding a phone moves between
+        // shots; warping every frame with one frame's corners leaves them
+        // offset, and differencing offset frames produces an edge along every
+        // printed line on the card. That reads as dozens of scratches and
+        // scores like a damaged card. It is what the first real capture did:
+        // sixty-one defects, and a detail map showing the artwork twice.
+        //
+        // The dragged outline is a fallback, not an override. It is one frame's
+        // answer — useful when detection finds nothing at all, and wrong for
+        // every other frame.
         $outline = $this->pixelQuad($guides['outline'] ?? null, $photos->width, $photos->height);
 
-        $corners = $outline !== null
-            ? array_fill(0, count($photos->frames), $outline)
-            : array_map(
-                fn (array $luma) => $this->outline->detect($luma, $photos->width, $photos->height),
-                $photos->frames,
-            );
+        $corners = array_map(
+            function (array $luma) use ($photos, $outline) {
+                $found = $this->outline->detect($luma, $photos->width, $photos->height);
+
+                return count($found) === 4 ? $found : $outline;
+            },
+            $photos->frames,
+        );
+
+        // A frame whose card could not be found, and which has no fallback,
+        // cannot be aligned to the others. Dropping it is the lesser harm: a
+        // misaligned frame invents damage, where a missing one only costs
+        // sensitivity.
+        $frames = [];
+        $kept = [];
+
+        foreach ($corners as $i => $quad) {
+            if ($quad !== null) {
+                $frames[] = $photos->frames[$i];
+                $kept[] = $quad;
+            }
+        }
+
+        $corners = $kept;
 
         $rect = $this->warper->rectifySequence(
-            $photos->frames,
+            $frames,
             $photos->width,
             $photos->height,
             $corners,
@@ -168,7 +196,7 @@ class PredictGradeFromPhotos
         // nothing to difference. Saying so is the honest answer — a single
         // photo of a scratched card looks exactly like a single photo of a
         // clean one.
-        $assessable = count($photos->frames) >= 2;
+        $assessable = count($frames) >= 2;
 
         $analysis = $assessable
             ? $this->analyzer->analyze($rect['frames'], $rect['width'], $rect['height'])
@@ -215,6 +243,11 @@ class PredictGradeFromPhotos
             // a bad shot. Several photos that did not move the glare COULD have
             // and did not — that is a re-shoot.
             'surface_assessable' => $assessable,
+            // What fraction of the detail map carries signal. Scratches are
+            // sparse, so a clean read lights a few percent of the card;
+            // misaligned frames light every printed edge on it. It is reported
+            // rather than acted on — the threshold is one real capture old.
+            'detail_coverage' => $maps !== null ? self::coverage($maps['normalized']) : null,
             'usable' => $analysis?->isUsable() ?? false,
             'frames_used' => count($rect['frames']),
             'specular_range' => $analysis !== null ? round($analysis->specularRange, 2) : null,
@@ -239,6 +272,41 @@ class PredictGradeFromPhotos
                 ),
             ],
         ];
+    }
+
+    /**
+     * The share of the detail map carrying real signal.
+     *
+     * Measured against the map's own range rather than an absolute level,
+     * because the range is arbitrary — it is a difference of differences. A
+     * clean card lights a few percent: the scratches. Frames that did not align
+     * light every edge the printing has, which is most of the card.
+     *
+     * @param  array<int, float>  $map
+     */
+    private static function coverage(array $map): float
+    {
+        if ($map === []) {
+            return 0.0;
+        }
+
+        $lo = min($map);
+        $hi = max($map);
+
+        if ($hi - $lo < 1e-6) {
+            return 0.0;
+        }
+
+        $cut = $lo + ($hi - $lo) * 0.25;
+        $lit = 0;
+
+        foreach ($map as $v) {
+            if ($v > $cut) {
+                $lit++;
+            }
+        }
+
+        return round($lit / count($map), 4);
     }
 
     /**
