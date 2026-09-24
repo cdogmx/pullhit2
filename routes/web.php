@@ -12,6 +12,7 @@ use App\Http\Controllers\Web\DealsController;
 use App\Http\Controllers\Web\FeedController;
 use App\Http\Controllers\Web\FollowController;
 use App\Http\Controllers\Web\GradeController;
+use App\Http\Controllers\Web\GradeReportController;
 use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\MarketplaceController;
 use App\Http\Controllers\Web\MarketplaceThreadController;
@@ -253,6 +254,11 @@ Route::get('wishlist/{username}', [WishlistController::class, 'publicShow'])->na
 Route::get('wishlist/{username}/{wishlistSlug}', [WishlistController::class, 'publicShowWishlist'])->name('wishlist.public.named');
 
 require __DIR__.'/settings.php';
+// A shared reading from the grading bench. The token is the permission —
+// no auth, and an unshared prediction simply is not here.
+Route::get('grade-report/{token}', [GradeReportController::class, 'show'])
+    ->name('grade-report.show');
+
 require __DIR__.'/admin.php';
 
 // Canonical card page at /{brand}/{set}/{card-slug}. Registered LAST so it only

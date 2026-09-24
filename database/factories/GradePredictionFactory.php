@@ -22,6 +22,15 @@ class GradePredictionFactory extends Factory
                 'sigma' => 85.0,
                 'probs' => ['10' => 0.31, '9' => 0.42, '8' => 0.18, 'other' => 0.09],
                 'unseen' => ['corners', 'edges'],
+                'limiting_attribute' => 'centering',
+                'confident' => false,
+                // A real estimate always carries these; a fixture without them
+                // lets a test pass that a real row would not.
+                'caveats' => [
+                    'corners' => 'Corners were not readable in the photo.',
+                    'edges' => 'Edges were not readable in the photo.',
+                ],
+                'attributes' => ['centering' => 964, 'surface' => 900],
             ],
             'observed' => ['centering', 'surface'],
             'guides_source' => 'manual',

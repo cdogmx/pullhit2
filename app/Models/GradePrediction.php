@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 /**
  * One run of the grading bench, and the grade the card really got.
@@ -23,7 +24,7 @@ class GradePrediction extends Model
         'user_id', 'label', 'catalog_item_id',
         'sides', 'estimate', 'observed', 'guides_source',
         'actual_company', 'actual_grade', 'actual_cert', 'actual_subscores',
-        'graded_at', 'notes',
+        'graded_at', 'notes', 'share_token',
     ];
 
     protected function casts(): array
@@ -48,6 +49,67 @@ class GradePrediction extends Model
     public function catalogItem(): BelongsTo
     {
         return $this->belongsTo(CatalogItem::class);
+    }
+
+    /** Start sharing this reading, or return the link it already has. */
+    public function share(): string
+    {
+        if ($this->share_token === null) {
+            // Long and random rather than sequential: the link IS the
+            // permission, so it has to be unguessable.
+            $this->forceFill(['share_token' => Str::random(32)])->save();
+        }
+
+        return $this->shareUrl();
+    }
+
+    public function unshare(): void
+    {
+        // Nulled, not blanked — an old link stops resolving rather than
+        // resolving to something empty.
+        $this->forceFill(['share_token' => null])->save();
+    }
+
+    public function shareUrl(): string
+    {
+        return url('/grade-report/'.$this->share_token);
+    }
+
+    /**
+     * The reading, as somebody who was not here would need it.
+     *
+     * Not the whole row — the notes are the owner's and who ran it is nobody
+     * else's business — but everything needed to argue with the result IS here.
+     * A link that shows a number and hides how it was reached cannot be
+     * debugged from, and a bench nobody can argue with is a bench that stops
+     * improving. Specular range, frame count and canvas size are how you tell a
+     * bad capture from a bad card, and none of them is private.
+     *
+     * @return array<string, mixed>
+     */
+    public function toShared(): array
+    {
+        return [
+            'label' => $this->label,
+            'created_at' => $this->created_at?->toDateString(),
+            'estimate' => $this->estimate,
+            'observed' => $this->observed,
+            'guides_source' => $this->guides_source,
+            'sides' => collect($this->sides)->map(fn ($side) => [
+                'usable' => $side['usable'] ?? null,
+                'surface_assessable' => $side['surface_assessable'] ?? null,
+                'surface' => $side['surface'] ?? null,
+                'centering' => $side['centering'] ?? null,
+                // The capture, so a poor reading can be traced to poor photos.
+                'frames_used' => $side['frames_used'] ?? null,
+                'specular_range' => $side['specular_range'] ?? null,
+                'canvas' => $side['canvas'] ?? null,
+            ])->all(),
+            'actual_company' => $this->actual_company,
+            'actual_grade' => $this->actual_grade,
+            'actual_cert' => $this->actual_cert,
+            'probability_of_actual' => $this->probabilityOfActual(),
+        ];
     }
 
     /**

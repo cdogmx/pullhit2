@@ -1,5 +1,12 @@
 import { router } from '@inertiajs/react';
-import { Check, Sparkles, UserRound } from 'lucide-react';
+import {
+    Check,
+    Copy,
+    Link2,
+    Link2Off,
+    Sparkles,
+    UserRound,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +28,7 @@ export type SavedRun = {
     actual_cert: string | null;
     probability_of_actual: number | null;
     notes: string | null;
+    share_url: string | null;
 };
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
@@ -56,7 +64,8 @@ export function SavedRuns({ runs }: { runs: SavedRun[] }) {
                             <th className="py-2 pr-4">guides</th>
                             <th className="py-2 pr-4">our call</th>
                             <th className="py-2 pr-4">graded</th>
-                            <th className="py-2">we gave it</th>
+                            <th className="py-2 pr-4">we gave it</th>
+                            <th className="py-2">link</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -77,6 +86,28 @@ function SavedRow({ run }: { run: SavedRun }) {
     );
     const [cert, setCert] = useState(run.actual_cert ?? '');
     const [busy, setBusy] = useState(false);
+    const [sharing, setSharing] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    async function toggleShare(revoke: boolean) {
+        setSharing(true);
+
+        try {
+            await fetch(`/admin/grade-predictor/predictions/${run.id}/share`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrf(),
+                },
+                body: JSON.stringify({ revoke }),
+            });
+
+            router.reload({ only: ['saved'] });
+        } finally {
+            setSharing(false);
+        }
+    }
 
     // The grade we put most weight on — what the bench would have told you.
     const top = Object.entries(run.probs).sort((a, b) => b[1] - a[1])[0];
@@ -187,7 +218,7 @@ function SavedRow({ run }: { run: SavedRun }) {
                 </div>
             </td>
 
-            <td className="py-2 tabular-nums">
+            <td className="py-2 pr-4 tabular-nums">
                 {run.probability_of_actual !== null ? (
                     <span
                         className={cn(
@@ -205,6 +236,50 @@ function SavedRow({ run }: { run: SavedRun }) {
                     <span className="text-muted-foreground">
                         {run.actual_grade !== null ? 'not priced' : '—'}
                     </span>
+                )}
+            </td>
+
+            <td className="py-2">
+                {run.share_url ? (
+                    <div className="flex items-center gap-1">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                                void navigator.clipboard.writeText(
+                                    run.share_url!,
+                                );
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 1500);
+                            }}
+                        >
+                            {copied ? (
+                                <Check className="size-3.5" />
+                            ) : (
+                                <Copy className="size-3.5" />
+                            )}
+                            {copied ? 'Copied' : 'Copy'}
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={sharing}
+                            aria-label="Stop sharing"
+                            onClick={() => toggleShare(true)}
+                        >
+                            <Link2Off className="size-3.5" />
+                        </Button>
+                    </div>
+                ) : (
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={sharing}
+                        onClick={() => toggleShare(false)}
+                    >
+                        <Link2 className="size-3.5" />
+                        Share
+                    </Button>
                 )}
             </td>
         </tr>

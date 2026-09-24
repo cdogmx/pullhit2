@@ -53,6 +53,7 @@ class GradePredictorController extends Controller
                     // says whether the pipeline is any good.
                     'probability_of_actual' => $p->probabilityOfActual(),
                     'notes' => $p->notes,
+                    'share_url' => $p->share_token ? $p->shareUrl() : null,
                 ]),
         ]);
     }
@@ -225,6 +226,18 @@ class GradePredictorController extends Controller
         $prediction = GradePrediction::create($data + ['user_id' => $request->user()->id]);
 
         return response()->json(['id' => $prediction->id]);
+    }
+
+    /** Hand out a link to one reading, or take it back. */
+    public function share(Request $request, GradePrediction $gradePrediction): JsonResponse
+    {
+        if ($request->boolean('revoke')) {
+            $gradePrediction->unshare();
+
+            return response()->json(['share_url' => null]);
+        }
+
+        return response()->json(['share_url' => $gradePrediction->share()]);
     }
 
     /** Record what the grader actually said. */
