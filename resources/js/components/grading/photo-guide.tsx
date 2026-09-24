@@ -50,13 +50,13 @@ const RULES: Rule[] = [
     {
         Icon: Lightbulb,
         title: 'Move the light, never the card',
-        body: 'Take the first shot, then move a lamp — or your phone’s torch in your other hand — and take another without touching the card. Three or four frames is plenty.',
+        body: 'Take the first shot, then move a lamp — or your phone’s flashlight in your other hand — and take another without touching the card. Three or four frames is plenty.',
         because: 'Surface is read by comparing frames: the artwork stays put and the glare travels. That comparison is the whole method, and it needs the card in the same place each time.',
     },
     {
         Icon: Sun,
         title: 'No direct flash',
-        body: 'A lamp off to one side, a window, a torch held at an angle. Anything but the flash next to the lens.',
+        body: 'A lamp off to one side, a window, a flashlight held at an angle. Anything but the flash next to the lens.',
         because: 'A head-on flash puts one blown-out hotspot in the middle of every frame, in the same place each time — the one kind of glare that moving the light cannot separate.',
     },
     {
