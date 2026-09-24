@@ -27,6 +27,43 @@ return [
         '8' => 0.25,
     ],
 
+    // ---- Published centering tolerances ---------------------------------
+    //
+    // Centering is the one attribute graders put numbers on, and the numbers
+    // differ between them — so the same card can be a 10 on centering to one
+    // company and a 9 to another. Worth saying out loud: it decides where a
+    // card is worth sending.
+    //
+    // Each limit is the largest share the WIDER side of an axis may take. A
+    // front limit of 55 means 55/45 or better on both axes. Front and back get
+    // their own limits because every standard is far more forgiving of the
+    // back, and grades are listed best-first — the first one a card satisfies
+    // is the answer.
+    //
+    // ONLY PSA IS FILLED IN. Its tolerances are published plainly and are the
+    // ones I can state without guessing. The others are left empty on purpose:
+    // a tolerance invented from memory is a number somebody submits a card on,
+    // and being wrong there costs real money. Fill each from that company's own
+    // published standard and it appears in the bench and on shared reports
+    // automatically.
+    'centering_standards' => [
+        'psa' => [
+            'name' => 'PSA',
+            'source' => 'PSA published grading standards',
+            'grades' => [
+                '10' => ['front' => 55, 'back' => 75, 'label' => 'Gem Mint'],
+                '9' => ['front' => 60, 'back' => 90, 'label' => 'Mint'],
+                '8' => ['front' => 65, 'back' => 90, 'label' => 'NM-MT'],
+                '7' => ['front' => 70, 'back' => 90, 'label' => 'Near Mint'],
+            ],
+        ],
+
+        // 'bgs' => ['name' => 'BGS', 'source' => '', 'grades' => [...]],
+        // 'cgc' => ['name' => 'CGC', 'source' => '', 'grades' => [...]],
+        // 'sgc' => ['name' => 'SGC', 'source' => '', 'grades' => [...]],
+        // 'tag' => ['name' => 'TAG', 'source' => '', 'grades' => [...]],
+    ],
+
     // ---- Photo-derived condition estimate -------------------------------
     //
     // Centering score = 1000 − penalty × (percentage points off centre on the

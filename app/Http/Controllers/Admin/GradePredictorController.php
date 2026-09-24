@@ -217,6 +217,7 @@ class GradePredictorController extends Controller
             // record of having seen none of the four attributes.
             'observed' => ['present', 'array'],
             'guides_source' => ['nullable', 'in:ai,ai-adjusted,manual'],
+            'centering_standards' => ['sometimes', 'array'],
             // Where the guide sat, so it can be drawn back over the picture.
             'sides.*.guide' => ['nullable', 'array', 'size:4'],
             'sides.*.guide.*.x' => ['required_with:sides.*.guide', 'numeric'],

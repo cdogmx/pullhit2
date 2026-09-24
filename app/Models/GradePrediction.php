@@ -24,7 +24,7 @@ class GradePrediction extends Model
         'user_id', 'label', 'catalog_item_id',
         'sides', 'estimate', 'observed', 'guides_source',
         'actual_company', 'actual_grade', 'actual_cert', 'actual_subscores',
-        'graded_at', 'notes', 'share_token',
+        'graded_at', 'notes', 'share_token', 'centering_standards',
     ];
 
     protected function casts(): array
@@ -33,6 +33,7 @@ class GradePrediction extends Model
             'sides' => 'array',
             'estimate' => 'array',
             'observed' => 'array',
+            'centering_standards' => 'array',
             'actual_subscores' => 'array',
             'actual_grade' => 'float',
             'graded_at' => 'datetime',
@@ -95,6 +96,7 @@ class GradePrediction extends Model
             'estimate' => $this->estimate,
             'observed' => $this->observed,
             'guides_source' => $this->guides_source,
+            'centering_standards' => $this->centering_standards ?? [],
             'sides' => collect($this->sides)->map(fn ($side) => [
                 'usable' => $side['usable'] ?? null,
                 'surface_assessable' => $side['surface_assessable'] ?? null,

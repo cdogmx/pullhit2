@@ -5,7 +5,9 @@ import {
     AttributeTiles,
     CenteringBars,
     DefectMap,
+    StandardVerdicts,
 } from '@/components/grading/breakdown';
+import type { StandardVerdict } from '@/components/grading/breakdown';
 import type { Guides, Quad } from '@/components/grading/guide-overlay';
 import type { SavedRun } from '@/components/grading/saved-runs';
 import { SavedRuns } from '@/components/grading/saved-runs';
@@ -67,6 +69,7 @@ type Prediction = {
     };
     observed: string[];
     limited_by_side: Record<string, string>;
+    centering_standards: StandardVerdict[];
     took_ms: number;
 };
 
@@ -152,6 +155,9 @@ export default function GradePredictor({ defaults, sides, saved }: Props) {
                     ),
                     estimate: result.estimate,
                     observed: result.observed,
+                    // Kept as it stood: the tolerances in config can change,
+                    // and a saved run should keep saying what it said.
+                    centering_standards: result.centering_standards ?? [],
                     guides_source: guidesSource(),
                 }),
             });
@@ -456,6 +462,10 @@ function Results({ result }: { result: Prediction }) {
                     <AttributeTiles
                         scores={result.estimate.attributes}
                         limitedBy={result.limited_by_side}
+                    />
+
+                    <StandardVerdicts
+                        verdicts={result.centering_standards ?? []}
                     />
 
                     {Object.entries(dist).map(([grade, p]) => (

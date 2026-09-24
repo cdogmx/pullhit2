@@ -403,3 +403,84 @@ function Reading({
         </span>
     );
 }
+
+export type StandardVerdict = {
+    company: string;
+    grade: string | null;
+    label: string | null;
+    limited_by: string | null;
+    judged: string[];
+    source: string | null;
+};
+
+/**
+ * What each grading company's published centering tolerance allows.
+ *
+ * On centering ALONE, and it says so: a card can pass every tolerance here and
+ * still grade poorly on the three attributes a photograph cannot show. What it
+ * answers is a real question though — the standards differ, so the same card
+ * is a 10 on centering to one company and a 9 to another, and that is part of
+ * deciding where to send it.
+ *
+ * Front and back are judged against their own limits. Every standard is far
+ * more forgiving of the back, so collapsing the two would fail cards no grader
+ * would fail.
+ */
+export function StandardVerdicts({
+    verdicts,
+}: {
+    verdicts: StandardVerdict[];
+}) {
+    if (verdicts.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+                {verdicts.map((v) => (
+                    <div
+                        key={v.company}
+                        className={cn(
+                            'flex min-w-28 flex-col gap-0.5 rounded-lg border px-3 py-2',
+                            v.grade
+                                ? 'border-[#047857]/30 bg-card'
+                                : 'border-[#b91c1c]/30 bg-card',
+                        )}
+                    >
+                        <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                            {v.company}
+                        </span>
+                        <span
+                            className={cn(
+                                'text-xl font-bold tabular-nums',
+                                v.grade
+                                    ? 'text-[#047857] dark:text-emerald-400'
+                                    : 'text-[#b91c1c] dark:text-red-400',
+                            )}
+                        >
+                            {v.grade ?? '—'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                            {v.label ?? ''}
+                        </span>
+                        {v.limited_by && (
+                            <span className="text-xs text-muted-foreground">
+                                tightest on the {v.limited_by}
+                            </span>
+                        )}
+                    </div>
+                ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+                Centering only, against each company&rsquo;s published tolerance
+                — front and back judged separately, because every standard is
+                far more forgiving of the back. This says nothing about corners,
+                edges or surface, and a card can clear all of these and still
+                grade poorly on those.
+                {verdicts.some((v) => v.judged.length === 1) &&
+                    ' Only one side was measured, so the other is not being vouched for.'}
+            </p>
+        </div>
+    );
+}

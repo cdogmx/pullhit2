@@ -4,7 +4,9 @@ import {
     AttributeTiles,
     CenteringBars,
     MeasuredCard,
+    StandardVerdicts,
 } from '@/components/grading/breakdown';
+import type { StandardVerdict } from '@/components/grading/breakdown';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -42,6 +44,7 @@ type Props = {
     };
     observed: string[];
     guides_source: string | null;
+    centering_standards: StandardVerdict[];
     sides: Record<string, SideSummary>;
     actual_company: string | null;
     actual_grade: number | null;
@@ -122,6 +125,7 @@ export default function GradeReport({
     estimate,
     observed,
     guides_source,
+    centering_standards,
     sides,
     actual_company,
     actual_grade,
@@ -281,6 +285,20 @@ export default function GradeReport({
                         limitedBy={{}}
                     />
                 </div>
+
+                {centering_standards?.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-sm">
+                                On centering, by each grader&rsquo;s own
+                                standard
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <StandardVerdicts verdicts={centering_standards} />
+                        </CardContent>
+                    </Card>
+                )}
 
                 {Object.entries(sides).map(([name, side]) => (
                     <ReadCard key={`img-${name}`} side={side} name={name} />

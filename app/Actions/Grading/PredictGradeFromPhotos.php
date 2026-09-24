@@ -5,6 +5,7 @@ namespace App\Actions\Grading;
 use App\Support\Grading\CardOutline;
 use App\Support\Grading\Centering;
 use App\Support\Grading\CenteringMeasurer;
+use App\Support\Grading\CenteringStandards;
 use App\Support\Grading\ConditionRollup;
 use App\Support\Grading\FrameWarper;
 use App\Support\Grading\Homography;
@@ -120,6 +121,14 @@ class PredictGradeFromPhotos
                 $results,
             ),
             'estimate' => $estimate->toArray(),
+            // What each company's published centering tolerance allows, front
+            // and back judged against their OWN limits. Separate from the
+            // score above, which is weakest-link across both sides because
+            // that is how TAG's own overall behaves.
+            'centering_standards' => CenteringStandards::assess(
+                $results['front']['centering'] ?? null,
+                $results['back']['centering'] ?? null,
+            ),
             'observed' => array_keys($observed),
             // Which side set each attribute, so a bad number can be traced to
             // the photos that produced it rather than to "the card".
