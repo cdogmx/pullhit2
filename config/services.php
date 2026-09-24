@@ -72,7 +72,16 @@ return [
         'key' => env('ANTHROPIC_API_KEY'),
         'endpoint' => env('ANTHROPIC_ENDPOINT', 'https://api.anthropic.com/v1/messages'),
         'version' => env('ANTHROPIC_VERSION', '2023-06-01'),
-        'model' => env('SCAN_MODEL', 'claude-sonnet-4-6'),
+        // Sonnet 5: the current generation of the tier this has always used,
+        // and cheaper than the one it replaces — $2/$10 per MTok against
+        // Sonnet 4.6's $3/$15. Nothing here passes the parameters Sonnet 5
+        // dropped (temperature/top_p/top_k, budget_tokens, assistant prefill),
+        // and forced tool_choice, which every caller relies on, is unaffected.
+        //
+        // One setting drives five quite different jobs — card vision, text
+        // extraction, the Sensei chat, and two web-search researchers. If
+        // scanning ever wants its own, faster model, this is the seam to split.
+        'model' => env('SCAN_MODEL', 'claude-sonnet-5'),
     ],
 
     // Dodo Payments — subscriptions + credit packs (merchant of record).
