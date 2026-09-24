@@ -1,10 +1,13 @@
 <?php
 
+use App\Actions\Collection\AddToCollection;
 use App\Models\CatalogItem;
+use App\Models\Collection;
 use App\Models\EbayScrapeJob;
 use App\Models\MarketValue;
 use App\Models\SaleObservation;
 use App\Models\Set;
+use App\Models\User;
 
 beforeEach(function () {
     config()->set('services.scrape_agent.token', 'test-token');
@@ -344,4 +347,80 @@ test('the queued URL is the sold search for that card', function () {
         ->toContain('LH_Sold=1')
         ->toContain('LH_Complete=1')
         ->toContain('ebay.com/sch/i.html');
+});
+
+test('naming a collection queues the cards in it', function () {
+    $owner = User::factory()->create(['username' => 'CardFoo']);
+    $collection = Collection::factory()->for($owner)->create(['slug' => 'for-sale', 'name' => 'For sale']);
+
+    $mine = enqueueableCard(null);
+    $theirs = enqueueableCard(null);
+    app(AddToCollection::class)(
+        $owner, $mine, ['condition' => 'NM', 'quantity' => 1, 'collection_id' => $collection->id],
+    );
+
+    test()->artisan('ebay:enqueue-sold', ['--collection' => 'CardFoo/for-sale'])->assertSuccessful();
+
+    expect(EbayScrapeJob::pluck('catalog_item_id')->all())->toBe([$mine->id])
+        ->and(EbayScrapeJob::pluck('catalog_item_id')->all())->not->toContain($theirs->id);
+});
+
+test('a collection queues its commons, which a set would not', function () {
+    // The catalog-wide heuristic skips Common and Uncommon because most of the
+    // catalog is commons nobody prices. A collection is not the catalog — it is
+    // a list somebody chose, so "queue this collection" has to mean all of it.
+    $owner = User::factory()->create(['username' => 'Commoner']);
+    $collection = Collection::factory()->for($owner)->create(['slug' => 'binder', 'name' => 'Binder']);
+
+    $common = CatalogItem::factory()->create([
+        'ebay_refreshed_at' => null,
+        'attributes' => ['language' => 'en', 'variant' => 'normal', 'rarity' => 'Common'],
+    ]);
+    app(AddToCollection::class)(
+        $owner, $common, ['condition' => 'NM', 'quantity' => 1, 'collection_id' => $collection->id],
+    );
+
+    test()->artisan('ebay:enqueue-sold', ['--collection' => 'Commoner/binder'])->assertSuccessful();
+
+    expect(EbayScrapeJob::pluck('catalog_item_id')->all())->toBe([$common->id]);
+});
+
+test('a bare collection slug is refused, because slugs repeat between people', function () {
+    // Two people can both have a "for-sale" list. Guessing which one was meant
+    // would queue a stranger's cards.
+    $a = User::factory()->create(['username' => 'PersonA']);
+    Collection::factory()->for($a)->create(['slug' => 'for-sale', 'name' => 'For sale']);
+
+    test()->artisan('ebay:enqueue-sold', ['--collection' => 'for-sale'])->assertFailed();
+
+    expect(EbayScrapeJob::count())->toBe(0);
+});
+
+test('an unknown collection fails instead of queueing the whole catalog', function () {
+    enqueueableCard(null);
+
+    test()->artisan('ebay:enqueue-sold', ['--collection' => 'Nobody/nothing'])->assertFailed();
+
+    expect(EbayScrapeJob::count())->toBe(0);
+});
+
+test('an outstanding sweep job does not stop every card being queued', function () {
+    // A sweep is a broad search with no card attached, so its catalog_item_id
+    // is NULL — and `id NOT IN (1, 2, NULL)` is NULL for every row, not true.
+    // One sweep in flight used to make the whole queue match nothing while the
+    // command reported that every card was already fresh.
+    $card = enqueueableCard(null);
+
+    EbayScrapeJob::create([
+        'catalog_item_id' => null,
+        'url' => 'https://www.ebay.com/sch/i.html?_nkw=pokemon+psa+10',
+        'status' => EbayScrapeJob::STATUS_PENDING,
+        'priority' => 0,
+        'attempts' => 0,
+    ]);
+
+    test()->artisan('ebay:enqueue-sold', ['--limit' => 10])->assertSuccessful();
+
+    expect(EbayScrapeJob::whereNotNull('catalog_item_id')->pluck('catalog_item_id')->all())
+        ->toContain($card->id);
 });

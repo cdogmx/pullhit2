@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\CatalogItem;
+use App\Models\Collection;
 use App\Models\EbayScrapeJob;
 use App\Models\Set;
 use App\Support\Ebay\EbaySoldSource;
@@ -31,6 +32,7 @@ class EnqueueEbaySoldCommand extends Command
 {
     protected $signature = 'ebay:enqueue-sold
         {--set= : only this set, by slug — implies --include-unvalued}
+        {--collection= : only the cards in this collection, as "username/slug" or an id — implies --include-unvalued}
         {--limit=200 : how many cards to queue}
         {--stale-hours= : only cards not refreshed in this many hours (default: the view TTL)}
         {--priority=0 : higher runs first}
@@ -58,18 +60,47 @@ class EnqueueEbaySoldCommand extends Command
             }
         }
 
+        $collection = null;
+
+        if ($ref = $this->option('collection')) {
+            $collection = $this->resolveCollection($ref);
+
+            if (! $collection) {
+                $this->error("No collection matching \"{$ref}\". Use \"username/slug\", or an id.");
+
+                return self::FAILURE;
+            }
+        }
+
+        // Naming a list is naming the cards somebody actually cares about, so
+        // both --set and --collection are treated as the stronger signal.
+        $named = $set !== null || $collection !== null;
+
         $limit = max(1, (int) $this->option('limit'));
         $staleHours = (int) ($this->option('stale-hours') ?? config('valuation.ebay.view_refresh_hours', 12));
         $cutoff = now()->subHours($staleHours);
 
         // Anything already queued or in flight stays as it is — re-running this
         // should top the queue up, not stack a second copy of every card.
-        $queued = EbayScrapeJob::outstanding()->pluck('catalog_item_id');
+        //
+        // Nulls excluded, and that is not a tidiness measure. A sweep job is a
+        // broad search with no card attached, so its catalog_item_id is NULL —
+        // and `id NOT IN (1, 2, NULL)` is NULL for every row, not true. With one
+        // sweep outstanding this list matched nothing at all: 0 of 71,490 cards
+        // survived the filter and the command queued nothing, while reporting
+        // "every card is fresher than 12h" as though all was well.
+        $queued = EbayScrapeJob::outstanding()
+            ->whereNotNull('catalog_item_id')
+            ->pluck('catalog_item_id');
 
         $items = CatalogItem::query()
             ->with(['productLine', 'set'])
             ->whereNotIn('id', $queued)
             ->when($set, fn (Builder $q) => $q->where('set_id', $set->id))
+            ->when($collection, fn (Builder $q) => $q->whereIn(
+                'id',
+                $collection->items()->select('catalog_item_id'),
+            ))
             ->where(fn (Builder $q) => $q
                 ->whereNull('ebay_refreshed_at')
                 ->orWhere('ebay_refreshed_at', '<', $cutoff))
@@ -78,14 +109,19 @@ class EnqueueEbaySoldCommand extends Command
             // for a NULL rarity, not true — which silently drops every card
             // whose rarity we do not hold, and those are exactly the ones with
             // the least data to begin with.
+            // A collection is a hand-picked list of cards somebody owns or is
+            // selling, so every one of them is wanted — including the commons
+            // the catalog-wide heuristic declines to spend on. A set is not:
+            // it is a whole printing, most of which is commons, and queueing
+            // those would bury the cards the set was named for.
             ->when(
-                $skip = (array) config('valuation.ebay.skip_rarities', []),
+                ! $collection && ($skip = (array) config('valuation.ebay.skip_rarities', [])),
                 fn (Builder $q) => $q->where(fn (Builder $r) => $r
                     ->whereNull('rarity')
                     ->orWhereNotIn('rarity', $skip)),
             )
             ->when(
-                ! $this->option('include-unvalued') && ! $set,
+                ! $this->option('include-unvalued') && ! $named,
                 fn (Builder $q) => $q->whereHas('marketValues'),
             )
             // Most-looked-at first. The agent is slow by design — one browser
@@ -108,8 +144,10 @@ class EnqueueEbaySoldCommand extends Command
             ->get();
 
         if ($items->isEmpty()) {
-            $this->info($set
-                ? "Nothing to queue — every card in {$set->name} is already queued or fresher than {$staleHours}h."
+            $where = $set?->name ?? $collection?->name;
+
+            $this->info($where
+                ? "Nothing to queue — every card in {$where} is already queued or fresher than {$staleHours}h."
                 : 'Nothing to queue — every card is fresher than '.$staleHours.'h.');
 
             return self::SUCCESS;
@@ -132,5 +170,32 @@ class EnqueueEbaySoldCommand extends Command
         $this->line('Outstanding queue: '.EbayScrapeJob::outstanding()->count());
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Find a collection from what a person would paste.
+     *
+     * "CardFoo/for-sale" is the shape of its public URL, which is how anyone
+     * asking for this actually holds the thing. A bare id works too. A bare
+     * slug does not: collection slugs are only unique per user, and "for-sale"
+     * belongs to as many people as have made one — queueing a stranger's cards
+     * because two lists share a name is not a mistake worth allowing.
+     */
+    private function resolveCollection(string $ref): ?Collection
+    {
+        if (ctype_digit($ref)) {
+            return Collection::find((int) $ref);
+        }
+
+        if (! str_contains($ref, '/')) {
+            return null;
+        }
+
+        [$username, $slug] = array_map('trim', explode('/', $ref, 2));
+
+        return Collection::query()
+            ->whereHas('user', fn (Builder $q) => $q->where('username', $username))
+            ->where('slug', $slug)
+            ->first();
     }
 }
