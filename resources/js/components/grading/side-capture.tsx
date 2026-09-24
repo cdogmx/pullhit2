@@ -476,13 +476,14 @@ export function SideCapture({
 
                         {files.length === 1 && (
                             <p className="rounded border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-500">
-                                One photo. Centering and the rectified card
+                                One photo. Centering and the straightened card
                                 still work, but{' '}
                                 <strong>
                                     surface cannot be read from a single image
                                 </strong>{' '}
                                 — the method compares frames as the glare moves,
                                 and one frame has nothing to compare against.
+                                Add a second with the light moved, not the card.
                             </p>
                         )}
 
@@ -492,11 +493,12 @@ export function SideCapture({
                                     <Images className="mr-1 inline size-3.5" />
                                     All {files.length} frames are read for
                                     surface. Pick the one to frame and measure
-                                    the card on — the glare moves between shots,
-                                    so choose one where the border is clear of
-                                    it. That crop is applied to every frame,
-                                    because cropping them differently would
-                                    misalign the sequence.
+                                    the card on — choose one where the glare is
+                                    clear of the border. Each frame is found on
+                                    its own terms, so a shifted hand is
+                                    recoverable, but a card that never moved at
+                                    all is better still: move the light between
+                                    shots and the frames align exactly.
                                 </p>
                                 <FramePicker
                                     files={files}

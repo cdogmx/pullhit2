@@ -275,12 +275,22 @@ export default function GradePredictor({ defaults, sides, saved }: Props) {
                         Grade predictor bench
                     </h1>
                     <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-                        For a surface read, shoot 3–5 photos per side, tilting
-                        the card between shots so the glare sweeps across it.
-                        That moving reflection is the entire signal. One photo
-                        is accepted and still gives you the rectified card and
-                        centering — it just cannot say anything about surface.
-                        Photos of different sizes are matched automatically.
+                        For a surface read, shoot 3&ndash;5 photos per side and
+                        move the LIGHT between them, not the card. Prop the
+                        phone, lay the card down, and walk a lamp or a torch
+                        around it so the glare sweeps across the surface. That
+                        moving reflection is the entire signal.
+                    </p>
+                    <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+                        Tilting the card works too, but less well: the frames
+                        are differenced against each other, so a card that
+                        stayed still is aligned perfectly by construction, while
+                        a card that moved is aligned only as well as its corners
+                        were found. A misalignment of a pixel or two draws an
+                        edge along every printed line and reads as dozens of
+                        scratches. One photo is fine for centering and still
+                        gives you the straightened card — it simply cannot say
+                        anything at all about surface.
                     </p>
                 </div>
 

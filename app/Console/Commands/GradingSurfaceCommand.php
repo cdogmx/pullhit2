@@ -17,9 +17,15 @@ use RuntimeException;
  *
  * How to shoot the sequence:
  *   - One card, plain contrasting background, filling most of the frame.
- *   - 3–5 shots. Between each, tilt the card (or move the light) so the GLARE
- *     MOVES ACROSS THE CARD. That reflection is the entire signal — a set of
- *     evenly-lit, glare-free photos carries no surface information at all.
+ *   - 3–5 shots. Between each, MOVE THE LIGHT so the glare sweeps across the
+ *     card. That reflection is the entire signal — a set of evenly-lit,
+ *     glare-free photos carries no surface information at all.
+ *   - Move the light, not the card, and leave the camera where it is. The
+ *     frames are differenced against each other, so a card that never moved is
+ *     aligned perfectly by construction. A card that moved is aligned only as
+ *     well as its corners were found in each frame, and being out by a pixel
+ *     or two draws an edge along every printed line — which reads as dozens of
+ *     scratches on a clean card, and scores like a damaged one.
  *   - Keep the framing roughly constant; the warp fixes the rest.
  *
  * Then look at the --out images, not just the numbers: albedo.png should be a
