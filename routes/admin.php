@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CardReportController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EbaySweepController;
 use App\Http\Controllers\Admin\GiveawayController;
+use App\Http\Controllers\Admin\GradePredictorController;
 use App\Http\Controllers\Admin\GradingGapController;
 use App\Http\Controllers\Admin\ImageController;
 use App\Http\Controllers\Admin\PriceInversionController;
@@ -85,6 +86,11 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
 
     // Billing ledger — all recorded transactions (read-only).
     Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');
+
+    // Bench for the photo grading pipeline — real photos against maths that
+    // has only ever seen synthetic ones.
+    Route::get('grade-predictor', [GradePredictorController::class, 'index'])->name('grade-predictor.index');
+    Route::post('grade-predictor', [GradePredictorController::class, 'predict'])->name('grade-predictor.predict');
 
     // Scan-detection feedback review (cache vs AI accuracy).
     Route::get('scan-feedback', [ScanFeedbackController::class, 'index'])->name('scan-feedback.index');
