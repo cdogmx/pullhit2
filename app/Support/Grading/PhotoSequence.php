@@ -52,7 +52,10 @@ class PhotoSequence
         $images = [];
 
         foreach (array_values($binaries) as $i => $bytes) {
-            $img = @imagecreatefromstring($bytes);
+            // EXIF first: a phone writes the sensor buffer plus a tag, and GD
+            // ignores the tag. Without this the server measures a photo a
+            // quarter turn from the one the guides were drawn on.
+            $img = @imagecreatefromstring(UprightImage::bytes($bytes));
 
             if ($img === false) {
                 throw new RuntimeException('Photo '.($i + 1).' could not be read as an image.');

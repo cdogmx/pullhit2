@@ -28,7 +28,9 @@ class ImageRectifier
      */
     public function rectify(string $binary, array $quad, int $outWidth = 700): string
     {
-        $src = @imagecreatefromstring($binary);
+        // Same reason as PhotoSequence: the quad was drawn on the picture a
+        // browser showed, which is the EXIF-corrected one.
+        $src = @imagecreatefromstring(UprightImage::bytes($binary));
 
         if ($src === false) {
             throw new RuntimeException('Could not read that as an image.');
@@ -43,10 +45,13 @@ class ImageRectifier
         $srcW = imagesx($src);
         $srcH = imagesy($src);
 
-        $corners = array_map(
+        // Ordered, not trusted: the homography maps positionally, so corners
+        // arriving from a different starting point warp the card a quarter
+        // turn round — a picture that is wrong in a way no number notices.
+        $corners = Quad::ordered(array_map(
             fn (array $p) => [(float) $p['x'] * $srcW, (float) $p['y'] * $srcH],
             array_values($quad),
-        );
+        ));
 
         $outWidth = max(100, min(1600, $outWidth));
         $outHeight = (int) round($outWidth / self::CARD_ASPECT);

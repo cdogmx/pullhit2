@@ -9,6 +9,7 @@ use App\Support\Grading\ConditionRollup;
 use App\Support\Grading\FrameWarper;
 use App\Support\Grading\Homography;
 use App\Support\Grading\PhotoSequence;
+use App\Support\Grading\Quad;
 use App\Support\Grading\Rect;
 use App\Support\Grading\SurfaceAnalyzer;
 use InvalidArgumentException;
@@ -276,10 +277,13 @@ class PredictGradeFromPhotos
             return null;
         }
 
-        return array_map(
+        // Same ordering rule as the warp: rectifySequence fits a homography
+        // to these, and a quad starting from the wrong corner rectifies every
+        // frame sideways.
+        return Quad::ordered(array_map(
             fn (array $p) => [(float) $p['x'] * $width, (float) $p['y'] * $height],
             array_values($quad),
-        );
+        ));
     }
 
     /**
