@@ -1,4 +1,16 @@
+import {
+    Move,
+    MoveDiagonal,
+    MoveDiagonal2,
+    MoveHorizontal,
+    MoveVertical,
+} from 'lucide-react';
 import { useRef, useState } from 'react';
+import {
+    ZOOM_MIN,
+    ZoomControls,
+    zoomStyle,
+} from '@/components/grading/zoom-pane';
 import { cn } from '@/lib/utils';
 
 /** A crop as fractions of the image, so it applies to every frame alike. */
@@ -19,17 +31,33 @@ type Handle =
     | 'move'
     | 'new';
 
-/** Where each handle sits on the box, and which way it resizes. */
-const HANDLES: { id: Handle; x: number; y: number; cursor: string }[] = [
-    { id: 'nw', x: 0, y: 0, cursor: 'nwse-resize' },
-    { id: 'n', x: 0.5, y: 0, cursor: 'ns-resize' },
-    { id: 'ne', x: 1, y: 0, cursor: 'nesw-resize' },
-    { id: 'e', x: 1, y: 0.5, cursor: 'ew-resize' },
-    { id: 'se', x: 1, y: 1, cursor: 'nwse-resize' },
-    { id: 's', x: 0.5, y: 1, cursor: 'ns-resize' },
-    { id: 'sw', x: 0, y: 1, cursor: 'nesw-resize' },
-    { id: 'w', x: 0, y: 0.5, cursor: 'ew-resize' },
+/** Where each handle sits, which way it resizes, and the arrow that says so. */
+const HANDLES: {
+    id: Handle;
+    x: number;
+    y: number;
+    cursor: string;
+    Icon: typeof MoveVertical;
+}[] = [
+    { id: 'nw', x: 0, y: 0, cursor: 'nwse-resize', Icon: MoveDiagonal2 },
+    { id: 'n', x: 0.5, y: 0, cursor: 'ns-resize', Icon: MoveVertical },
+    { id: 'ne', x: 1, y: 0, cursor: 'nesw-resize', Icon: MoveDiagonal },
+    { id: 'e', x: 1, y: 0.5, cursor: 'ew-resize', Icon: MoveHorizontal },
+    { id: 'se', x: 1, y: 1, cursor: 'nwse-resize', Icon: MoveDiagonal2 },
+    { id: 's', x: 0.5, y: 1, cursor: 'ns-resize', Icon: MoveVertical },
+    { id: 'sw', x: 0, y: 1, cursor: 'nesw-resize', Icon: MoveDiagonal },
+    { id: 'w', x: 0, y: 0.5, cursor: 'ew-resize', Icon: MoveHorizontal },
 ];
+
+/**
+ * A handle: a thin arrow saying which way it pulls, over a dark disc so it
+ * stays legible against any photo. Thin on purpose — a chunky handle covers the
+ * card edge it is being trimmed to, which is the one pixel that matters.
+ */
+const HANDLE =
+    'absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full ' +
+    'bg-black/55 text-white ring-1 ring-primary backdrop-blur-[1px] ' +
+    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
 
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -51,6 +79,7 @@ type Props = {
 export function CropBox({ src, crop, onChange, alt }: Props) {
     const boxRef = useRef<HTMLDivElement>(null);
     const [held, setHeld] = useState<Handle | null>(null);
+    const [zoom, setZoom] = useState(ZOOM_MIN);
 
     // What the box and the pointer were when the drag started. Resizing from
     // the deltas of the original — rather than accumulating each move — is what
@@ -151,87 +180,128 @@ export function CropBox({ src, crop, onChange, alt }: Props) {
     }
 
     return (
-        <div
-            ref={boxRef}
-            className={cn(
-                'relative w-full touch-none overflow-hidden rounded border border-border select-none',
-                crop ? 'cursor-default' : 'cursor-crosshair',
-            )}
-            onPointerDown={(e) => {
-                // Starting a fresh drag outside an existing box replaces it.
-                if (!crop) {
-                    start('new', e);
-                }
-            }}
-            onPointerMove={move}
-            onPointerUp={end}
-            onPointerLeave={end}
-        >
-            <img src={src} alt={alt} className="pointer-events-none w-full" />
+        <div className="flex flex-col gap-2">
+            <ZoomControls
+                zoom={zoom}
+                onZoom={setZoom}
+                hint="Zoom in to trim right up to the card's edge."
+            />
 
-            {crop && crop.w > 0 && crop.h > 0 && (
-                <>
-                    {/* Dim what is being cut away, so the crop reads as a
-                        selection rather than as a drawn rectangle. */}
-                    <div className="pointer-events-none absolute inset-0 bg-black/50" />
-                    <div
-                        className="absolute overflow-hidden"
-                        style={{
-                            left: `${crop.x * 100}%`,
-                            top: `${crop.y * 100}%`,
-                            width: `${crop.w * 100}%`,
-                            height: `${crop.h * 100}%`,
-                        }}
-                    >
-                        <img
-                            src={src}
-                            alt=""
-                            aria-hidden
-                            className="pointer-events-none absolute max-w-none"
-                            style={{
-                                width: `${100 / crop.w}%`,
-                                left: `${(-crop.x / crop.w) * 100}%`,
-                                top: `${(-crop.y / crop.h) * 100}%`,
-                                height: `${100 / crop.h}%`,
-                            }}
-                        />
-                    </div>
-
-                    <div
-                        role="presentation"
-                        onPointerDown={(e) => start('move', e)}
-                        className={cn(
-                            'absolute border-2 border-primary',
-                            held === 'move' ? 'cursor-grabbing' : 'cursor-grab',
-                        )}
-                        style={{
-                            left: `${crop.x * 100}%`,
-                            top: `${crop.y * 100}%`,
-                            width: `${crop.w * 100}%`,
-                            height: `${crop.h * 100}%`,
-                        }}
+            <div className="max-h-[70vh] overflow-auto rounded border border-border">
+                <div
+                    ref={boxRef}
+                    className={cn(
+                        'relative touch-none select-none',
+                        crop ? 'cursor-default' : 'cursor-crosshair',
+                    )}
+                    style={zoomStyle(zoom)}
+                    onPointerDown={(e) => {
+                        // Starting a fresh drag outside an existing box replaces it.
+                        if (!crop) {
+                            start('new', e);
+                        }
+                    }}
+                    onPointerMove={move}
+                    onPointerUp={end}
+                    onPointerLeave={end}
+                >
+                    <img
+                        src={src}
+                        alt={alt}
+                        className="pointer-events-none w-full"
                     />
 
-                    {HANDLES.map((handle) => (
-                        <button
-                            key={handle.id}
-                            type="button"
-                            aria-label={`Resize crop ${handle.id}`}
-                            onPointerDown={(e) => start(handle.id, e)}
-                            className={cn(
-                                'absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-white bg-primary shadow',
-                                'focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                                held === handle.id && 'scale-125',
-                            )}
-                            style={{
-                                left: `${(crop.x + crop.w * handle.x) * 100}%`,
-                                top: `${(crop.y + crop.h * handle.y) * 100}%`,
-                                cursor: handle.cursor,
-                            }}
-                        />
-                    ))}
-                </>
-            )}
+                    {crop && crop.w > 0 && crop.h > 0 && (
+                        <>
+                            {/* Dim what is being cut away, so the crop reads as a
+                        selection rather than as a drawn rectangle. */}
+                            <div className="pointer-events-none absolute inset-0 bg-black/50" />
+                            <div
+                                className="absolute overflow-hidden"
+                                style={{
+                                    left: `${crop.x * 100}%`,
+                                    top: `${crop.y * 100}%`,
+                                    width: `${crop.w * 100}%`,
+                                    height: `${crop.h * 100}%`,
+                                }}
+                            >
+                                <img
+                                    src={src}
+                                    alt=""
+                                    aria-hidden
+                                    className="pointer-events-none absolute max-w-none"
+                                    style={{
+                                        width: `${100 / crop.w}%`,
+                                        left: `${(-crop.x / crop.w) * 100}%`,
+                                        top: `${(-crop.y / crop.h) * 100}%`,
+                                        height: `${100 / crop.h}%`,
+                                    }}
+                                />
+                            </div>
+
+                            <div
+                                role="presentation"
+                                onPointerDown={(e) => start('move', e)}
+                                className={cn(
+                                    'absolute border border-dashed border-primary',
+                                    held === 'move'
+                                        ? 'cursor-grabbing'
+                                        : 'cursor-grab',
+                                )}
+                                style={{
+                                    left: `${crop.x * 100}%`,
+                                    top: `${crop.y * 100}%`,
+                                    width: `${crop.w * 100}%`,
+                                    height: `${crop.h * 100}%`,
+                                }}
+                            />
+
+                            <button
+                                type="button"
+                                aria-label="Move the crop"
+                                onPointerDown={(e) => start('move', e)}
+                                className={cn(
+                                    HANDLE,
+                                    'size-7',
+                                    held === 'move'
+                                        ? 'cursor-grabbing'
+                                        : 'cursor-grab',
+                                )}
+                                style={{
+                                    left: `${(crop.x + crop.w / 2) * 100}%`,
+                                    top: `${(crop.y + crop.h / 2) * 100}%`,
+                                }}
+                            >
+                                <Move className="size-4" strokeWidth={1.5} />
+                            </button>
+
+                            {HANDLES.map((handle) => (
+                                <button
+                                    key={handle.id}
+                                    type="button"
+                                    aria-label={`Resize crop ${handle.id}`}
+                                    onPointerDown={(e) => start(handle.id, e)}
+                                    className={cn(
+                                        HANDLE,
+                                        'size-6',
+                                        held === handle.id && 'scale-110',
+                                    )}
+                                    style={{
+                                        left: `${(crop.x + crop.w * handle.x) * 100}%`,
+                                        top: `${(crop.y + crop.h * handle.y) * 100}%`,
+                                        cursor: handle.cursor,
+                                    }}
+                                >
+                                    <handle.Icon
+                                        className="size-3.5"
+                                        strokeWidth={1.5}
+                                    />
+                                </button>
+                            ))}
+                        </>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }

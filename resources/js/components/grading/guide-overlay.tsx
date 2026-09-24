@@ -1,4 +1,16 @@
+import {
+    Move,
+    MoveDiagonal,
+    MoveDiagonal2,
+    MoveHorizontal,
+    MoveVertical,
+} from 'lucide-react';
 import { useRef, useState } from 'react';
+import {
+    ZOOM_MIN,
+    ZoomControls,
+    zoomStyle,
+} from '@/components/grading/zoom-pane';
 import { cn } from '@/lib/utils';
 
 export type Point = { x: number; y: number };
@@ -26,15 +38,43 @@ export const DEFAULT_GUIDES: Guides = {
     frame: insetQuad(0.16),
 };
 
-const CORNERS = ['top left', 'top right', 'bottom right', 'bottom left'];
+const CORNERS: { name: string; Icon: typeof MoveDiagonal; cursor: string }[] = [
+    { name: 'top left', Icon: MoveDiagonal2, cursor: 'nwse-resize' },
+    { name: 'top right', Icon: MoveDiagonal, cursor: 'nesw-resize' },
+    { name: 'bottom right', Icon: MoveDiagonal2, cursor: 'nwse-resize' },
+    { name: 'bottom left', Icon: MoveDiagonal, cursor: 'nesw-resize' },
+];
 
 /** Each side, as the pair of corners it joins. */
-const SIDES: { name: string; from: number; to: number; cursor: string }[] = [
-    { name: 'top', from: 0, to: 1, cursor: 'ns-resize' },
-    { name: 'right', from: 1, to: 2, cursor: 'ew-resize' },
-    { name: 'bottom', from: 2, to: 3, cursor: 'ns-resize' },
-    { name: 'left', from: 3, to: 0, cursor: 'ew-resize' },
+const SIDES: {
+    name: string;
+    from: number;
+    to: number;
+    cursor: string;
+    Icon: typeof MoveVertical;
+}[] = [
+    { name: 'top', from: 0, to: 1, cursor: 'ns-resize', Icon: MoveVertical },
+    {
+        name: 'right',
+        from: 1,
+        to: 2,
+        cursor: 'ew-resize',
+        Icon: MoveHorizontal,
+    },
+    { name: 'bottom', from: 2, to: 3, cursor: 'ns-resize', Icon: MoveVertical },
+    { name: 'left', from: 3, to: 0, cursor: 'ew-resize', Icon: MoveHorizontal },
 ];
+
+/**
+ * A handle: a thin arrow saying which way it pulls, over a dark disc so it
+ * stays legible on both a white border and dark artwork. Thin on purpose — a
+ * chunky handle covers the edge it is being aligned to, which is the one pixel
+ * that matters.
+ */
+const HANDLE =
+    'absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full ' +
+    'bg-black/55 text-white ring-1 ring-white/70 backdrop-blur-[1px] ' +
+    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
 
 const clamp = (v: number) => Math.min(1.2, Math.max(-0.2, v));
 
@@ -69,6 +109,7 @@ type Props = {
 export function GuideOverlay({ src, guides, onChange, alt }: Props) {
     const boxRef = useRef<HTMLDivElement>(null);
     const [held, setHeld] = useState<Held | null>(null);
+    const [zoom, setZoom] = useState(ZOOM_MIN);
 
     // The quad and the pointer as the drag began. Working from the original's
     // deltas rather than accumulating each move is what keeps the grabbed part
@@ -134,134 +175,178 @@ export function GuideOverlay({ src, guides, onChange, alt }: Props) {
     });
 
     return (
-        <div
-            ref={boxRef}
-            className="relative w-full touch-none overflow-hidden rounded border border-border select-none"
-            onPointerMove={move}
-            onPointerUp={() => setHeld(null)}
-            onPointerLeave={() => setHeld(null)}
-        >
-            <img src={src} alt={alt} className="pointer-events-none w-full" />
+        <div className="flex flex-col gap-2">
+            <ZoomControls
+                zoom={zoom}
+                onZoom={setZoom}
+                hint="Zoom in to sit a corner exactly on the border."
+            />
 
-            <svg
-                className="pointer-events-none absolute inset-0 size-full"
-                viewBox="0 0 1 1"
-                preserveAspectRatio="none"
-            >
-                {(['outline', 'frame'] as const).map((which) => (
-                    <polygon
-                        key={which}
-                        points={guides[which]
-                            .map((p) => `${p.x},${p.y}`)
-                            .join(' ')}
-                        className={cn(
-                            'fill-none',
-                            which === 'outline'
-                                ? 'stroke-primary'
-                                : 'stroke-amber-500',
-                        )}
-                        strokeWidth={1.5}
-                        vectorEffect="non-scaling-stroke"
+            <div className="max-h-[70vh] overflow-auto rounded border border-border">
+                <div
+                    ref={boxRef}
+                    className="relative touch-none select-none"
+                    style={zoomStyle(zoom)}
+                    onPointerMove={move}
+                    onPointerUp={() => setHeld(null)}
+                    onPointerLeave={() => setHeld(null)}
+                >
+                    <img
+                        src={src}
+                        alt={alt}
+                        className="pointer-events-none w-full"
                     />
-                ))}
-            </svg>
 
-            {(['outline', 'frame'] as const).map((which) => {
-                const quad = guides[which];
-                const tone =
-                    which === 'outline' ? 'bg-primary' : 'bg-amber-500';
-
-                return (
-                    <div key={which}>
-                        {/* The whole quad, for coarse placement before the
-                            edges are nudged into place. */}
-                        <button
-                            type="button"
-                            aria-label={`Move the ${which}`}
-                            onPointerDown={(e) =>
-                                start({ which, kind: 'whole' }, e)
-                            }
-                            className={cn(
-                                'absolute size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white opacity-70 shadow',
-                                'focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                                tone,
-                                held?.which === which && held.kind === 'whole'
-                                    ? 'cursor-grabbing'
-                                    : 'cursor-grab',
-                            )}
-                            style={{
-                                left: `${centre(quad).x * 100}%`,
-                                top: `${centre(quad).y * 100}%`,
-                            }}
-                        />
-
-                        {SIDES.map((side, i) => {
-                            const p = mid(quad, side);
-
-                            return (
-                                <button
-                                    key={side.name}
-                                    type="button"
-                                    aria-label={`${which} ${side.name} side`}
-                                    onPointerDown={(e) =>
-                                        start(
-                                            { which, kind: 'side', index: i },
-                                            e,
-                                        )
-                                    }
-                                    className={cn(
-                                        'absolute h-2.5 w-6 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-white shadow',
-                                        'focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                                        tone,
-                                        held?.which === which &&
-                                            held.kind === 'side' &&
-                                            held.index === i &&
-                                            'scale-125',
-                                    )}
-                                    style={{
-                                        left: `${p.x * 100}%`,
-                                        top: `${p.y * 100}%`,
-                                        cursor: side.cursor,
-                                        // Left and right read better upright.
-                                        transform:
-                                            side.name === 'left' ||
-                                            side.name === 'right'
-                                                ? 'translate(-50%, -50%) rotate(90deg)'
-                                                : undefined,
-                                    }}
-                                />
-                            );
-                        })}
-
-                        {quad.map((p, i) => (
-                            <button
-                                key={i}
-                                type="button"
-                                aria-label={`${which} ${CORNERS[i]} corner`}
-                                onPointerDown={(e) =>
-                                    start(
-                                        { which, kind: 'corner', index: i },
-                                        e,
-                                    )
-                                }
+                    <svg
+                        className="pointer-events-none absolute inset-0 size-full"
+                        viewBox="0 0 1 1"
+                        preserveAspectRatio="none"
+                    >
+                        {(['outline', 'frame'] as const).map((which) => (
+                            <polygon
+                                key={which}
+                                points={guides[which]
+                                    .map((p) => `${p.x},${p.y}`)
+                                    .join(' ')}
                                 className={cn(
-                                    'absolute size-4 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-2 border-white shadow',
-                                    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                                    tone,
-                                    held?.which === which &&
-                                        held.kind === 'corner' &&
-                                        held.index === i &&
-                                        'scale-125 cursor-grabbing',
+                                    'fill-none',
+                                    which === 'outline'
+                                        ? 'stroke-primary'
+                                        : 'stroke-amber-500',
                                 )}
-                                style={{
-                                    left: `${p.x * 100}%`,
-                                    top: `${p.y * 100}%`,
-                                }}
+                                strokeWidth={1.5}
+                                vectorEffect="non-scaling-stroke"
                             />
                         ))}
-                    </div>
-                );
-            })}
+                    </svg>
+
+                    {(['outline', 'frame'] as const).map((which) => {
+                        const quad = guides[which];
+                        // The arrow is white on a dark disc; the tone marks which guide
+                        // it belongs to through the ring, so the glyph stays legible.
+                        const ring =
+                            which === 'outline'
+                                ? 'ring-primary'
+                                : 'ring-amber-400';
+
+                        return (
+                            <div key={which}>
+                                {/* The whole quad, for coarse placement before the
+                            sides and corners are nudged into place. */}
+                                <button
+                                    type="button"
+                                    aria-label={`Move the whole ${which}`}
+                                    onPointerDown={(e) =>
+                                        start({ which, kind: 'whole' }, e)
+                                    }
+                                    className={cn(
+                                        HANDLE,
+                                        ring,
+                                        'size-7',
+                                        held?.which === which &&
+                                            held.kind === 'whole'
+                                            ? 'cursor-grabbing'
+                                            : 'cursor-grab',
+                                    )}
+                                    style={{
+                                        left: `${centre(quad).x * 100}%`,
+                                        top: `${centre(quad).y * 100}%`,
+                                    }}
+                                >
+                                    <Move
+                                        className="size-4"
+                                        strokeWidth={1.5}
+                                    />
+                                </button>
+
+                                {SIDES.map((side, i) => {
+                                    const p = mid(quad, side);
+
+                                    return (
+                                        <button
+                                            key={side.name}
+                                            type="button"
+                                            aria-label={`${which} ${side.name} side`}
+                                            onPointerDown={(e) =>
+                                                start(
+                                                    {
+                                                        which,
+                                                        kind: 'side',
+                                                        index: i,
+                                                    },
+                                                    e,
+                                                )
+                                            }
+                                            className={cn(
+                                                HANDLE,
+                                                ring,
+                                                'size-6',
+                                                held?.which === which &&
+                                                    held.kind === 'side' &&
+                                                    held.index === i &&
+                                                    'scale-110',
+                                            )}
+                                            style={{
+                                                left: `${p.x * 100}%`,
+                                                top: `${p.y * 100}%`,
+                                                cursor: side.cursor,
+                                            }}
+                                        >
+                                            <side.Icon
+                                                className="size-3.5"
+                                                strokeWidth={1.5}
+                                            />
+                                        </button>
+                                    );
+                                })}
+
+                                {quad.map((p, i) => (
+                                    <button
+                                        key={i}
+                                        type="button"
+                                        aria-label={`${which} ${CORNERS[i].name} corner`}
+                                        onPointerDown={(e) =>
+                                            start(
+                                                {
+                                                    which,
+                                                    kind: 'corner',
+                                                    index: i,
+                                                },
+                                                e,
+                                            )
+                                        }
+                                        className={cn(
+                                            HANDLE,
+                                            ring,
+                                            'size-6',
+                                            held?.which === which &&
+                                                held.kind === 'corner' &&
+                                                held.index === i &&
+                                                'scale-110',
+                                        )}
+                                        style={{
+                                            left: `${p.x * 100}%`,
+                                            top: `${p.y * 100}%`,
+                                            cursor: CORNERS[i].cursor,
+                                        }}
+                                    >
+                                        {(() => {
+                                            const Icon = CORNERS[i].Icon;
+
+                                            return (
+                                                <Icon
+                                                    className="size-3.5"
+                                                    strokeWidth={1.5}
+                                                />
+                                            );
+                                        })()}
+                                    </button>
+                                ))}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
         </div>
     );
 }

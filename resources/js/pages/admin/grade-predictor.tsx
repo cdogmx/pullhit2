@@ -1,6 +1,11 @@
 import { Head } from '@inertiajs/react';
 import { AlertTriangle, Info, Upload, X } from 'lucide-react';
 import { useState } from 'react';
+import {
+    AttributeTiles,
+    CenteringBars,
+    DefectMap,
+} from '@/components/grading/breakdown';
 import type { CropRect } from '@/components/grading/crop-box';
 import type { Guides } from '@/components/grading/guide-overlay';
 import {
@@ -55,6 +60,7 @@ type Prediction = {
     estimate: {
         score: number;
         sigma: number;
+        attributes: Record<string, number>;
         unseen: string[];
         probs: Record<string, number>;
         limiting_attribute: string | null;
@@ -304,6 +310,11 @@ function Results({ result }: { result: Prediction }) {
                         the back holds a card back exactly as one on the front.
                     </p>
 
+                    <AttributeTiles
+                        scores={result.estimate.attributes}
+                        limitedBy={result.limited_by_side}
+                    />
+
                     {Object.entries(dist).map(([grade, p]) => (
                         <div key={grade} className="flex items-center gap-3">
                             <span className="w-14 text-sm font-medium tabular-nums">
@@ -413,6 +424,8 @@ function SideResults({ name, side }: { name: string; side: SideResult }) {
                     </div>
                 )}
 
+                {side.centering && <CenteringBars centering={side.centering} />}
+
                 {side.images.albedo && side.images.detail && (
                     <div className="grid gap-4 sm:grid-cols-2">
                         <Figure
@@ -448,47 +461,15 @@ function SideResults({ name, side }: { name: string; side: SideResult }) {
                     </div>
                 </div>
 
-                {(side.surface?.defect_count ?? 0) > 0 && (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="text-left text-xs text-muted-foreground">
-                                <tr className="border-b border-border">
-                                    <th className="py-2 pr-4">x</th>
-                                    <th className="py-2 pr-4">y</th>
-                                    <th className="py-2 pr-4">length</th>
-                                    <th className="py-2 pr-4">elongation</th>
-                                    <th className="py-2">strength</th>
-                                </tr>
-                            </thead>
-                            <tbody className="tabular-nums">
-                                {side
-                                    .surface!.defects.slice(0, 40)
-                                    .map((d, i) => (
-                                        <tr
-                                            key={i}
-                                            className="border-b border-border/50"
-                                        >
-                                            <td className="py-1.5 pr-4">
-                                                {Math.round(d.x)}
-                                            </td>
-                                            <td className="py-1.5 pr-4">
-                                                {Math.round(d.y)}
-                                            </td>
-                                            <td className="py-1.5 pr-4">
-                                                {Math.round(d.length)}
-                                            </td>
-                                            <td className="py-1.5 pr-4">
-                                                {d.elongation.toFixed(1)}
-                                            </td>
-                                            <td className="py-1.5">
-                                                {d.strength.toFixed(1)}
-                                            </td>
-                                        </tr>
-                                    ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                {(side.surface?.defect_count ?? 0) > 0 &&
+                    side.images.detail && (
+                        <DefectMap
+                            src={side.images.detail}
+                            defects={side.surface!.defects}
+                            width={side.canvas.width}
+                            height={side.canvas.height}
+                        />
+                    )}
             </CardContent>
         </Card>
     );
