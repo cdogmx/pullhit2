@@ -96,6 +96,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('grade-predictor/guides', [GradePredictorController::class, 'propose'])->name('grade-predictor.guides');
     Route::post('grade-predictor/predictions', [GradePredictorController::class, 'store'])->name('grade-predictor.store');
     Route::post('grade-predictor/predictions/{gradePrediction}/share', [GradePredictorController::class, 'share'])->name('grade-predictor.share');
+    Route::delete('grade-predictor/predictions/{gradePrediction}', [GradePredictorController::class, 'destroy'])->name('grade-predictor.destroy');
     Route::patch('grade-predictor/predictions/{gradePrediction}', [GradePredictorController::class, 'update'])->name('grade-predictor.update');
 
     // Scan-detection feedback review (cache vs AI accuracy).

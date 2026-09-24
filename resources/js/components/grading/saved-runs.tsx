@@ -4,14 +4,26 @@ import {
     Copy,
     Link2,
     Link2Off,
+    Pencil,
     Sparkles,
+    Trash2,
     UserRound,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { csrf } from '@/lib/csrf';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +41,9 @@ export type SavedRun = {
     probability_of_actual: number | null;
     notes: string | null;
     share_url: string | null;
+    /** Whether the viewer is the person who ran it. */
+    owned: boolean;
+    ran_by: string | null;
 };
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
@@ -65,7 +80,8 @@ export function SavedRuns({ runs }: { runs: SavedRun[] }) {
                             <th className="py-2 pr-4">our call</th>
                             <th className="py-2 pr-4">graded</th>
                             <th className="py-2 pr-4">we gave it</th>
-                            <th className="py-2">link</th>
+                            <th className="py-2 pr-4">link</th>
+                            <th className="py-2"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -88,6 +104,24 @@ function SavedRow({ run }: { run: SavedRun }) {
     const [busy, setBusy] = useState(false);
     const [sharing, setSharing] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [editing, setEditing] = useState(false);
+    const [confirmRemove, setConfirmRemove] = useState(false);
+    const [label, setLabel] = useState(run.label ?? '');
+    const [notes, setNotes] = useState(run.notes ?? '');
+
+    async function send(body: Record<string, unknown>, method = 'PATCH') {
+        await fetch(`/admin/grade-predictor/predictions/${run.id}`, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': csrf(),
+            },
+            body: method === 'DELETE' ? undefined : JSON.stringify(body),
+        });
+
+        router.reload({ only: ['saved'] });
+    }
 
     async function toggleShare(revoke: boolean) {
         setSharing(true);
@@ -239,7 +273,7 @@ function SavedRow({ run }: { run: SavedRun }) {
                 )}
             </td>
 
-            <td className="py-2">
+            <td className="py-2 pr-4">
                 {run.share_url ? (
                     <div className="flex items-center gap-1">
                         <Button
@@ -281,6 +315,99 @@ function SavedRow({ run }: { run: SavedRun }) {
                         Share
                     </Button>
                 )}
+            </td>
+
+            <td className="py-2">
+                {run.owned ? (
+                    <div className="flex items-center gap-1">
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            aria-label="Edit this run"
+                            onClick={() => setEditing(true)}
+                        >
+                            <Pencil className="size-3.5" />
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            aria-label="Delete this run"
+                            className="text-red-600 hover:text-red-600 dark:text-red-400"
+                            onClick={() => setConfirmRemove(true)}
+                        >
+                            <Trash2 className="size-3.5" />
+                        </Button>
+                    </div>
+                ) : (
+                    // Visible to everyone, editable by one. Comparing runs is
+                    // the point of the list; changing somebody else's record of
+                    // their own card is not.
+                    <span className="text-xs text-muted-foreground">
+                        {run.ran_by ?? 'someone else'}
+                    </span>
+                )}
+
+                <Dialog open={editing} onOpenChange={setEditing}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Edit this run</DialogTitle>
+                        </DialogHeader>
+                        <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <Label htmlFor={`label-${run.id}`}>Card</Label>
+                                <Input
+                                    id={`label-${run.id}`}
+                                    value={label}
+                                    onChange={(e) => setLabel(e.target.value)}
+                                    placeholder="Milotic ex 237/191"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <Label htmlFor={`notes-${run.id}`}>Notes</Label>
+                                <Textarea
+                                    id={`notes-${run.id}`}
+                                    value={notes}
+                                    rows={4}
+                                    onChange={(e) => setNotes(e.target.value)}
+                                    placeholder="How it was shot, what looked off, anything worth remembering when the grade comes back."
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Notes stay private — they are not on the
+                                    shared link.
+                                </p>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button
+                                variant="ghost"
+                                onClick={() => setEditing(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    setEditing(false);
+                                    void send({
+                                        label: label || null,
+                                        notes: notes || null,
+                                    });
+                                }}
+                            >
+                                Save
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                <ConfirmDialog
+                    open={confirmRemove}
+                    onOpenChange={setConfirmRemove}
+                    title="Delete this run?"
+                    description="The reading and its pictures go. A run with a real grade against it is calibration data — deleting it loses that."
+                    confirmLabel="Delete"
+                    destructive
+                    onConfirm={() => void send({}, 'DELETE')}
+                />
             </td>
         </tr>
     );

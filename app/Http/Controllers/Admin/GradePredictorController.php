@@ -38,6 +38,7 @@ class GradePredictorController extends Controller
             ],
             'sides' => PredictGradeFromPhotos::SIDES,
             'saved' => GradePrediction::query()
+                ->with('user:id,name,username')
                 ->latest('id')->limit(30)->get()
                 ->map(fn (GradePrediction $p) => [
                     'id' => $p->id,
@@ -55,6 +56,10 @@ class GradePredictorController extends Controller
                     'probability_of_actual' => $p->probabilityOfActual(),
                     'notes' => $p->notes,
                     'share_url' => $p->share_token ? $p->shareUrl() : null,
+                    // Everyone sees every run — comparing them is the point —
+                    // but only the person who ran one may change it.
+                    'owned' => $p->user_id === request()->user()?->id,
+                    'ran_by' => $p->user?->username ?? $p->user?->name,
                 ]),
         ]);
     }
@@ -244,9 +249,21 @@ class GradePredictorController extends Controller
         return response()->json(['id' => $prediction->id]);
     }
 
+    /** Throw a run away. The owner's to make. */
+    public function destroy(GradePrediction $gradePrediction): JsonResponse
+    {
+        $this->authorize('delete', $gradePrediction);
+
+        $gradePrediction->delete();
+
+        return response()->json(['deleted' => true]);
+    }
+
     /** Hand out a link to one reading, or take it back. */
     public function share(Request $request, GradePrediction $gradePrediction): JsonResponse
     {
+        $this->authorize('share', $gradePrediction);
+
         if ($request->boolean('revoke')) {
             $gradePrediction->unshare();
 
@@ -259,12 +276,17 @@ class GradePredictorController extends Controller
     /** Record what the grader actually said. */
     public function update(Request $request, GradePrediction $gradePrediction): JsonResponse
     {
+        $this->authorize('update', $gradePrediction);
+
         $validator = validator($request->all(), [
-            'actual_company' => ['nullable', 'string', 'max:40'],
+            // What it is and what you thought at the time: both get corrected
+            // later, and a run mislabelled is a run nobody finds again.
+            'label' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'actual_company' => ['sometimes', 'nullable', 'string', 'max:40'],
             // Half grades exist; 0 does not.
-            'actual_grade' => ['nullable', 'numeric', 'min:0.5', 'max:10'],
-            'actual_cert' => ['nullable', 'string', 'max:60'],
-            'notes' => ['nullable', 'string', 'max:2000'],
+            'actual_grade' => ['sometimes', 'nullable', 'numeric', 'min:0.5', 'max:10'],
+            'actual_cert' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ]);
 
         if ($validator->fails()) {
@@ -273,9 +295,13 @@ class GradePredictorController extends Controller
 
         $data = $validator->validated();
 
-        $gradePrediction->update($data + [
-            'graded_at' => ($data['actual_grade'] ?? null) !== null ? now() : null,
-        ]);
+        // Only touch graded_at when this edit carried a grade. Renaming a run
+        // must not quietly un-grade it, which the old unconditional write did.
+        if (array_key_exists('actual_grade', $data)) {
+            $data['graded_at'] = $data['actual_grade'] !== null ? now() : null;
+        }
+
+        $gradePrediction->update($data);
 
         return response()->json([
             'id' => $gradePrediction->id,
