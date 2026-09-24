@@ -30,7 +30,7 @@ class ImageRectifier
     {
         // Same reason as PhotoSequence: the quad was drawn on the picture a
         // browser showed, which is the EXIF-corrected one.
-        $src = @imagecreatefromstring(UprightImage::bytes($binary));
+        $src = UprightImage::decode($binary);
 
         if ($src === false) {
             throw new RuntimeException('Could not read that as an image.');

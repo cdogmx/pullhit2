@@ -42,7 +42,7 @@ test('a phone photo is turned the right way up before anything measures it', fun
         ->and(imagesy($before))->toBe(200);
     imagedestroy($before);
 
-    $after = imagecreatefromstring(UprightImage::bytes($raw));
+    $after = UprightImage::decode($raw);
 
     // Turned: the landscape buffer is now the portrait picture a phone meant.
     expect(imagesx($after))->toBe(200)
@@ -59,16 +59,15 @@ test('an image with no EXIF is left exactly as it is', function () {
     $png = (string) ob_get_clean();
     imagedestroy($img);
 
-    $after = imagecreatefromstring(UprightImage::bytes($png));
+    $after = UprightImage::decode($png);
 
     expect(imagesx($after))->toBe(120)->and(imagesy($after))->toBe(80);
 
     imagedestroy($after);
 });
 
-test('bytes that are not an image come back untouched rather than throwing', function () {
-    // Better a reading GD might still manage than no reading at all.
-    expect(UprightImage::bytes('not an image'))->toBe('not an image');
+test('bytes that are not an image decode to false, not to a broken image', function () {
+    expect(UprightImage::decode('not an image'))->toBeFalse();
 });
 
 test('corners are put in order however they arrive', function () {
