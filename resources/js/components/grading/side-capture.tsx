@@ -7,11 +7,10 @@ import {
     Sparkles,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { CropBox } from '@/components/grading/crop-box';
-import type { CropRect } from '@/components/grading/crop-box';
 import {
     DEFAULT_GUIDES,
     GuideOverlay,
+    insetQuad,
 } from '@/components/grading/guide-overlay';
 import type { Guides, Quad } from '@/components/grading/guide-overlay';
 import { Badge } from '@/components/ui/badge';
@@ -39,16 +38,17 @@ export const EMPTY_SPLIT: Split = {
 
 const EDGES = ['left', 'right', 'top', 'bottom'] as const;
 
-const STEPS = ['Photos', 'Crop', 'Guides'] as const;
+const STEPS = ['Photos', 'Frame', 'Guides'] as const;
 
 type Props = {
     side: string;
     files: File[];
-    crop: CropRect | null;
+    /** The card's four corners in the original photo — the crop. */
+    crop: Quad | null;
     split: Split;
     guides: Guides | null;
     onFiles: (files: File[]) => void;
-    onCrop: (crop: CropRect | null) => void;
+    onCrop: (crop: Quad | null) => void;
     onSplit: (edge: string, value: string) => void;
     onGuides: (guides: Guides | null) => void;
     onProposed: (guides: Guides) => void;
@@ -92,10 +92,11 @@ export function SideCapture({
     // coordinates. Kept so the outer guide can start on the real edge instead
     // of on an arbitrary inset rectangle.
     const [detected, setDetected] = useState<Quad | null>(null);
-    const [cropped, setCropped] = useState<{
+    const [straight, setStraight] = useState<{
         file: File;
         url: string;
     } | null>(null);
+    const [straightening, setStraightening] = useState(false);
 
     // The first frame, which the crop is judged on. Derived rather than set
     // from an effect, so the URL exists on the same render as its file.
@@ -112,9 +113,15 @@ export function SideCapture({
         return () => URL.revokeObjectURL(original);
     }, [original]);
 
-    // The cropped first frame — what the guides are placed on, and what the
-    // model is shown. Built here rather than at submit time so that what is
-    // being looked at and what is being measured are the same picture.
+    // The card, straightened out of the photo. This is what the guides are
+    // placed on, what the model is shown, and what the server is sent.
+    //
+    // Straightened rather than merely cropped because a card is rarely
+    // square-on in a hand-held shot, and an axis-aligned crop of a tilted card
+    // keeps the tilt plus a wedge of background in every corner. Both make the
+    // next step harder: a guide dragged along a crooked border is fighting the
+    // picture, and the model reads a crooked card as a card with a crooked
+    // border.
     useEffect(() => {
         if (!crop || files.length === 0) {
             return;
@@ -124,15 +131,47 @@ export function SideCapture({
         let url: string | null = null;
 
         void (async () => {
-            const { cropFile } = await import('@/lib/crop-image');
-            const file = await cropFile(files[0], crop);
+            setStraightening(true);
 
-            if (stale) {
-                return;
+            try {
+                const body = new FormData();
+                body.append('photo', files[0]);
+                body.append('width', '700');
+                crop.forEach((p, i) => {
+                    body.append(`quad[${i}][x]`, String(p.x));
+                    body.append(`quad[${i}][y]`, String(p.y));
+                });
+
+                const response = await fetch('/admin/grade-predictor/deskew', {
+                    method: 'POST',
+                    body,
+                    headers: {
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': csrf(),
+                    },
+                });
+
+                if (!response.ok || stale) {
+                    return;
+                }
+
+                const payload = await response.json();
+                const blob = await (await fetch(payload.image)).blob();
+                const file = new File([blob], 'straight.png', {
+                    type: 'image/png',
+                });
+
+                if (stale) {
+                    return;
+                }
+
+                url = URL.createObjectURL(file);
+                setStraight({ file, url });
+            } finally {
+                if (!stale) {
+                    setStraightening(false);
+                }
             }
-
-            url = URL.createObjectURL(file);
-            setCropped({ file, url });
         })();
 
         return () => {
@@ -144,9 +183,9 @@ export function SideCapture({
         };
     }, [crop, files]);
 
-    // With a crop set, every later step works on the cropped picture.
-    const working = crop && cropped ? cropped.url : original;
-    const workingFile = crop && cropped ? cropped.file : files[0];
+    // Once framed, every later step works on the straightened card.
+    const working = crop && straight ? straight.url : original;
+    const workingFile = crop && straight ? straight.file : files[0];
 
     /**
      * Find the card and crop to it.
@@ -175,8 +214,9 @@ export function SideCapture({
             }
 
             const payload = await response.json();
+            // The detected quad IS the frame to straighten from.
             setDetected(payload.outline as Quad);
-            onCrop(payload.crop);
+            onCrop(payload.outline as Quad);
         } catch {
             // Same — a failed detection just means cropping by hand.
         } finally {
@@ -185,34 +225,18 @@ export function SideCapture({
     }
 
     /**
-     * The outer guide, put where the detector said the card is.
+     * Starting guides on the straightened card.
      *
-     * Mapped from the original photo into the cropped one, which is the picture
-     * the guides live on. The inner guide has no detector — card designs vary
-     * far too much — so it starts as an inset of the outer one, which is at
-     * least the right shape to drag.
+     * The card has already been warped to fill the frame, so its outer edge is
+     * the frame — the blue guide starts there and usually needs no touching.
+     * The inner border has no detector, because card designs vary far too much
+     * for a design-agnostic one, so it starts as an inset and is the one thing
+     * actually left to place.
      */
     function startingGuides(): Guides {
-        if (!detected || !crop) {
-            return DEFAULT_GUIDES;
-        }
-
-        const outline = detected.map((p) => ({
-            x: (p.x - crop.x) / crop.w,
-            y: (p.y - crop.y) / crop.h,
-        })) as Quad;
-
-        const centre = {
-            x: outline.reduce((t, p) => t + p.x, 0) / 4,
-            y: outline.reduce((t, p) => t + p.y, 0) / 4,
-        };
-
-        const frame = outline.map((p) => ({
-            x: centre.x + (p.x - centre.x) * 0.88,
-            y: centre.y + (p.y - centre.y) * 0.88,
-        })) as Quad;
-
-        return { outline, frame };
+        return crop && straight
+            ? { outline: insetQuad(0.004), frame: insetQuad(0.07) }
+            : DEFAULT_GUIDES;
     }
 
     /**
@@ -318,7 +342,7 @@ export function SideCapture({
                                 // frame mean nothing on a new one.
                                 onCrop(null);
                                 onGuides(null);
-                                setCropped(null);
+                                setStraight(null);
                                 setDetected(null);
                                 setStep(1);
 
@@ -362,28 +386,55 @@ export function SideCapture({
                                 </>
                             ) : crop ? (
                                 <>
-                                    Cropped to the card automatically — nudge
-                                    the edges if it clipped anything. Everything
-                                    after this works on what you leave.
+                                    Put a corner on each corner of the card. It
+                                    is straightened from these, so a card shot
+                                    crooked comes out square — drag any corner
+                                    that is off.
                                 </>
                             ) : (
                                 <>
-                                    Trim the background away so the card fills
-                                    the frame. Everything after this works on
-                                    what you leave, which is what makes the
-                                    guides worth anything.
+                                    Mark the card&rsquo;s four corners. It gets
+                                    straightened and cropped from them, so the
+                                    card need not be square-on in the photo.
                                 </>
                             )}
                         </p>
-                        <CropBox
+
+                        <GuideOverlay
                             src={original}
-                            crop={crop}
-                            onChange={onCrop}
+                            guides={{
+                                outline: crop ?? insetQuad(0.08),
+                                frame: crop ?? insetQuad(0.08),
+                            }}
+                            only={['outline']}
+                            hint="Zoom in to sit a corner exactly on the card's corner."
+                            onChange={(g) => onCrop(g.outline)}
                             alt={`${side} first frame`}
                         />
+
+                        {straight && (
+                            <div className="flex flex-col gap-2">
+                                <p className="text-xs text-muted-foreground">
+                                    Straightened:
+                                </p>
+                                <img
+                                    src={straight.url}
+                                    alt={`${side} straightened`}
+                                    className="w-40 rounded border border-border"
+                                />
+                            </div>
+                        )}
+
                         <div className="flex flex-wrap gap-2">
                             {crop && (
-                                <Button size="sm" onClick={() => setStep(2)}>
+                                <Button
+                                    size="sm"
+                                    disabled={straightening}
+                                    onClick={() => setStep(2)}
+                                >
+                                    {straightening ? (
+                                        <Spinner className="size-3.5" />
+                                    ) : null}
                                     Next: guides
                                 </Button>
                             )}
@@ -407,7 +458,7 @@ export function SideCapture({
                                     onClick={() => onCrop(null)}
                                 >
                                     <RotateCcw className="size-3.5" />
-                                    Clear crop
+                                    Start over
                                 </Button>
                             )}
                         </div>
@@ -418,16 +469,17 @@ export function SideCapture({
                     <>
                         {!crop && (
                             <p className="rounded border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-500">
-                                No crop yet. Guides can be placed on the whole
-                                photo, but on a card surrounded by background
-                                both you and the model are aiming at an edge
-                                that is nowhere near the frame.{' '}
+                                The card has not been framed yet. Guides can go
+                                on the raw photo, but on a card that is small,
+                                crooked, or surrounded by background, both you
+                                and the model are aiming at an edge that is
+                                nowhere near the frame.{' '}
                                 <button
                                     type="button"
                                     className="underline underline-offset-2"
                                     onClick={() => setStep(1)}
                                 >
-                                    Crop first
+                                    Frame it first
                                 </button>
                                 .
                             </p>
@@ -477,23 +529,24 @@ export function SideCapture({
                         {working && guides && (
                             <div className="flex flex-col gap-2">
                                 <p className="text-xs text-muted-foreground">
-                                    Put the{' '}
-                                    <span className="text-primary">blue</span>{' '}
-                                    guide on the OUTER edge of the border — the
-                                    card&rsquo;s own edge — and the{' '}
+                                    The card is straightened, so its outer edge
+                                    is the frame — only the{' '}
                                     <span className="text-amber-600">
-                                        amber
+                                        inner
                                     </span>{' '}
-                                    one on its INNER edge, where the artwork
-                                    starts. Drag corners, sides, or the middle.
-                                    Check them even if the model placed them: a
-                                    percent out is twenty points of centering.
+                                    edge of the border is left to place, where
+                                    the artwork starts. Drag corners, sides, or
+                                    the middle. Check it even if the model
+                                    placed it: a percent out is twenty points of
+                                    centering.
                                 </p>
                                 <GuideOverlay
                                     src={working}
                                     guides={guides}
+                                    only={['frame']}
+                                    hint="Zoom in to sit a corner exactly on the inner border."
                                     onChange={onGuides}
-                                    alt={`${side} guides`}
+                                    alt={`${side} inner border`}
                                 />
                                 <div className="flex flex-wrap items-center gap-2">
                                     <Button

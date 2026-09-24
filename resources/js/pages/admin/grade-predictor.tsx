@@ -6,8 +6,7 @@ import {
     CenteringBars,
     DefectMap,
 } from '@/components/grading/breakdown';
-import type { CropRect } from '@/components/grading/crop-box';
-import type { Guides } from '@/components/grading/guide-overlay';
+import type { Guides, Quad } from '@/components/grading/guide-overlay';
 import type { SavedRun } from '@/components/grading/saved-runs';
 import { SavedRuns } from '@/components/grading/saved-runs';
 import { EMPTY_SPLIT, SideCapture } from '@/components/grading/side-capture';
@@ -17,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { cropFile } from '@/lib/crop-image';
 import { csrf } from '@/lib/csrf';
 import { cn } from '@/lib/utils';
 
@@ -83,7 +81,7 @@ const pct = (n: number) => `${Math.round(n * 100)}%`;
 
 export default function GradePredictor({ defaults, sides, saved }: Props) {
     const [files, setFiles] = useState<Record<string, File[]>>({});
-    const [crops, setCrops] = useState<Record<string, CropRect | null>>({});
+    const [crops, setCrops] = useState<Record<string, Quad | null>>({});
     const [guides, setGuides] = useState<Record<string, Guides | null>>({});
     const [splits, setSplits] = useState<Record<string, Split>>(
         Object.fromEntries(sides.map((s) => [s, { ...EMPTY_SPLIT }])),
@@ -167,11 +165,14 @@ export default function GradePredictor({ defaults, sides, saved }: Props) {
             for (const side of given) {
                 const crop = crops[side];
 
+                // The ORIGINAL frames go up. The card's corners go with them as
+                // the outline guide, and the server rectifies every frame from
+                // that one quad — the same warp the surface read already needs.
+                // Sending pre-straightened images instead would mean warping
+                // each frame in the browser, and a second implementation of a
+                // transform this codebase already has fitted and tested.
                 for (const file of files[side]) {
-                    body.append(
-                        `${side}[]`,
-                        crop ? await cropFile(file, crop) : file,
-                    );
+                    body.append(`${side}[]`, file);
                 }
 
                 for (const edge of EDGES) {
@@ -182,26 +183,35 @@ export default function GradePredictor({ defaults, sides, saved }: Props) {
                     }
                 }
 
+                if (crop) {
+                    crop.forEach((p, i) => {
+                        body.append(
+                            `guides[${side}][outline][${i}][x]`,
+                            String(p.x),
+                        );
+                        body.append(
+                            `guides[${side}][outline][${i}][y]`,
+                            String(p.y),
+                        );
+                    });
+                }
+
                 const g = guides[side];
 
                 if (g) {
-                    // No mapping needed: the guides were placed on the cropped
-                    // image, which is the image being sent. That was not true
-                    // when crop and guides were two views of the same photo,
-                    // and the transform reconciling them was a bug waiting to
-                    // happen.
-                    for (const which of ['outline', 'frame'] as const) {
-                        g[which].forEach((p, i) => {
-                            body.append(
-                                `guides[${side}][${which}][${i}][x]`,
-                                String(p.x),
-                            );
-                            body.append(
-                                `guides[${side}][${which}][${i}][y]`,
-                                String(p.y),
-                            );
-                        });
-                    }
+                    // The inner border, as placed on the straightened card —
+                    // which is card space already, so it goes as frame_uv and
+                    // the server maps it no further.
+                    g.frame.forEach((p, i) => {
+                        body.append(
+                            `guides[${side}][frame_uv][${i}][x]`,
+                            String(p.x),
+                        );
+                        body.append(
+                            `guides[${side}][frame_uv][${i}][y]`,
+                            String(p.y),
+                        );
+                    });
                 }
             }
 

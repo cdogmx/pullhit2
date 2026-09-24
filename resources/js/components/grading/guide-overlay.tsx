@@ -83,11 +83,20 @@ type Held =
     | { which: keyof Guides; kind: 'side'; index: number }
     | { which: keyof Guides; kind: 'whole' };
 
+export type QuadTone = 'outline' | 'frame';
+
 type Props = {
     src: string;
     guides: Guides;
     onChange: (guides: Guides) => void;
     alt: string;
+    /**
+     * Which quads to show. One, for framing the card; two, for measuring the
+     * border between them. Same handles either way — a card is a quadrilateral
+     * in both jobs, and learning one set of controls should be enough.
+     */
+    only?: QuadTone[];
+    hint?: string;
 };
 
 /**
@@ -106,7 +115,15 @@ type Props = {
  * photographed by hand is not a rectangle, and squaring it off here would throw
  * away the perspective the homography needs.
  */
-export function GuideOverlay({ src, guides, onChange, alt }: Props) {
+export function GuideOverlay({
+    src,
+    guides,
+    onChange,
+    alt,
+    only,
+    hint,
+}: Props) {
+    const shown: QuadTone[] = only ?? ['outline', 'frame'];
     const boxRef = useRef<HTMLDivElement>(null);
     const [held, setHeld] = useState<Held | null>(null);
     const [zoom, setZoom] = useState(ZOOM_MIN);
@@ -179,7 +196,7 @@ export function GuideOverlay({ src, guides, onChange, alt }: Props) {
             <ZoomControls
                 zoom={zoom}
                 onZoom={setZoom}
-                hint="Zoom in to sit a corner exactly on the border."
+                hint={hint ?? 'Zoom in to sit a corner exactly on the border.'}
             />
 
             <div className="max-h-[70vh] overflow-auto rounded border border-border">
@@ -202,7 +219,7 @@ export function GuideOverlay({ src, guides, onChange, alt }: Props) {
                         viewBox="0 0 1 1"
                         preserveAspectRatio="none"
                     >
-                        {(['outline', 'frame'] as const).map((which) => (
+                        {shown.map((which) => (
                             <polygon
                                 key={which}
                                 points={guides[which]
@@ -220,7 +237,7 @@ export function GuideOverlay({ src, guides, onChange, alt }: Props) {
                         ))}
                     </svg>
 
-                    {(['outline', 'frame'] as const).map((which) => {
+                    {shown.map((which) => {
                         const quad = guides[which];
                         // The arrow is white on a dark disc; the tone marks which guide
                         // it belongs to through the ring, so the glyph stays legible.

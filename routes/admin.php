@@ -92,6 +92,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('grade-predictor', [GradePredictorController::class, 'index'])->name('grade-predictor.index');
     Route::post('grade-predictor', [GradePredictorController::class, 'predict'])->name('grade-predictor.predict');
     Route::post('grade-predictor/detect', [GradePredictorController::class, 'detect'])->name('grade-predictor.detect');
+    Route::post('grade-predictor/deskew', [GradePredictorController::class, 'deskew'])->name('grade-predictor.deskew');
     Route::post('grade-predictor/guides', [GradePredictorController::class, 'propose'])->name('grade-predictor.guides');
     Route::post('grade-predictor/predictions', [GradePredictorController::class, 'store'])->name('grade-predictor.store');
     Route::patch('grade-predictor/predictions/{gradePrediction}', [GradePredictorController::class, 'update'])->name('grade-predictor.update');

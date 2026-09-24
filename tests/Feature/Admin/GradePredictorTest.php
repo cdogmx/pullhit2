@@ -357,3 +357,71 @@ test('detecting is admin-only', function () {
         ])
         ->assertForbidden();
 });
+
+test('a crooked card is straightened from its corners', function () {
+    // The whole point: a card need not be square-on in the photo. The corners
+    // say where it is, and the warp makes it rectangular.
+    $img = imagecreatetruecolor(400, 400);
+    imagefill($img, 0, 0, imagecolorallocate($img, 20, 20, 20));
+    imagefilledpolygon($img, [120, 40, 360, 120, 280, 360, 40, 280], imagecolorallocate($img, 220, 40, 40));
+    $path = tempnam(sys_get_temp_dir(), 'skew').'.png';
+    imagepng($img, $path);
+    imagedestroy($img);
+
+    $response = $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor/deskew', [
+            'photo' => new UploadedFile($path, 'skew.png', 'image/png', null, true),
+            'quad' => [
+                ['x' => 120 / 400, 'y' => 40 / 400],
+                ['x' => 360 / 400, 'y' => 120 / 400],
+                ['x' => 280 / 400, 'y' => 360 / 400],
+                ['x' => 40 / 400, 'y' => 280 / 400],
+            ],
+            'width' => 250,
+        ])
+        ->assertOk();
+
+    $png = base64_decode(explode(',', $response->json('image'))[1]);
+    $out = imagecreatefromstring($png);
+
+    // A card, so the output is 2.5:3.5 whatever shape the quad was.
+    expect(imagesx($out))->toBe(250)
+        ->and(imagesy($out))->toBe(350);
+
+    // The rotated red field now fills the frame: its corners are red, which
+    // they were not in the photograph.
+    foreach ([[4, 4], [245, 4], [4, 345], [245, 345]] as [$x, $y]) {
+        $rgb = imagecolorat($out, $x, $y);
+        expect(($rgb >> 16) & 0xFF)->toBeGreaterThan(150);
+    }
+
+    imagedestroy($out);
+});
+
+test('deskewing needs four corners', function () {
+    $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor/deskew', [
+            'photo' => cardPhoto(300, 400, 150, 'a.png'),
+            'quad' => [['x' => 0.1, 'y' => 0.1], ['x' => 0.9, 'y' => 0.1]],
+        ])
+        ->assertStatus(422);
+});
+
+test('an inner border placed on the straightened card is measured as-is', function () {
+    // It is already card space — the straightening put it there. Mapping it
+    // through the outline homography again would correct twice.
+    $response = $this->actingAs($this->admin)
+        ->postJson('/admin/grade-predictor', [
+            'front' => [cardPhoto(300, 400, 90, 'a.png'), cardPhoto(300, 400, 180, 'b.png')],
+            'canvas_width' => 200,
+            'guides' => ['front' => ['frame_uv' => [
+                ['x' => 0.10, 'y' => 0.2], ['x' => 0.70, 'y' => 0.2],
+                ['x' => 0.70, 'y' => 0.8], ['x' => 0.10, 'y' => 0.8],
+            ]]],
+        ])
+        ->assertOk();
+
+    // margins 0.10 and 0.30 -> 25% left share.
+    expect($response->json('sides.front.centering.left'))->toBeGreaterThan(24.0)
+        ->and($response->json('sides.front.centering.left'))->toBeLessThan(26.0);
+});

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\GradePrediction;
 use App\Support\Grading\CardOutline;
 use App\Support\Grading\GuideProposer;
+use App\Support\Grading\ImageRectifier;
 use App\Support\Grading\PhotoSequence;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -115,6 +116,53 @@ class GradePredictorController extends Controller
                 'w' => min(1.0 - $x, max($xs) - min($xs) + $pad * 2),
                 'h' => min(1.0 - $y, max($ys) - min($ys) + $pad * 2),
             ],
+        ]);
+    }
+
+    /**
+     * Straighten a card out of a photo, given its four corners.
+     *
+     * A card is rarely square-on in a hand-held shot, and an axis-aligned crop
+     * of a tilted one keeps the tilt and a wedge of background in every corner.
+     * Both make the next step harder than it needs to be: a guide placed along
+     * a crooked border is fighting the picture, and the model reads a crooked
+     * card as a card with a crooked border.
+     *
+     * Warped here rather than in the browser because the maths is already here,
+     * fitted and tested — the same Homography the surface pipeline flattens
+     * frames with. A second implementation in canvas would be a second thing
+     * to be wrong.
+     */
+    public function deskew(Request $request, ImageRectifier $rectifier): JsonResponse
+    {
+        $validator = validator($request->all(), [
+            'photo' => ['required', 'file', 'image', 'max:12288'],
+            'quad' => ['required', 'array', 'size:4'],
+            'quad.*.x' => ['required', 'numeric', 'min:-0.5', 'max:1.5'],
+            'quad.*.y' => ['required', 'numeric', 'min:-0.5', 'max:1.5'],
+            'width' => ['nullable', 'integer', 'min:200', 'max:1600'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
+        @ini_set('memory_limit', '1024M');
+
+        $data = $validator->validated();
+
+        try {
+            $png = $rectifier->rectify(
+                (string) file_get_contents($request->file('photo')->getRealPath()),
+                $data['quad'],
+                (int) ($data['width'] ?? 700),
+            );
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'image' => 'data:image/png;base64,'.base64_encode($png),
         ]);
     }
 
@@ -230,7 +278,7 @@ class GradePredictorController extends Controller
 
             // Dragged guides: the card's outline and its artwork frame, four
             // corners each, as fractions of the image.
-            foreach (['outline', 'frame'] as $guide) {
+            foreach (['outline', 'frame', 'frame_uv'] as $guide) {
                 $rules["guides.{$side}.{$guide}"] = ['nullable', 'array', 'size:4'];
                 $rules["guides.{$side}.{$guide}.*.x"] = ['required_with:guides.'.$side.'.'.$guide, 'numeric', 'min:-0.5', 'max:1.5'];
                 $rules["guides.{$side}.{$guide}.*.y"] = ['required_with:guides.'.$side.'.'.$guide, 'numeric', 'min:-0.5', 'max:1.5'];

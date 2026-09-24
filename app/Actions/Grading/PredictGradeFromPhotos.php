@@ -185,10 +185,18 @@ class PredictGradeFromPhotos
         // take, and dragging them is a measurement. A typed split is a figure
         // read off somebody else's report — useful for checking ourselves
         // against one, but not a measurement of these photos.
-        $centering = $this->centeringFromGuides(
-            $outline ?? ($corners[0] ?? null),
-            $this->pixelQuad($guides['frame'] ?? null, $photos->width, $photos->height),
-        ) ?? ($split !== null ? $this->centeringFromSplit($split) : null);
+        //
+        // frame_uv is the inner border as placed on the STRAIGHTENED card,
+        // which is already card space — the outline quad defines that space, so
+        // those coordinates need no mapping and get none. Mapping them anyway,
+        // through a homography they are already the output of, would apply the
+        // correction twice.
+        $centering = $this->centeringFromCardSpace($guides['frame_uv'] ?? null)
+            ?? $this->centeringFromGuides(
+                $outline ?? ($corners[0] ?? null),
+                $this->pixelQuad($guides['frame'] ?? null, $photos->width, $photos->height),
+            )
+            ?? ($split !== null ? $this->centeringFromSplit($split) : null);
 
         $observed = [];
 
@@ -272,6 +280,39 @@ class PredictGradeFromPhotos
             fn (array $p) => [(float) $p['x'] * $width, (float) $p['y'] * $height],
             array_values($quad),
         );
+    }
+
+    /**
+     * Centering from an inner border already expressed in card space.
+     *
+     * The card was straightened before the border was placed on it, so these
+     * fractions are of the flattened card itself. That is the output of the
+     * very homography centeringFromGuides applies — running it again would
+     * correct for a perspective that has already been removed.
+     *
+     * @param  array<int, array{x: float, y: float}>|null  $frame
+     */
+    private function centeringFromCardSpace(?array $frame): ?Centering
+    {
+        if ($frame === null || count($frame) !== 4) {
+            return null;
+        }
+
+        $xs = array_map(fn ($p) => (float) $p['x'], $frame);
+        $ys = array_map(fn ($p) => (float) $p['y'], $frame);
+
+        $rect = new Rect(
+            min($xs),
+            min($ys),
+            max($xs) - min($xs),
+            max($ys) - min($ys),
+        );
+
+        try {
+            return $this->centering->measure(new Rect(0.0, 0.0, 1.0, 1.0), $rect);
+        } catch (InvalidArgumentException) {
+            return null;
+        }
     }
 
     /**
