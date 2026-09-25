@@ -191,6 +191,11 @@ class SoldCompClassifier
             return "blocklisted term “{$bad}”";
         }
 
+        // A slab from a grader we do not track.
+        if ($brand = $this->untrackedGraderHit($lower)) {
+            return "graded by {$brand}, a company we do not track";
+        }
+
         // Multi-quantity / lots. Note "sets" (plural) only — singular "Set" is
         // part of set names like "Base Set".
         // "8 Pokemon Pikachu … Cards" is a lot; the count needed two digits, so
@@ -509,7 +514,14 @@ class SoldCompClassifier
 
         // Graded: "PSA 10", "BGS 9.5", "Beckett 10", "PSA-10", and the
         // company/number-separated-by-grade-words form "PSA GEM MINT 10".
-        if (preg_match('/\b(psa|bgs|cgc|sgc|tag|ace|beckett)[\s-]*(?:(?:gem|mint|mt|pristine|black|label|gm)\s+){0,4}(10|[1-9](?:\.5)?)\b/i', $title, $g)) {
+        //
+        // "graded?" is in the filler list because "PSA GRADED 10" and "PSA
+        // Grade 8" are how sellers most often write it, and without it 267
+        // stored comps across 237 cards — $72,626 of slab money — had been
+        // filed as RAW cards. The trailing \b is load-bearing: "PSA Graded
+        // 1st Edition" otherwise reads the 1 of "1st" as the grade and invents
+        // a PSA 1 out of a listing that never stated one.
+        if (preg_match('/\b(psa|bgs|cgc|sgc|tag|ace|beckett)[\s-]*(?:(?:gem|mint|mt|pristine|black|label|gm|graded?)[\s-]+){0,4}(10|[1-9](?:\.5)?)\b/i', $title, $g)) {
             $slug = strtolower($g[1]);
             $slug = $slug === 'beckett' ? 'bgs' : $slug;
             if (isset($companyIds[$slug])) {
@@ -533,6 +545,40 @@ class SoldCompClassifier
         };
 
         return new SoldComp($candidate->priceCents, $candidate->soldAt, $condition, null, null, null, $candidate->itemId ?? '', $title, $candidate->url, $candidate->seller, $candidate->imageUrl);
+    }
+
+    /**
+     * Grading companies that exist but that we hold no value model for.
+     *
+     * Their slabs are not raw cards, and their grades do not map onto the six
+     * we do track — BCCG 10 is roughly a nice ungraded card, while AGS, GMA and
+     * Arena Club are newer and grade to their own scales. Storing them under a
+     * graded state would imply we can price them; storing them as raw is what
+     * put a $53.35 value on a $4.28 card. So the comp is dropped.
+     *
+     * "mnt" is deliberately absent: sellers abbreviate MINT that way, and the
+     * stored data has "GM MNT 9.5 BGS", which is a Beckett slab, not an MNT one.
+     */
+    private const UNTRACKED_GRADERS = [
+        'bccg', 'bvg', 'gma', 'hga', 'csg', 'ksa', 'isa', 'pgc', 'rcg', 'ags', 'wcg', 'arena club',
+    ];
+
+    /**
+     * The untracked grader this title names alongside a grade, or null.
+     *
+     * A grade number is required, so a stray three letters in a description
+     * cannot drop a genuine listing — the brand has to be used the way a slab
+     * is described.
+     */
+    private function untrackedGraderHit(string $lower): ?string
+    {
+        foreach (self::UNTRACKED_GRADERS as $brand) {
+            if (preg_match('/\b'.preg_quote($brand, '/').'[\s-]*(?:(?:gem|mint|mt|pristine|graded?)[\s-]+){0,3}(?:10|[1-9](?:\.5)?)\b/i', $lower)) {
+                return strtoupper($brand);
+            }
+        }
+
+        return null;
     }
 
     /**
