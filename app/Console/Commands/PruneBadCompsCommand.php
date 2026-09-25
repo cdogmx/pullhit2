@@ -4,10 +4,12 @@ namespace App\Console\Commands;
 
 use App\Actions\Valuation\RecomputeCatalogItem;
 use App\Models\CatalogItem;
+use App\Models\GradingCompany;
 use App\Models\SaleObservation;
 use App\Models\Set;
 use App\Support\Ebay\SoldCandidate;
 use App\Support\Ebay\SoldCompClassifier;
+use App\Support\Valuation\RawAnchor;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,13 +30,20 @@ class PruneBadCompsCommand extends Command
         {--from-id= : only observations above this id}
         {--to-id= : only observations up to this id}
         {--limit= : stop after this many observations, and report where to resume}
+        {--price-band : also drop raw comps priced outside the sanity band}
         {--dry-run : report what would be removed, delete nothing}';
 
     protected $description = 'Remove stored eBay comps that no longer pass the classifier (multi-card sets, lots, …)';
 
-    public function handle(SoldCompClassifier $classifier, RecomputeCatalogItem $recompute): int
+    public function handle(SoldCompClassifier $classifier, RecomputeCatalogItem $recompute, RawAnchor $anchor): int
     {
         $dryRun = (bool) $this->option('dry-run');
+        // Off by default. The band is a judgement about price rather than a
+        // fact about the listing, and it moved when the anchor stopped being
+        // the card's own median — so it is opt-in, and worth a dry run of its
+        // own before it deletes anything.
+        $usePriceBand = (bool) $this->option('price-band');
+        $companyIds = GradingCompany::pluck('id', 'slug')->all();
         $set = null;
 
         if ($slug = $this->option('set')) {
@@ -72,7 +81,7 @@ class PruneBadCompsCommand extends Command
             // — so the oldest slices are worth doing first.
             ->when($this->option('from-id'), fn (Builder $q, $id) => $q->where('id', '>', (int) $id))
             ->when($this->option('to-id'), fn (Builder $q, $id) => $q->where('id', '<=', (int) $id))
-            ->chunkById(500, function ($rows) use ($classifier, $recompute, $dryRun, $limit, &$affected, &$removed, &$checked, &$lastId) {
+            ->chunkById(500, function ($rows) use ($classifier, $recompute, $anchor, $dryRun, $usePriceBand, $companyIds, $limit, &$affected, &$removed, &$checked, &$lastId) {
                 // Eager, because the classifier reads the set and its product
                 // line for nearly every comp it judges. Lazily, that is two
                 // round trips per CARD, and against the remote database it was
@@ -93,7 +102,17 @@ class PruneBadCompsCommand extends Command
                     $checked++;
                     $candidate = new SoldCandidate($title, (int) $o->price, CarbonImmutable::now(), (string) $o->source_listing_id);
 
-                    if ($classifier->structurallyInvalid($candidate, $item)) {
+                    $bad = $classifier->structurallyInvalid($candidate, $item);
+
+                    if (! $bad && $usePriceBand) {
+                        // diagnose() applies the band only to comps that resolve
+                        // to a raw state, which is the right scope: a PSA 10
+                        // legitimately sells for many times the raw price.
+                        $bad = $classifier->diagnose($candidate, $item, $anchor->for($item), $companyIds)['reason']
+                            === 'price outside sanity band';
+                    }
+
+                    if ($bad) {
                         $affected[$o->catalog_item_id] = true;
                         $touched[$o->catalog_item_id] = $item;
                         $removed++;

@@ -7,6 +7,7 @@ use App\Models\GradingCompany;
 use App\Support\Ebay\SoldCandidate;
 use App\Support\Ebay\SoldComp;
 use App\Support\Ebay\SoldCompClassifier;
+use App\Support\Valuation\RawAnchor;
 use App\Support\Pricecharting\CompletedSale;
 use App\Support\Pricecharting\PricechartingSoldSource;
 use Illuminate\Support\Carbon;
@@ -24,12 +25,13 @@ class IngestPricechartingComps
         protected PricechartingSoldSource $source,
         protected SoldCompClassifier $classifier,
         protected RecomputeCatalogItem $recompute,
+        protected RawAnchor $anchor,
     ) {}
 
     /** @return int  number of accepted comps ingested */
     public function __invoke(CatalogItem $item): int
     {
-        $anchor = $this->anchorCents($item);
+        $anchor = $this->anchor->for($item);
         $companyIds = GradingCompany::pluck('id', 'slug')->all();
         $data = $this->source->fetchData($item);
 
@@ -102,11 +104,4 @@ class IngestPricechartingComps
         );
     }
 
-    protected function anchorCents(CatalogItem $item): int
-    {
-        return (int) ($item->marketValues()
-            ->whereNull('grading_company_id')
-            ->orderByRaw("CASE WHEN state_key IN ('NM', 'SEALED') THEN 0 ELSE 1 END")
-            ->value('median') ?? 0);
-    }
 }

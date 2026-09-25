@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\CatalogItem;
+use App\Models\GradingCompany;
 use App\Models\MarketValue;
+use App\Models\PricechartingProduct;
 use App\Models\SaleObservation;
 use App\Models\Set;
 
@@ -123,4 +125,69 @@ test('a slice stops at its limit on a chunk boundary', function () {
 
     // Whatever it reached is still fully handled — the recompute runs per chunk.
     expect(SaleObservation::where('catalog_item_id', $card->id)->count())->toBe(0);
+});
+
+test('--price-band drops a raw comp priced far above the market', function () {
+    // The Flying Pikachu V case: a clean-looking title at 23x the real price.
+    // Nothing structural is wrong with it — only the price gives it away, and
+    // only once the anchor stopped being the card's own broken median.
+    $set = Set::factory()->create();
+    $card = CatalogItem::factory()->create([
+        'name' => 'Flying Pikachu V', 'number' => '6', 'set_id' => $set->id,
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+    PricechartingProduct::create([
+        'pc_id' => '2618151', 'console_name' => 'Pokemon Celebrations', 'product_name' => 'Flying Pikachu V #6',
+        'language' => 'en', 'set_id' => $set->id, 'card_name' => 'Flying Pikachu V', 'number' => '6',
+        'is_sealed' => false, 'price_ungraded' => 428,
+    ]);
+
+    $wild = SaleObservation::create([
+        'catalog_item_id' => $card->id, 'venue' => 'ebay', 'price' => 10000, 'currency' => 'USD',
+        'observed_at' => now(), 'is_synthetic' => false, 'source_listing_id' => 'w1',
+        'raw' => ['title' => 'Flying Pikachu V 006/025 Celebrations Holo', 'source' => 'ebay'],
+    ]);
+    $fair = SaleObservation::create([
+        'catalog_item_id' => $card->id, 'venue' => 'ebay', 'price' => 500, 'currency' => 'USD',
+        'observed_at' => now(), 'is_synthetic' => false, 'source_listing_id' => 'f1',
+        'raw' => ['title' => 'Flying Pikachu V 006/025 Celebrations Holo NM', 'source' => 'ebay'],
+    ]);
+
+    // Without the flag the band is not consulted and both survive.
+    $this->artisan('valuation:prune-bad-comps', ['--card' => $card->id])->assertSuccessful();
+    expect(SaleObservation::find($wild->id))->not->toBeNull();
+
+    $this->artisan('valuation:prune-bad-comps', ['--card' => $card->id, '--price-band' => true])
+        ->assertSuccessful();
+
+    expect(SaleObservation::find($wild->id))->toBeNull()
+        ->and(SaleObservation::find($fair->id))->not->toBeNull();
+});
+
+test('--price-band leaves a legitimately expensive graded comp alone', function () {
+    // A PSA 10 sells for many times the raw price. The band applies only to
+    // comps that resolve to a raw state, and forgetting that would delete
+    // every high-grade slab we hold.
+    $set = Set::factory()->create();
+    $card = CatalogItem::factory()->create([
+        'name' => 'Flying Pikachu V', 'number' => '6', 'set_id' => $set->id,
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+    GradingCompany::factory()->create(['slug' => 'psa', 'name' => 'PSA']);
+    PricechartingProduct::create([
+        'pc_id' => '2618151b', 'console_name' => 'Pokemon Celebrations', 'product_name' => 'Flying Pikachu V #6',
+        'language' => 'en', 'set_id' => $set->id, 'card_name' => 'Flying Pikachu V', 'number' => '6',
+        'is_sealed' => false, 'price_ungraded' => 428,
+    ]);
+
+    $slab = SaleObservation::create([
+        'catalog_item_id' => $card->id, 'venue' => 'ebay', 'price' => 21000, 'currency' => 'USD',
+        'observed_at' => now(), 'is_synthetic' => false, 'source_listing_id' => 's1',
+        'raw' => ['title' => 'Pokemon Celebrations Flying Pikachu V 006/025 PSA 10', 'source' => 'ebay'],
+    ]);
+
+    $this->artisan('valuation:prune-bad-comps', ['--card' => $card->id, '--price-band' => true])
+        ->assertSuccessful();
+
+    expect(SaleObservation::find($slab->id))->not->toBeNull();
 });

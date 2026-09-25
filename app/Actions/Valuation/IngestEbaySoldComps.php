@@ -9,6 +9,7 @@ use App\Support\Ebay\EbaySoldSource;
 use App\Support\Ebay\SoldCandidate;
 use App\Support\Ebay\SoldComp;
 use App\Support\Ebay\SoldCompClassifier;
+use App\Support\Valuation\RawAnchor;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -30,6 +31,7 @@ class IngestEbaySoldComps
         protected EbaySoldSource $source,
         protected SoldCompClassifier $classifier,
         protected RecomputeCatalogItem $recompute,
+        protected RawAnchor $anchor,
     ) {}
 
     /** @return int  number of accepted comps ingested */
@@ -57,7 +59,7 @@ class IngestEbaySoldComps
      */
     public function ingest(CatalogItem $item, array $candidates): int
     {
-        $anchor = $this->anchorCents($item);
+        $anchor = $this->anchor->for($item);
         $companyIds = GradingCompany::pluck('id', 'slug')->all();
 
         $accepted = array_values(array_filter(array_map(
@@ -104,11 +106,4 @@ class IngestEbaySoldComps
         );
     }
 
-    protected function anchorCents(CatalogItem $item): int
-    {
-        return (int) ($item->marketValues()
-            ->whereNull('grading_company_id')
-            ->orderByRaw("CASE WHEN state_key IN ('NM', 'SEALED') THEN 0 ELSE 1 END")
-            ->value('median') ?? 0);
-    }
 }

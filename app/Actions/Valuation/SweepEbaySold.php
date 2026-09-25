@@ -12,6 +12,7 @@ use App\Support\Ebay\OxylabsClient;
 use App\Support\Ebay\SoldCandidate;
 use App\Support\Ebay\SoldComp;
 use App\Support\Ebay\SoldCompClassifier;
+use App\Support\Valuation\RawAnchor;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
 
@@ -30,6 +31,7 @@ class SweepEbaySold
         protected EbayTitleResolver $resolver,
         protected SoldCompClassifier $classifier,
         protected RecomputeCatalogItem $recompute,
+        protected RawAnchor $anchor,
     ) {}
 
     /** Card ids awaiting a value recompute while deferral is on. */
@@ -333,10 +335,7 @@ class SweepEbaySold
             return $this->anchorCache[$item->id];
         }
 
-        $anchor = (int) ($item->marketValues()
-            ->whereNull('grading_company_id')
-            ->orderByRaw("CASE WHEN state_key IN ('NM', 'SEALED') THEN 0 ELSE 1 END")
-            ->value('median') ?? 0);
+        $anchor = $this->anchor->for($item);
 
         if ($this->deferRecompute) {
             $this->anchorCache[$item->id] = $anchor;
