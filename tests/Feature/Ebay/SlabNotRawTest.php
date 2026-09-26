@@ -171,3 +171,27 @@ test('our card paired with one other from its set is a bundle', function () {
         expect($this->classifier->structurallyInvalid(slabCandidate($title, 500), $ours))->toBeFalse($title);
     }
 });
+
+test('"NO. 250" is a stated collector number', function () {
+    // How Japanese-era listings mark it. A Neo Premium Ho-Oh "NO. 250" and a
+    // Fossil Golem "NO. 076" were both priced as comps for Split Earth cards
+    // because the gate read them as stating no number at all.
+    expect($this->classifier->structurallyInvalid(
+        slabCandidate('Pokemon Card - Pikachu ex Neo Premium NO. 250 Japanese', 1799), $this->item
+    ))->toBeTrue();
+
+    // Our own number, stated the same way, is fine.
+    expect($this->classifier->structurallyInvalid(
+        slabCandidate('Pokemon Card - Pikachu ex NO. 276 Japanese', 1799), $this->item
+    ))->toBeFalse();
+});
+
+test('a bare "No 1" is marketing, not a collector number', function () {
+    // The period is required for exactly this reason. Reading "No 1 seller" as
+    // card 1 would reject genuine listings to catch a handful of Japanese ones.
+    expect($this->classifier->structurallyInvalid(
+        slabCandidate('Pikachu ex 276/217 SIR Ascended Heroes - No 1 seller, ships fast', 129000), $this->item
+    ))->toBeFalse();
+});
+
+

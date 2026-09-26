@@ -243,6 +243,7 @@ class SoldCompClassifier
             return 'collector number does not match';
         }
 
+
         // The treatment, when the listing names one in words. A chase printing
         // often states what it is and never states its number: a "SPECIAL
         // ILLUSTRATION RARE GARDEVOIR EX" sold at $346 as a comp for the Double
@@ -390,6 +391,18 @@ class SoldCompClassifier
             $stated = array_merge($stated, $matches[1]);
         }
 
+        // "Ho-Oh Neo Premium NO. 250", "Golem NO. 076 Uncommon Fossil" — how
+        // Japanese-era listings mark it. Both of those were priced as comps for
+        // an entirely different card (Split Earth #091 and #089) because the
+        // gate read them as stating no number at all.
+        //
+        // The PERIOD is required. A bare "No 1" is marketing — "No 1 seller",
+        // "No 1 condition" — and reading it as card 1 would reject genuine
+        // listings for the sake of these.
+        if (preg_match_all('/\bno\.\s*([0-9]{1,4})\b/u', $lower, $matches)) {
+            $stated = array_merge($stated, $matches[1]);
+        }
+
         // "SWSH144", "XY183", "OP02-031" — a set code carrying its number, which
         // sellers of promos often give instead of a fraction. Invisible until
         // now, and not a quiet gap: such a title read as stating no number at
@@ -482,6 +495,26 @@ class SoldCompClassifier
 
         return true;
     }
+
+    /**
+     * NOT here: a gate rejecting a listing that names a DIFFERENT set.
+     *
+     * It is the obvious fix for the reprint collision — Umbreon Gold Star 17/17
+     * from Celebrations: Classic Collection is $120 and prices the $4,700 POP
+     * Series 5 original, and nothing but the set name separates them. I built
+     * it, restricted to set names of two words and fourteen characters, and
+     * measured it over the 60,000 most recent comps: it fired 992 times, and the
+     * cases were false.
+     *
+     * The reason is our own catalog. It holds several near-duplicate names for
+     * the same promo family — "Scarlet & Violet Promo Cards", "SV Black Star
+     * Promos" — so a title naming one while the card sits in the other reads as
+     * a different set. No distinctiveness threshold fixes that; the names would
+     * have to be reconciled first.
+     *
+     * If you come back to this: reconcile the promo set names, then re-measure
+     * before trusting the gate.
+     */
 
     /**
      * Collector numbers compare zero-padding- and case-insensitively.
