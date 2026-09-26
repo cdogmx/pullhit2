@@ -95,3 +95,20 @@ test('a genuine raw single is still accepted', function () {
             ->toBeFalse($title);
     }
 });
+
+test('a fan-made card is not a comp for the real one', function () {
+    // These sell for a few dollars under the real card's name. One of them put
+    // Lugia EX at $3.88 against a $137 reference.
+    foreach ([
+        'Pikachu ex Pokemon Bubbles Friend Fan Art Non Tcg Fan Art Card 2025',
+        'Pikachu ex 276/217 Fanart Holo Custom',
+        'Pikachu ex 276/217 Non-TCG Art Card',
+    ] as $title) {
+        expect($this->classifier->structurallyInvalid(slabCandidate($title, 400), $this->item))
+            ->toBeTrue($title);
+    }
+
+    // And the real card still passes.
+    expect($this->classifier->structurallyInvalid(slabCandidate('Pikachu ex 276/217 SIR Ascended Heroes', 129000), $this->item))
+        ->toBeFalse();
+});

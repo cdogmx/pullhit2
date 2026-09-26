@@ -215,6 +215,11 @@ return [
         'blocklist' => [
             'mystery', 'chance', 'random', 'grab bag', 'lot of', 'bundle',
             'proxy', 'custom', 'fake', 'orica', 'repack', 'rip ', 'break',
+            // Fan-made cards, which sell for a few dollars under the real
+            // card's name and drag its raw price down. "Lugia EX Pokemon
+            // Bubbles Friend Fan Art Non Tcg Fan Art Card" was $4.00 against a
+            // $137 card. Both spellings and both spacings occur.
+            'fan art', 'fanart', 'non tcg', 'non-tcg',
             'ptcgo', 'ptcg live', 'online code', 'code card', 'digital',
             'sticker', 'jumbo', 'oversized', 'choose', 'pick your', 'you pick',
             'you will receive', 'raffle', 'giveaway', 'spin', 'read description',

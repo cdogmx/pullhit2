@@ -16,19 +16,33 @@ use Illuminate\Database\Eloquent\Builder;
  * at all. That is exactly what an interrupted bulk ingest leaves behind — sales
  * stored, values not yet derived — and it is also the right filter for a
  * periodic pass, since a card with no new comps needs no work.
+ *
+ * --orphaned is the selector --stale structurally cannot be: a value computed
+ * before something DELETED comps. Removing rows does not make the survivors
+ * newer, so the staleness check sees nothing wrong, and the card keeps a price
+ * derived from sales it no longer holds. Roaring Skies Shaymin-EX 77a sat at
+ * $5.81 on 27 counted sales when only 14 remained and every one of them was
+ * over $130; recomputing it gave $238.61 against a $310 reference. Reach for
+ * this after any pass that deletes comps.
  */
 class RecomputeValuationsCommand extends Command
 {
     protected $signature = 'valuation:recompute
         {--item= : Recompute only this catalog_item id}
         {--stale : Only items whose values are older than their newest observation}
+        {--orphaned : Only items whose values count more sales than the card still has}
         {--limit= : Stop after this many items}';
 
     protected $description = 'Recompute market_values from sale_observations';
 
     public function handle(RecomputeCatalogItem $recompute): int
     {
-        $query = CatalogItem::query()->whereHas('saleObservations');
+        // Normally there is nothing to compute without comps. --orphaned is the
+        // exception: a card whose comps were ALL pruned still shows the price
+        // they produced, and excluding it here is exactly why it kept showing.
+        // Recomputing an empty card drops its values, which is the right answer.
+        $query = CatalogItem::query()
+            ->when(! $this->option('orphaned'), fn (Builder $q) => $q->whereHas('saleObservations'));
 
         if ($item = $this->option('item')) {
             $query->whereKey($item);
@@ -44,6 +58,24 @@ class RecomputeValuationsCommand extends Command
                         where so.catalog_item_id = catalog_items.id)
                      > (select min(mv.computed_at) from market_values mv
                         where mv.catalog_item_id = catalog_items.id)'
+                ));
+        }
+
+        if ($this->option('orphaned')) {
+            // n_sales is what the value was derived from; the subquery is what
+            // survives. A value claiming more than exists was computed against
+            // rows that have since been pruned.
+            $query->whereHas('marketValues', fn (Builder $q) => $q
+                ->where('n_sales', '>', 0)
+                ->whereNull('grading_company_id')
+                ->where('is_estimated', false)
+                ->whereRaw(
+                    'market_values.n_sales > (
+                        select count(*) from sale_observations so
+                        where so.catalog_item_id = market_values.catalog_item_id
+                          and so.is_synthetic = 0
+                          and so.grading_company_id is null
+                     )'
                 ));
         }
 
