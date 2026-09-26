@@ -106,3 +106,57 @@ test('it returns zero when there is nothing to anchor on', function () {
     // bootstrapping hole, unchanged here and worth closing separately.
     expect($this->anchor->for($this->item))->toBe(0);
 });
+
+test('a reverse holo is not anchored on the normal printing', function () {
+    // Legendary Collection #86: the normal Pikachu is $5.59 and the reverse
+    // holo is $895. Matching on set + number + name alone picked whichever row
+    // came first, so the reverse holo was anchored at $5.59 — which sets its
+    // band to $0.56–$27.95 and rejects every genuine sale of it.
+    anchorPcRow($this->set, ['pc_id' => 'norm', 'price_ungraded' => 559]);
+    anchorPcRow($this->set, ['pc_id' => 'rev', 'variant' => 'reverse_holo', 'price_ungraded' => 89500]);
+
+    $reverse = CatalogItem::factory()->create([
+        'set_id' => $this->set->id, 'name' => 'Flying Pikachu V', 'number' => '6',
+        'attributes' => ['language' => 'en', 'variant' => 'reverse_holo'],
+    ]);
+
+    expect($this->anchor->for($reverse))->toBe(89500)
+        ->and($this->anchor->for($this->item))->toBe(559);
+});
+
+test('a first edition is not anchored on the unlimited printing', function () {
+    // Base #17: unlimited Beedrill $4.24, first edition $128.32. Same failure,
+    // and the one that matters most on vintage.
+    anchorPcRow($this->set, ['pc_id' => 'unl', 'price_ungraded' => 424]);
+    anchorPcRow($this->set, ['pc_id' => 'fe', 'edition' => 'first_edition', 'price_ungraded' => 12832]);
+
+    $firstEd = CatalogItem::factory()->create([
+        'set_id' => $this->set->id, 'name' => 'Flying Pikachu V', 'number' => '6',
+        'attributes' => ['language' => 'en', 'variant' => 'holo', 'edition' => 'first_edition'],
+    ]);
+
+    expect($this->anchor->for($firstEd))->toBe(12832);
+});
+
+test('unlimited and an unlabelled PriceCharting row are the same printing', function () {
+    // PriceCharting leaves edition empty for the unlimited run rather than
+    // saying "unlimited", so an exact string match would strand every
+    // unlimited card we hold.
+    anchorPcRow($this->set, ['price_ungraded' => 424]);
+    $this->item->forceFill(['attributes' => ['language' => 'en', 'variant' => 'holo', 'edition' => 'unlimited']])->save();
+
+    expect($this->anchor->for($this->item))->toBe(424);
+});
+
+test('it declines to guess when two rows match equally', function () {
+    // Base #17 really does hold two unlabelled Beedrill rows at $4.24 and
+    // $8.99. With nothing to tell them apart, no anchor is the honest answer —
+    // it falls back to our own median, which is where we were before.
+    anchorPcRow($this->set, ['pc_id' => 'a', 'price_ungraded' => 424]);
+    anchorPcRow($this->set, ['pc_id' => 'b', 'price_ungraded' => 899]);
+    MarketValue::factory()->for($this->item)->create([
+        'state_key' => 'NM', 'condition' => 'NM', 'median' => 5335, 'is_estimated' => false,
+    ]);
+
+    expect($this->anchor->for($this->item))->toBe(5335);
+});

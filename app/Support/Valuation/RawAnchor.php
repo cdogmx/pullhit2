@@ -90,17 +90,37 @@ class RawAnchor
             return null;
         }
 
+        $attributes = (array) $item->attributes;
+        $reverse = self::isReverse($attributes['variant'] ?? null);
+        $edition = self::editionKey($attributes['edition'] ?? null);
+
+        $hits = [];
+
         foreach ($this->setRows($item->set_id) as $row) {
-            if ($row['num'] !== $number || $row['name'] === '') {
+            if ($row['num'] !== $number || $row['name'] === '' || $row['cents'] <= 0) {
                 continue;
             }
 
-            if (str_contains($name, $row['name']) || str_contains($row['name'], $name)) {
-                return $row['cents'] > 0 ? $row['cents'] : null;
+            if (! str_contains($name, $row['name']) && ! str_contains($row['name'], $name)) {
+                continue;
             }
+
+            // Printing has to agree, or the anchor is another card's price.
+            // Legendary Collection #86 is $5.59 normal and $895 reverse; Base
+            // #17 is $4.24 unlimited and $128.32 first edition. Anchoring one
+            // on the other sets a band that rejects every genuine sale.
+            if ($row['reverse'] !== $reverse || $row['edition'] !== $edition) {
+                continue;
+            }
+
+            $hits[$row['cents']] = true;
         }
 
-        return null;
+        // Exactly one price, or several that agree. Base #17 genuinely holds
+        // two unlabelled Beedrill rows at $4.24 and $8.99 with nothing to tell
+        // them apart — there, no anchor is the honest answer, and the fallback
+        // is what we had before.
+        return count($hits) === 1 ? (int) array_key_first($hits) : null;
     }
 
     /**
@@ -123,10 +143,12 @@ class RawAnchor
             // lower it, and it is not this card in any case.
             ->where('is_sealed', false)
             ->whereNotNull('price_ungraded')
-            ->get(['card_name', 'number', 'price_ungraded'])
+            ->get(['card_name', 'number', 'variant', 'edition', 'price_ungraded'])
             ->map(fn (PricechartingProduct $row) => [
                 'num' => self::numKey($row->number),
                 'name' => self::nameKey((string) $row->card_name),
+                'reverse' => self::isReverse($row->variant),
+                'edition' => self::editionKey($row->edition),
                 'cents' => (int) $row->price_ungraded,
             ])
             ->all();
@@ -154,6 +176,31 @@ class RawAnchor
         $n = ltrim((string) preg_replace('/[^a-z0-9]+/i', '', strtolower($n)), '0');
 
         return $n === '' ? '0' : $n;
+    }
+
+    /**
+     * Is this the reverse-holo printing?
+     *
+     * Only reverse is tested, not variant equality: PriceCharting splits the
+     * reverse holo into its own row but folds holo and normal together, so
+     * demanding an exact variant match would strand every holo we hold.
+     */
+    private static function isReverse(?string $variant): bool
+    {
+        return str_contains(strtolower((string) $variant), 'reverse');
+    }
+
+    /**
+     * The printing run, with unlimited and unlabelled treated as the same.
+     *
+     * PriceCharting leaves edition empty for the unlimited run rather than
+     * naming it, so an exact string match would strand every unlimited card.
+     */
+    private static function editionKey(?string $edition): string
+    {
+        $e = strtolower(trim((string) $edition));
+
+        return $e === 'unlimited' ? '' : $e;
     }
 
     /** Fold accents (Pokémon → Pokemon) then strip to alphanumerics. */
