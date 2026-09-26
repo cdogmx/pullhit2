@@ -112,3 +112,62 @@ test('a fan-made card is not a comp for the real one', function () {
     expect($this->classifier->structurallyInvalid(slabCandidate('Pikachu ex 276/217 SIR Ascended Heroes', 129000), $this->item))
         ->toBeFalse();
 });
+
+test('two collector numbers in slashed form are two cards', function () {
+    // Real titles from the stored comps. statesTwoCardNumbers only recognised
+    // the "#107" form — its lookahead explicitly excluded a number followed by
+    // a slash, which is how most modern listings write one.
+    foreach ([
+        'Pikachu ex 276/217 & Pikachu ex 73/86 Chaos Rising IR & EX NM',
+        'Pikachu ex 276/217 UR & Pikachu ex 118/086 FA',
+    ] as $title) {
+        expect($this->classifier->structurallyInvalid(slabCandidate($title, 800), $this->item))
+            ->toBeTrue($title);
+    }
+});
+
+test('a set name carrying a number is not a second card', function () {
+    // The reason bare numbers are NOT counted. "Scarlet & Violet 151" puts a
+    // number next to an ampersand in a perfectly ordinary single-card title,
+    // and counting it would reject every 151 listing in the catalog.
+    foreach ([
+        'Pikachu ex 276/217 Sv: Scarlet & Violet 151 Holo',
+        'Pokemon TCG Scarlet & Violet 151 MEW EN 276/217 Pikachu ex SIR',
+        'Pikachu ex 276/217 Chaos Rising CRI Double Rare EN - NM & SHIPS FAST',
+        'Pikachu ex 276/217 IR - Chaos Rising - Sleeved and Top Loaded',
+        'Pokémon Chaos Rising - Pikachu ex CRI 102 - Full Art And Double Rare',
+    ] as $title) {
+        expect($this->classifier->structurallyInvalid(slabCandidate($title, 129000), $this->item))
+            ->toBeFalse($title);
+    }
+});
+
+test('our card paired with one other from its set is a bundle', function () {
+    // The last bad comp on Celebrations Flying Pikachu V: "Surfing Pikachu V
+    // and Flying Pikachu V" at $12 for the pair. The sibling gate needs two
+    // OTHER cards named and this names one, and no number rule can help
+    // because the title states no collector number at all.
+    $set = \App\Models\Set::factory()->create(['name' => 'Celebrations']);
+    $ours = CatalogItem::factory()->create([
+        'set_id' => $set->id, 'name' => 'Flying Pikachu V', 'number' => '6',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+    CatalogItem::factory()->create([
+        'set_id' => $set->id, 'name' => 'Surfing Pikachu V', 'number' => '7',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    expect($this->classifier->structurallyInvalid(
+        slabCandidate('Surfing Pikachu V and Flying Pikachu V - Pokemon TCG Celebrations 2021 - NM', 1200), $ours
+    ))->toBeTrue();
+
+    // And the ordinary single still passes, including when its description
+    // happens to use the word "and".
+    foreach ([
+        'Flying Pikachu V 006/025 Celebrations Holo NM',
+        'Flying Pikachu V 006/025 Celebrations Holo - Sleeved and Top Loaded',
+        'Flying Pikachu V 006/025 Celebrations - ships with tracking and a sleeve',
+    ] as $title) {
+        expect($this->classifier->structurallyInvalid(slabCandidate($title, 500), $ours))->toBeFalse($title);
+    }
+});

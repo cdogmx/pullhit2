@@ -605,6 +605,15 @@ class SoldCompClassifier
     /** How far apart two stated numbers may sit and still read as a pair. */
     private const JOIN_DISTANCE = 40;
 
+    /**
+     * How far apart two card NAMES may sit and still read as a pair.
+     *
+     * Much tighter than the number distance, because the join has to be the
+     * only thing between them: "Surfing Pikachu V and Flying Pikachu V" is a
+     * pair, while two names at opposite ends of a description are not.
+     */
+    private const PAIR_JOIN_DISTANCE = 14;
+
     private function isMultiCardTitle(string $lower, ?CatalogItem $item = null): bool
     {
         // Explicit multi-card language. "set of N", a "starter/promo/gift set",
@@ -665,18 +674,47 @@ class SoldCompClassifier
      */
     private static function statesTwoCardNumbers(string $lower): bool
     {
-        preg_match_all('/#\s?(\d{1,3})(?![\d\/])/', $lower, $m, PREG_OFFSET_CAPTURE);
+        $stated = [];
 
-        $numbers = $m[1];
+        // Two ways a listing states a collector number: "#107" and "105/86".
+        // The slashed form was missing, and it is how most modern listings write
+        // one — "Cinccino EX 105/86 & Cinccino EX 73/86" is two cards, read as
+        // one, at the price of the pair.
+        //
+        // A BARE number is deliberately not counted. Set names carry them:
+        // "Scarlet & Violet 151" puts a number beside an ampersand in an
+        // entirely ordinary single-card title, and counting it would reject
+        // every 151 listing we hold.
+        foreach (['/#\s?(\d{1,3})(?![\d\/])/', '/(\d{1,3})\s*\/\s*\d{1,4}/'] as $pattern) {
+            preg_match_all($pattern, $lower, $m, PREG_OFFSET_CAPTURE);
 
-        for ($i = 0; $i < count($numbers); $i++) {
-            for ($j = $i + 1; $j < count($numbers); $j++) {
-                if ((int) $numbers[$i][0] === (int) $numbers[$j][0]) {
+            foreach ($m[1] as $k => $capture) {
+                $stated[] = [
+                    'num' => (int) $capture[0],
+                    // Span of the WHOLE match, so the gap between two numbers is
+                    // not measured through the "/217" of the first one.
+                    'start' => $m[0][$k][1],
+                    'end' => $m[0][$k][1] + strlen($m[0][$k][0]),
+                ];
+            }
+        }
+
+        usort($stated, fn ($a, $b) => $a['start'] <=> $b['start']);
+
+        for ($i = 0; $i < count($stated); $i++) {
+            for ($j = $i + 1; $j < count($stated); $j++) {
+                if ($stated[$i]['num'] === $stated[$j]['num']) {
                     continue;
                 }
 
-                $from = $numbers[$i][1] + strlen($numbers[$i][0]);
-                $between = substr($lower, $from, $numbers[$j][1] - $from);
+                $from = $stated[$i]['end'];
+                $gap = $stated[$j]['start'] - $from;
+
+                if ($gap < 0) {
+                    continue; // overlapping matches over the same text
+                }
+
+                $between = substr($lower, $from, $gap);
 
                 if (strlen($between) <= self::JOIN_DISTANCE
                     && preg_match('/&|\+|,|\band\b|\bvs\.?\b/', $between)) {
@@ -912,6 +950,81 @@ class SoldCompClassifier
             }
 
             if (str_contains($haystack, ' '.$core.' ') && ++$others >= 2) {
+                return true;
+            }
+        }
+
+        return $this->namesOnePairedSetCard($lower, $own, $siblings, $item);
+    }
+
+    /**
+     * Our card and exactly ONE other from its set, joined — "Surfing Pikachu V
+     * and Flying Pikachu V". Two cards, one price, and recorded against either
+     * one it prices a pair as a single.
+     *
+     * The gate above needs two OTHER cards named, so a plain pair slips past it,
+     * and neither number rule can help: a title like this states no collector
+     * number at all.
+     *
+     * Kept narrow on purpose, because a loose version of this is worse than the
+     * bug. The join has to sit BETWEEN our name and the other card's — an
+     * ampersand elsewhere in the title is usually a set name ("Scarlet & Violet")
+     * or a shipping note ("NM & SHIPS FAST") — it has to be close, and a sibling
+     * whose name is part of the SET's name does not count, or every "151 MEW"
+     * listing would read as a Mew bundle.
+     *
+     * @param  array<int, string>  $siblings
+     */
+    private function namesOnePairedSetCard(string $lower, string $own, array $siblings, CatalogItem $item): bool
+    {
+        // NOT flatten(): that strips the word "and", which is the very thing
+        // this rule is looking for. Punctuation becomes space, nothing else.
+        $haystack = ' '.trim((string) preg_replace('/\s+/', ' ',
+            (string) preg_replace('/[^a-z0-9&+]+/', ' ', $lower))).' ';
+
+        if ($own === '' || ($ours = strpos($haystack, ' '.$own.' ')) === false) {
+            return false;
+        }
+
+        $setName = self::flatten(mb_strtolower((string) $item->set?->name));
+        $ownStart = $ours + 1;
+        $ownEnd = $ownStart + strlen($own);
+
+        foreach ($siblings as $core) {
+            if ($core === '' || str_contains(' '.$own.' ', ' '.$core.' ')) {
+                continue;
+            }
+
+            // A card whose name the set also carries tells us nothing.
+            if ($setName !== '' && str_contains(' '.$setName.' ', ' '.$core.' ')) {
+                continue;
+            }
+
+            $at = strpos($haystack, ' '.$core.' ');
+
+            if ($at === false) {
+                continue;
+            }
+
+            $start = $at + 1;
+            $end = $start + strlen($core);
+
+            // Whichever comes first, look only at the text between the two.
+            $between = $start >= $ownEnd
+                ? substr($haystack, $ownEnd, $start - $ownEnd)
+                : substr($haystack, $end, $ownStart - $end);
+
+            if (strlen($between) > self::PAIR_JOIN_DISTANCE) {
+                continue;
+            }
+
+            // The name cores have their suffix words stripped ("Flying Pikachu
+            // V" -> "flying pikachu"), so a stray "v" is left sitting in the
+            // gap. Drop those and the join has to be all that remains.
+            $gap = (string) preg_replace('/\b(ex|gx|v|vmax|vstar|vunion|prime|break)\b/', ' ', $between);
+            $gap = trim((string) preg_replace('/\s+/', ' ', $gap));
+
+            if (in_array($gap, ['&', '+', 'and', 'plus', 'with'], true)) {
                 return true;
             }
         }

@@ -27,6 +27,16 @@ use Illuminate\Support\Facades\Log;
  */
 class IngestEbaySoldComps
 {
+    /**
+     * Raw candidates needed before their median is worth trusting as a seed.
+     *
+     * Four sales can sit anywhere; the middle of them says little. This is a
+     * judgement, not a measurement — it is set where a median stops being an
+     * accident and is deliberately low, because the cost of being wrong here is
+     * only that a card waits one refresh for its first sanity check.
+     */
+    private const MIN_SEED = 5;
+
     public function __construct(
         protected EbaySoldSource $source,
         protected SoldCompClassifier $classifier,
@@ -59,8 +69,17 @@ class IngestEbaySoldComps
      */
     public function ingest(CatalogItem $item, array $candidates): int
     {
-        $anchor = $this->anchor->for($item);
         $companyIds = GradingCompany::pluck('id', 'slug')->all();
+        $anchor = $this->anchor->for($item);
+
+        // Nothing to judge against means the band waves everything through, and
+        // the first wrong listing becomes the median that judges the rest. The
+        // batch itself is something: every candidate here is for this one card,
+        // so its own raw median is a seed — not authoritative, but enough to
+        // notice the listing that is twenty times the others.
+        if ($anchor <= 0) {
+            $anchor = $this->seedAnchor($candidates, $companyIds);
+        }
 
         $accepted = array_values(array_filter(array_map(
             fn ($candidate) => $this->classifier->classify($candidate, $item, $anchor, $companyIds),
@@ -84,6 +103,38 @@ class IngestEbaySoldComps
         ($this->recompute)($item);
 
         return count($accepted);
+    }
+
+    /**
+     * A first anchor taken from the candidates themselves, or 0 to stay open.
+     *
+     * Raw candidates only: a PSA 10 sells for many times raw, so seeding from
+     * everything would lift the band and let the expensive raw outlier back in.
+     *
+     * Below MIN_SEED there is no meaningful middle, and refusing the batch would
+     * stop a quiet card ever getting a first price — so it stays permissive and
+     * the card is judged on its next refresh instead.
+     *
+     * @param  array<int, SoldCandidate>  $candidates
+     * @param  array<string, int>  $companyIds
+     */
+    protected function seedAnchor(array $candidates, array $companyIds): int
+    {
+        $raw = [];
+
+        foreach ($candidates as $candidate) {
+            if ($this->classifier->pricedState($candidate, $companyIds)->gradingCompanyId === null) {
+                $raw[] = $candidate->priceCents;
+            }
+        }
+
+        if (count($raw) < self::MIN_SEED) {
+            return 0;
+        }
+
+        sort($raw);
+
+        return (int) $raw[intdiv(count($raw), 2)];
     }
 
     protected function store(CatalogItem $item, SoldComp $comp): void
