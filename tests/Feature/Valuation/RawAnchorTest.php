@@ -160,3 +160,35 @@ test('it declines to guess when two rows match equally', function () {
 
     expect($this->anchor->for($this->item))->toBe(5335);
 });
+
+test('a mirror holofoil is the reverse printing by another name', function () {
+    // Japanese sets call it Mirror Holofoil; PriceCharting files it as
+    // reverse_holo. Our own variant attribute says "holo" and only the card's
+    // NAME carries the distinction, so 25th Anniversary Mew was anchored on
+    // the $5.54 normal row when its own reverse row says $35.
+    anchorPcRow($this->set, ['pc_id' => 'plain', 'card_name' => 'Mew', 'number' => '2', 'price_ungraded' => 554]);
+    anchorPcRow($this->set, ['pc_id' => 'rev', 'card_name' => 'Mew', 'number' => '2',
+        'variant' => 'reverse_holo', 'price_ungraded' => 3500]);
+
+    $mirror = CatalogItem::factory()->create([
+        'set_id' => $this->set->id, 'name' => 'Mew (Mirror Holofoil)', 'number' => '002',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    expect($this->anchor->for($mirror))->toBe(3500);
+});
+
+test('an ordinary holo is still not a reverse', function () {
+    // The guard for the rule above: "holo" in a name must not start matching
+    // reverse rows, or every holo in the catalog moves to the wrong price.
+    anchorPcRow($this->set, ['pc_id' => 'plain', 'card_name' => 'Mew', 'number' => '2', 'price_ungraded' => 554]);
+    anchorPcRow($this->set, ['pc_id' => 'rev', 'card_name' => 'Mew', 'number' => '2',
+        'variant' => 'reverse_holo', 'price_ungraded' => 3500]);
+
+    $holo = CatalogItem::factory()->create([
+        'set_id' => $this->set->id, 'name' => 'Mew', 'number' => '002',
+        'attributes' => ['language' => 'en', 'variant' => 'holo'],
+    ]);
+
+    expect($this->anchor->for($holo))->toBe(554);
+});

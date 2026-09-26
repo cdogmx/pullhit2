@@ -91,7 +91,11 @@ class RawAnchor
         }
 
         $attributes = (array) $item->attributes;
-        $reverse = self::isReverse($attributes['variant'] ?? null);
+        // The name matters as well as the attribute: Japanese sets print a
+        // "Mirror Holofoil", which is the reverse printing under another name,
+        // and we store those with variant "holo" so only the name says so.
+        $reverse = self::isReverse($attributes['variant'] ?? null)
+            || str_contains(strtolower($item->name), 'mirror holo');
         $edition = self::editionKey($attributes['edition'] ?? null);
 
         $hits = [];
