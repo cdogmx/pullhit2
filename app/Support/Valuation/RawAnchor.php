@@ -43,7 +43,19 @@ class RawAnchor
      */
     public function for(CatalogItem $item): int
     {
-        return $this->fromPricecharting($item) ?? $this->fromOwnMedian($item);
+        return $this->reference($item) ?? $this->fromOwnMedian($item);
+    }
+
+    /**
+     * Only the independent reference, with no fallback — null when we hold none.
+     *
+     * Separate from {@see for()} because "what does an outside source say this
+     * is worth" and "what should we judge a comp against" are different
+     * questions, and the health report needs the first one on its own.
+     */
+    public function reference(CatalogItem $item): ?int
+    {
+        return $this->fromPricecharting($item);
     }
 
     /**
