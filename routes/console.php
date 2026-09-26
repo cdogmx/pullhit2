@@ -25,6 +25,33 @@ Schedule::command('valuation:snapshot')->dailyAt('06:30')->withoutOverlapping();
 // hot items hourly, the long tail daily. Kept off by default.
 // Schedule::command('valuation:recompute')->hourly();
 
+// Values built on comps that have since been deleted. --stale cannot see these:
+// it looks for an observation NEWER than the value, and removing rows does not
+// make the survivors newer, so a card keeps a price derived from sales it no
+// longer holds. July's prune left 1,066 of them, 441 showing a price with no
+// comps behind it at all. Cheap, and it only touches cards whose counts already
+// disagree — so it does nothing on a healthy catalog.
+Schedule::command('valuation:recompute --orphaned')->dailyAt('07:00')->withoutOverlapping();
+
+// The catalog's health, measured against a source we do not compute: how far
+// our raw prices sit from PriceCharting's. Read-only and cheap. Worth a standing
+// slot because every pricing bug found so far was invisible from the inside —
+// including one introduced in the anchor itself, which this caught on its first
+// real run when the test suite could not.
+Schedule::command('valuation:price-divergence')->dailyAt('07:30')->withoutOverlapping();
+
+// AI re-read of the comps behind the cards that report flags, and ONLY those.
+// The deterministic classifier is right on about 99.8% of comps and its misses
+// have been rule-shaped — a grader brand absent from a list, a number form the
+// gate could not read — each fixed once and pinned by a test. What a model adds
+// is the judgement a regex cannot make: a reprint sharing its name, number and
+// artwork with the original at a fortieth of the price.
+//
+// Suggest-only deliberately. Its output is worth more as a pattern to turn into
+// a classifier rule than as a nightly delete, and nothing should remove a real
+// sale on a model's say-so without someone reading it first.
+Schedule::command('valuation:adjudicate-comps --cards=40')->dailyAt('08:00')->withoutOverlapping();
+
 // Broad eBay sold-comp sweeps. Ticks often; each configured search self-throttles
 // to its own interval (config valuation.ebay.sweep), so this stays under the
 // daily Oxylabs cap. Needs Laravel Cloud's scheduler enabled to run.
