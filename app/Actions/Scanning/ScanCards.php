@@ -2,9 +2,11 @@
 
 namespace App\Actions\Scanning;
 
+use App\Actions\Catalog\CreateProvisionalCard;
 use App\Actions\Community\AwardPoints;
 use App\Enums\ContributionType;
 use App\Http\Resources\CatalogItemResource;
+use App\Models\CatalogItem;
 use App\Models\ScanLog;
 use App\Models\User;
 use App\Support\Membership\ScanQuota;
@@ -28,6 +30,7 @@ class ScanCards
         protected ScanArchive $archive,
         protected AwardPoints $award,
         protected ScanTimer $timer,
+        protected CreateProvisionalCard $provisional,
     ) {}
 
     /**
@@ -55,7 +58,7 @@ class ScanCards
         $aiReads = count(array_filter($cards, fn (IdentifiedCard $c) => $c->source !== 'cache'));
         $creditsSpent = $aiReads > 0 ? $quota->record($aiReads) : 0;
 
-        $detected = array_map(fn (IdentifiedCard $card) => $this->present($card), $cards);
+        $detected = array_map(fn (IdentifiedCard $card) => $this->present($card, $user), $cards);
 
         // Record the scan for the user's history (thumbnail + results snapshot).
         if ($total > 0) {
@@ -93,7 +96,7 @@ class ScanCards
     }
 
     /** @return array<string, mixed> */
-    protected function present(IdentifiedCard $card): array
+    protected function present(IdentifiedCard $card, ?User $user = null): array
     {
         $matches = $this->timer->time('match', fn () => $this->matcher->match($card));
 
@@ -110,6 +113,25 @@ class ScanCards
                 'reasons' => ['recognized'],
             ]);
             $matches = array_slice($matches, 0, (int) config('scanning.max_candidates', 5));
+        }
+
+        // Nothing in the catalog looks like this card. Rather than a dead end,
+        // create the row provisionally so its finder can log it — quarantined
+        // from browse, pricing and the sitemap until somebody confirms it.
+        $created = null;
+
+        if ($this->shouldCreateProvisional($card, $matches, $user)) {
+            $created = ($this->provisional)($card, $user);
+
+            if ($created !== null) {
+                // Offered as the match, so the confirm step behaves exactly as it
+                // does for a card we already held.
+                array_unshift($matches, [
+                    'item' => $created,
+                    'score' => 1.0,
+                    'reasons' => ['added from your scan'],
+                ]);
+            }
         }
 
         $candidates = array_map(fn (array $c) => [
@@ -133,9 +155,56 @@ class ScanCards
                 'confidence' => round($card->confidence, 2),
             ],
             'thumbnail' => $card->thumbnail,
+            // Set when this scan added the card itself, so the UI can say so
+            // rather than presenting a new row as an ordinary match.
+            'added_provisionally' => $created !== null,
             'fingerprint' => $card->phash,
             'source' => $card->source,
             'candidates' => $candidates,
         ];
+    }
+
+    /**
+     * Is this a card we genuinely do not hold, and is the read good enough to
+     * build a row from?
+     *
+     * Both have to be true. A confident read that ALMOST matched something is far
+     * more likely to be a card we hold under a slightly different name than a new
+     * card — and creating a near-duplicate is the expensive mistake here, because
+     * the name feeds the identity hash and the official import will never match
+     * it. A hesitant read is refused for the same reason.
+     *
+     * @param  array<int, array{item: CatalogItem, score: float, reasons: array<int, string>}>  $matches
+     */
+    protected function shouldCreateProvisional(IdentifiedCard $card, array $matches, ?User $user): bool
+    {
+        $config = (array) config('scanning.provisional');
+
+        if (! ($config['enabled'] ?? false) || $user === null) {
+            return false;
+        }
+
+        // A cache hit already knows its exact card; there is nothing to create.
+        if ($card->matchedItem !== null) {
+            return false;
+        }
+
+        $best = $matches[0]['score'] ?? 0.0;
+
+        if ($best >= (float) ($config['match_floor'] ?? 0.45)) {
+            return false;
+        }
+
+        if ($card->confidence < (float) ($config['read_floor'] ?? 0.75)) {
+            return false;
+        }
+
+        // A scanner pointed at something that is not a card should cost a handful
+        // of rows, not a catalog.
+        $cap = (int) ($config['daily_per_user'] ?? 25);
+
+        return $cap <= 0 || CatalogItem::where('provisional_by', $user->id)
+            ->where('provisional_at', '>=', now()->subDay())
+            ->count() < $cap;
     }
 }

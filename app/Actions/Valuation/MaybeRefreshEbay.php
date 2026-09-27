@@ -32,6 +32,14 @@ class MaybeRefreshEbay
 
     public function __invoke(CatalogItem $item): bool
     {
+        // Provisional rows are reachable from their owner's collection even
+        // though browse hides them, so the guard belongs here rather than in the
+        // controller: a scan of a misread number must not spend a paid fetch and
+        // publish a price for it.
+        if ($item->is_provisional) {
+            return false;
+        }
+
         if ($this->isSkippedRarity($item) || ! $this->isDue($item)) {
             return false;
         }

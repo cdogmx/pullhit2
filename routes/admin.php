@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EbaySweepController;
 use App\Http\Controllers\Admin\GiveawayController;
 use App\Http\Controllers\Admin\GradePredictorController;
+use App\Http\Controllers\Admin\ProvisionalCardController;
 use App\Http\Controllers\Admin\GradingGapController;
 use App\Http\Controllers\Admin\ImageController;
 use App\Http\Controllers\Admin\PriceInversionController;
@@ -89,6 +90,13 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
 
     // Bench for the photo grading pipeline — real photos against maths that
     // has only ever seen synthetic ones.
+    // Cards a scan created and nobody has confirmed. Ordered by how many people
+    // scanned each one, which is the signal for what to add properly first.
+    Route::get('provisional-cards', [ProvisionalCardController::class, 'index'])->name('provisional-cards.index');
+    Route::post('provisional-cards/{catalogItem}/confirm', [ProvisionalCardController::class, 'confirm'])->name('provisional-cards.confirm');
+    Route::delete('provisional-cards/{catalogItem}', [ProvisionalCardController::class, 'reject'])->name('provisional-cards.reject');
+    Route::post('provisional-cards/{catalogItem}/merge', [ProvisionalCardController::class, 'merge'])->name('provisional-cards.merge');
+
     Route::get('grade-predictor', [GradePredictorController::class, 'index'])->name('grade-predictor.index');
     Route::post('grade-predictor', [GradePredictorController::class, 'predict'])->name('grade-predictor.predict');
     Route::post('grade-predictor/detect', [GradePredictorController::class, 'detect'])->name('grade-predictor.detect');

@@ -21,6 +21,9 @@ class ProductLine extends Model
     protected function casts(): array
     {
         return [
+            // Created by a scan of a brand/set we did not hold; hidden from
+            // navigation until a human confirms it.
+            'is_provisional' => 'boolean',
             'metadata' => 'array',
         ];
     }

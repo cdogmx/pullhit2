@@ -94,6 +94,10 @@ class EnqueueEbaySoldCommand extends Command
             ->pluck('catalog_item_id');
 
         $items = CatalogItem::query()
+            // Never price an unconfirmed scan row. Its number may be misread,
+            // and comps match on set and number — so it would collect another
+            // card's sales and publish a price for a card that may not exist.
+            ->confirmed()
             ->with(['productLine', 'set'])
             ->whereNotIn('id', $queued)
             ->when($set, fn (Builder $q) => $q->where('set_id', $set->id))

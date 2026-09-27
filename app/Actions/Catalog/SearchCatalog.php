@@ -32,7 +32,13 @@ class SearchCatalog
     {
         $grading = $this->gradingFilter($filters);
 
-        $query = CatalogItem::query()->with(['vertical', 'productLine', 'set', 'defaultMarketValue']);
+        // Browse and search are the public catalog. An unconfirmed scan row does
+        // not belong in either: its name may not match what the official import
+        // will call it, and showing it invites people to collect a row that is
+        // about to be superseded.
+        $query = CatalogItem::query()
+            ->confirmed()
+            ->with(['vertical', 'productLine', 'set', 'defaultMarketValue']);
 
         // Browsing a graded state: load + display that state's value instead of
         // the raw headline (the resource prefers gradedMarketValue when present).

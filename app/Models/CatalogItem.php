@@ -54,6 +54,12 @@ class CatalogItem extends Model
             'ebay_refreshed_at' => 'datetime',
             'for_sale_refreshed_at' => 'datetime',
             'pc_synced_at' => 'datetime',
+            // Set by a scan nobody has confirmed. Quarantined from browse,
+            // search, pricing and the sitemap until it is.
+            'is_provisional' => 'boolean',
+            'provisional_read' => 'array',
+            'provisional_at' => 'datetime',
+            'provisional_scans' => 'integer',
         ];
     }
 
@@ -137,6 +143,21 @@ class CatalogItem extends Model
         });
     }
 
+    /**
+     * Rows a human has confirmed — everything a stranger should be shown.
+     *
+     * Provisional rows come from a scan nobody reviewed, so the name may not
+     * match the official import's and the number may be misread. Either mistake
+     * spreads if the row is browsable or priceable: a wrong number collects
+     * another card's comps. The owner still sees it in their own collection.
+     *
+     * @param  Builder<CatalogItem>  $query
+     */
+    public function scopeConfirmed(Builder $query): void
+    {
+        $query->where('catalog_items.is_provisional', false);
+    }
+
     /** @return HasMany<CatalogItemSlugAlias, $this> */
     public function slugAliases(): HasMany
     {
@@ -188,6 +209,16 @@ class CatalogItem extends Model
         }
 
         return $slug;
+    }
+
+    /**
+     * Whoever's scan created this row, when it was created by one.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function provisionalBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'provisional_by');
     }
 
     /** @return BelongsTo<Vertical, $this> */

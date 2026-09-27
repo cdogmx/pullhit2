@@ -32,7 +32,7 @@ class SitemapController extends Controller
     public function index(): Response
     {
         $cardPages = (int) max(1, ceil(
-            CatalogItem::whereNotNull('slug')->count() / self::CHUNK,
+            CatalogItem::confirmed()->whereNotNull('slug')->count() / self::CHUNK,
         ));
 
         $sitemaps = [url('/sitemap-pages.xml')];
@@ -89,6 +89,10 @@ class SitemapController extends Controller
             ->join('sets as s', 'ci.set_id', '=', 's.id')
             ->join('product_lines as pl', 'ci.product_line_id', '=', 'pl.id')
             ->whereNotNull('ci.slug')
+            // An unconfirmed scan row is not a page worth indexing: its name may
+            // not survive review, and a URL that changes after Google has it is
+            // worse than one that was never submitted.
+            ->where('ci.is_provisional', false)
             ->orderBy('ci.id')
             ->forPage(max(1, $page), self::CHUNK)
             ->select('pl.slug as brand', 's.slug as set', 'ci.slug as card', 'ci.updated_at')

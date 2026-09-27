@@ -216,6 +216,10 @@ class AnthropicVisionClient
                     'name' => $nullableString,
                     'number' => $nullableString + ['description' => 'Collector number as printed, e.g. "029/086", or null.'],
                     'set_name' => $nullableString,
+                    // Which game, so a card from a brand we do not hold yet can
+                    // still be placed. Without this a scan of an unknown game is
+                    // unplaceable even when the read is perfect.
+                    'game' => $nullableString + ['description' => 'The trading card game this card belongs to, as commonly written, e.g. "Pokemon", "One Piece", "Disney Lorcana", "Magic: The Gathering", "Star Wars Unlimited", "Yu-Gi-Oh!". Null only if genuinely unclear.'],
                     'set_code' => $nullableString + ['description' => 'Short set code near the collector number, e.g. "MEW", "PAL", "BLK", "OP07", "SV6", or null.'],
                     'language' => $nullableString + ['description' => 'en, ja, ko, zh-CN, zh-TW, fr, de, it, es, pt, or null.'],
                     'edition' => $nullableString + ['description' => "'first_edition', 'shadowless', 'unlimited', or null. Only when clearly visible."],

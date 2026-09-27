@@ -44,6 +44,9 @@ class Set extends Model
     protected function casts(): array
     {
         return [
+            // Created by a scan of a brand/set we did not hold; hidden from
+            // navigation until a human confirms it.
+            'is_provisional' => 'boolean',
             'released_at' => 'date',
             'ebay_set_learned_at' => 'datetime',
             'refresh_boost_until' => 'datetime',

@@ -31,6 +31,11 @@ readonly class IdentifiedCard
         public ?string $phash = null,
         public ?CatalogItem $matchedItem = null,
         public string $source = 'vision',  // vision | cache
+        /**
+         * The game as the read spelled it, e.g. "Pokemon". Only used to place a
+         * card nothing matched; the matcher works from name/number/set.
+         */
+        public ?string $productLine = null,
     ) {}
 
     /** @param  array<string, mixed>  $input */
@@ -51,6 +56,7 @@ readonly class IdentifiedCard
             edition: $input['edition'] ?? null,
             variant: $input['variant'] ?? null,
             phash: $phash,
+            productLine: $input['game'] ?? null,
         );
     }
 

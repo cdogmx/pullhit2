@@ -54,6 +54,10 @@ class EbayTitleResolver
         $lineId = $this->productLineId($productLine);
 
         $candidates = CatalogItem::query()
+            // An unconfirmed scan row is not a comp target. Its number came from
+            // a vision read, so a sweep matching on number would attach real
+            // sales to a card that may not exist as described.
+            ->confirmed()
             ->with(['set:id,name,code'])
             ->when($language, fn (Builder $q) => $q->where('language', $language))
             ->when($lineId, fn (Builder $q) => $q->where('product_line_id', $lineId))

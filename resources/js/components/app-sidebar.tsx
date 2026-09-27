@@ -5,6 +5,7 @@ import {
     Bell,
     Boxes,
     CreditCard,
+    FilePlus2,
     FlagTriangleRight,
     Gift,
     GitCompare,
@@ -144,6 +145,13 @@ const adminNavItems: NavItem[] = [
     },
     { title: 'Reconcile', href: '/admin/reconcile', icon: GitCompare },
     { title: 'Scan feedback', href: '/admin/scan-feedback', icon: ScanLine },
+    // Cards a scan created that nobody has confirmed. Sits with the other review
+    // queues rather than under Catalog: these are not catalog rows yet.
+    {
+        title: 'Scan additions',
+        href: '/admin/provisional-cards',
+        icon: FilePlus2,
+    },
 
     // Pricing & availability ops
     { title: 'Grading gaps', href: '/admin/grading-gaps', icon: TrendingUp },
