@@ -5,6 +5,7 @@ import {
     Bell,
     Boxes,
     CreditCard,
+    Activity,
     FilePlus2,
     FlagTriangleRight,
     Gift,
@@ -154,6 +155,10 @@ const adminNavItems: NavItem[] = [
     },
 
     // Pricing & availability ops
+    // Leads this group deliberately: it is the only check that compares our
+    // prices with something we do not compute, and every pricing bug found so
+    // far was invisible from the inside.
+    { title: 'Price health', href: '/admin/price-health', icon: Activity },
     { title: 'Grading gaps', href: '/admin/grading-gaps', icon: TrendingUp },
     {
         title: 'Price inversions',

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Actions\Valuation\RecomputeCatalogItem;
 use App\Models\CatalogItem;
+use App\Models\CompAdjudication;
 use App\Models\SaleObservation;
 use App\Support\Scanning\CandidateMatcher;
 use App\Support\Scanning\CardTextExtractor;
@@ -140,6 +141,22 @@ class AdjudicateCompsCommand extends Command
                         mb_substr($top['item']->name, 0, 20).' #'.$top['item']->number,
                         mb_substr((string) ($observation->raw['title'] ?? ''), 0, 44),
                     ];
+
+                    // Recorded whether or not it is applied. Suggest-only is the
+                    // default, so without this the run's findings would exist
+                    // only in scrollback — and the point of the pass is the list.
+                    CompAdjudication::updateOrCreate(
+                        ['sale_observation_id' => $observation->id],
+                        [
+                            'catalog_item_id' => $card->id,
+                            'reads_as_catalog_item_id' => $top['item']->id,
+                            'price' => (int) $observation->price,
+                            'title' => (string) ($observation->raw['title'] ?? ''),
+                            'ratio' => round($row['ratio'], 2),
+                            'status' => $apply ? CompAdjudication::APPLIED : CompAdjudication::OPEN,
+                            'reviewed_at' => $apply ? now() : null,
+                        ],
+                    );
 
                     if ($apply) {
                         $observation->delete();

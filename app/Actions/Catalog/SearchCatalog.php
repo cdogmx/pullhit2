@@ -38,7 +38,13 @@ class SearchCatalog
         // about to be superseded.
         $query = CatalogItem::query()
             ->confirmed()
-            ->with(['vertical', 'productLine', 'set', 'defaultMarketValue']);
+            ->with(['vertical', 'productLine', 'set', 'defaultMarketValue'])
+            // How many printings this card has, always — not only when browse is
+            // grouping them. Two rows sharing a name, a number and (because
+            // catalogs publish one scan per card) an image read as a duplicate
+            // unless BOTH say which printing they are. Lorcana's normal/foil
+            // pairs are the case that showed it.
+            ->withCount('variants');
 
         // Browsing a graded state: load + display that state's value instead of
         // the raw headline (the resource prefers gradedMarketValue when present).

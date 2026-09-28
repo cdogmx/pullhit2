@@ -1478,7 +1478,24 @@ function ItemImage({
     );
 }
 
+/**
+ * The printing this row is, named on BOTH halves of a pair.
+ *
+ * "Normal" used to be shown as nothing at all, which is fine for a card with one
+ * printing and misleading for one with two: the foil said "Foil" and its sibling
+ * said nothing, so a listing of Lorcana's normal/foil pairs looked like every
+ * card was in the catalog twice. They share a name, a number and an image —
+ * catalogs publish one scan per card — so the label is the only thing telling
+ * them apart.
+ *
+ * Only when there is something to distinguish. A card with one printing needs no
+ * "Normal" badge, and stamping one on every card in the catalog would be noise.
+ */
 function VariantBadges({ item }: { item: CatalogItem }) {
+    const printings = item.variants_count ?? 0;
+    const hasSiblings = printings > 1;
+    const finish = item.variant ?? 'normal';
+
     return (
         <div className="flex flex-wrap gap-1">
             {item.rarity && (
@@ -1486,14 +1503,17 @@ function VariantBadges({ item }: { item: CatalogItem }) {
                     {item.rarity}
                 </Badge>
             )}
-            {item.variant && item.variant !== 'normal' && (
-                <Badge variant="outline" className="text-[10px]">
-                    {humanize(item.variant)}
+            {(hasSiblings || finish !== 'normal') && (
+                <Badge
+                    variant={finish === 'normal' ? 'outline' : 'default'}
+                    className="text-[10px]"
+                >
+                    {humanize(finish)}
                 </Badge>
             )}
-            {item.variants_count && item.variants_count > 1 && (
-                <Badge className="text-[10px]">
-                    {item.variants_count} printings
+            {hasSiblings && (
+                <Badge variant="outline" className="text-[10px]">
+                    {printings} printings
                 </Badge>
             )}
         </div>

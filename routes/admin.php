@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EbaySweepController;
 use App\Http\Controllers\Admin\GiveawayController;
 use App\Http\Controllers\Admin\GradePredictorController;
+use App\Http\Controllers\Admin\PriceHealthController;
 use App\Http\Controllers\Admin\ProvisionalCardController;
 use App\Http\Controllers\Admin\GradingGapController;
 use App\Http\Controllers\Admin\ImageController;
@@ -90,6 +91,12 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
 
     // Bench for the photo grading pipeline — real photos against maths that
     // has only ever seen synthetic ones.
+    // Where our prices sit against an outside source, and what the AI pass made
+    // of the comps behind the worst of them.
+    Route::get('price-health', [PriceHealthController::class, 'index'])->name('price-health.index');
+    Route::post('price-health/{compAdjudication}/apply', [PriceHealthController::class, 'apply'])->name('price-health.apply');
+    Route::post('price-health/{compAdjudication}/dismiss', [PriceHealthController::class, 'dismiss'])->name('price-health.dismiss');
+
     // Cards a scan created and nobody has confirmed. Ordered by how many people
     // scanned each one, which is the signal for what to add properly first.
     Route::get('provisional-cards', [ProvisionalCardController::class, 'index'])->name('provisional-cards.index');

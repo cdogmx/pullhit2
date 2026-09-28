@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\PriceHealthSnapshot;
 use App\Support\Valuation\PriceDivergence;
 use Illuminate\Console\Command;
 
@@ -67,6 +68,18 @@ class PriceDivergenceCommand extends Command
         $this->line(sprintf('Over-priced by 2x or more: <options=bold>%s</> (%.1f%%)   ·   under half: %s (%.1f%%)',
             number_format($high), $high / $compared * 100,
             number_format($low), $low / $compared * 100));
+
+        // Recorded so the admin page can show a trend rather than one night's
+        // number. Only for a whole-catalog run: a single set's reading is not
+        // comparable with the rest of the series.
+        if ($setSlug === null) {
+            PriceHealthSnapshot::create([
+                'compared' => $compared,
+                'buckets' => $buckets,
+                'over_2x' => $high,
+                'under_half' => $low,
+            ]);
+        }
 
         $outliers = $divergence->cards($threshold, $minCents, $setSlug);
 
