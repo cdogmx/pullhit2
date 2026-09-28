@@ -182,9 +182,14 @@ export default function CollectionIndex({
                         </Button>
                         {holdings.length > 0 && (
                             <Button asChild variant="outline" size="sm">
-                                <a href="/collection/export">
+                                {/* Carries the collection being viewed, so the
+                                    file matches the list on screen rather than
+                                    every card the account owns. */}
+                                <a
+                                    href={`/collection/export?collection=${encodeURIComponent(activeCollection)}`}
+                                >
                                     <Download className="size-4" />
-                                    Export CSV
+                                    Export {active?.name ?? 'CSV'}
                                 </a>
                             </Button>
                         )}

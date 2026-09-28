@@ -2,6 +2,7 @@
 
 namespace App\Actions\Collection;
 
+use App\Models\Collection;
 use App\Models\CollectionItem;
 use App\Models\User;
 
@@ -14,12 +15,17 @@ use App\Models\User;
 class ExportCollectionCsv
 {
     /**
+     * @param  Collection|null  $collection  one collection, or null for every holding
      * @return array{headers: list<string>, rows: list<list<string|int>>}
      */
-    public function __invoke(User $user): array
+    public function __invoke(User $user, ?Collection $collection = null): array
     {
         $items = CollectionItem::query()
             ->where('user_id', $user->id)
+            // Scoped when a collection is named. Someone viewing "For sale" and
+            // pressing Export expects that list, not every card they own —
+            // and on a large account the difference is thousands of rows.
+            ->when($collection, fn ($q) => $q->where('collection_id', $collection->id))
             ->with(['catalogItem.set', 'catalogItem.marketValues', 'gradingCompany', 'acquisitionLots'])
             ->get();
 

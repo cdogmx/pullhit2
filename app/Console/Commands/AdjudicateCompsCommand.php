@@ -125,7 +125,20 @@ class AdjudicateCompsCommand extends Command
                         continue;
                     }
 
-                    if ($top['item']->id === $card->id) {
+                    // base_key, not id. Comparing ids calls a match on a
+                    // SIBLING PRINTING — holo against reverse holo, normal
+                    // against foil — a different card, and it is not: same card,
+                    // same number, one printing apart. The first real run flagged
+                    // 318 comps and most were this, dozens on one Politoed.
+                    //
+                    // A comp on the wrong printing is a real but much smaller
+                    // problem, and it is the classifier's printing gate to fix,
+                    // not something to delete a sale over.
+                    $sameCard = $card->base_key !== null
+                        ? $top['item']->base_key === $card->base_key
+                        : $top['item']->id === $card->id;
+
+                    if ($sameCard) {
                         $counts['confirmed']++;
 
                         continue;
@@ -135,7 +148,9 @@ class AdjudicateCompsCommand extends Command
                     $touched[$card->id] = $card;
 
                     $findings[] = [
-                        sprintf('%.1fx', $row['ratio']),
+                        // Two decimals below 1x: an 0.02x card and an 0.4x card
+                        // are very different, and both render as "0.0x".
+                        sprintf($row['ratio'] < 1 ? '%.2fx' : '%.1fx', $row['ratio']),
                         '$'.number_format((float) $observation->price / 100, 2),
                         mb_substr($card->name, 0, 20).' #'.$card->number,
                         mb_substr($top['item']->name, 0, 20).' #'.$top['item']->number,

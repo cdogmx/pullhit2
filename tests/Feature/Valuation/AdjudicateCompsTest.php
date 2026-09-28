@@ -126,3 +126,27 @@ test('cards that agree with the reference are never sent to the model', function
 
     expect(SaleObservation::find($this->comp->id))->not->toBeNull();
 });
+
+test('a sibling printing is not "a different card"', function () {
+    // The first real run flagged 318 comps and most were this: the matcher
+    // landed on the holo where the comp sits on the reverse holo, or the foil
+    // where it sits on the normal. Same card, same number, one printing apart —
+    // comparing ids called that a wrong card and would have deleted dozens of
+    // good sales off one Politoed.
+    $sibling = CatalogItem::factory()->create([
+        'set_id' => $this->set->id,
+        'name' => 'Umbreon', 'number' => '17',
+        'attributes' => ['language' => 'en', 'variant' => 'reverse_holo'],
+        // What makes them the same card.
+        'base_key' => $this->card->base_key,
+    ]);
+
+    fakeRead(['name' => 'Umbreon', 'number' => '17', 'set_name' => 'POP Series 5',
+        'language' => 'en', 'confidence' => 0.95]);
+
+    $this->artisan('valuation:adjudicate-comps', ['--set' => $this->set->slug, '--apply' => true])
+        ->assertSuccessful();
+
+    expect(SaleObservation::find($this->comp->id))->not->toBeNull()
+        ->and($sibling->base_key)->toBe($this->card->base_key);
+});

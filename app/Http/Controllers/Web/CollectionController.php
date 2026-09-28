@@ -30,6 +30,7 @@ use App\Support\Membership\Entitlements;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -217,9 +218,20 @@ class CollectionController extends Controller
 
     public function export(Request $request, ExportCollectionCsv $export): StreamedResponse
     {
-        ['headers' => $headers, 'rows' => $rows] = $export($request->user());
+        $user = $request->user();
 
-        $filename = 'cardfoo-collection-'.now()->format('Y-m-d').'.csv';
+        // The same ?collection= the page itself uses to pick the active list, so
+        // Export follows what is on screen. Unknown slug falls back to the
+        // default collection rather than silently exporting everything.
+        $collection = $request->query('collection')
+            ? ($user->collections()->where('slug', $request->query('collection'))->first() ?? $user->defaultCollection())
+            : null;
+
+        ['headers' => $headers, 'rows' => $rows] = $export($user, $collection);
+
+        $filename = 'cardfoo-'
+            .($collection ? Str::slug($collection->name) : 'collection')
+            .'-'.now()->format('Y-m-d').'.csv';
 
         return response()->streamDownload(function () use ($headers, $rows) {
             $out = fopen('php://output', 'w');
