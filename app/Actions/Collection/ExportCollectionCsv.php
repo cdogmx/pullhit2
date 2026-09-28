@@ -2,6 +2,7 @@
 
 namespace App\Actions\Collection;
 
+use App\Models\CatalogItem;
 use App\Models\Collection;
 use App\Models\CollectionItem;
 use App\Models\User;
@@ -30,8 +31,8 @@ class ExportCollectionCsv
             ->get();
 
         $headers = [
-            'Catalog ID', 'Name', 'Set', 'Number', 'Language', 'State',
-            'Quantity', 'Unit value', 'Market value', 'Cost basis',
+            'Catalog ID', 'Name', 'Set', 'Number', 'Rarity', 'Variant', 'Language',
+            'State', 'Quantity', 'Unit value', 'Market value', 'Cost basis',
             'Unrealized gain', 'Currency', 'Folder', 'Notes',
         ];
 
@@ -46,6 +47,12 @@ class ExportCollectionCsv
                 $catalog?->name ?? '',
                 $catalog?->set?->code ?? $catalog?->set?->name ?? '',
                 $catalog?->number ?? '',
+                $catalog?->rarity ?? '',
+                // Which printing, spelled the way a person reads it. It matters
+                // more than it looks: a foil and its normal sibling share a name
+                // and a number, and on Lorcana the foil carries a premium — so a
+                // row without this cannot be told from its twin.
+                self::printing($catalog),
                 $catalog?->language ?? '',
                 $item->stateLabel(),
                 $item->quantity,
@@ -60,6 +67,24 @@ class ExportCollectionCsv
         })->all();
 
         return ['headers' => $headers, 'rows' => $rows];
+    }
+
+    /**
+     * "reverse_holo" → "Reverse Holo". Empty for a card with no variant.
+     *
+     * Left out for a plain Normal printing: on a card with one printing it is
+     * noise in every row, and the column is there to distinguish the ones that
+     * have siblings.
+     */
+    private static function printing(?CatalogItem $catalog): string
+    {
+        $variant = $catalog?->variant ?? ($catalog?->attributes['variant'] ?? null);
+
+        if ($variant === null || $variant === '' || $variant === 'normal') {
+            return '';
+        }
+
+        return ucwords(str_replace('_', ' ', (string) $variant));
     }
 
     /** Cents → plain dollar string (e.g. 84.59); empty when null. */

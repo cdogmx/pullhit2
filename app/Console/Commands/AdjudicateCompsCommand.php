@@ -167,6 +167,7 @@ class AdjudicateCompsCommand extends Command
                             'reads_as_catalog_item_id' => $top['item']->id,
                             'price' => (int) $observation->price,
                             'title' => (string) ($observation->raw['title'] ?? ''),
+                            'url' => $observation->raw['url'] ?? null,
                             'ratio' => round($row['ratio'], 2),
                             'status' => $apply ? CompAdjudication::APPLIED : CompAdjudication::OPEN,
                             'reviewed_at' => $apply ? now() : null,

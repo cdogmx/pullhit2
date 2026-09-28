@@ -80,3 +80,34 @@ test('one person cannot export another person\'s collection', function () {
     expect($body)->not->toContain('Listed Card')
         ->not->toContain('Kept Card');
 });
+
+test('the export names the rarity and the printing', function () {
+    // A foil and its normal sibling share a name and a number, so without the
+    // printing column two rows in the file are indistinguishable — and on
+    // Lorcana they are not worth the same.
+    $foil = CatalogItem::factory()->create([
+        'name' => 'Elsa - Spirit of Winter',
+        'number' => '42',
+        'attributes' => ['language' => 'en', 'variant' => 'foil', 'rarity' => 'Legendary'],
+    ]);
+    $this->forSale->items()->create([
+        'user_id' => $this->user->id, 'catalog_item_id' => $foil->id,
+        'quantity' => 1, 'condition' => 'NM',
+    ]);
+
+    $body = csv($this->actingAs($this->user)->get('/collection/export?collection=for-sale'));
+
+    expect($body)->toContain('Rarity')
+        ->toContain('Variant')
+        ->toContain('Legendary')
+        // Written the way a person reads it, not "foil".
+        ->toContain('Foil');
+});
+
+test('a plain normal printing leaves the variant column empty', function () {
+    // On a card with one printing it would be noise in every row; the column is
+    // there to separate the ones that have siblings.
+    $body = csv($this->actingAs($this->user)->get('/collection/export?collection=for-sale'));
+
+    expect($body)->not->toContain('Normal');
+});

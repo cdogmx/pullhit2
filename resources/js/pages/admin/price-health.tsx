@@ -1,5 +1,12 @@
 import { Head, router } from '@inertiajs/react';
-import { ArrowRight, Check, TrendingDown, TrendingUp, X } from 'lucide-react';
+import {
+    ArrowRight,
+    Check,
+    ExternalLink,
+    TrendingDown,
+    TrendingUp,
+    X,
+} from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -7,12 +14,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
-type CardRef = { id: number; label: string; set: string | null } | null;
+type CardRef = {
+    id: number;
+    label: string;
+    set: string | null;
+    url: string;
+} | null;
 
 type Finding = {
     id: number;
     price: number;
     title: string;
+    url: string | null;
     ratio: number | null;
     stale: boolean;
     filed_under: CardRef;
@@ -89,6 +102,36 @@ function Distribution({ snapshot }: { snapshot: Snapshot }) {
     );
 }
 
+/**
+ * A card, linked to its own page.
+ *
+ * Both sides are worth opening: the one the comp is filed under, to see the
+ * price it is distorting, and the one it reads as, to confirm they really are
+ * different cards. Most findings here are two cards sharing a collector number
+ * across sets, which is only obvious once you look at both.
+ */
+function CardLink({ card }: { card: CardRef }) {
+    if (!card) {
+        return <span className="font-medium">&mdash;</span>;
+    }
+
+    return (
+        <span className="inline-flex items-baseline gap-1.5">
+            <a
+                href={card.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium underline underline-offset-2 hover:text-foreground"
+            >
+                {card.label}
+            </a>
+            {card.set && (
+                <span className="text-xs text-muted-foreground">{card.set}</span>
+            )}
+        </span>
+    );
+}
+
 function FindingRow({ finding }: { finding: Finding }) {
     const [busy, setBusy] = useState(false);
 
@@ -127,30 +170,31 @@ function FindingRow({ finding }: { finding: Finding }) {
                         )}
                     </div>
 
-                    <p className="text-sm break-words text-muted-foreground">
-                        {finding.title}
-                    </p>
+                    {/* The listing itself. Judging whether the model read it
+                        correctly means looking at the real page, so this is the
+                        most-used link on the row. */}
+                    {finding.url ? (
+                        <a
+                            href={finding.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-start gap-1 text-sm break-words text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                        >
+                            {finding.title}
+                            <ExternalLink className="mt-0.5 size-3 shrink-0" />
+                        </a>
+                    ) : (
+                        <p className="text-sm break-words text-muted-foreground">
+                            {finding.title}
+                        </p>
+                    )}
 
                     <div className="flex flex-wrap items-center gap-2 text-sm">
                         <span className="text-muted-foreground">filed under</span>
-                        <span className="font-medium">
-                            {finding.filed_under?.label ?? '—'}
-                        </span>
-                        {finding.filed_under?.set && (
-                            <span className="text-xs text-muted-foreground">
-                                {finding.filed_under.set}
-                            </span>
-                        )}
+                        <CardLink card={finding.filed_under} />
                         <ArrowRight className="size-3.5 text-muted-foreground" />
                         <span className="text-muted-foreground">reads as</span>
-                        <span className="font-medium">
-                            {finding.reads_as?.label ?? '—'}
-                        </span>
-                        {finding.reads_as?.set && (
-                            <span className="text-xs text-muted-foreground">
-                                {finding.reads_as.set}
-                            </span>
-                        )}
+                        <CardLink card={finding.reads_as} />
                     </div>
                 </div>
 

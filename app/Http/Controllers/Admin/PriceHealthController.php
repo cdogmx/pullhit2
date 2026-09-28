@@ -35,11 +35,16 @@ class PriceHealthController extends Controller
 
         $findings = CompAdjudication::query()
             ->where('status', CompAdjudication::OPEN)
+            // product_line and slug as well, because path() needs all three to
+            // build a card's /{brand}/{set}/{card} URL — without them every
+            // finding would link nowhere.
             ->with([
-                'catalogItem:id,name,number,set_id',
-                'catalogItem.set:id,name',
-                'readsAs:id,name,number,set_id',
-                'readsAs.set:id,name',
+                'catalogItem:id,name,number,slug,set_id,product_line_id',
+                'catalogItem.set:id,name,slug',
+                'catalogItem.productLine:id,slug',
+                'readsAs:id,name,number,slug,set_id,product_line_id',
+                'readsAs.set:id,name,slug',
+                'readsAs.productLine:id,slug',
             ])
             // Worst divergence first: the finding on a card that is 30x off is
             // worth more attention than one on a card that is 3x off.
@@ -49,6 +54,10 @@ class PriceHealthController extends Controller
                 'id' => $f->id,
                 'price' => $f->price,
                 'title' => $f->title,
+                // The listing itself. Checking the model's reading against the
+                // real page is the only way to judge whether to trust the next
+                // one, so it has to be one click away.
+                'url' => $f->url,
                 'ratio' => $f->ratio,
                 // Null once another pass has pruned the comp. The finding is
                 // then just history, and the UI says so rather than offering a
@@ -58,11 +67,13 @@ class PriceHealthController extends Controller
                     'id' => $f->catalogItem->id,
                     'label' => $f->catalogItem->name.' #'.$f->catalogItem->number,
                     'set' => $f->catalogItem->set?->name,
+                    'url' => $f->catalogItem->path() ?? '/catalog/'.$f->catalogItem->id,
                 ] : null,
                 'reads_as' => $f->readsAs ? [
                     'id' => $f->readsAs->id,
                     'label' => $f->readsAs->name.' #'.$f->readsAs->number,
                     'set' => $f->readsAs->set?->name,
+                    'url' => $f->readsAs->path() ?? '/catalog/'.$f->readsAs->id,
                 ] : null,
             ]);
 
