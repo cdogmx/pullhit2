@@ -82,6 +82,12 @@ return [
         // extraction, the Sensei chat, and two web-search researchers. If
         // scanning ever wants its own, faster model, this is the seam to split.
         'model' => env('SCAN_MODEL', 'claude-sonnet-5'),
+
+        // Reading a listing TITLE into fields is text parsing, not vision, and
+        // the bulk passes do thousands of them — the sweep-miss matcher and the
+        // comp adjudicator. It inherited the vision model, which is slower and
+        // dearer for a job that never looks at an image.
+        'text_model' => env('EBAY_AI_MATCH_MODEL', 'claude-haiku-4-5-20251001'),
     ],
 
     // Dodo Payments — subscriptions + credit packs (merchant of record).

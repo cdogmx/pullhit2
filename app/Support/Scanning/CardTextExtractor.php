@@ -124,8 +124,11 @@ class CardTextExtractor
 
     private function model(): string
     {
-        // Defaults to the scan model; override with a cheaper one for bulk runs.
-        return (string) (env('EBAY_AI_MATCH_MODEL') ?: $this->config()['model']);
+        // The text model, not the vision one. This class only ever reads a
+        // title into fields — it never sees an image — and it runs in bulk:
+        // the comp adjudicator's first real pass made ~45 calls and took most
+        // of an hour on the vision model.
+        return (string) ($this->config()['text_model'] ?? $this->config()['model']);
     }
 
     /** @return array<string, string> */
