@@ -47,6 +47,7 @@ class PriceHealthController extends Controller
                 'readsAs:id,name,number,slug,set_id,product_line_id',
                 'readsAs.set:id,name,slug',
                 'readsAs.productLine:id,slug',
+                'saleObservation:id,raw',
             ])
             // Worst divergence first: the finding on a card that is 30x off is
             // worth more attention than one on a card that is 3x off.
@@ -59,7 +60,11 @@ class PriceHealthController extends Controller
                 // The listing itself. Checking the model's reading against the
                 // real page is the only way to judge whether to trust the next
                 // one, so it has to be one click away.
-                'url' => $f->url,
+                //
+                // Falls back to the comp's own url: findings recorded before
+                // this column existed have none, and a finding whose comp is
+                // still on file should never render without a link.
+                'url' => $f->url ?? ($f->saleObservation?->raw['url'] ?? null),
                 'ratio' => $f->ratio,
                 // Null once another pass has pruned the comp. The finding is
                 // then just history, and the UI says so rather than offering a

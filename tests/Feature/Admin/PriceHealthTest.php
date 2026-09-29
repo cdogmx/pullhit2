@@ -160,3 +160,28 @@ test('a finding cannot be moved once decided', function () {
 
     expect($this->comp->fresh()->catalog_item_id)->toBe($this->card->id);
 });
+
+test('a finding with no stored url still links, via its comp', function () {
+    // Every finding recorded before the url column existed had none — 74 of
+    // them — and rendered as plain text on the one page whose job is to let
+    // somebody check the listing.
+    $this->finding->forceFill(['url' => null])->save();
+    $this->comp->forceFill([
+        'raw' => ['title' => 'x', 'url' => 'https://www.ebay.com/itm/123'],
+    ])->save();
+
+    $this->actingAs($this->admin)->get('/admin/price-health')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('findings.data.0.url', 'https://www.ebay.com/itm/123'));
+});
+
+test('a stored url is preferred, so a decided finding keeps its link', function () {
+    // Applying a finding deletes the comp, so the fallback disappears with it.
+    $this->finding->forceFill(['url' => 'https://www.ebay.com/itm/stored'])->save();
+
+    $this->actingAs($this->admin)->get('/admin/price-health')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('findings.data.0.url', 'https://www.ebay.com/itm/stored'));
+});

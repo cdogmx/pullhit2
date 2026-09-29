@@ -224,13 +224,31 @@ function FindingRow({ finding }: { finding: Finding }) {
                     {finding.reads_as && (
                         <Button
                             size="sm"
-                            className="flex-1"
+                            className="h-auto flex-1 py-2"
                             disabled={busy || finding.stale}
                             onClick={() => act('move')}
-                            title={`Move this sale to ${finding.reads_as.label}`}
+                            title={`Move this sale to ${finding.reads_as.label}${
+                                finding.reads_as.set
+                                    ? ` — ${finding.reads_as.set}`
+                                    : ''
+                            }`}
                         >
-                            <MoveRight className="size-4" />
-                            Move to {finding.reads_as.label}
+                            <MoveRight className="size-4 shrink-0" />
+                            {/* The SET, not just the name. Both cards in a
+                                finding share a name and a number — that is why
+                                the comp landed on the wrong one — so a button
+                                reading "Move to Lugia #149" names the card it is
+                                leaving just as well as the one it is going to. */}
+                            <span className="flex min-w-0 flex-col items-start text-left">
+                                <span className="truncate">
+                                    Move to {finding.reads_as.label}
+                                </span>
+                                {finding.reads_as.set && (
+                                    <span className="w-full truncate text-[11px] font-normal opacity-80">
+                                        {finding.reads_as.set}
+                                    </span>
+                                )}
+                            </span>
                         </Button>
                     )}
                     <Button
