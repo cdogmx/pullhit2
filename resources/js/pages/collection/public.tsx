@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { Award, Pencil } from 'lucide-react';
+import { Award, LayoutGrid, List, Pencil, Rows3 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { EditHoldingDialog } from '@/components/collection/edit-holding-dialog';
 import { ProfileLinks } from '@/components/profile-links';
@@ -11,6 +11,10 @@ import type {
 } from '@/components/shared/list-controls';
 import { OwnerLink } from '@/components/shared/owner-link';
 import { Badge } from '@/components/ui/badge';
+import {
+    ToggleGroup,
+    ToggleGroupItem,
+} from '@/components/ui/toggle-group';
 import {
     Select,
     SelectContent,
@@ -102,6 +106,16 @@ function byValue(a: number | null, b: number | null, dir: 1 | -1): number {
  * but never cost basis or P&L (those stay private). Chrome from AppShell.
  * Sorting/filtering is client-side over the fully server-rendered list.
  */
+type ViewMode = 'small' | 'large' | 'list';
+
+const VIEW_KEY = 'cardfoo:collection-view';
+
+/** Columns per breakpoint. "small" fits a whole set on a screen. */
+const GRID_CLASS: Record<Exclude<ViewMode, 'list'>, string> = {
+    large: 'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4',
+    small: 'grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-8',
+};
+
 export default function PublicCollection({
     owner,
     collection,
@@ -129,6 +143,38 @@ export default function PublicCollection({
 
     const [set, setSet] = useState(ALL);
     const [sort, setSort] = useState('value_desc');
+    /**
+     * How densely to show the cards.
+     *
+     * A shared collection is browsed very differently depending on why somebody
+     * opened it: "large" to look at the cards, "small" to take in a whole set at
+     * once, "list" to read values and quantities down a column. Remembered per
+     * visitor because it is a preference about THEM, not about the collection —
+     * localStorage rather than the URL, so a shared link does not impose the
+     * sender's choice on whoever opens it.
+     */
+    const [view, setView] = useState<ViewMode>(() => {
+        try {
+            const saved = localStorage.getItem(VIEW_KEY);
+
+            return saved === 'small' || saved === 'list' || saved === 'large'
+                ? saved
+                : 'large';
+        } catch {
+            // Private windows and blocked site data throw on access.
+            return 'large';
+        }
+    });
+
+    const chooseView = (next: ViewMode) => {
+        setView(next);
+        try {
+            localStorage.setItem(VIEW_KEY, next);
+        } catch {
+            // A preference that cannot be saved is not worth failing over.
+        }
+    };
+
     const [editing, setEditing] = useState<Holding | null>(null);
 
     // Sets present in this collection, for the filter dropdown.
@@ -293,6 +339,24 @@ export default function PublicCollection({
                                 {visible.length.toLocaleString()} of{' '}
                                 {holdings.length.toLocaleString()}
                             </span>
+                            <ToggleGroup
+                                type="single"
+                                value={view}
+                                onValueChange={(v) => v && chooseView(v as ViewMode)}
+                                variant="outline"
+                                size="sm"
+                                className="ml-auto"
+                            >
+                                <ToggleGroupItem value="small" aria-label="Small thumbnails">
+                                    <LayoutGrid className="size-4" />
+                                </ToggleGroupItem>
+                                <ToggleGroupItem value="large" aria-label="Large cards">
+                                    <Rows3 className="size-4" />
+                                </ToggleGroupItem>
+                                <ToggleGroupItem value="list" aria-label="List">
+                                    <List className="size-4" />
+                                </ToggleGroupItem>
+                            </ToggleGroup>
                         </div>
 
                         {visible.length === 0 ? (
@@ -300,7 +364,13 @@ export default function PublicCollection({
                                 No cards match your filters.
                             </div>
                         ) : (
-                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                            <div
+                                className={
+                                    view === 'list'
+                                        ? 'flex flex-col divide-y divide-border rounded-lg border border-border'
+                                        : GRID_CLASS[view]
+                                }
+                            >
                                 {visible.map((h, i) => (
                                     <div
                                         key={`${h.catalog_item_id}-${i}`}
@@ -317,55 +387,115 @@ export default function PublicCollection({
                                                 <Pencil className="size-3.5" />
                                             </button>
                                         )}
-                                        <a
-                                            href={cardHref(h)}
-                                            className="group block overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring"
-                                        >
-                                            <div className="aspect-[3/4] overflow-hidden bg-muted">
-                                                {h.image_url ? (
-                                                    <img
-                                                        src={h.image_url}
-                                                        alt={h.name ?? ''}
-                                                        loading="lazy"
-                                                        className="size-full object-contain transition-transform group-hover:scale-105"
-                                                    />
-                                                ) : (
-                                                    <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
-                                                        No image
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="space-y-1 p-3">
-                                                <p
-                                                    className="truncate text-sm font-medium"
-                                                    title={h.name ?? ''}
-                                                >
-                                                    {h.name}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {h.set}
-                                                    {h.number
-                                                        ? ` · ${h.number}`
-                                                        : ''}
-                                                </p>
-                                                <div className="flex items-center justify-between gap-2 text-xs">
-                                                    <span className="truncate text-muted-foreground">
-                                                        {h.state_label}
+                                        {view === 'list' ? (
+                                            <a
+                                                href={cardHref(h)}
+                                                className="flex items-center gap-3 p-2 transition-colors hover:bg-muted/50"
+                                            >
+                                                <div className="h-14 w-10 shrink-0 overflow-hidden rounded bg-muted">
+                                                    {h.image_url ? (
+                                                        <img
+                                                            src={h.image_url}
+                                                            alt={h.name ?? ''}
+                                                            loading="lazy"
+                                                            className="size-full object-contain"
+                                                        />
+                                                    ) : null}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate text-sm font-medium">
+                                                        {h.name}
+                                                    </p>
+                                                    <p className="truncate text-xs text-muted-foreground">
+                                                        {h.set}
+                                                        {h.number
+                                                            ? ` · ${h.number}`
+                                                            : ''}
+                                                        {` · ${h.state_label}`}
                                                         {h.quantity > 1
                                                             ? ` · ×${h.quantity}`
                                                             : ''}
+                                                    </p>
+                                                </div>
+                                                {h.market_value != null && (
+                                                    <span className="shrink-0 text-sm font-semibold tabular-nums">
+                                                        {formatMoney(
+                                                            h.market_value,
+                                                            h.currency,
+                                                        )}
                                                     </span>
-                                                    {h.market_value != null && (
-                                                        <span className="shrink-0 font-semibold">
-                                                            {formatMoney(
-                                                                h.market_value,
-                                                                h.currency,
-                                                            )}
-                                                        </span>
+                                                )}
+                                            </a>
+                                        ) : (
+                                            <a
+                                                href={cardHref(h)}
+                                                className="group block overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-ring"
+                                            >
+                                                <div className="aspect-[3/4] overflow-hidden bg-muted">
+                                                    {h.image_url ? (
+                                                        <img
+                                                            src={h.image_url}
+                                                            alt={h.name ?? ''}
+                                                            loading="lazy"
+                                                            className="size-full object-contain transition-transform group-hover:scale-105"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
+                                                            No image
+                                                        </div>
                                                     )}
                                                 </div>
-                                            </div>
-                                        </a>
+                                                {/* At small size the set line and
+                                                    the condition are dropped: the
+                                                    point of that view is seeing
+                                                    the cards, and eight columns of
+                                                    three-line captions is noise. */}
+                                                <div
+                                                    className={
+                                                        view === 'small'
+                                                            ? 'space-y-0.5 p-1.5'
+                                                            : 'space-y-1 p-3'
+                                                    }
+                                                >
+                                                    <p
+                                                        className={
+                                                            view === 'small'
+                                                                ? 'truncate text-xs font-medium'
+                                                                : 'truncate text-sm font-medium'
+                                                        }
+                                                        title={h.name ?? ''}
+                                                    >
+                                                        {h.name}
+                                                    </p>
+                                                    {view === 'large' && (
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {h.set}
+                                                            {h.number
+                                                                ? ` · ${h.number}`
+                                                                : ''}
+                                                        </p>
+                                                    )}
+                                                    <div className="flex items-center justify-between gap-2 text-xs">
+                                                        {view === 'large' && (
+                                                            <span className="truncate text-muted-foreground">
+                                                                {h.state_label}
+                                                                {h.quantity > 1
+                                                                    ? ` · ×${h.quantity}`
+                                                                    : ''}
+                                                            </span>
+                                                        )}
+                                                        {h.market_value != null && (
+                                                            <span className="shrink-0 font-semibold">
+                                                                {formatMoney(
+                                                                    h.market_value,
+                                                                    h.currency,
+                                                                )}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        )}
                                     </div>
                                 ))}
                             </div>

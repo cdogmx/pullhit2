@@ -9,6 +9,7 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Vertical;
 use App\Support\Scanning\IdentifiedCard;
+use App\Support\Scanning\ScanArchive;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -34,7 +35,10 @@ use Illuminate\Support\Str;
  */
 class CreateProvisionalCard
 {
-    public function __construct(protected CreateCatalogItem $create) {}
+    public function __construct(
+        protected CreateCatalogItem $create,
+        protected ScanArchive $archive,
+    ) {}
 
     /**
      * Returns the card, or null when the read is too thin to make a row from.
@@ -50,7 +54,7 @@ class CreateProvisionalCard
             return null;
         }
 
-        $vertical = Vertical::where('slug', 'tcg')->first();
+        $vertical = $this->vertical($card);
 
         if (! $vertical) {
             return null;
@@ -59,18 +63,7 @@ class CreateProvisionalCard
         $line = $this->productLine($vertical, $card);
         $set = $this->set($line, $card);
 
-        // language and variant are required facets for a tcg single, so a read
-        // that omits them still has to state something. "normal" is the base
-        // printing and the value every importer uses when a source is silent —
-        // and because it is variant-defining, a later confirmed foil becomes its
-        // own row rather than overwriting this one.
-        $attributes = array_filter([
-            'language' => $card->language ?: 'en',
-            'variant' => in_array($card->variant, ['normal', 'holo', 'reverse_holo', 'foil'], true)
-                ? $card->variant
-                : 'normal',
-            'edition' => $card->edition,
-        ], fn ($v) => $v !== null && $v !== '');
+        $attributes = $this->attributes($vertical, $card);
 
         $item = ($this->create)(
             vertical: $vertical,
@@ -78,8 +71,14 @@ class CreateProvisionalCard
             set: $set,
             itemType: ItemType::Single,
             name: $name,
-            number: $card->number ?: null,
+            number: $this->collectorNumber($vertical, $card),
             attributes: $attributes,
+            // The scan's own crop. A card nobody has catalogued has no catalog
+            // art by definition, so this is the only picture of it there is —
+            // and the review queue cannot be judged without one.
+            primaryImagePath: $user
+                ? $this->archive->storeCardImage($user, $card->thumbnail)
+                : null,
         );
 
         // Idempotent by identity_hash, so a second scan of the same card lands on
@@ -98,6 +97,139 @@ class CreateProvisionalCard
 
         return $item;
     }
+
+    /**
+     * The card's collector number, with a serial number refused.
+     *
+     * THE most dangerous read in this category. On a collectible "014/199"
+     * means the 14th of 199 copies; on a TCG single "006/025" means card 6 of a
+     * 25-card set. They are written identically and mean opposite things — and
+     * the number feeds identity_hash, so a serial stored here would give every
+     * copy its own catalog row. 199 people scanning one card would make 199 of
+     * them.
+     *
+     * The prompt now asks for serial and print_run separately, but a model that
+     * puts one here anyway must not be believed, so the shape is refused in code
+     * as well. Only for collectibles: on a TCG single N/M is exactly what the
+     * field is for.
+     */
+    protected function collectorNumber(Vertical $vertical, IdentifiedCard $card): ?string
+    {
+        $number = $card->number ?: null;
+
+        if ($number === null || $vertical->slug !== 'collectibles') {
+            return $number;
+        }
+
+        return self::printRunFromSerial($number) === null ? $number : null;
+    }
+
+    /**
+     * The print run inside a serial like "014/199", or null when it is not one.
+     *
+     * A serial's denominator is the run size and its numerator is a single copy
+     * within it, so the numerator has to be no larger. That check is what keeps
+     * a genuine collector number — "199/014" never appears, but "006/025" does —
+     * from being mistaken for a serial.
+     */
+    protected static function printRunFromSerial(?string $number): ?int
+    {
+        if (! preg_match('#^\s*(\d{1,5})\s*/\s*(\d{1,5})\s*$#', (string) $number, $m)) {
+            return null;
+        }
+
+        [$copy, $run] = [(int) $m[1], (int) $m[2]];
+
+        return $copy >= 1 && $copy <= $run ? $run : null;
+    }
+
+    /**
+     * The facets to create the row with, in the vocabulary of its vertical.
+     *
+     * The two vocabularies do not overlap, and CreateCatalogItem rejects a facet
+     * the schema does not declare — so a collectible built with tcg's `variant`
+     * would not save at all.
+     *
+     * @return array<string, mixed>
+     */
+    protected function attributes(Vertical $vertical, IdentifiedCard $card): array
+    {
+        $language = $card->language ?: 'en';
+
+        if ($vertical->slug === 'collectibles') {
+            // The read's "variant" is never carried over: it is a GAME notion,
+            // and the first Mickey scan came back "holo" for a teal refractor.
+            // `parallel` is only set when the model actually named one, so an
+            // absent value means base rather than a parallel nobody saw.
+            return array_filter([
+                'language' => $language,
+                'parallel' => $card->parallel ? trim($card->parallel) : null,
+                'print_run' => $card->printRun ?: self::printRunFromSerial($card->number),
+                'autograph' => $card->autograph,
+                'memorabilia' => $card->memorabilia,
+            ], fn ($v) => $v !== null && $v !== '');
+        }
+
+        // language and variant are required facets for a tcg single, so a read
+        // that omits them still has to state something. "normal" is the base
+        // printing and the value every importer uses when a source is silent —
+        // and because it is variant-defining, a later confirmed foil becomes its
+        // own row rather than overwriting this one.
+        return array_filter([
+            'language' => $language,
+            'variant' => in_array($card->variant, ['normal', 'holo', 'reverse_holo', 'foil'], true)
+                ? $card->variant
+                : 'normal',
+            'edition' => $card->edition,
+        ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * Which vertical this card belongs to.
+     *
+     * A brand we already hold answers it outright. Otherwise the read's own
+     * words decide: Topps, Panini and Upper Deck do not make trading card GAMES,
+     * and filing their cards under `tcg` is how the first two scans of this kind
+     * came back tagged "variant: holo" — the game vocabulary forced onto a chrome
+     * refractor, wrong but valid.
+     *
+     * Unrecognised falls to `tcg`, which is what most scans are, and a reviewer
+     * can move it.
+     */
+    protected function vertical(IdentifiedCard $card): ?Vertical
+    {
+        $brand = mb_strtolower(trim((string) ($card->productLine ?? '')));
+
+        if ($brand !== '') {
+            $known = ProductLine::where('slug', Str::slug($brand))->first();
+
+            if ($known) {
+                return Vertical::find($known->vertical_id);
+            }
+        }
+
+        $haystack = $brand.' '.mb_strtolower((string) ($card->setName ?? ''));
+
+        foreach (self::COLLECTIBLE_MAKERS as $maker) {
+            if (str_contains($haystack, $maker)) {
+                return Vertical::where('slug', 'collectibles')->first()
+                    ?? Vertical::where('slug', 'tcg')->first();
+            }
+        }
+
+        return Vertical::where('slug', 'tcg')->first();
+    }
+
+    /**
+     * Makers whose cards are collectibles rather than a game.
+     *
+     * Deliberately a short list of manufacturers rather than a guess at subject
+     * matter: "Disney" is Lorcana as often as it is Topps Chrome, and the maker
+     * is the part that actually decides which schema fits.
+     */
+    private const COLLECTIBLE_MAKERS = [
+        'topps', 'panini', 'upper deck', 'leaf', 'donruss', 'fleer', 'bowman', 'score',
+    ];
 
     /**
      * The brand, created provisionally when we do not hold it.

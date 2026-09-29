@@ -214,16 +214,29 @@ class AnthropicVisionClient
                 'type' => 'object',
                 'properties' => [
                     'name' => $nullableString,
-                    'number' => $nullableString + ['description' => 'Collector number as printed, e.g. "029/086", or null.'],
+                    // The SERIAL trap. On a collectible "014/199" means the
+                    // 14th of 199 copies printed; on a TCG single "006/025"
+                    // means card 6 of a 25-card set. They look identical and
+                    // mean opposite things — and a serial written here becomes
+                    // part of the card's identity, so 199 people scanning their
+                    // copies would make 199 catalog rows for one card.
+                    'number' => $nullableString + ['description' => 'The collector number of the CARD, as printed, e.g. "029/086", or null. NOT a serial number: if the figure identifies THIS COPY out of a limited print run (a hand-numbered or foil-stamped "14/199" on a Topps/Panini-style card), leave this null and use serial and print_run instead.'],
+                    'serial' => ['type' => ['integer', 'null'], 'description' => 'Which copy this is, when the card is numbered to a limited run — the 14 of "14/199". Null otherwise.'],
+                    'print_run' => ['type' => ['integer', 'null'], 'description' => 'How many copies were printed, when stated — the 199 of "14/199". Null otherwise.'],
                     'set_name' => $nullableString,
                     // Which game, so a card from a brand we do not hold yet can
                     // still be placed. Without this a scan of an unknown game is
                     // unplaceable even when the read is perfect.
-                    'game' => $nullableString + ['description' => 'The trading card game this card belongs to, as commonly written, e.g. "Pokemon", "One Piece", "Disney Lorcana", "Magic: The Gathering", "Star Wars Unlimited", "Yu-Gi-Oh!". Null only if genuinely unclear.'],
+                    'game' => $nullableString + ['description' => 'The game or MAKER this card belongs to, as commonly written. A game: "Pokemon", "One Piece", "Disney Lorcana", "Magic: The Gathering". A collectible: name the MANUFACTURER — "Topps", "Panini", "Upper Deck" — not the licence, because Disney and Marvel appear on both games and collectibles. Null only if genuinely unclear.'],
                     'set_code' => $nullableString + ['description' => 'Short set code near the collector number, e.g. "MEW", "PAL", "BLK", "OP07", "SV6", or null.'],
                     'language' => $nullableString + ['description' => 'en, ja, ko, zh-CN, zh-TW, fr, de, it, es, pt, or null.'],
                     'edition' => $nullableString + ['description' => "'first_edition', 'shadowless', 'unlimited', or null. Only when clearly visible."],
-                    'variant' => $nullableString + ['description' => "'reverse_holo', 'holo', 'normal', or null. The foil pattern."],
+                    'variant' => $nullableString + ['description' => "'reverse_holo', 'holo', 'normal', or null. The foil pattern on a TRADING CARD GAME single. Leave null for a Topps/Panini-style collectible — use parallel instead."],
+                    // Collectibles have no holo/reverse-holo axis; they have
+                    // parallels, and there are dozens per set.
+                    'parallel' => $nullableString + ['description' => 'The parallel/refractor treatment on a collectible, as printed or as commonly named: "Refractor", "Gold Refractor", "Aqua", "Prizm", "Superfractor". Null for a plain base card or for a trading card game single.'],
+                    'autograph' => ['type' => ['boolean', 'null'], 'description' => 'True when the card carries an on-card or sticker autograph — look for a signature and wording like "CERTIFIED AUTOGRAPH ISSUE".'],
+                    'memorabilia' => ['type' => ['boolean', 'null'], 'description' => 'True when the card has an embedded relic/patch/swatch.'],
                     'is_graded' => ['type' => 'boolean'],
                     'grading_company' => $nullableString + ['description' => 'psa, bgs, cgc, sgc, ... or null.'],
                     'grade' => ['type' => ['number', 'null']],

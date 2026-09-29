@@ -1,14 +1,26 @@
 import { Head, router } from '@inertiajs/react';
-import { Check, GitMerge, Sparkles, Users, X } from 'lucide-react';
+import { Check, GitMerge, Pencil, Sparkles, Users, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+type Facet = {
+    key: string;
+    label: string;
+    type: 'string' | 'text' | 'integer' | 'decimal' | 'boolean' | 'enum';
+    required: boolean;
+    options: string[] | null;
+};
 
 type ProvisionalCard = {
     id: number;
+    vertical: string | null;
+    attributes: Record<string, string | number | boolean | null>;
+    facets: Facet[];
     name: string;
     number: string | null;
     set: string | null;
@@ -68,8 +80,161 @@ function ReadOut({ read }: { read: ProvisionalCard['read'] }) {
     );
 }
 
+/**
+ * Correct the read before accepting it.
+ *
+ * The queue exists because a vision read is a guess, so "accept or reject" is
+ * the wrong pair of choices on its own — most rows need a word changed. The two
+ * Topps scans produced brands called "Topps Chrome Pixar" and "Disney Topps
+ * Chrome" for one maker and two sets, which is an edit, not a rejection.
+ *
+ * Fields come from the vertical's own facet list, so a collectible is offered
+ * parallel and autograph while a game single is offered variant and edition —
+ * and neither is offered the other's vocabulary.
+ */
+function Editor({ card, onDone }: { card: ProvisionalCard; onDone: () => void }) {
+    const [name, setName] = useState(card.name);
+    const [number, setNumber] = useState(card.number ?? '');
+    const [setLabel, setSetLabel] = useState(card.set ?? '');
+    const [brandLabel, setBrandLabel] = useState(card.brand ?? '');
+    const [attributes, setAttributes] = useState<
+        Record<string, string | number | boolean | null>
+    >(card.attributes ?? {});
+    const [busy, setBusy] = useState(false);
+
+    const save = () => {
+        setBusy(true);
+        router.patch(
+            `/admin/provisional-cards/${card.id}`,
+            {
+                name,
+                number,
+                set_name: setLabel,
+                brand_name: brandLabel,
+                attributes,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Updated');
+                    onDone();
+                },
+                onError: (e) => toast.error(Object.values(e)[0] ?? 'That did not work'),
+                onFinish: () => setBusy(false),
+            },
+        );
+    };
+
+    const field = (facet: Facet) => {
+        const value = attributes[facet.key];
+        const set = (v: string | boolean | null) =>
+            setAttributes({ ...attributes, [facet.key]: v });
+
+        if (facet.type === 'boolean') {
+            return (
+                <label className="flex items-center gap-2 pt-5 text-sm">
+                    <input
+                        type="checkbox"
+                        checked={value === true}
+                        onChange={(e) => set(e.target.checked)}
+                        className="size-4"
+                    />
+                    {facet.label}
+                </label>
+            );
+        }
+
+        return (
+            <div className="flex flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">
+                    {facet.label}
+                    {facet.required ? ' *' : ''}
+                </Label>
+                <Input
+                    value={value == null ? '' : String(value)}
+                    inputMode={facet.type === 'integer' ? 'numeric' : undefined}
+                    list={facet.options ? `opts-${card.id}-${facet.key}` : undefined}
+                    onChange={(e) => set(e.target.value || null)}
+                    className="h-9"
+                />
+                {/* Options as suggestions rather than a hard select: the server
+                    validates them, and a datalist still lets a value be read off
+                    the card when our list is short one. */}
+                {facet.options ? (
+                    <datalist id={`opts-${card.id}-${facet.key}`}>
+                        {facet.options.map((o) => (
+                            <option key={o} value={o} />
+                        ))}
+                    </datalist>
+                ) : null}
+            </div>
+        );
+    };
+
+    return (
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-1">
+                    <Label className="text-xs text-muted-foreground">Name</Label>
+                    <Input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="h-9"
+                    />
+                </div>
+                <div className="flex flex-col gap-1">
+                    <Label className="text-xs text-muted-foreground">
+                        Collector number
+                    </Label>
+                    <Input
+                        value={number}
+                        onChange={(e) => setNumber(e.target.value)}
+                        className="h-9"
+                        placeholder="leave blank if serial-numbered"
+                    />
+                </div>
+                <div className="flex flex-col gap-1">
+                    <Label className="text-xs text-muted-foreground">
+                        Brand{card.new_brand ? '' : ' (existing set of cards — not renamed here)'}
+                    </Label>
+                    <Input
+                        value={brandLabel}
+                        onChange={(e) => setBrandLabel(e.target.value)}
+                        disabled={!card.new_brand}
+                        className="h-9"
+                    />
+                </div>
+                <div className="flex flex-col gap-1">
+                    <Label className="text-xs text-muted-foreground">
+                        Set{card.new_set ? '' : ' (existing — not renamed here)'}
+                    </Label>
+                    <Input
+                        value={setLabel}
+                        onChange={(e) => setSetLabel(e.target.value)}
+                        disabled={!card.new_set}
+                        className="h-9"
+                    />
+                </div>
+                {card.facets.map((f) => (
+                    <div key={f.key}>{field(f)}</div>
+                ))}
+            </div>
+
+            <div className="flex gap-2">
+                <Button size="sm" disabled={busy} onClick={save}>
+                    Save changes
+                </Button>
+                <Button size="sm" variant="ghost" onClick={onDone}>
+                    Cancel
+                </Button>
+            </div>
+        </div>
+    );
+}
+
 function Row({ card }: { card: ProvisionalCard }) {
     const [mergeInto, setMergeInto] = useState('');
+    const [editing, setEditing] = useState(false);
     const [busy, setBusy] = useState(false);
 
     const act = (
@@ -99,7 +264,7 @@ function Row({ card }: { card: ProvisionalCard }) {
                         />
                     ) : (
                         <div className="grid h-28 w-20 shrink-0 place-items-center rounded border border-dashed border-border text-xs text-muted-foreground">
-                            no image
+                            no scan
                         </div>
                     )}
                 </div>
@@ -139,6 +304,10 @@ function Row({ card }: { card: ProvisionalCard }) {
 
                     <ReadOut read={card.read} />
 
+                    {editing ? (
+                        <Editor card={card} onDone={() => setEditing(false)} />
+                    ) : null}
+
                     {card.found_by && (
                         <p className="text-xs text-muted-foreground">
                             found by {card.found_by}
@@ -150,6 +319,16 @@ function Row({ card }: { card: ProvisionalCard }) {
                 </div>
 
                 <div className="flex w-full flex-col gap-2 sm:w-64">
+                    {/* Before Confirm, because most rows need a word changed
+                        first, and confirming a wrong one makes it canonical. */}
+                    <Button
+                        size="sm"
+                        variant={editing ? 'secondary' : 'outline'}
+                        onClick={() => setEditing(!editing)}
+                    >
+                        <Pencil className="size-4" />
+                        {editing ? 'Close editor' : 'Edit'}
+                    </Button>
                     <Button
                         size="sm"
                         disabled={busy}

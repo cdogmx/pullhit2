@@ -10,9 +10,12 @@ use App\Models\ProductLine;
 use App\Models\SaleObservation;
 use App\Models\Set;
 use App\Models\WishlistItem;
+use App\Support\Catalog\ItemIdentity;
+use App\Support\Verticals\VerticalRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -33,11 +36,13 @@ use Inertia\Response;
  */
 class ProvisionalCardController extends Controller
 {
+    public function __construct(protected VerticalRegistry $registry) {}
+
     public function index(Request $request): Response
     {
         $cards = CatalogItem::query()
             ->where('is_provisional', true)
-            ->with(['set:id,name,is_provisional', 'productLine:id,name,slug,is_provisional', 'provisionalBy:id,name'])
+            ->with(['set:id,name,is_provisional', 'productLine:id,name,slug,is_provisional', 'provisionalBy:id,name', 'vertical:id,slug'])
             // Most-scanned first: the queue should lead with what people are
             // actually holding, not with whatever was scanned most recently.
             ->orderByDesc('provisional_scans')
@@ -52,6 +57,12 @@ class ProvisionalCardController extends Controller
                 'new_brand' => (bool) $card->productLine?->is_provisional,
                 'new_set' => (bool) $card->set?->is_provisional,
                 'image_url' => $card->primary_image_path,
+                'vertical' => $card->vertical?->slug,
+                'attributes' => $card->getAttribute('attributes') ?? [],
+                // Which facets this vertical actually has, so the form offers
+                // parallel/autograph on a collectible and variant/edition on a
+                // game single rather than one hardcoded set of fields.
+                'facets' => $this->facets($card),
                 'scans' => $card->provisional_scans,
                 'read' => $card->provisional_read,
                 'found_by' => $card->provisionalBy?->name,
@@ -64,6 +75,80 @@ class ProvisionalCardController extends Controller
             'cards' => $cards,
             'total' => CatalogItem::where('is_provisional', true)->count(),
         ]);
+    }
+
+    /**
+     * Correct a row before confirming it.
+     *
+     * The read is a guess, and the queue exists because guesses need checking —
+     * so the reviewer has to be able to fix one rather than only accept or
+     * reject it. Two scans of Topps produced brands called "Topps Chrome Pixar"
+     * and "Disney Topps Chrome" for one maker and two sets; naming that properly
+     * is an edit, not a rejection.
+     *
+     * Facets go through the vertical registry, so a collectible is judged
+     * against parallel/autograph and a game single against variant/edition, and
+     * neither can be given the other's vocabulary.
+     */
+    public function update(Request $request, CatalogItem $catalogItem, ItemIdentity $identity): RedirectResponse
+    {
+        abort_unless($catalogItem->is_provisional, 404);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'number' => ['nullable', 'string', 'max:50'],
+            // Renaming is allowed only while the set or brand is itself
+            // provisional: a real set is shared by other cards, and this page is
+            // not the place to rename one out from under them.
+            'set_name' => ['nullable', 'string', 'max:255'],
+            'brand_name' => ['nullable', 'string', 'max:255'],
+            'attributes' => ['nullable', 'array'],
+        ]);
+
+        $catalogItem->loadMissing(['vertical', 'productLine', 'set']);
+
+        try {
+            $attributes = $this->registry->validate(
+                $catalogItem->vertical->slug,
+                $catalogItem->item_type->value,
+                // Blank inputs mean "no value", not an empty string: an empty
+                // enum would fail validation and an empty parallel would read as
+                // a printing called "".
+                array_filter(
+                    $data['attributes'] ?? $catalogItem->getAttribute('attributes') ?? [],
+                    fn ($v) => $v !== null && $v !== '',
+                ),
+            );
+        } catch (ValidationException $e) {
+            return back()->withErrors($e->errors());
+        }
+
+        DB::transaction(function () use ($catalogItem, $data, $attributes, $identity) {
+            if (! empty($data['set_name']) && $catalogItem->set?->is_provisional) {
+                $catalogItem->set->forceFill(['name' => $data['set_name']])->save();
+            }
+
+            if (! empty($data['brand_name']) && $catalogItem->productLine?->is_provisional) {
+                $catalogItem->productLine->forceFill(['name' => $data['brand_name']])->save();
+            }
+
+            $catalogItem->forceFill([
+                'name' => $data['name'],
+                // ?? as well as ?:, because a nullable field that was not sent
+                // is ABSENT from validated() rather than null — so an edit that
+                // leaves the number alone would otherwise fatal.
+                'number' => ($data['number'] ?? null) ?: null,
+                'attributes' => $attributes,
+            ])->save();
+
+            // The hash is a function of the name, the number and the facets, so
+            // an edit that does not rehash leaves the row hashed as the card it
+            // used to be — and the next import inserts a duplicate instead of
+            // matching it.
+            $catalogItem->forceFill($identity->forItem($catalogItem->fresh()))->save();
+        });
+
+        return back()->with('success', "Updated “{$data['name']}”.");
     }
 
     /**
@@ -181,6 +266,33 @@ class ProvisionalCardController extends Controller
         });
 
         return back()->with('success', "Merged into “{$target->name}”.");
+    }
+
+    /**
+     * The editable facets for this card's vertical.
+     *
+     * Read from the registry rather than listed here, so a facet added to a
+     * vertical appears in this form without anyone remembering to update it.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function facets(CatalogItem $card): array
+    {
+        // has(), because get() THROWS on an unregistered slug. A row carrying a
+        // vertical nobody registered — a retired one, a typo, a fixture — would
+        // otherwise take the whole review queue down with a 500, and this page
+        // exists precisely to deal with rows that are not yet right.
+        if (! $card->vertical || ! $this->registry->has($card->vertical->slug)) {
+            return [];
+        }
+
+        return array_map(fn ($a) => [
+            'key' => $a->key,
+            'label' => $a->label,
+            'type' => $a->type->value,
+            'required' => $a->required,
+            'options' => $a->options,
+        ], $this->registry->get($card->vertical->slug)->attributesFor($card->item_type->value));
     }
 
     /** How many people hold or want this card. */

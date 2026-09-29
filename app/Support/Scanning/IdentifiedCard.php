@@ -36,6 +36,12 @@ readonly class IdentifiedCard
          * card nothing matched; the matcher works from name/number/set.
          */
         public ?string $productLine = null,
+        /** Collectibles: the printing ("Gold Refractor"), not a game's foil pattern. */
+        public ?string $parallel = null,
+        /** How many copies were printed, when the card is numbered to a run. */
+        public ?int $printRun = null,
+        public ?bool $autograph = null,
+        public ?bool $memorabilia = null,
     ) {}
 
     /** @param  array<string, mixed>  $input */
@@ -57,6 +63,10 @@ readonly class IdentifiedCard
             variant: $input['variant'] ?? null,
             phash: $phash,
             productLine: $input['game'] ?? null,
+            parallel: $input['parallel'] ?? null,
+            printRun: isset($input['print_run']) ? (int) $input['print_run'] : null,
+            autograph: isset($input['autograph']) ? (bool) $input['autograph'] : null,
+            memorabilia: isset($input['memorabilia']) ? (bool) $input['memorabilia'] : null,
         );
     }
 

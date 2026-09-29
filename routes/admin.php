@@ -101,6 +101,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     // Cards a scan created and nobody has confirmed. Ordered by how many people
     // scanned each one, which is the signal for what to add properly first.
     Route::get('provisional-cards', [ProvisionalCardController::class, 'index'])->name('provisional-cards.index');
+    Route::patch('provisional-cards/{catalogItem}', [ProvisionalCardController::class, 'update'])->name('provisional-cards.update');
     Route::post('provisional-cards/{catalogItem}/confirm', [ProvisionalCardController::class, 'confirm'])->name('provisional-cards.confirm');
     Route::delete('provisional-cards/{catalogItem}', [ProvisionalCardController::class, 'reject'])->name('provisional-cards.reject');
     Route::post('provisional-cards/{catalogItem}/merge', [ProvisionalCardController::class, 'merge'])->name('provisional-cards.merge');

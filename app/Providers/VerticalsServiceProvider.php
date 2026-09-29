@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Support\Verticals\Definitions\CollectiblesVertical;
 use App\Support\Verticals\Definitions\TcgVertical;
 use App\Support\Verticals\VerticalRegistry;
 use Illuminate\Support\ServiceProvider;
@@ -18,6 +19,7 @@ class VerticalsServiceProvider extends ServiceProvider
         $this->app->singleton(VerticalRegistry::class, function (): VerticalRegistry {
             $registry = new VerticalRegistry;
             $registry->register(TcgVertical::definition());
+            $registry->register(CollectiblesVertical::definition());
 
             return $registry;
         });

@@ -31,6 +31,30 @@ class ScanArchive
         ];
     }
 
+    /**
+     * Store one detected card's crop and return its URL, or null.
+     *
+     * The scan log keeps a thumbnail of the whole PHOTO; this is the single card
+     * cut out of it. A row created from a scan has no catalog art to show — the
+     * card is, by definition, one nobody has catalogued — so this crop is the
+     * only picture of it that exists, and the review queue cannot be judged
+     * without seeing it.
+     *
+     * Best-effort, like everything else here: a scan must never fail because an
+     * image did not store.
+     */
+    public function storeCardImage(User $user, ?string $dataUri): ?string
+    {
+        if ($dataUri === null || ! str_starts_with($dataUri, 'data:image/')) {
+            return null;
+        }
+
+        $encoded = substr($dataUri, (int) strpos($dataUri, ',') + 1);
+        $binary = base64_decode($encoded, true);
+
+        return $binary === false ? null : $this->storeThumbnail($user, base64_encode($binary));
+    }
+
     private function storeThumbnail(User $user, string $base64): ?string
     {
         try {

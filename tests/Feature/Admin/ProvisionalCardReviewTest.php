@@ -160,3 +160,63 @@ test('only admins can review', function () {
         ->get('/admin/provisional-cards')
         ->assertForbidden();
 });
+
+test('a reviewer can correct the read before confirming it', function () {
+    // The two Topps scans produced brands called "Topps Chrome Pixar" and
+    // "Disney Topps Chrome" for one maker and two sets. That is an edit, not a
+    // rejection — and "accept or reject" alone would have thrown both away.
+    $this->actingAs($this->admin)
+        ->patch("/admin/provisional-cards/{$this->card->id}", [
+            'name' => 'Ahsoka Tano (Leader)',
+            'number' => '42',
+            'brand_name' => 'Topps',
+            'set_name' => 'Chrome Disney 2026',
+            'attributes' => ['language' => 'en', 'variant' => 'holo'],
+        ])
+        ->assertRedirect();
+
+    $card = $this->card->fresh();
+
+    expect($card->name)->toBe('Ahsoka Tano (Leader)')
+        ->and($card->number)->toBe('42')
+        ->and($card->set->fresh()->name)->toBe('Chrome Disney 2026')
+        ->and($card->productLine->fresh()->name)->toBe('Topps')
+        // Still provisional: editing is not confirming.
+        ->and($card->is_provisional)->toBeTrue();
+});
+
+test('an edit rehashes the row', function () {
+    // identity_hash is a function of the name, the number and the facets. An
+    // edit that does not rehash leaves the row hashed as the card it used to be,
+    // and the next import inserts a duplicate rather than matching it.
+    $before = $this->card->identity_hash;
+
+    $this->actingAs($this->admin)
+        ->patch("/admin/provisional-cards/{$this->card->id}", [
+            'name' => 'A Completely Different Name',
+            'attributes' => ['language' => 'en', 'variant' => 'holo'],
+        ])
+        ->assertRedirect();
+
+    expect($this->card->fresh()->identity_hash)->not->toBe($before);
+});
+
+test('an edit cannot give a card a facet its vertical does not have', function () {
+    $this->actingAs($this->admin)
+        ->patch("/admin/provisional-cards/{$this->card->id}", [
+            'name' => 'Ahsoka Tano',
+            // "parallel" belongs to collectibles; this card is a game single.
+            'attributes' => ['language' => 'en', 'variant' => 'holo', 'parallel' => 'Gold'],
+        ])
+        ->assertSessionHasErrors();
+
+    expect($this->card->fresh()->name)->toBe('Ahsoka Tano');
+});
+
+test('a confirmed card is not editable from this queue', function () {
+    $this->card->forceFill(['is_provisional' => false])->save();
+
+    $this->actingAs($this->admin)
+        ->patch("/admin/provisional-cards/{$this->card->id}", ['name' => 'Nope'])
+        ->assertNotFound();
+});
