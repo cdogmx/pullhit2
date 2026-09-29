@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Http;
 use App\Actions\Valuation\MaybeRefreshEbay;
 use App\Models\CatalogItem;
 use App\Models\EbayScrapeJob;
@@ -7,6 +8,15 @@ use App\Support\Ebay\ScrapeAgentPresence;
 use Illuminate\Support\Facades\Cache;
 
 beforeEach(function () {
+    // These render a card page, and a card-page render dispatches
+    // RefreshEbaySoldComps — which the sync queue runs INLINE. Without a fake
+    // the request goes to eBay for real and the test waits out a timeout: the
+    // five tests in this file were 537 seconds of a 890-second suite.
+    //
+    // Faked here rather than globally: a bare Http::fake() registers a
+    // catch-all, later Http::fake([...]) calls APPEND, and first match wins —
+    // so a global one silently beats every specific stub in the suite.
+    Http::fake();
     Cache::flush();
     // The server's own fetcher is off; the browser agent is the path under test.
     config()->set('valuation.ebay.enabled', false);

@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Http;
 use App\Models\CatalogItem;
 use App\Models\ProductLine;
 use App\Models\Set;
@@ -8,6 +9,15 @@ use App\Models\Vertical;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
+    // These render a card page, and a card-page render dispatches
+    // RefreshEbaySoldComps — which the sync queue runs INLINE. Without a fake
+    // the request goes to eBay for real and the test waits out a timeout: the
+    // five tests in this file were 537 seconds of a 890-second suite.
+    //
+    // Faked here rather than globally: a bare Http::fake() registers a
+    // catch-all, later Http::fake([...]) calls APPEND, and first match wins —
+    // so a global one silently beats every specific stub in the suite.
+    Http::fake();
     $vertical = Vertical::factory()->create(['slug' => 'tcg']);
     $this->line = ProductLine::factory()->for($vertical)->create(['slug' => 'pokemon']);
     $this->set = Set::factory()->for($this->line)->create(['slug' => 'surging-sparks']);
