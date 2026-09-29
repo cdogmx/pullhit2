@@ -108,3 +108,55 @@ test('only admins can see it', function () {
         ->get('/admin/price-health')
         ->assertForbidden();
 });
+
+test('moving reassigns the comp and reprices both cards', function () {
+    // The better answer than deleting: the sale happened. On the Aquapolis Lugia
+    // it is the difference between losing 25 real sales and handing them to the
+    // 30th Celebration reprint that actually made them.
+    MarketValue::factory()->for($this->card)->create([
+        'state_key' => 'NM', 'condition' => 'NM', 'median' => 12000, 'is_estimated' => false,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post("/admin/price-health/{$this->finding->id}/move")
+        ->assertRedirect();
+
+    expect($this->comp->fresh()->catalog_item_id)->toBe($this->other->id)
+        ->and($this->finding->fresh()->status)->toBe(CompAdjudication::MOVED)
+        // The card it left had only this comp, so its value goes with it.
+        ->and(MarketValue::where('catalog_item_id', $this->card->id)->where('state_key', 'NM')->exists())
+        ->toBeFalse()
+        // And the card it joined now has one.
+        ->and(MarketValue::where('catalog_item_id', $this->other->id)->where('state_key', 'NM')->exists())
+        ->toBeTrue();
+});
+
+test('moving onto a card that already holds the listing drops the duplicate', function () {
+    // A sweep may have placed the same listing correctly already. Moving would
+    // leave the one sale on the card twice, which is its own pricing bug.
+    SaleObservation::factory()->for($this->other)->create([
+        'condition' => 'NM', 'grading_company_id' => null, 'grade' => null,
+        'price' => 12000, 'is_synthetic' => false,
+        'venue' => $this->comp->venue,
+        'source_listing_id' => 'dupe-1',
+        'raw' => ['title' => 'same listing', 'source' => 'ebay'],
+    ]);
+    $this->comp->forceFill(['source_listing_id' => 'dupe-1'])->save();
+
+    $this->actingAs($this->admin)
+        ->post("/admin/price-health/{$this->finding->id}/move")
+        ->assertRedirect();
+
+    expect(SaleObservation::find($this->comp->id))->toBeNull()
+        ->and(SaleObservation::where('catalog_item_id', $this->other->id)->count())->toBe(1);
+});
+
+test('a finding cannot be moved once decided', function () {
+    $this->finding->forceFill(['status' => CompAdjudication::DISMISSED])->save();
+
+    $this->actingAs($this->admin)
+        ->post("/admin/price-health/{$this->finding->id}/move")
+        ->assertSessionHasErrors('finding');
+
+    expect($this->comp->fresh()->catalog_item_id)->toBe($this->card->id);
+});

@@ -3,6 +3,7 @@ import {
     ArrowRight,
     Check,
     ExternalLink,
+    MoveRight,
     TrendingDown,
     TrendingUp,
     X,
@@ -53,6 +54,20 @@ type Props = {
         links: { url: string | null; label: string; active: boolean }[];
     };
     open: number;
+};
+
+/**
+ * The divergence in the terms people actually use.
+ *
+ * The stored ratio is ours / theirs, so an under-priced card is a fraction —
+ * and "0.09x off" reads like a rounding error when it means eleven times too
+ * low. Inverted below 1x and given a direction.
+ */
+const describeRatio = (ratio: number): string => {
+    const [multiple, direction] =
+        ratio >= 1 ? [ratio, 'too high'] : [1 / ratio, 'too low'];
+
+    return `${multiple < 10 ? multiple.toFixed(1) : Math.round(multiple)}x ${direction}`;
 };
 
 const money = (cents: number) =>
@@ -135,7 +150,7 @@ function CardLink({ card }: { card: CardRef }) {
 function FindingRow({ finding }: { finding: Finding }) {
     const [busy, setBusy] = useState(false);
 
-    const act = (verb: 'apply' | 'dismiss') => {
+    const act = (verb: 'apply' | 'move' | 'dismiss') => {
         setBusy(true);
         router.post(
             `/admin/price-health/${finding.id}/${verb}`,
@@ -158,9 +173,12 @@ function FindingRow({ finding }: { finding: Finding }) {
                         <span className="font-medium tabular-nums">
                             {money(finding.price)}
                         </span>
-                        {finding.ratio != null && (
+                        {finding.ratio != null && finding.ratio > 0 && (
                             <Badge variant="secondary" className="tabular-nums">
-                                card is {finding.ratio}x off
+                                {/* "0.09x off" reads like a rounding error when
+                                    it means eleven times too low. Say the
+                                    direction and the multiple people think in. */}
+                                card is {describeRatio(finding.ratio)}
                             </Badge>
                         )}
                         {finding.stale && (
@@ -198,7 +216,23 @@ function FindingRow({ finding }: { finding: Finding }) {
                     </div>
                 </div>
 
-                <div className="flex gap-2 lg:w-64 lg:shrink-0">
+                <div className="flex flex-wrap gap-2 lg:w-72 lg:shrink-0">
+                    {/* First, because it is usually the right answer: the sale
+                        happened, it is just filed on the wrong card. Moving it
+                        fixes both — this one stops being dragged, and the other
+                        gains a comp it never had. */}
+                    {finding.reads_as && (
+                        <Button
+                            size="sm"
+                            className="flex-1"
+                            disabled={busy || finding.stale}
+                            onClick={() => act('move')}
+                            title={`Move this sale to ${finding.reads_as.label}`}
+                        >
+                            <MoveRight className="size-4" />
+                            Move to {finding.reads_as.label}
+                        </Button>
+                    )}
                     <Button
                         size="sm"
                         variant="outline"

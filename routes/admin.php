@@ -95,6 +95,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     // of the comps behind the worst of them.
     Route::get('price-health', [PriceHealthController::class, 'index'])->name('price-health.index');
     Route::post('price-health/{compAdjudication}/apply', [PriceHealthController::class, 'apply'])->name('price-health.apply');
+    Route::post('price-health/{compAdjudication}/move', [PriceHealthController::class, 'move'])->name('price-health.move');
     Route::post('price-health/{compAdjudication}/dismiss', [PriceHealthController::class, 'dismiss'])->name('price-health.dismiss');
 
     // Cards a scan created and nobody has confirmed. Ordered by how many people

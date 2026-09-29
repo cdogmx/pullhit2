@@ -21,6 +21,15 @@ class CompAdjudication extends Model
 
     public const DISMISSED = 'dismissed';
 
+    /**
+     * Reassigned to the card it reads as.
+     *
+     * Better than deleting wherever the target is known: the sale happened, and
+     * moving it both stops it dragging the wrong card and gives the right one a
+     * real comp it did not have.
+     */
+    public const MOVED = 'moved';
+
     protected $guarded = [];
 
     protected function casts(): array

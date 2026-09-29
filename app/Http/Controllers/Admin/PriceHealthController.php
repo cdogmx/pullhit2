@@ -6,6 +6,8 @@ use App\Actions\Valuation\RecomputeCatalogItem;
 use App\Http\Controllers\Controller;
 use App\Models\CompAdjudication;
 use App\Models\PriceHealthSnapshot;
+use App\Models\SaleObservation;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -126,6 +128,61 @@ class PriceHealthController extends Controller
         }
 
         return back()->with('success', 'Comp removed and the card repriced.');
+    }
+
+    /**
+     * Move the comp to the card it reads as.
+     *
+     * The better answer wherever the target is known. Deleting throws away a
+     * real sale; moving it fixes both cards at once — the wrong one stops being
+     * dragged, and the right one gains a comp it never had. On the Aquapolis
+     * Lugia that is the difference between losing 25 sales and handing them to
+     * the 30th Celebration reprint that actually made them.
+     *
+     * Both cards are recomputed, because both of their prices just changed.
+     */
+    public function move(CompAdjudication $compAdjudication, RecomputeCatalogItem $recompute): RedirectResponse
+    {
+        if ($compAdjudication->status !== CompAdjudication::OPEN) {
+            return back()->withErrors(['finding' => 'That finding has already been decided.']);
+        }
+
+        $comp = $compAdjudication->saleObservation;
+        $target = $compAdjudication->readsAs;
+        $from = $compAdjudication->catalogItem;
+
+        if (! $comp || ! $target) {
+            return back()->withErrors([
+                'finding' => 'Nothing to move — the comp or the card it reads as is gone.',
+            ]);
+        }
+
+        DB::transaction(function () use ($comp, $target, $compAdjudication) {
+            // The target may already hold this listing, from a sweep that placed
+            // it correctly. Moving would leave the same sale twice, so the
+            // duplicate goes instead.
+            $alreadyThere = SaleObservation::where('catalog_item_id', $target->id)
+                ->where('venue', $comp->venue)
+                ->where('source_listing_id', $comp->source_listing_id)
+                ->whereNotNull('source_listing_id')
+                ->exists();
+
+            $alreadyThere
+                ? $comp->delete()
+                : $comp->forceFill(['catalog_item_id' => $target->id])->save();
+
+            $compAdjudication->forceFill([
+                'status' => CompAdjudication::MOVED,
+                'reviewed_by' => request()->user()->id,
+                'reviewed_at' => now(),
+            ])->save();
+        });
+
+        foreach (array_filter([$from, $target]) as $card) {
+            ($recompute)($card);
+        }
+
+        return back()->with('success', "Moved to “{$target->name}”. Both cards repriced.");
     }
 
     /**
