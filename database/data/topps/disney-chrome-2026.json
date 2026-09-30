@@ -1,0 +1,3380 @@
+{
+  "brand": "Topps",
+  "source": "Topps published checklist (26DNYC_Checklist) and odds sheet (2026 Disney Chrome Odds)",
+  "set": {
+    "name": "Chrome Disney 2026",
+    "slug": "chrome-disney-2026",
+    "language": "en"
+  },
+  "subsets": [
+    {
+      "key": "base",
+      "name": "Base",
+      "parallels": [
+        {
+          "name": "Refractor",
+          "odds": {
+            "hobby": "1:2"
+          }
+        },
+        {
+          "name": "Magenta Refractor",
+          "odds": {
+            "hobby": "1:21"
+          }
+        },
+        {
+          "name": "Pink Refractor",
+          "odds": {
+            "hobby": "1:33"
+          }
+        },
+        {
+          "name": "Yellow and Green Raywave",
+          "odds": {
+            "hobby": "1:37"
+          }
+        },
+        {
+          "name": "Aqua Refractor",
+          "odds": {
+            "hobby": "1:42"
+          }
+        },
+        {
+          "name": "Purple and Light Green Shimmer Refractor",
+          "odds": {
+            "hobby": "1:47"
+          }
+        },
+        {
+          "name": "Blue Refractor",
+          "odds": {
+            "hobby": "1:55"
+          }
+        },
+        {
+          "name": "Dark Blue and Light Blue Lava",
+          "odds": {
+            "hobby": "1:66"
+          }
+        },
+        {
+          "name": "101 Dalmatians Black and White Shimmer",
+          "odds": {
+            "hobby": "1:81"
+          }
+        },
+        {
+          "name": "Green Refractor",
+          "odds": {
+            "hobby": "1:83"
+          }
+        },
+        {
+          "name": "Purple Refractor",
+          "odds": {
+            "hobby": "1:109"
+          }
+        },
+        {
+          "name": "Gold Refractor",
+          "odds": {
+            "hobby": "1:163"
+          }
+        },
+        {
+          "name": "Pearl Refractor",
+          "odds": {
+            "hobby": "1:266"
+          }
+        },
+        {
+          "name": "Mickey Mouse Red and Black Refractor",
+          "odds": {
+            "hobby": "1:291"
+          }
+        },
+        {
+          "name": "Orange Refractor",
+          "odds": {
+            "hobby": "1:326"
+          }
+        },
+        {
+          "name": "Black Refractor",
+          "odds": {
+            "hobby": "1:814"
+          }
+        },
+        {
+          "name": "Red Refractor",
+          "odds": {
+            "hobby": "1:1628"
+          }
+        },
+        {
+          "name": "Superfractor",
+          "odds": {
+            "hobby": "1:6686"
+          }
+        },
+        {
+          "name": "Prism Refractor",
+          "odds": {
+            "hobby": "1:3"
+          }
+        },
+        {
+          "name": "Aqua Wave",
+          "odds": {
+            "hobby": "1:21"
+          }
+        },
+        {
+          "name": "Blue Wave",
+          "odds": {
+            "hobby": "1:28"
+          }
+        },
+        {
+          "name": "Green Wave",
+          "odds": {
+            "hobby": "1:42"
+          }
+        },
+        {
+          "name": "Gold Wave",
+          "odds": {
+            "hobby": "1:83"
+          }
+        },
+        {
+          "name": "When You Wish Upon a Star Refractor",
+          "odds": {
+            "hobby": "1:283"
+          }
+        },
+        {
+          "name": "Red Wave",
+          "odds": {
+            "hobby": "1:831"
+          }
+        },
+        {
+          "name": "X-Fractor"
+        },
+        {
+          "name": "Raywave"
+        },
+        {
+          "name": "Pink Mini Diamond"
+        },
+        {
+          "name": "Aqua Mini Diamond"
+        },
+        {
+          "name": "Blue Mini Diamond"
+        },
+        {
+          "name": "Green Mini Diamond"
+        }
+      ],
+      "cards": [
+        {
+          "number": "1",
+          "name": "Snow White",
+          "franchise": "Snow White and the Seven Dwarfs"
+        },
+        {
+          "number": "2",
+          "name": "Evil Queen",
+          "franchise": "Snow White and the Seven Dwarfs"
+        },
+        {
+          "number": "3",
+          "name": "Mr. Toad",
+          "franchise": "Mr. Toad"
+        },
+        {
+          "number": "4",
+          "name": "Hannah Montana",
+          "franchise": "Hannah Montana"
+        },
+        {
+          "number": "5",
+          "name": "Mirabel",
+          "franchise": "Encanto"
+        },
+        {
+          "number": "6",
+          "name": "Kirby",
+          "franchise": "Chicken Little"
+        },
+        {
+          "number": "7",
+          "name": "Alex Russo",
+          "franchise": "Wizards of Waverly Place"
+        },
+        {
+          "number": "8",
+          "name": "Thumper",
+          "franchise": "Bambi"
+        },
+        {
+          "number": "9",
+          "name": "Flower",
+          "franchise": "Bambi"
+        },
+        {
+          "number": "10",
+          "name": "Moana",
+          "franchise": "Moana 2"
+        },
+        {
+          "number": "11",
+          "name": "Maui",
+          "franchise": "Moana 2"
+        },
+        {
+          "number": "12",
+          "name": "Matangi",
+          "franchise": "Moana 2"
+        },
+        {
+          "number": "13",
+          "name": "Kotu",
+          "franchise": "Moana 2"
+        },
+        {
+          "number": "14",
+          "name": "Jack Sparrow",
+          "franchise": "Pirates of the Caribbean: On Stranger Tides"
+        },
+        {
+          "number": "15",
+          "name": "Blackbeard",
+          "franchise": "Pirates of the Caribbean: On Stranger Tides"
+        },
+        {
+          "number": "16",
+          "name": "Hector Barbossa",
+          "franchise": "Pirates of the Caribbean: On Stranger Tides"
+        },
+        {
+          "number": "17",
+          "name": "Emperor Kuzco",
+          "franchise": "The Emperor's New Groove"
+        },
+        {
+          "number": "18",
+          "name": "Kronk",
+          "franchise": "The Emperor's New Groove"
+        },
+        {
+          "number": "19",
+          "name": "Tex Dinoco",
+          "franchise": "Cars"
+        },
+        {
+          "number": "20",
+          "name": "Lightning McQueen",
+          "franchise": "Cars"
+        },
+        {
+          "number": "21",
+          "name": "Mater",
+          "franchise": "Cars"
+        },
+        {
+          "number": "22",
+          "name": "Sally",
+          "franchise": "Cars"
+        },
+        {
+          "number": "23",
+          "name": "Guido",
+          "franchise": "Cars"
+        },
+        {
+          "number": "24",
+          "name": "Red",
+          "franchise": "Cars"
+        },
+        {
+          "number": "25",
+          "name": "Fillmore",
+          "franchise": "Cars"
+        },
+        {
+          "number": "26",
+          "name": "Sheriff",
+          "franchise": "Cars"
+        },
+        {
+          "number": "27",
+          "name": "Chick Hicks",
+          "franchise": "Cars"
+        },
+        {
+          "number": "28",
+          "name": "Mike Wazowski",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "29",
+          "name": "Sulley",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "30",
+          "name": "Quasimodo",
+          "franchise": "The Hunchback of Notre Dame"
+        },
+        {
+          "number": "31",
+          "name": "Esmeralda",
+          "franchise": "The Hunchback of Notre Dame"
+        },
+        {
+          "number": "32",
+          "name": "Judge Claude Frollo",
+          "franchise": "The Hunchback of Notre Dame"
+        },
+        {
+          "number": "33",
+          "name": "Mitchie Torres",
+          "franchise": "Camp Rock"
+        },
+        {
+          "number": "34",
+          "name": "Sisu",
+          "franchise": "Raya and the Last Dragon"
+        },
+        {
+          "number": "35",
+          "name": "Belle",
+          "franchise": "Beauty and the Beast"
+        },
+        {
+          "number": "36",
+          "name": "The Beast",
+          "franchise": "Beauty and the Beast"
+        },
+        {
+          "number": "37",
+          "name": "Gaston",
+          "franchise": "Beauty and the Beast"
+        },
+        {
+          "number": "38",
+          "name": "Mrs. Potts & Chip",
+          "franchise": "Beauty and the Beast"
+        },
+        {
+          "number": "39",
+          "name": "Wardrobe",
+          "franchise": "Beauty and the Beast"
+        },
+        {
+          "number": "40",
+          "name": "Basil of Baker Street",
+          "franchise": "The Great Mouse Detective"
+        },
+        {
+          "number": "41",
+          "name": "Professor Ratigan",
+          "franchise": "The Great Mouse Detective"
+        },
+        {
+          "number": "42",
+          "name": "Olivia Flaversham",
+          "franchise": "The Great Mouse Detective"
+        },
+        {
+          "number": "43",
+          "name": "Asha",
+          "franchise": "Wish"
+        },
+        {
+          "number": "44",
+          "name": "Star",
+          "franchise": "Wish"
+        },
+        {
+          "number": "45",
+          "name": "Tod",
+          "franchise": "The Fox and the Hound"
+        },
+        {
+          "number": "46",
+          "name": "Copper",
+          "franchise": "The Fox and the Hound"
+        },
+        {
+          "number": "47",
+          "name": "Remy",
+          "franchise": "Ratatouille"
+        },
+        {
+          "number": "48",
+          "name": "Linguini",
+          "franchise": "Ratatouille"
+        },
+        {
+          "number": "49",
+          "name": "Emile",
+          "franchise": "Ratatouille"
+        },
+        {
+          "number": "50",
+          "name": "Mickey Mouse",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "51",
+          "name": "Minnie Mouse",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "52",
+          "name": "Goofy",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "53",
+          "name": "Pluto",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "54",
+          "name": "Daisy Duck",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "55",
+          "name": "Kermit the Frog",
+          "franchise": "The Muppets"
+        },
+        {
+          "number": "56",
+          "name": "Fozzie Bear",
+          "franchise": "The Muppets"
+        },
+        {
+          "number": "57",
+          "name": "Gonzo",
+          "franchise": "The Muppets"
+        },
+        {
+          "number": "58",
+          "name": "Dr. Bunsen Honeydew",
+          "franchise": "The Muppets"
+        },
+        {
+          "number": "59",
+          "name": "Beaker",
+          "franchise": "The Muppets"
+        },
+        {
+          "number": "60",
+          "name": "Sam Eagle",
+          "franchise": "The Muppets"
+        },
+        {
+          "number": "61",
+          "name": "Miss Piggy",
+          "franchise": "The Muppets"
+        },
+        {
+          "number": "62",
+          "name": "Jim Hawkins",
+          "franchise": "Treasure Planet"
+        },
+        {
+          "number": "63",
+          "name": "John Silver",
+          "franchise": "Treasure Planet"
+        },
+        {
+          "number": "64",
+          "name": "B.E.N.",
+          "franchise": "Treasure Planet"
+        },
+        {
+          "number": "65",
+          "name": "Cruella de Vil",
+          "franchise": "One Hundred and One Dalmatians"
+        },
+        {
+          "number": "66",
+          "name": "Judy Hopps",
+          "franchise": "Zootopia 2"
+        },
+        {
+          "number": "67",
+          "name": "Nick Wilde",
+          "franchise": "Zootopia 2"
+        },
+        {
+          "number": "68",
+          "name": "Gary De'Snake",
+          "franchise": "Zootopia 2"
+        },
+        {
+          "number": "69",
+          "name": "Mayor Winddancer",
+          "franchise": "Zootopia 2"
+        },
+        {
+          "number": "70",
+          "name": "Nibbles Maplestick",
+          "franchise": "Zootopia 2"
+        },
+        {
+          "number": "71",
+          "name": "Pawbert Lynxley",
+          "franchise": "Zootopia 2"
+        },
+        {
+          "number": "72",
+          "name": "Dr. Fuzzby",
+          "franchise": "Zootopia 2"
+        },
+        {
+          "number": "73",
+          "name": "Robert Furwin",
+          "franchise": "Zootopia 2"
+        },
+        {
+          "number": "74",
+          "name": "Gazelle",
+          "franchise": "Zootopia 2"
+        },
+        {
+          "number": "75",
+          "name": "Alice",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "76",
+          "name": "Mad Hatter",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "77",
+          "name": "Cheshire Cat",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "78",
+          "name": "Caterpillar",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "79",
+          "name": "March Hare",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "80",
+          "name": "Doorknob",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "81",
+          "name": "Aladdin",
+          "franchise": "Aladdin"
+        },
+        {
+          "number": "82",
+          "name": "Jasmine",
+          "franchise": "Aladdin"
+        },
+        {
+          "number": "83",
+          "name": "Genie",
+          "franchise": "Aladdin"
+        },
+        {
+          "number": "84",
+          "name": "Jafar",
+          "franchise": "Aladdin"
+        },
+        {
+          "number": "85",
+          "name": "Dumbo",
+          "franchise": "Dumbo"
+        },
+        {
+          "number": "86",
+          "name": "Timothy Q. Mouse",
+          "franchise": "Dumbo"
+        },
+        {
+          "number": "87",
+          "name": "Mrs. Jumbo",
+          "franchise": "Dumbo"
+        },
+        {
+          "number": "88",
+          "name": "Nemo",
+          "franchise": "Finding Nemo"
+        },
+        {
+          "number": "89",
+          "name": "Marlin",
+          "franchise": "Finding Nemo"
+        },
+        {
+          "number": "90",
+          "name": "Dory",
+          "franchise": "Finding Nemo"
+        },
+        {
+          "number": "91",
+          "name": "Crush",
+          "franchise": "Finding Nemo"
+        },
+        {
+          "number": "92",
+          "name": "Nigel",
+          "franchise": "Finding Nemo"
+        },
+        {
+          "number": "93",
+          "name": "Gill",
+          "franchise": "Finding Nemo"
+        },
+        {
+          "number": "94",
+          "name": "Jacques",
+          "franchise": "Finding Nemo"
+        },
+        {
+          "number": "95",
+          "name": "Pinocchio",
+          "franchise": "Pinocchio (2022)"
+        },
+        {
+          "number": "96",
+          "name": "Geppetto",
+          "franchise": "Pinocchio (2022)"
+        },
+        {
+          "number": "97",
+          "name": "Jose Carioca",
+          "franchise": "The Three Caballeros"
+        },
+        {
+          "number": "98",
+          "name": "Panchito",
+          "franchise": "The Three Caballeros"
+        },
+        {
+          "number": "99",
+          "name": "Donald Duck",
+          "franchise": "The Three Caballeros"
+        },
+        {
+          "number": "100",
+          "name": "Winnie the Pooh",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "101",
+          "name": "Tigger",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "102",
+          "name": "Eeyore",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "103",
+          "name": "Piglet",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "104",
+          "name": "Owl",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "105",
+          "name": "Elliott",
+          "franchise": "Pete's Dragon"
+        },
+        {
+          "number": "106",
+          "name": "Ariel",
+          "franchise": "The Little Mermaid"
+        },
+        {
+          "number": "107",
+          "name": "Sebastian",
+          "franchise": "The Little Mermaid"
+        },
+        {
+          "number": "108",
+          "name": "Ursula",
+          "franchise": "The Little Mermaid"
+        },
+        {
+          "number": "109",
+          "name": "Lizzie McGuire",
+          "franchise": "Lizzie McGuire"
+        },
+        {
+          "number": "110",
+          "name": "Mabel Beaver",
+          "franchise": "Hoppers"
+        },
+        {
+          "number": "111",
+          "name": "King George",
+          "franchise": "Hoppers"
+        },
+        {
+          "number": "112",
+          "name": "Mayor Jerry",
+          "franchise": "Hoppers"
+        },
+        {
+          "number": "113",
+          "name": "Ellen Bear",
+          "franchise": "Hoppers"
+        },
+        {
+          "number": "114",
+          "name": "Tom Lizard",
+          "franchise": "Hoppers"
+        },
+        {
+          "number": "115",
+          "name": "Phineas",
+          "franchise": "Phineas and Ferb"
+        },
+        {
+          "number": "116",
+          "name": "Ferb",
+          "franchise": "Phineas and Ferb"
+        },
+        {
+          "number": "117",
+          "name": "Agent P",
+          "franchise": "Phineas and Ferb"
+        },
+        {
+          "number": "118",
+          "name": "Scrooge McDuck",
+          "franchise": "Ducktales"
+        },
+        {
+          "number": "119",
+          "name": "Huey",
+          "franchise": "Ducktales"
+        },
+        {
+          "number": "120",
+          "name": "Dewey",
+          "franchise": "Ducktales"
+        },
+        {
+          "number": "121",
+          "name": "Louie",
+          "franchise": "Ducktales"
+        },
+        {
+          "number": "122",
+          "name": "Miguel",
+          "franchise": "Coco"
+        },
+        {
+          "number": "123",
+          "name": "Dante",
+          "franchise": "Coco"
+        },
+        {
+          "number": "124",
+          "name": "Hector",
+          "franchise": "Coco"
+        },
+        {
+          "number": "125",
+          "name": "Mama Coco",
+          "franchise": "Coco"
+        },
+        {
+          "number": "126",
+          "name": "Mr. Incredible",
+          "franchise": "The Incredibles"
+        },
+        {
+          "number": "127",
+          "name": "Frozone",
+          "franchise": "The Incredibles"
+        },
+        {
+          "number": "128",
+          "name": "Edna Mode",
+          "franchise": "The Incredibles"
+        },
+        {
+          "number": "129",
+          "name": "Mulan",
+          "franchise": "Mulan"
+        },
+        {
+          "number": "130",
+          "name": "Yao",
+          "franchise": "Mulan"
+        },
+        {
+          "number": "131",
+          "name": "Ling",
+          "franchise": "Mulan"
+        },
+        {
+          "number": "132",
+          "name": "Chien-Po",
+          "franchise": "Mulan"
+        },
+        {
+          "number": "133",
+          "name": "The Emperor",
+          "franchise": "Mulan"
+        },
+        {
+          "number": "134",
+          "name": "Wreck-It Ralph",
+          "franchise": "Wreck-It Ralph"
+        },
+        {
+          "number": "135",
+          "name": "Darkwing Duck",
+          "franchise": "Darkwing Duck"
+        },
+        {
+          "number": "136",
+          "name": "Dug",
+          "franchise": "Up"
+        },
+        {
+          "number": "137",
+          "name": "Kevin",
+          "franchise": "Up"
+        },
+        {
+          "number": "138",
+          "name": "Tiana",
+          "franchise": "The Princess and the Frog"
+        },
+        {
+          "number": "139",
+          "name": "Dr. Facilier",
+          "franchise": "The Princess and the Frog"
+        },
+        {
+          "number": "140",
+          "name": "Elio",
+          "franchise": "Elio"
+        },
+        {
+          "number": "141",
+          "name": "Glordon",
+          "franchise": "Elio"
+        },
+        {
+          "number": "142",
+          "name": "Ooooo",
+          "franchise": "Elio"
+        },
+        {
+          "number": "143",
+          "name": "Baymax",
+          "franchise": "Big Hero 6"
+        },
+        {
+          "number": "144",
+          "name": "Captain B. McCrea",
+          "franchise": "WALL-E"
+        },
+        {
+          "number": "145",
+          "name": "WALL-E",
+          "franchise": "WALL-E"
+        },
+        {
+          "number": "146",
+          "name": "EVE",
+          "franchise": "WALL-E"
+        },
+        {
+          "number": "147",
+          "name": "M-O",
+          "franchise": "WALL-E"
+        },
+        {
+          "number": "148",
+          "name": "Ares",
+          "franchise": "Tron: Ares"
+        },
+        {
+          "number": "149",
+          "name": "Lilo",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "150",
+          "name": "Stitch",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "151",
+          "name": "Nani",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "152",
+          "name": "David Kawena",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "153",
+          "name": "Jumba",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "154",
+          "name": "Pleakley",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "155",
+          "name": "Captain Gantu",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "156",
+          "name": "Cobra Bubbles",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "157",
+          "name": "Pocahontas",
+          "franchise": "Pocahontas"
+        },
+        {
+          "number": "158",
+          "name": "Giselle",
+          "franchise": "Enchanted"
+        },
+        {
+          "number": "159",
+          "name": "Prince Edward",
+          "franchise": "Enchanted"
+        },
+        {
+          "number": "160",
+          "name": "Robert Philip",
+          "franchise": "Enchanted"
+        },
+        {
+          "number": "161",
+          "name": "Dusty Crophopper",
+          "franchise": "Planes"
+        },
+        {
+          "number": "162",
+          "name": "Simba",
+          "franchise": "The Lion King"
+        },
+        {
+          "number": "163",
+          "name": "Scar",
+          "franchise": "The Lion King"
+        },
+        {
+          "number": "164",
+          "name": "Mufasa",
+          "franchise": "The Lion King"
+        },
+        {
+          "number": "165",
+          "name": "Peter Pan",
+          "franchise": "Peter Pan"
+        },
+        {
+          "number": "166",
+          "name": "Tinker Bell",
+          "franchise": "Peter Pan"
+        },
+        {
+          "number": "167",
+          "name": "The Crocodile",
+          "franchise": "Peter Pan"
+        },
+        {
+          "number": "168",
+          "name": "Elsa",
+          "franchise": "Frozen II"
+        },
+        {
+          "number": "169",
+          "name": "Anna",
+          "franchise": "Frozen II"
+        },
+        {
+          "number": "170",
+          "name": "Olaf",
+          "franchise": "Frozen II"
+        },
+        {
+          "number": "171",
+          "name": "Joy",
+          "franchise": "Inside Out"
+        },
+        {
+          "number": "172",
+          "name": "Sadness",
+          "franchise": "Inside Out"
+        },
+        {
+          "number": "173",
+          "name": "Anger",
+          "franchise": "Inside Out"
+        },
+        {
+          "number": "174",
+          "name": "Fear",
+          "franchise": "Inside Out"
+        },
+        {
+          "number": "175",
+          "name": "Disgust",
+          "franchise": "Inside Out"
+        },
+        {
+          "number": "176",
+          "name": "Bing Bong",
+          "franchise": "Inside Out"
+        },
+        {
+          "number": "177",
+          "name": "Anxiety",
+          "franchise": "Inside Out 2"
+        },
+        {
+          "number": "178",
+          "name": "Nostalgia",
+          "franchise": "Inside Out 2"
+        },
+        {
+          "number": "179",
+          "name": "Cinderella",
+          "franchise": "Cinderella"
+        },
+        {
+          "number": "180",
+          "name": "Fairy Godmother",
+          "franchise": "Cinderella"
+        },
+        {
+          "number": "181",
+          "name": "Gus",
+          "franchise": "Cinderella"
+        },
+        {
+          "number": "182",
+          "name": "Troy Bolton",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "183",
+          "name": "Gabriella Montez",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "184",
+          "name": "Sharpay Evans",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "185",
+          "name": "Ryan Evans",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "186",
+          "name": "Chad Danforth",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "187",
+          "name": "Taylor McKessie",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "188",
+          "name": "Rapunzel",
+          "franchise": "Tangled"
+        },
+        {
+          "number": "189",
+          "name": "Pascal",
+          "franchise": "Tangled"
+        },
+        {
+          "number": "190",
+          "name": "Combat Carl",
+          "franchise": "Toy Story 4"
+        },
+        {
+          "number": "191",
+          "name": "Melephant Brooks",
+          "franchise": "Toy Story 4"
+        },
+        {
+          "number": "192",
+          "name": "Forky",
+          "franchise": "Toy Story 4"
+        },
+        {
+          "number": "193",
+          "name": "Karen Beverly",
+          "franchise": "Toy Story 5"
+        },
+        {
+          "number": "194",
+          "name": "Woody",
+          "franchise": "Toy Story 5"
+        },
+        {
+          "number": "195",
+          "name": "Jessie",
+          "franchise": "Toy Story 5"
+        },
+        {
+          "number": "196",
+          "name": "Atlas",
+          "franchise": "Toy Story 5"
+        },
+        {
+          "number": "197",
+          "name": "Snappy",
+          "franchise": "Toy Story 5"
+        },
+        {
+          "number": "198",
+          "name": "Smarty Pants",
+          "franchise": "Toy Story 5"
+        },
+        {
+          "number": "199",
+          "name": "Lilypad",
+          "franchise": "Toy Story 5"
+        },
+        {
+          "number": "200",
+          "name": "Hi-Tech Edition Buzz Lightyear",
+          "franchise": "Toy Story 5"
+        }
+      ]
+    },
+    {
+      "key": "iconic-moments",
+      "name": "Iconic Moments",
+      "parallels": [
+        {
+          "name": "Mickey Mouse Red and Black Refractor"
+        },
+        {
+          "name": "Orange Refractor"
+        },
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "IM-1",
+          "name": "Be Our Guest",
+          "franchise": "Beauty and the Beast"
+        },
+        {
+          "number": "IM-2",
+          "name": "Cruella's Entrance",
+          "franchise": "One Hundred and One Dalmatians"
+        },
+        {
+          "number": "IM-3",
+          "name": "On Syndrome's Island",
+          "franchise": "The Incredibles"
+        },
+        {
+          "number": "IM-4",
+          "name": "Isn't This a Silly Song?",
+          "franchise": "Snow White and the Seven Dwarfs"
+        },
+        {
+          "number": "IM-5",
+          "name": "A Whole New World",
+          "franchise": "Aladdin"
+        },
+        {
+          "number": "IM-6",
+          "name": "I'm Gonna Go Touch the Butt",
+          "franchise": "Finding Nemo"
+        },
+        {
+          "number": "IM-7",
+          "name": "Restoring the Heart of Te Fiti",
+          "franchise": "Moana"
+        },
+        {
+          "number": "IM-8",
+          "name": "Meet the Scarers",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "IM-9",
+          "name": "The Poison for Kuzco",
+          "franchise": "The Emperor's New Groove"
+        },
+        {
+          "number": "IM-10",
+          "name": "Into the Unknown",
+          "franchise": "Frozen II"
+        },
+        {
+          "number": "IM-11",
+          "name": "Pocahontas Meets John Smith",
+          "franchise": "Pocahontas"
+        },
+        {
+          "number": "IM-12",
+          "name": "Silenzio Bruno",
+          "franchise": "Luca"
+        },
+        {
+          "number": "IM-13",
+          "name": "Speed, I Am Speed",
+          "franchise": "Cars"
+        },
+        {
+          "number": "IM-14",
+          "name": "I'll Make a Man Out of You",
+          "franchise": "Mulan"
+        },
+        {
+          "number": "IM-15",
+          "name": "Hawaiian Roller Coaster Ride",
+          "franchise": "Lilo & Stitch"
+        }
+      ]
+    },
+    {
+      "key": "future-stars",
+      "name": "Future Stars",
+      "parallels": [
+        {
+          "name": "Mickey Mouse Red and Black Refractor"
+        },
+        {
+          "name": "Orange Refractor"
+        },
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "FS-1",
+          "name": "Star",
+          "franchise": "Wish"
+        },
+        {
+          "number": "FS-2",
+          "name": "Bambi",
+          "franchise": "Bambi"
+        },
+        {
+          "number": "FS-3",
+          "name": "Dumbo",
+          "franchise": "Dumbo"
+        },
+        {
+          "number": "FS-4",
+          "name": "Chicken Little",
+          "franchise": "Chicken Little"
+        },
+        {
+          "number": "FS-5",
+          "name": "Dopey",
+          "franchise": "Snow White and the Seven Dwarfs"
+        },
+        {
+          "number": "FS-6",
+          "name": "White Rabbit",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "FS-7",
+          "name": "Koda",
+          "franchise": "Brother Bear"
+        },
+        {
+          "number": "FS-8",
+          "name": "Jaq and Gus",
+          "franchise": "Cinderella"
+        },
+        {
+          "number": "FS-9",
+          "name": "Wendy",
+          "franchise": "Peter Pan"
+        },
+        {
+          "number": "FS-10",
+          "name": "Russell",
+          "franchise": "Up"
+        }
+      ]
+    },
+    {
+      "key": "disney-channel",
+      "name": "Disney Channel",
+      "parallels": [
+        {
+          "name": "Orange Refractor"
+        },
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "DC-1",
+          "name": "Lizzie McGuire",
+          "franchise": "Lizzie McGuire"
+        },
+        {
+          "number": "DC-2",
+          "name": "Raven Baxter",
+          "franchise": "That's So Raven"
+        },
+        {
+          "number": "DC-3",
+          "name": "Hannah Montana",
+          "franchise": "Hannah Montana"
+        },
+        {
+          "number": "DC-4",
+          "name": "Alex Russo",
+          "franchise": "Wizards of Waverly Place"
+        },
+        {
+          "number": "DC-5",
+          "name": "Justin Russo",
+          "franchise": "Wizards of Waverly Place"
+        },
+        {
+          "number": "DC-6",
+          "name": "Max Russo",
+          "franchise": "Wizards of Waverly Place"
+        },
+        {
+          "number": "DC-7",
+          "name": "Harper Finkle",
+          "franchise": "Wizards of Waverly Place"
+        },
+        {
+          "number": "DC-8",
+          "name": "Jerry Russo",
+          "franchise": "Wizards of Waverly Place"
+        },
+        {
+          "number": "DC-9",
+          "name": "Theresa Russo",
+          "franchise": "Wizards of Waverly Place"
+        },
+        {
+          "number": "DC-10",
+          "name": "Mitchie Torres",
+          "franchise": "Camp Rock"
+        },
+        {
+          "number": "DC-11",
+          "name": "Shane Gray",
+          "franchise": "Camp Rock"
+        },
+        {
+          "number": "DC-12",
+          "name": "Nate Gray",
+          "franchise": "Camp Rock"
+        },
+        {
+          "number": "DC-13",
+          "name": "Jason Gray",
+          "franchise": "Camp Rock"
+        },
+        {
+          "number": "DC-14",
+          "name": "Caitlyn Gellar",
+          "franchise": "Camp Rock"
+        },
+        {
+          "number": "DC-15",
+          "name": "Rocky Blue",
+          "franchise": "Shake It Up"
+        },
+        {
+          "number": "DC-16",
+          "name": "CeCe Jones",
+          "franchise": "Shake It Up"
+        },
+        {
+          "number": "DC-17",
+          "name": "Jessie",
+          "franchise": "Jessie"
+        },
+        {
+          "number": "DC-18",
+          "name": "Liv and Maddie",
+          "franchise": "Liv and Maddie"
+        },
+        {
+          "number": "DC-19",
+          "name": "Riley Matthews",
+          "franchise": "Girl Meets World"
+        },
+        {
+          "number": "DC-20",
+          "name": "Maya Hart",
+          "franchise": "Girl Meets World"
+        }
+      ]
+    },
+    {
+      "key": "disney-ink-and-paint",
+      "name": "Disney Ink and Paint",
+      "parallels": [
+        {
+          "name": "Mickey Mouse Red and Black Refractor"
+        },
+        {
+          "name": "Orange Refractor"
+        },
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "I&P-1",
+          "name": "Snow White",
+          "franchise": "Snow White and the Seven Dwarfs"
+        },
+        {
+          "number": "I&P-2",
+          "name": "Jiminy Cricket",
+          "franchise": "Pinocchio"
+        },
+        {
+          "number": "I&P-3",
+          "name": "Sorcerer's Apprentice Mickey",
+          "franchise": "Fantasia"
+        },
+        {
+          "number": "I&P-4",
+          "name": "Dumbo",
+          "franchise": "Dumbo"
+        },
+        {
+          "number": "I&P-5",
+          "name": "Bambi",
+          "franchise": "Bambi"
+        },
+        {
+          "number": "I&P-6",
+          "name": "The Three Caballeros",
+          "franchise": "The Three Caballeros"
+        },
+        {
+          "number": "I&P-7",
+          "name": "Mr. Toad",
+          "franchise": "The Adventures of Ichabod and Mr. Toad"
+        },
+        {
+          "number": "I&P-8",
+          "name": "Alice",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "I&P-9",
+          "name": "Peter Pan",
+          "franchise": "Peter Pan"
+        },
+        {
+          "number": "I&P-10",
+          "name": "Merlin",
+          "franchise": "The Sword in the Stone"
+        }
+      ]
+    },
+    {
+      "key": "darkwing-duck-35th",
+      "name": "Darkwing Duck 35th Anniversary",
+      "parallels": [
+        {
+          "name": "Orange Refractor"
+        },
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "DD-1",
+          "name": "Darkwing Duck",
+          "franchise": "Darkwing Duck"
+        },
+        {
+          "number": "DD-2",
+          "name": "Drake Mallard",
+          "franchise": "Darkwing Duck"
+        },
+        {
+          "number": "DD-3",
+          "name": "Gosalyn Mallard",
+          "franchise": "Darkwing Duck"
+        },
+        {
+          "number": "DD-4",
+          "name": "Gizmoduck",
+          "franchise": "Darkwing Duck"
+        },
+        {
+          "number": "DD-5",
+          "name": "Launchpad McQuack",
+          "franchise": "Darkwing Duck"
+        },
+        {
+          "number": "DD-6",
+          "name": "Splatter Phoenix",
+          "franchise": "Darkwing Duck"
+        },
+        {
+          "number": "DD-7",
+          "name": "Dr. Reginald Bushroot",
+          "franchise": "Darkwing Duck"
+        },
+        {
+          "number": "DD-8",
+          "name": "Megavolt",
+          "franchise": "Darkwing Duck"
+        },
+        {
+          "number": "DD-9",
+          "name": "Quackerjack",
+          "franchise": "Darkwing Duck"
+        },
+        {
+          "number": "DD-10",
+          "name": "Negaduck",
+          "franchise": "Darkwing Duck"
+        }
+      ]
+    },
+    {
+      "key": "alice-75th",
+      "name": "Alice in Wonderland 75th Anniversary",
+      "parallels": [
+        {
+          "name": "Orange Refractor"
+        },
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "AW-1",
+          "name": "Following the White Rabbit",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "AW-2",
+          "name": "Down the Rabbit Hole",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "AW-3",
+          "name": "A Garden of Flowers",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "AW-4",
+          "name": "A Mad Tea Party",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "AW-5",
+          "name": "A Court of Cards",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "AW-6",
+          "name": "Steaming Teapots",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "AW-7",
+          "name": "The Mad Hatter",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "AW-8",
+          "name": "Who Are You?",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "AW-9",
+          "name": "Alice and the White Rabbit",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "AW-10",
+          "name": "Painting the Roses Red",
+          "franchise": "Alice in Wonderland"
+        }
+      ]
+    },
+    {
+      "key": "cars-20th",
+      "name": "Cars 20th Anniversary",
+      "parallels": [
+        {
+          "name": "Orange Refractor"
+        },
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "CRS-1",
+          "name": "The King Advises The Rookie",
+          "franchise": "Cars"
+        },
+        {
+          "number": "CRS-2",
+          "name": "Sleepy Mack",
+          "franchise": "Cars"
+        },
+        {
+          "number": "CRS-3",
+          "name": "Our Founder: Stanley",
+          "franchise": "Cars"
+        },
+        {
+          "number": "CRS-4",
+          "name": "Mater Meets Lightning",
+          "franchise": "Cars"
+        },
+        {
+          "number": "CRS-5",
+          "name": "Sally and Red",
+          "franchise": "Cars"
+        },
+        {
+          "number": "CRS-6",
+          "name": "Beautiful Ornament Valley",
+          "franchise": "Cars"
+        },
+        {
+          "number": "CRS-7",
+          "name": "Sally Goes for a Drive",
+          "franchise": "Cars"
+        },
+        {
+          "number": "CRS-8",
+          "name": "Doc Hudson Hits the Track",
+          "franchise": "Cars"
+        },
+        {
+          "number": "CRS-9",
+          "name": "Cadillac Range",
+          "franchise": "Cars"
+        },
+        {
+          "number": "CRS-10",
+          "name": "Downtown Radiator Springs",
+          "franchise": "Cars"
+        }
+      ]
+    },
+    {
+      "key": "monsters-inc-25th",
+      "name": "Monsters, Inc. 25th Anniversary",
+      "parallels": [
+        {
+          "name": "Orange Refractor"
+        },
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "MI-1",
+          "name": "James P. Sullivan",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "MI-2",
+          "name": "Boo",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "MI-3",
+          "name": "Henry J. Waternoose III",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "MI-4",
+          "name": "George Sanderson",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "MI-5",
+          "name": "Mike Wazowski",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "MI-6",
+          "name": "Celia Mae",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "MI-7",
+          "name": "Roz",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "MI-8",
+          "name": "Smitty",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "MI-9",
+          "name": "Needleman",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "MI-10",
+          "name": "Randall Boggs",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "MI-11",
+          "name": "Fungus",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "MI-12",
+          "name": "Bile",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "MI-13",
+          "name": "CDA Agent",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "MI-14",
+          "name": "Bob Peterson",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "MI-15",
+          "name": "Ted Pauley",
+          "franchise": "Monsters, Inc."
+        }
+      ]
+    },
+    {
+      "key": "moana-10th",
+      "name": "Moana 10th Anniversary",
+      "parallels": [
+        {
+          "name": "Orange Refractor"
+        },
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "MN-1",
+          "name": "Moana",
+          "franchise": "Moana"
+        },
+        {
+          "number": "MN-2",
+          "name": "Heihei",
+          "franchise": "Moana"
+        },
+        {
+          "number": "MN-3",
+          "name": "Pua",
+          "franchise": "Moana"
+        },
+        {
+          "number": "MN-4",
+          "name": "Gramma Tala",
+          "franchise": "Moana"
+        },
+        {
+          "number": "MN-5",
+          "name": "Maui",
+          "franchise": "Moana"
+        },
+        {
+          "number": "MN-6",
+          "name": "Mini Maui",
+          "franchise": "Moana"
+        },
+        {
+          "number": "MN-7",
+          "name": "Kakamora",
+          "franchise": "Moana"
+        },
+        {
+          "number": "MN-8",
+          "name": "Tamatoa",
+          "franchise": "Moana"
+        },
+        {
+          "number": "MN-9",
+          "name": "Te Ka",
+          "franchise": "Moana"
+        },
+        {
+          "number": "MN-10",
+          "name": "Te Fiti",
+          "franchise": "Moana"
+        }
+      ]
+    },
+    {
+      "key": "hsm-20th",
+      "name": "High School Musical 20th Anniversary",
+      "parallels": [
+        {
+          "name": "Orange Refractor"
+        },
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "HSM-1",
+          "name": "Troy Bolton",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "HSM-2",
+          "name": "Gabriella Montez",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "HSM-3",
+          "name": "Sharpay Evans",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "HSM-4",
+          "name": "Ryan Evans",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "HSM-5",
+          "name": "Chad Danforth",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "HSM-6",
+          "name": "Taylor McKessie",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "HSM-7",
+          "name": "Kelsi Nielsen",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "HSM-8",
+          "name": "Ms. Darbus",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "HSM-9",
+          "name": "Zeke Baylor",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "HSM-10",
+          "name": "Coach Bolton",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "HSM-11",
+          "name": "Jason Cross",
+          "franchise": "High School Musical"
+        }
+      ]
+    },
+    {
+      "key": "winnie-the-pooh-100th",
+      "name": "Winnie the Pooh 100th Anniversary",
+      "parallels": [
+        {
+          "name": "Red Refractor"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "WP-1",
+          "name": "Winnie the Pooh",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "WP-2",
+          "name": "Tigger",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "WP-3",
+          "name": "Eeyore",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "WP-4",
+          "name": "Piglet",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "WP-5",
+          "name": "Christopher Robin",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "WP-6",
+          "name": "Rabbit",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "WP-7",
+          "name": "Owl",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "WP-8",
+          "name": "Roo",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "WP-9",
+          "name": "Kanga",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "WP-10",
+          "name": "Heffalump",
+          "franchise": "Winnie the Pooh"
+        }
+      ]
+    },
+    {
+      "key": "art-of-disney",
+      "name": "Art of Disney",
+      "parallels": [
+        {
+          "name": "Kaleidoscope"
+        },
+        {
+          "name": "Shimmer"
+        },
+        {
+          "name": "Raywave"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "AD-1",
+          "name": "Winnie the Pooh",
+          "franchise": "Winnie the Pooh"
+        },
+        {
+          "number": "AD-2",
+          "name": "Dumbo",
+          "franchise": "Dumbo"
+        },
+        {
+          "number": "AD-3",
+          "name": "Alice in Wonderland",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "AD-4",
+          "name": "One Hundred and One Dalmatians",
+          "franchise": "One Hundred and One Dalmatians"
+        },
+        {
+          "number": "AD-5",
+          "name": "Fox and the Hound",
+          "franchise": "The Fox and the Hound"
+        },
+        {
+          "number": "AD-6",
+          "name": "Beauty and the Beast",
+          "franchise": "Beauty and the Beast"
+        },
+        {
+          "number": "AD-7",
+          "name": "Darkwing Duck",
+          "franchise": "Darkwing Duck"
+        },
+        {
+          "number": "AD-8",
+          "name": "Hunchback of Notre Dame",
+          "franchise": "The Hunchback of Notre Dame"
+        },
+        {
+          "number": "AD-9",
+          "name": "Zootopia",
+          "franchise": "Zootopia"
+        },
+        {
+          "number": "AD-10",
+          "name": "Moana",
+          "franchise": "Moana"
+        }
+      ]
+    },
+    {
+      "key": "disney-reflections",
+      "name": "Disney Reflections",
+      "parallels": [
+        {
+          "name": "Kaleidoscope"
+        },
+        {
+          "name": "Shimmer"
+        },
+        {
+          "name": "Raywave"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "R-1",
+          "name": "Genie and Aladdin",
+          "franchise": "Aladdin"
+        },
+        {
+          "number": "R-2",
+          "name": "Simba and Mufasa",
+          "franchise": "The Lion King"
+        },
+        {
+          "number": "R-3",
+          "name": "Mulan",
+          "franchise": "Mulan"
+        },
+        {
+          "number": "R-4",
+          "name": "Alice and The Doorknob",
+          "franchise": "Alice in Wonderland"
+        },
+        {
+          "number": "R-5",
+          "name": "Darkwing Duck and Negaduck",
+          "franchise": "Darkwing Duck"
+        }
+      ]
+    },
+    {
+      "key": "ukiyo-e",
+      "name": "Mickey and Friends Ukiyo-e",
+      "parallels": [
+        {
+          "name": "Kaleidoscope"
+        },
+        {
+          "name": "Shimmer"
+        },
+        {
+          "name": "Raywave"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "UK-1",
+          "name": "Mickey Mouse",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "UK-2",
+          "name": "Donald Duck",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "UK-3",
+          "name": "Daisy Duck",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "UK-4",
+          "name": "Pete",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "UK-5",
+          "name": "Minnie Mouse",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "UK-6",
+          "name": "Pluto",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "UK-7",
+          "name": "Chip & Dale",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "UK-8",
+          "name": "Clarabelle",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "UK-9",
+          "name": "Horace",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "UK-10",
+          "name": "Goofy",
+          "franchise": "Mickey & Friends"
+        }
+      ]
+    },
+    {
+      "key": "tron-tek",
+      "name": "Tron Tek",
+      "parallels": [
+        {
+          "name": "Gold"
+        },
+        {
+          "name": "Orange"
+        },
+        {
+          "name": "Green"
+        },
+        {
+          "name": "Red"
+        },
+        {
+          "name": "Black"
+        }
+      ],
+      "cards": [
+        {
+          "number": "TRON-1",
+          "name": "He fights for the Users",
+          "franchise": "Tron"
+        },
+        {
+          "number": "TRON-2",
+          "name": "Together, we will be complete",
+          "franchise": "Tron"
+        },
+        {
+          "number": "TRON-3",
+          "name": "Vacate entry port, program!",
+          "franchise": "Tron"
+        },
+        {
+          "number": "TRON-4",
+          "name": "Bio-digital jazz, man",
+          "franchise": "Tron: Legacy"
+        },
+        {
+          "number": "TRON-5",
+          "name": "I'm a User, I'll improvise",
+          "franchise": "Tron: Legacy"
+        },
+        {
+          "number": "TRON-6",
+          "name": "The Last ISO",
+          "franchise": "Tron: Legacy"
+        },
+        {
+          "number": "TRON-7",
+          "name": "Am I still to create the perfect system?",
+          "franchise": "Tron: Legacy"
+        },
+        {
+          "number": "TRON-8",
+          "name": "Tron Lives",
+          "franchise": "Tron: Legacy"
+        },
+        {
+          "number": "TRON-9",
+          "name": "Proceed to Games",
+          "franchise": "Tron: Legacy"
+        },
+        {
+          "number": "TRON-10",
+          "name": "My world is coming to destroy yours",
+          "franchise": "Tron: Ares"
+        }
+      ]
+    },
+    {
+      "key": "scorched",
+      "name": "Scorched",
+      "parallels": [
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "SC-1",
+          "name": "Bolt",
+          "franchise": "Bolt"
+        },
+        {
+          "number": "SC-2",
+          "name": "Crush",
+          "franchise": "Finding Nemo"
+        },
+        {
+          "number": "SC-3",
+          "name": "Kristoff & Sven",
+          "franchise": "Frozen"
+        },
+        {
+          "number": "SC-4",
+          "name": "Pegasus",
+          "franchise": "Hercules"
+        },
+        {
+          "number": "SC-5",
+          "name": "Doc Hudson",
+          "franchise": "Cars"
+        }
+      ]
+    },
+    {
+      "key": "super-strength-chrome",
+      "name": "Super Strength Chrome",
+      "parallels": [
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "ST-1",
+          "name": "Mulan",
+          "franchise": "Mulan"
+        },
+        {
+          "number": "ST-2",
+          "name": "Baymax",
+          "franchise": "Big Hero 6"
+        },
+        {
+          "number": "ST-3",
+          "name": "Mei Lee",
+          "franchise": "Turning Red"
+        },
+        {
+          "number": "ST-4",
+          "name": "Zeus",
+          "franchise": "Hercules"
+        },
+        {
+          "number": "ST-5",
+          "name": "Genie",
+          "franchise": "Aladdin"
+        }
+      ]
+    },
+    {
+      "key": "helix",
+      "name": "Helix",
+      "parallels": [
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "HX-1",
+          "name": "Mickey Mouse",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "HX-2",
+          "name": "Woody",
+          "franchise": "Toy Story"
+        },
+        {
+          "number": "HX-3",
+          "name": "Winnie the Pooh",
+          "franchise": "The Many Adventures of Winnie the Pooh"
+        },
+        {
+          "number": "HX-4",
+          "name": "Snow White",
+          "franchise": "Snow White and the Seven Dwarfs"
+        },
+        {
+          "number": "HX-5",
+          "name": "Stitch",
+          "franchise": "Lilo & Stitch"
+        }
+      ]
+    },
+    {
+      "key": "golden-age-posters",
+      "name": "Golden Age Posters",
+      "parallels": [
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "GA-1",
+          "name": "Snow White and the Seven Dwarfs",
+          "franchise": "Snow White and the Seven Dwarfs"
+        },
+        {
+          "number": "GA-2",
+          "name": "Pinocchio",
+          "franchise": "Pinocchio"
+        },
+        {
+          "number": "GA-3",
+          "name": "Fantasia",
+          "franchise": "Fantasia"
+        },
+        {
+          "number": "GA-4",
+          "name": "Dumbo",
+          "franchise": "Dumbo"
+        },
+        {
+          "number": "GA-5",
+          "name": "Bambi",
+          "franchise": "Bambi"
+        }
+      ]
+    },
+    {
+      "key": "toy-story-5-first-edition",
+      "name": "Toy Story 5 First Edition",
+      "parallels": [
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "TS5-1",
+          "name": "Lilypad",
+          "franchise": "Toy Story 5"
+        },
+        {
+          "number": "TS5-2",
+          "name": "Karen Beverly",
+          "franchise": "Toy Story 5"
+        },
+        {
+          "number": "TS5-3",
+          "name": "Smarty Pants",
+          "franchise": "Toy Story 5"
+        },
+        {
+          "number": "TS5-4",
+          "name": "Atlas",
+          "franchise": "Toy Story 5"
+        },
+        {
+          "number": "TS5-5",
+          "name": "Hi-Tech Edition Buzz Lightyear",
+          "franchise": "Toy Story 5"
+        }
+      ]
+    },
+    {
+      "key": "lilo-and-stitch-shadowbox",
+      "name": "Lilo & Stitch Shadowbox",
+      "parallels": [
+        {
+          "name": "Orange Refractor"
+        },
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "LS-1",
+          "name": "Stitch",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "LS-2",
+          "name": "Jumba",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "LS-3",
+          "name": "Pleakley",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "LS-4",
+          "name": "Alien",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "LS-5",
+          "name": "Alien",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "LS-6",
+          "name": "Grand Councilwoman",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "LS-7",
+          "name": "Lilo",
+          "franchise": "Lilo & Stitch"
+        }
+      ]
+    },
+    {
+      "key": "the-one-and-only",
+      "name": "The One and Only",
+      "parallels": [
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "OO-1",
+          "name": "Joe Gardner",
+          "franchise": "Soul"
+        },
+        {
+          "number": "OO-2",
+          "name": "Mowgli",
+          "franchise": "The Jungle Book"
+        },
+        {
+          "number": "OO-3",
+          "name": "Princess Aurora",
+          "franchise": "Sleeping Beauty"
+        },
+        {
+          "number": "OO-4",
+          "name": "Bo Peep",
+          "franchise": "Toy Story"
+        },
+        {
+          "number": "OO-5",
+          "name": "Carl Fredricksen",
+          "franchise": "Up"
+        }
+      ]
+    },
+    {
+      "key": "mlb-home-jersey",
+      "name": "Mickey & Friends MLB Home Jersey Set",
+      "parallels": [
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "MLBH-31",
+          "name": "Goofy",
+          "franchise": "Los Angeles Dodgers"
+        },
+        {
+          "number": "MLBH-32",
+          "name": "Goofy",
+          "franchise": "San Diego Padres"
+        },
+        {
+          "number": "MLBH-33",
+          "name": "Goofy",
+          "franchise": "San Francisco Giants"
+        },
+        {
+          "number": "MLBH-34",
+          "name": "Goofy",
+          "franchise": "Arizona Diamondbacks"
+        },
+        {
+          "number": "MLBH-35",
+          "name": "Goofy",
+          "franchise": "Colorado Rockies"
+        },
+        {
+          "number": "MLBH-36",
+          "name": "Goofy",
+          "franchise": "Angels"
+        },
+        {
+          "number": "MLBH-37",
+          "name": "Goofy",
+          "franchise": "Athletics"
+        },
+        {
+          "number": "MLBH-38",
+          "name": "Goofy",
+          "franchise": "Houston Astros"
+        },
+        {
+          "number": "MLBH-39",
+          "name": "Goofy",
+          "franchise": "Seattle Mariners"
+        },
+        {
+          "number": "MLBH-40",
+          "name": "Goofy",
+          "franchise": "Texas Rangers"
+        },
+        {
+          "number": "MLBH-41",
+          "name": "Mickey Mouse",
+          "franchise": "Cleveland Guardians"
+        },
+        {
+          "number": "MLBH-42",
+          "name": "Mickey Mouse",
+          "franchise": "Chicago White Sox"
+        },
+        {
+          "number": "MLBH-43",
+          "name": "Mickey Mouse",
+          "franchise": "Detroit Tigers"
+        },
+        {
+          "number": "MLBH-44",
+          "name": "Mickey Mouse",
+          "franchise": "Kansas City Royals"
+        },
+        {
+          "number": "MLBH-45",
+          "name": "Mickey Mouse",
+          "franchise": "Minnesota Twins"
+        },
+        {
+          "number": "MLBH-46",
+          "name": "Mickey Mouse",
+          "franchise": "St. Louis Cardinals"
+        },
+        {
+          "number": "MLBH-47",
+          "name": "Mickey Mouse",
+          "franchise": "Milwaukee Brewers"
+        },
+        {
+          "number": "MLBH-48",
+          "name": "Mickey Mouse",
+          "franchise": "Chicago Cubs"
+        },
+        {
+          "number": "MLBH-49",
+          "name": "Mickey Mouse",
+          "franchise": "Cincinnati Reds"
+        },
+        {
+          "number": "MLBH-50",
+          "name": "Mickey Mouse",
+          "franchise": "Pittsburgh Pirates"
+        },
+        {
+          "number": "MLBH-51",
+          "name": "Donald Duck",
+          "franchise": "Atlanta Braves"
+        },
+        {
+          "number": "MLBH-52",
+          "name": "Donald Duck",
+          "franchise": "New York Mets"
+        },
+        {
+          "number": "MLBH-53",
+          "name": "Donald Duck",
+          "franchise": "Washington Nationals"
+        },
+        {
+          "number": "MLBH-54",
+          "name": "Donald Duck",
+          "franchise": "Miami Marlins"
+        },
+        {
+          "number": "MLBH-55",
+          "name": "Donald Duck",
+          "franchise": "Philadelphia Phillies"
+        },
+        {
+          "number": "MLBH-56",
+          "name": "Donald Duck",
+          "franchise": "Toronto Blue Jays"
+        },
+        {
+          "number": "MLBH-57",
+          "name": "Donald Duck",
+          "franchise": "Tampa Bay Rays"
+        },
+        {
+          "number": "MLBH-58",
+          "name": "Donald Duck",
+          "franchise": "Boston Red Sox"
+        },
+        {
+          "number": "MLBH-59",
+          "name": "Donald Duck",
+          "franchise": "Baltimore Orioles"
+        },
+        {
+          "number": "MLBH-60",
+          "name": "Donald Duck",
+          "franchise": "New York Yankees"
+        }
+      ]
+    },
+    {
+      "key": "facsimile-autographs",
+      "name": "Disney Chrome Facsimile Autographs",
+      "autograph": true,
+      "parallels": [
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "FA-1",
+          "name": "Mickey Mouse",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "FA-2",
+          "name": "Belle",
+          "franchise": "Beauty and the Beast"
+        },
+        {
+          "number": "FA-3",
+          "name": "Nemo",
+          "franchise": "Finding Nemo"
+        },
+        {
+          "number": "FA-4",
+          "name": "Donald Duck",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "FA-5",
+          "name": "Sharpay Evans",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "FA-6",
+          "name": "Miguel",
+          "franchise": "Coco"
+        },
+        {
+          "number": "FA-7",
+          "name": "Goofy",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "FA-8",
+          "name": "Moana",
+          "franchise": "Moana"
+        },
+        {
+          "number": "FA-9",
+          "name": "Elio Solis",
+          "franchise": "Elio"
+        },
+        {
+          "number": "FA-10",
+          "name": "Scrooge McDuck",
+          "franchise": "Ducktales"
+        },
+        {
+          "number": "FA-11",
+          "name": "Rapunzel",
+          "franchise": "Tangled"
+        },
+        {
+          "number": "FA-12",
+          "name": "Minnie Mouse",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "FA-13",
+          "name": "Troy Bolton",
+          "franchise": "High School Musical"
+        },
+        {
+          "number": "FA-14",
+          "name": "Ernesto de la Cruz",
+          "franchise": "Coco"
+        },
+        {
+          "number": "FA-15",
+          "name": "Mirabel",
+          "franchise": "Encanto"
+        }
+      ]
+    },
+    {
+      "key": "authentic-autographs",
+      "name": "Authentic Autographs",
+      "autograph": true,
+      "parallels": [
+        {
+          "name": "Gold Refractor"
+        },
+        {
+          "name": "Mickey Mouse Red and Black Refractor"
+        },
+        {
+          "name": "Orange Refractor"
+        },
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "AA-AB",
+          "name": "Albert Brooks",
+          "franchise": "Finding Nemo"
+        },
+        {
+          "number": "AA-AG",
+          "name": "Alexander Gould",
+          "franchise": "Finding Nemo"
+        },
+        {
+          "number": "AA-AS",
+          "name": "Andrew Stanton",
+          "franchise": "Toy Story 2"
+        },
+        {
+          "number": "AA-ANR",
+          "name": "Anika Noni Rose",
+          "franchise": "The Princess and the Frog"
+        },
+        {
+          "number": "AA-AC",
+          "name": "Auli'i Cravalho",
+          "franchise": "Moana"
+        },
+        {
+          "number": "AA-BDW",
+          "name": "BD Wong",
+          "franchise": "Mulan"
+        },
+        {
+          "number": "AA-BB",
+          "name": "Benjamin Bratt",
+          "franchise": "Coco"
+        },
+        {
+          "number": "AA-BF",
+          "name": "Bill Farmer",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "AA-BC",
+          "name": "Billy Crystal",
+          "franchise": "Monsters, Inc."
+        },
+        {
+          "number": "AA-BI",
+          "name": "Bret Iwan",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "AA-CE",
+          "name": "Chris Evans",
+          "franchise": "Lightyear"
+        },
+        {
+          "number": "AA-CPI",
+          "name": "Chris Pine",
+          "franchise": "Wish"
+        },
+        {
+          "number": "AA-CS",
+          "name": "Chris Sanders",
+          "franchise": "Lilo & Stitch"
+        },
+        {
+          "number": "AA-CD",
+          "name": "Chris Diamantopoulos",
+          "franchise": "Mickey Shorts"
+        },
+        {
+          "number": "AA-CDB",
+          "name": "Christopher Daniel Barnes",
+          "franchise": "The Little Mermaid"
+        },
+        {
+          "number": "AA-DS",
+          "name": "Dan Stevens",
+          "franchise": "Beauty and the Beast (2017)"
+        },
+        {
+          "number": "AA-DP",
+          "name": "Dan Povenmire",
+          "franchise": "Phineas and Ferb"
+        },
+        {
+          "number": "AA-DF",
+          "name": "Dave Foley",
+          "franchise": "A Bug's Life"
+        },
+        {
+          "number": "AA-DSP",
+          "name": "David Spade",
+          "franchise": "The Emperor's New Groove"
+        },
+        {
+          "number": "AA-DE",
+          "name": "David Errigo Jr.",
+          "franchise": "Phineas and Ferb"
+        },
+        {
+          "number": "AA-DBB",
+          "name": "Dee Bradley Baker",
+          "franchise": "Phineas and Ferb"
+        },
+        {
+          "number": "AA-DM",
+          "name": "Donna Murphy",
+          "franchise": "Tangled"
+        },
+        {
+          "number": "AA-DD",
+          "name": "Donnie Dunagan",
+          "franchise": "Bambi"
+        },
+        {
+          "number": "AA-EON",
+          "name": "Ed O'Neill",
+          "franchise": "Finding Dory"
+        },
+        {
+          "number": "AA-ES",
+          "name": "Ernie Sabella",
+          "franchise": "The Lion King"
+        },
+        {
+          "number": "AA-GB",
+          "name": "Gael Garcia Bernal",
+          "franchise": "Coco"
+        },
+        {
+          "number": "AA-GGW",
+          "name": "Ginnifer Goodwin",
+          "franchise": "Zootopia"
+        },
+        {
+          "number": "AA-HB",
+          "name": "Halle Bailey",
+          "franchise": "The Little Mermaid (2023)"
+        },
+        {
+          "number": "AA-IM",
+          "name": "Idina Menzel",
+          "franchise": "Frozen"
+        },
+        {
+          "number": "AA-IB",
+          "name": "Irene Bedard",
+          "franchise": "Pocahontas"
+        },
+        {
+          "number": "AA-JC",
+          "name": "Jim Cummings",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "AA-JCM",
+          "name": "Jim Cummings",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "AA-JB",
+          "name": "Jodi Benson",
+          "franchise": "The Little Mermaid"
+        },
+        {
+          "number": "AA-JD",
+          "name": "Johnny Depp",
+          "franchise": "Pirates of the Caribbean"
+        },
+        {
+          "number": "AA-JF",
+          "name": "Jonathan Freeman",
+          "franchise": "Aladdin"
+        },
+        {
+          "number": "AA-JGF",
+          "name": "Jonathan Groff",
+          "franchise": "Frozen"
+        },
+        {
+          "number": "AA-JG",
+          "name": "Josh Gad",
+          "franchise": "Frozen"
+        },
+        {
+          "number": "AA-JL",
+          "name": "Jude Law",
+          "franchise": "Peter Pan & Wendy"
+        },
+        {
+          "number": "AA-JLD",
+          "name": "Julia Louis-Dreyfus",
+          "franchise": "A Bug's Life"
+        },
+        {
+          "number": "AA-KR",
+          "name": "Kaitlyn Robrock",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "AA-KN",
+          "name": "Keira Knightley",
+          "franchise": "Pirates of the Caribbean"
+        },
+        {
+          "number": "AA-KM",
+          "name": "Kelly Macdonald",
+          "franchise": "Brave"
+        },
+        {
+          "number": "AA-LL",
+          "name": "Linda Larkin",
+          "franchise": "Aladdin"
+        },
+        {
+          "number": "AA-LE",
+          "name": "Luke Evans",
+          "franchise": "Beauty and the Beast (2017)"
+        },
+        {
+          "number": "AA-MK",
+          "name": "Margaret Kerry",
+          "franchise": "Peter Pan"
+        },
+        {
+          "number": "AA-MBR",
+          "name": "Matthew Broderick",
+          "franchise": "The Lion King"
+        },
+        {
+          "number": "AA-MB",
+          "name": "Mel Brooks",
+          "franchise": "Toy Story 4"
+        },
+        {
+          "number": "AA-MMC",
+          "name": "Melissa McCarthy",
+          "franchise": "The Little Mermaid (2023)"
+        },
+        {
+          "number": "AA-MMS",
+          "name": "Mena Massoud",
+          "franchise": "Aladdin (2019)"
+        },
+        {
+          "number": "AA-MNW",
+          "name": "Ming-Na Wen",
+          "franchise": "Mulan"
+        },
+        {
+          "number": "AA-NS",
+          "name": "Naomi Scott",
+          "franchise": "Aladdin (2019)"
+        },
+        {
+          "number": "AA-NL",
+          "name": "Nathan Lane",
+          "franchise": "The Lion King"
+        },
+        {
+          "number": "AA-OB",
+          "name": "Orlando Bloom",
+          "franchise": "Pirates of the Caribbean"
+        },
+        {
+          "number": "AA-OW",
+          "name": "Owen Wilson",
+          "franchise": "Cars"
+        },
+        {
+          "number": "AA-POH",
+          "name": "Paige O'Hara",
+          "franchise": "Beauty and the Beast"
+        },
+        {
+          "number": "AA-PW",
+          "name": "Patrick Warburton",
+          "franchise": "The Emperor's New Groove"
+        },
+        {
+          "number": "AA-PO",
+          "name": "Patton Oswalt",
+          "franchise": "Ratatouille"
+        },
+        {
+          "number": "AA-PB",
+          "name": "Peter Behn",
+          "franchise": "Bambi"
+        },
+        {
+          "number": "AA-PS",
+          "name": "Phyllis Smith",
+          "franchise": "Inside Out"
+        },
+        {
+          "number": "AA-RW",
+          "name": "Richard White",
+          "franchise": "Beauty and the Beast"
+        },
+        {
+          "number": "AA-RK",
+          "name": "Richard Kind",
+          "franchise": "Inside Out"
+        },
+        {
+          "number": "AA-RB",
+          "name": "Robby Benson",
+          "franchise": "Beauty and the Beast"
+        },
+        {
+          "number": "AA-SLJ",
+          "name": "Samuel L. Jackson",
+          "franchise": "The Incredibles"
+        },
+        {
+          "number": "AA-SF",
+          "name": "Santino Fontana",
+          "franchise": "Frozen"
+        },
+        {
+          "number": "AA-SW",
+          "name": "Scott Weinger",
+          "franchise": "Aladdin"
+        },
+        {
+          "number": "AA-SB",
+          "name": "Stephanie Beatriz",
+          "franchise": "Encanto"
+        },
+        {
+          "number": "AA-SE",
+          "name": "Susan Egan",
+          "franchise": "Hercules"
+        },
+        {
+          "number": "AA-TD",
+          "name": "Tate Donovan",
+          "franchise": "Hercules"
+        },
+        {
+          "number": "AA-TA",
+          "name": "Tim Allen",
+          "franchise": "Toy Story"
+        },
+        {
+          "number": "AA-TH",
+          "name": "Tom Hanks",
+          "franchise": "Toy Story"
+        },
+        {
+          "number": "AA-TAN",
+          "name": "Tony Anselmo",
+          "franchise": "Mickey & Friends"
+        },
+        {
+          "number": "AA-VM",
+          "name": "Vincent Martella",
+          "franchise": "Phineas and Ferb"
+        },
+        {
+          "number": "AA-WG",
+          "name": "Whoopi Goldberg",
+          "franchise": "The Lion King"
+        },
+        {
+          "number": "AA-WS",
+          "name": "Will Smith",
+          "franchise": "Aladdin (2019)"
+        }
+      ]
+    },
+    {
+      "key": "disney-princess-autographs",
+      "name": "Disney Princess Autographs",
+      "autograph": true,
+      "parallels": [
+        {
+          "name": "Gold Refractor"
+        },
+        {
+          "name": "Mickey Mouse Red and Black Refractor"
+        },
+        {
+          "name": "Orange Refractor"
+        },
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "PA-IB",
+          "name": "Irene Bedard",
+          "franchise": "Pocahontas"
+        },
+        {
+          "number": "PA-JB",
+          "name": "Jodi Benson",
+          "franchise": "The Little Mermaid"
+        },
+        {
+          "number": "PA-LL",
+          "name": "Linda Larkin",
+          "franchise": "Aladdin"
+        },
+        {
+          "number": "PA-MW",
+          "name": "Ming-Na Wen",
+          "franchise": "Mulan"
+        },
+        {
+          "number": "PA-PO",
+          "name": "Paige O'Hara",
+          "franchise": "Beauty and the Beast"
+        }
+      ]
+    },
+    {
+      "key": "disney-channel-autograph-variation",
+      "name": "Disney Channel Autograph Variation",
+      "autograph": true,
+      "parallels": [
+        {
+          "name": "Gold Refractor"
+        },
+        {
+          "name": "Mickey Mouse Red and Black Refractor"
+        },
+        {
+          "name": "Orange Refractor"
+        },
+        {
+          "name": "Black Refractor"
+        },
+        {
+          "name": "Red Refractor"
+        },
+        {
+          "name": "Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "DCA-AS",
+          "name": "Alyson Stoner",
+          "franchise": "Camp Rock"
+        },
+        {
+          "number": "DCA-DL",
+          "name": "Demi Lovato",
+          "franchise": "Camp Rock"
+        },
+        {
+          "number": "DCA-MC",
+          "name": "Miley Cyrus",
+          "franchise": "Hannah Montana"
+        },
+        {
+          "number": "DCA-RS",
+          "name": "Raven-Symone",
+          "franchise": "That's So Raven"
+        },
+        {
+          "number": "DCA-VH",
+          "name": "Vanessa Hudgens",
+          "franchise": "High School Musical"
+        }
+      ]
+    },
+    {
+      "key": "cars-authentic-autographs",
+      "name": "Cars Authentic Autographs",
+      "autograph": true,
+      "parallels": [
+        {
+          "name": "Checker Flag X-Fractor"
+        },
+        {
+          "name": "Checker Flag Superfractor"
+        }
+      ],
+      "cards": [
+        {
+          "number": "AA-OW",
+          "name": "Owen Wilson",
+          "franchise": "Cars"
+        },
+        {
+          "number": "AA-JV",
+          "name": "Jacques Villeneuve",
+          "franchise": "Cars 2"
+        }
+      ]
+    }
+  ]
+}
