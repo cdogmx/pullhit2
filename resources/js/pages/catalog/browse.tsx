@@ -87,6 +87,11 @@ type Props = {
     autoCorrectedTo?: string | null;
     /** The original query as the server saw it (banner/empty-state echo). */
     searchedQuery?: string | null;
+    /**
+     * Whether this vertical collapses a card's printings by default. The toggle
+     * needs it to know when an explicit group=0 has to be sent.
+     */
+    groupDefault: boolean;
 };
 
 const SORTS = [
@@ -122,7 +127,10 @@ const setOptionLabel = (s: CatalogFilterOptions['sets'][number]): string =>
         ? `${s.name} (${s.language.toUpperCase()})`
         : s.name;
 
-function buildQuery(filters: CatalogFilters): Record<string, string | number> {
+function buildQuery(
+    filters: CatalogFilters,
+    groupDefault = false,
+): Record<string, string | number> {
     const out: Record<string, string | number> = {};
 
     if (filters.q) {
@@ -167,8 +175,11 @@ function buildQuery(filters: CatalogFilters): Record<string, string | number> {
         out.direction = filters.direction;
     }
 
-    if (filters.group) {
-        out.group = 1;
+    // Grouping's default comes from the vertical (collectibles collapse their
+    // printings, TCG does not), so emit it only when it differs. Omitting a
+    // deliberate "off" would be read as an untouched page and snap back on.
+    if (filters.group !== groupDefault) {
+        out.group = filters.group ? 1 : 0;
     }
 
     if (filters.all) {
@@ -226,6 +237,7 @@ export default function Browse({
     didYouMean,
     autoCorrectedTo,
     searchedQuery,
+    groupDefault,
 }: Props) {
     const { auth } = usePage().props;
     const canAdd = Boolean(auth.user);
@@ -291,7 +303,7 @@ export default function Browse({
     // Scroll memory: remember where the user was in this browse view so that
     // loading more → opening a card → coming back (browser Back or the "Browse"
     // crumb, which history-restores the accumulated list) lands in place.
-    const scrollKey = `browse-scroll:${JSON.stringify(buildQuery(filters))}`;
+    const scrollKey = `browse-scroll:${JSON.stringify(buildQuery(filters, groupDefault))}`;
     useEffect(() => {
         const save = () => {
             try {
@@ -362,7 +374,7 @@ export default function Browse({
         // keep ids the user can no longer see.
         clearSelection();
 
-        const next = buildQuery({ ...filters, ...partial });
+        const next = buildQuery({ ...filters, ...partial }, groupDefault);
         router.get('/browse', next, {
             preserveState: true,
             preserveScroll: true,
@@ -417,7 +429,10 @@ export default function Browse({
         router.get(
             '/browse',
             {
-                ...buildQuery({ ...filters, q: searchedQuery ?? null }),
+                ...buildQuery(
+                    { ...filters, q: searchedQuery ?? null },
+                    groupDefault,
+                ),
                 exact: 1,
             },
             {
@@ -1001,6 +1016,7 @@ export default function Browse({
                                 pagination={pagination}
                                 filters={filters}
                                 hasItems={items.length > 0}
+                                groupDefault={groupDefault}
                             />
                         </div>
                     </div>
@@ -1741,10 +1757,12 @@ function InfiniteFooter({
     pagination,
     filters,
     hasItems,
+    groupDefault,
 }: {
     pagination: Pagination;
     filters: CatalogFilters;
     hasItems: boolean;
+    groupDefault: boolean;
 }) {
     if (pagination.has_more) {
         return (
@@ -1754,7 +1772,7 @@ function InfiniteFooter({
                 params={{
                     only: ['items', 'pagination'],
                     data: {
-                        ...buildQuery(filters),
+                        ...buildQuery(filters, groupDefault),
                         page: pagination.page + 1,
                     },
                     preserveUrl: true,

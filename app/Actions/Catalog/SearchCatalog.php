@@ -385,11 +385,13 @@ class SearchCatalog
      */
     protected function collapseToBaseCards(Builder $query): void
     {
+        // Grouped on the base_key, but a row WITHOUT one stands alone: SQL puts
+        // every NULL in a single bucket, so plain GROUP BY base_key would
+        // collapse unrelated cards into one and hide the rest of them.
         $representativeIds = (clone $query)
             ->reorder()
-            ->select('base_key')
             ->selectRaw('MIN(id) as rep_id')
-            ->groupBy('base_key')
+            ->groupByRaw("COALESCE(catalog_items.base_key, CONCAT('#', catalog_items.id))")
             ->pluck('rep_id');
 
         $query->whereIn('id', $representativeIds)->withCount('variants');

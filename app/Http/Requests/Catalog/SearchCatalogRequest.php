@@ -81,7 +81,11 @@ class SearchCatalogRequest extends FormRequest
             'owned' => $v['owned'] ?? null,
             'sort' => $v['sort'] ?? 'number',
             'direction' => $v['direction'] ?? 'asc',
-            'group' => $this->boolean('group'),
+            // Tri-state on purpose: null means "not asked for", which lets the
+            // browse controller pick a default per vertical, while an explicit
+            // group=0 still turns grouping off. A plain boolean here could not
+            // tell an untouched page from a deliberately un-grouped one.
+            'group' => $this->has('group') ? $this->boolean('group') : null,
             'all' => $this->boolean('all'),
             'view' => $v['view'] ?? 'grid',
             'per_page' => min(max((int) ($v['per_page'] ?? 24), 1), 96),

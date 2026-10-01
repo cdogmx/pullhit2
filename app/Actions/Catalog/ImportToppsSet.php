@@ -68,7 +68,7 @@ class ImportToppsSet
 
             if ($withParallels) {
                 foreach ($subset['parallels'] ?? [] as $parallel) {
-                    $treatments[] = $parallel['name'];
+                    $treatments[] = $parallel;
                 }
             }
 
@@ -90,6 +90,7 @@ class ImportToppsSet
      *
      * @param  array<string, mixed>  $subset
      * @param  array<string, mixed>  $card
+     * @param  array<string, mixed>|null  $parallel  null for the base printing
      */
     protected function printing(
         Vertical $vertical,
@@ -97,11 +98,15 @@ class ImportToppsSet
         Set $set,
         array $subset,
         array $card,
-        ?string $parallel,
+        ?array $parallel,
     ): void {
         $attributes = array_filter([
             'language' => $set->language ?: 'en',
-            'parallel' => $parallel,
+            'parallel' => $parallel['name'] ?? null,
+            // Serial-numbered parallels print a stated run ("/199" on the card).
+            // Unnumbered ones carry none at all rather than a 0, which would read
+            // as a one-of-none.
+            'print_run' => isset($parallel['print_run']) ? (int) $parallel['print_run'] : null,
             'manufacturer' => $line->name,
             'franchise' => $card['franchise'] ?? null,
             // The insert this card belongs to. Absent on the base set, where

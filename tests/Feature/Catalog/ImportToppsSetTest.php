@@ -25,7 +25,7 @@ function toppsFixture(array $overrides = []): array
                 'name' => 'Base',
                 'parallels' => [
                     ['name' => 'Refractor', 'odds' => ['hobby' => '1:2']],
-                    ['name' => 'Gold Refractor', 'odds' => ['hobby' => '1:163']],
+                    ['name' => 'Gold Refractor', 'odds' => ['hobby' => '1:163'], 'print_run' => 50],
                 ],
                 'cards' => [
                     ['number' => '50', 'name' => 'Mickey Mouse', 'franchise' => 'Mickey & Friends'],
@@ -136,4 +136,37 @@ test('it files the set under collectibles, not under the game vertical', functio
 
     expect($line->name)->toBe('Topps')
         ->and($line->vertical_id)->toBe(Vertical::where('slug', 'collectibles')->first()->id);
+});
+
+test('a serial-numbered parallel records its print run, and an unnumbered one does not', function () {
+    app(ImportToppsSet::class)(toppsFixture());
+
+    $printings = CatalogItem::where('name', 'Mickey Mouse')->get();
+
+    $gold = $printings->firstWhere('attributes.parallel', 'Gold Refractor');
+    $plain = $printings->firstWhere('attributes.parallel', 'Refractor');
+
+    // "/50" is stated on the card, so it is worth storing. An unnumbered
+    // parallel carries no key at all — a 0 would read as a one-of-none.
+    expect($gold->attributes['print_run'])->toBe(50)
+        ->and($plain->attributes)->not->toHaveKey('print_run');
+});
+
+test('the print run does not change the identity of a printing', function () {
+    app(ImportToppsSet::class)(toppsFixture());
+    $before = CatalogItem::where('name', 'Mickey Mouse')
+        ->get()
+        ->pluck('identity_hash', 'id');
+
+    // Learning a parallel's print run later is a correction, not a new card, so
+    // re-importing with it must update the row rather than land beside it.
+    $data = toppsFixture();
+    $data['subsets'][0]['parallels'][0]['print_run'] = 1299;
+    app(ImportToppsSet::class)($data);
+
+    $after = CatalogItem::where('name', 'Mickey Mouse')->get();
+
+    expect($after)->toHaveCount($before->count())
+        ->and($after->pluck('identity_hash', 'id')->all())->toBe($before->all())
+        ->and($after->firstWhere('attributes.parallel', 'Refractor')->attributes['print_run'])->toBe(1299);
 });

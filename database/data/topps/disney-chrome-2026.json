@@ -21,103 +21,120 @@
           "name": "Magenta Refractor",
           "odds": {
             "hobby": "1:21"
-          }
+          },
+          "print_run": 399
         },
         {
           "name": "Pink Refractor",
           "odds": {
             "hobby": "1:33"
-          }
+          },
+          "print_run": 250
         },
         {
           "name": "Yellow and Green Raywave",
           "odds": {
             "hobby": "1:37"
-          }
+          },
+          "print_run": 225
         },
         {
           "name": "Aqua Refractor",
           "odds": {
             "hobby": "1:42"
-          }
+          },
+          "print_run": 199
         },
         {
           "name": "Purple and Light Green Shimmer Refractor",
           "odds": {
             "hobby": "1:47"
-          }
+          },
+          "print_run": 175
         },
         {
           "name": "Blue Refractor",
           "odds": {
             "hobby": "1:55"
-          }
+          },
+          "print_run": 150
         },
         {
           "name": "Dark Blue and Light Blue Lava",
           "odds": {
             "hobby": "1:66"
-          }
+          },
+          "print_run": 125
         },
         {
           "name": "101 Dalmatians Black and White Shimmer",
           "odds": {
             "hobby": "1:81"
-          }
+          },
+          "print_run": 101
         },
         {
           "name": "Green Refractor",
           "odds": {
             "hobby": "1:83"
-          }
+          },
+          "print_run": 99
         },
         {
           "name": "Purple Refractor",
           "odds": {
             "hobby": "1:109"
-          }
+          },
+          "print_run": 75
         },
         {
           "name": "Gold Refractor",
           "odds": {
             "hobby": "1:163"
-          }
+          },
+          "print_run": 50
         },
         {
           "name": "Pearl Refractor",
           "odds": {
             "hobby": "1:266"
-          }
+          },
+          "print_run": 30
         },
         {
           "name": "Mickey Mouse Red and Black Refractor",
           "odds": {
             "hobby": "1:291"
-          }
+          },
+          "print_run": 28
         },
         {
           "name": "Orange Refractor",
           "odds": {
             "hobby": "1:326"
-          }
+          },
+          "print_run": 25
         },
         {
           "name": "Black Refractor",
           "odds": {
             "hobby": "1:814"
-          }
+          },
+          "print_run": 10
         },
         {
           "name": "Red Refractor",
           "odds": {
             "hobby": "1:1628"
-          }
+          },
+          "print_run": 5
         },
         {
           "name": "Superfractor",
           "odds": {
             "hobby": "1:6686"
-          }
+          },
+          "print_run": 1
         },
         {
           "name": "Prism Refractor",
@@ -153,7 +170,8 @@
           "name": "When You Wish Upon a Star Refractor",
           "odds": {
             "hobby": "1:283"
-          }
+          },
+          "print_run": 15
         },
         {
           "name": "Red Wave",

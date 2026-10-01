@@ -21,6 +21,7 @@ use App\Models\CollectionItem;
 use App\Models\GradingCompany;
 use App\Models\ProductLine;
 use App\Models\Set;
+use App\Models\Vertical;
 use App\Support\Catalog\CrossLanguageMatcher;
 use App\Support\Verticals\Definitions\TcgVertical;
 use Illuminate\Http\RedirectResponse;
@@ -35,6 +36,12 @@ use Inertia\Response;
  */
 class CatalogController extends Controller
 {
+    /**
+     * Verticals whose cards routinely have many printings, so browse collapses
+     * them to one row per card unless asked otherwise.
+     */
+    private const GROUPS_PRINTINGS_BY_DEFAULT = ['collectibles'];
+
     public function index(
         SearchCatalogRequest $request,
         SearchCatalog $search,
@@ -90,6 +97,41 @@ class CatalogController extends Controller
     }
 
     /**
+     * Whether the vertical being browsed collapses printings by default.
+     *
+     * Collectibles do: a Topps chrome set carries thirty-odd parallels of every
+     * subject, so one row per printing means 6,400 near-identical rows for 200
+     * cards. A TCG set carries two or three, which are worth listing separately.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function groupsByDefault(array $filters): bool
+    {
+        $vertical = match (true) {
+            ! empty($filters['vertical']) => $filters['vertical'],
+            ! empty($filters['product_line']) => ProductLine::where('slug', $filters['product_line'])
+                ->value('vertical_id'),
+            // Qualified: the join brings product_lines.slug along, so a bare
+            // 'slug' is ambiguous.
+            ! empty($filters['set']) => Set::where('sets.slug', $filters['set'])
+                ->join('product_lines', 'product_lines.id', '=', 'sets.product_line_id')
+                ->value('product_lines.vertical_id'),
+            default => null,
+        };
+
+        if ($vertical === null) {
+            return false;
+        }
+
+        // Either a slug (from the filter) or an id (resolved via the line above).
+        $slug = is_numeric($vertical)
+            ? Vertical::whereKey($vertical)->value('slug')
+            : $vertical;
+
+        return in_array($slug, self::GROUPS_PRINTINGS_BY_DEFAULT, true);
+    }
+
+    /**
      * @param  array<string, mixed>  $filters
      * @param  array{title: string, heading: string}|null  $seo
      */
@@ -99,6 +141,17 @@ class CatalogController extends Controller
         // to singles; the UI's "All types" option sends 'all' to opt back in.
         if (($filters['item_type'] ?? null) === null) {
             $filters['item_type'] = ItemType::Single->value;
+        }
+
+        // Grouping collapses a card's printings into one row. Whether that is the
+        // right default depends on how many printings a card has: two or three in
+        // a TCG set, where seeing the reverse holo as its own row is useful, but
+        // thirty-two in a modern chrome release, where it buries the set. So the
+        // vertical decides, and an explicit group=0/1 always wins.
+        $groupDefault = $this->groupsByDefault($filters);
+
+        if (($filters['group'] ?? null) === null) {
+            $filters['group'] = $groupDefault;
         }
 
         $tiles = app(BrowseTiles::class);
@@ -151,6 +204,9 @@ class CatalogController extends Controller
 
         $common = [
             'mode' => $mode,
+            // So the toggle can tell an un-grouped view from an untouched one and
+            // send group=0 when it needs to override the default.
+            'groupDefault' => $groupDefault,
             'blurb' => $blurb,
             'wishlistedIds' => auth()->user()?->wishlistItems()->pluck('catalog_item_id')->all() ?? [],
             'options' => $options($filters),
