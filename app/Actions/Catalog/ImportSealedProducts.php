@@ -138,8 +138,21 @@ class ImportSealedProducts
             str_contains($n, 'collection') || str_contains($n, 'collector') => 'collection',
             str_contains($n, 'bundle') => 'bundle',
             // Generic sealed signals we haven't pinned to a precise type.
+            //
+            // 'trove' and 'starter set' are Lorcana's own words for major sealed
+            // SKUs that carry none of the signals above: an Illumineer's Trove
+            // says neither box nor pack nor deck, and a "2-Player Starter Set"
+            // only ever landed when TCGplayer also wrote "Display". They sit
+            // AFTER the collection arm so a "Collection Starter Set" stays a
+            // collection — sealed_type is identity-defining, and reclassifying
+            // the six that already exist would rehash them.
+            //
+            // Each also catches its Case ("Illumineer's Trove Case"), which is
+            // why bare 'case' is deliberately absent: it would pull in deck
+            // boxes and card cases, which are accessories, not sealed cards.
             str_contains($n, 'booster') || str_contains($n, 'box') || str_contains($n, 'pack')
-                || str_contains($n, 'display') || str_contains($n, 'deck') => 'other',
+                || str_contains($n, 'display') || str_contains($n, 'deck')
+                || str_contains($n, 'trove') || str_contains($n, 'starter set') => 'other',
             default => null,
         };
     }
