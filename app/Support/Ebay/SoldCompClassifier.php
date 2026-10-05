@@ -8,6 +8,7 @@ use App\Models\Set;
 use App\Support\Catalog\StampMatcher;
 use App\Support\Catalog\Subsets;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Decides whether an eBay sold candidate is a genuine single-card sale of THIS
@@ -242,7 +243,6 @@ class SoldCompClassifier
         if ($this->numberContradicts($item, $lower)) {
             return 'collector number does not match';
         }
-
 
         // The treatment, when the listing names one in words. A chase printing
         // often states what it is and never states its number: a "SPECIAL
@@ -1095,7 +1095,143 @@ class SoldCompClassifier
         );
     }
 
-    /** Normalised core of a card name: lowercased, suffixes (ex/gx/v/…) dropped. */
+    /**
+     * How sellers spell the parallels that are routinely mis-spelled. Keyed by
+     * the catalog's own name; the name itself is always a needle too.
+     */
+    private const PARALLEL_ALIASES = [
+        'X-Fractor' => ['x fractor', 'x factor', 'xfractor', 'xfactor'],
+        'Raywave' => ['raywave', 'ray wave'],
+        'Superfractor' => ['superfractor', 'super fractor', 'super refractor'],
+    ];
+
+    /** @var array<int, bool> vertical_id → is it collectibles, memoised */
+    private array $collectibleVertical = [];
+
+    /** @var array<int, list<string>> set_id → the parallel names it prints */
+    private array $parallelsBySet = [];
+
+    /** Whether this item is a collectible, where `parallel` is the printing. */
+    private function isCollectible(CatalogItem $item): bool
+    {
+        $id = $item->vertical_id;
+
+        if ($id === null) {
+            return false;
+        }
+
+        // Memoised: classify() runs once per printing per candidate, and a set
+        // like Disney Chrome has 8,068 printings.
+        return $this->collectibleVertical[$id] ??= $item->vertical?->slug === 'collectibles';
+    }
+
+    /**
+     * Every parallel name this set prints — the vocabulary the gate matches
+     * against. Read from the catalog rather than hardcoded, so a new Topps
+     * release needs no code.
+     *
+     * @return list<string>
+     */
+    private function setParallels(CatalogItem $item): array
+    {
+        $setId = $item->set_id;
+
+        if ($setId === null) {
+            return [];
+        }
+
+        if (isset($this->parallelsBySet[$setId])) {
+            return $this->parallelsBySet[$setId];
+        }
+
+        // Decoded here rather than with JSON_EXTRACT so the gate behaves the
+        // same on MySQL and on the suite's SQLite.
+        $names = DB::table('catalog_items')
+            ->where('set_id', $setId)
+            ->distinct()
+            ->pluck('attributes')
+            ->map(function ($json) {
+                $decoded = is_array($json) ? $json : json_decode((string) $json, true);
+
+                return is_array($decoded) ? ($decoded['parallel'] ?? null) : null;
+            })
+            ->filter(fn ($n) => is_string($n) && $n !== '')
+            ->unique()
+            ->values()
+            ->all();
+
+        // Longest first, so "Aqua Wave" is tried before "Wave" and a specific
+        // name always beats the generic tail it ends with.
+        usort($names, fn ($a, $b) => mb_strlen($b) <=> mb_strlen($a));
+
+        return $this->parallelsBySet[$setId] = $names;
+    }
+
+    /**
+     * The most specific parallel this title names, or null for none.
+     *
+     * A bare "Refractor" is the tail of a dozen others, so a name that is only a
+     * suffix of another in the same set is a last resort: "Aqua Wave Refractor"
+     * is an Aqua Wave, not a Refractor.
+     *
+     * @param  list<string>  $names
+     */
+    private static function statedParallel(string $lower, array $names): ?string
+    {
+        $title = self::foldParallel($lower) ?? '';
+        $generic = null;
+
+        foreach ($names as $name) {
+            $needles = [mb_strtolower($name), ...(self::PARALLEL_ALIASES[$name] ?? [])];
+
+            $hit = false;
+            foreach ($needles as $needle) {
+                $folded = self::foldParallel($needle);
+                if ($folded !== null && str_contains($title, $folded)) {
+                    $hit = true;
+                    break;
+                }
+            }
+
+            if (! $hit) {
+                continue;
+            }
+
+            // Is some OTHER parallel of this set a longer name ending in this
+            // one? Then this is the generic tail, held back in case nothing
+            // more specific matches.
+            $isTail = false;
+            foreach ($names as $other) {
+                if ($other !== $name && str_ends_with(mb_strtolower($other), ' '.mb_strtolower($name))) {
+                    $isTail = true;
+                    break;
+                }
+            }
+
+            if ($isTail) {
+                $generic ??= $name;
+
+                continue;
+            }
+
+            return $name;
+        }
+
+        return $generic;
+    }
+
+    /** Comparable form of a parallel name: lowercase, punctuation to spaces. */
+    private static function foldParallel(?string $name): ?string
+    {
+        if ($name === null || $name === '') {
+            return null;
+        }
+
+        $folded = trim((string) preg_replace('/\s+/', ' ',
+            (string) preg_replace('/[^a-z0-9]+/', ' ', mb_strtolower($name))));
+
+        return $folded === '' ? null : $folded;
+    }
 
     /** Normalised core of a card name: lowercased, suffixes (ex/gx/v/…) dropped. */
     private function nameCore(string $name): string
@@ -1155,6 +1291,24 @@ class SoldCompClassifier
                 if ($other !== $colour && self::statesColour($lower, $other)) {
                     return false;
                 }
+            }
+        }
+
+        // The colourway gate again, for collectibles. A Topps chrome card exists
+        // in thirty-odd parallels at wildly different prices — Mickey #50 is
+        // $9.68 as a base card and $436 as an Aqua Wave — so pooling their sales
+        // is the same expensive mistake as pooling the RGB Mews.
+        //
+        // Exact agreement both ways: a parallel row needs its name in the title,
+        // and a BASE row rejects any title that names a parallel. Without the
+        // second half the base card swallows everything, which is how 37 sales
+        // of six different printings ended up on one row.
+        if ($this->isCollectible($item)) {
+            $mine = $attributes['parallel'] ?? null;
+            $stated = self::statedParallel($lower, $this->setParallels($item));
+
+            if (self::foldParallel($mine) !== self::foldParallel($stated)) {
+                return false;
             }
         }
 
