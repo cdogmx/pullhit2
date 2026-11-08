@@ -34,8 +34,21 @@ type Props = {
     };
 };
 
-/** Milliseconds per day of the race. Slow enough to read a name. */
-const FRAME_MS = 900;
+/**
+ * Milliseconds per day of the race, and the bar transition must match it.
+ *
+ * At 900ms a 30-day window built 87 frames and took 78 seconds to play, which
+ * is longer than anyone watches. The bars carry their names and values with
+ * them, so the race stays readable much faster than it stays watchable.
+ *
+ * The transition is LINEAR and exactly one frame long on purpose: an eased
+ * transition shorter than the frame makes each bar stop dead and wait, which
+ * reads as stuttering rather than racing.
+ */
+const FRAME_MS = 300;
+
+/** Multipliers the speed button cycles through. */
+const SPEEDS = [1, 2, 4] as const;
 
 const ROW_H = 34;
 
@@ -84,6 +97,7 @@ export default function PriceRace({ race }: Props) {
 
     const [index, setIndex] = useState(0);
     const [playing, setPlaying] = useState(true);
+    const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
     const timer = useRef<number | null>(null);
 
     const frame = frames[index];
@@ -119,14 +133,14 @@ export default function PriceRace({ race }: Props) {
 
                 return i + 1;
             });
-        }, FRAME_MS);
+        }, FRAME_MS / speed);
 
         return () => {
             if (timer.current) {
                 window.clearTimeout(timer.current);
             }
         };
-    }, [playing, index, frames.length]);
+    }, [playing, index, frames.length, speed]);
 
     const restart = useCallback(() => {
         setIndex(0);
@@ -180,6 +194,24 @@ export default function PriceRace({ race }: Props) {
                             )}
                             {atEnd ? 'Replay' : playing ? 'Pause' : 'Play'}
                         </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            aria-label={`Playback speed ${speed}x`}
+                            onClick={() =>
+                                setSpeed(
+                                    (s) =>
+                                        SPEEDS[
+                                            (SPEEDS.indexOf(s) + 1) %
+                                                SPEEDS.length
+                                        ],
+                                )
+                            }
+                        >
+                            <span className="font-mono tabular-nums">
+                                {speed}&times;
+                            </span>
+                        </Button>
                         <span className="w-24 text-right font-mono text-sm tabular-nums">
                             {dayLabel(frame.day)}
                         </span>
@@ -225,10 +257,11 @@ export default function PriceRace({ race }: Props) {
                         return (
                             <div
                                 key={bar.id}
-                                className="absolute inset-x-0 flex items-center gap-2 transition-all duration-700 ease-out"
+                                className="absolute inset-x-0 flex items-center gap-2 transition-all ease-linear"
                                 style={{
                                     transform: `translateY(${rank * ROW_H}px)`,
                                     height: ROW_H - 6,
+                                    transitionDuration: `${FRAME_MS / speed}ms`,
                                 }}
                             >
                                 <span className="w-5 shrink-0 text-right font-mono text-xs text-muted-foreground tabular-nums">
@@ -236,9 +269,10 @@ export default function PriceRace({ race }: Props) {
                                 </span>
 
                                 <div
-                                    className="flex h-full min-w-0 items-center gap-2 rounded-r-md bg-primary/15 pr-2 transition-all duration-700 ease-out"
+                                    className="flex h-full min-w-0 items-center gap-2 rounded-r-md bg-primary/15 pr-2 transition-all ease-linear"
                                     style={{
                                         width: `${Math.max(12, (bar.value / scale) * 100)}%`,
+                                        transitionDuration: `${FRAME_MS / speed}ms`,
                                     }}
                                 >
                                     {card.image && (
