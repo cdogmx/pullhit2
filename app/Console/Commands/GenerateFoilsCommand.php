@@ -7,6 +7,7 @@ use App\Actions\Valuation\SeedSyntheticValuation;
 use App\Enums\ItemType;
 use App\Models\CatalogItem;
 use App\Models\ProductLine;
+use App\Models\Set;
 use Illuminate\Console\Command;
 
 /**
@@ -19,6 +20,7 @@ class GenerateFoilsCommand extends Command
 {
     protected $signature = 'catalog:generate-foils
         {--line=lorcana : product line slug}
+        {--set= : only this set, by slug — a new release needs no pass over the rest}
         {--multiplier= : foil premium for the seed estimate (default from config)}
         {--limit= : cap how many base cards to process}
         {--dry : report counts without writing}';
@@ -36,6 +38,19 @@ class GenerateFoilsCommand extends Command
             return self::FAILURE;
         }
 
+        $set = null;
+        if ($slug = $this->option('set')) {
+            $set = Set::where('slug', $slug)
+                ->where('product_line_id', $line->id)
+                ->first();
+
+            if (! $set) {
+                $this->error("No set [{$slug}] in {$line->name}.");
+
+                return self::FAILURE;
+            }
+        }
+
         $mult = (float) ($this->option('multiplier') ?: config('valuation.lorcana_foil_multiplier', 2.0));
         $dry = (bool) $this->option('dry');
 
@@ -47,6 +62,7 @@ class GenerateFoilsCommand extends Command
             ->where('product_line_id', $line->id)
             ->where('item_type', ItemType::Single)
             ->where('variant', 'normal')
+            ->when($set, fn ($q) => $q->where('set_id', $set->id))
             ->when($this->option('limit'), fn ($q, $n) => $q->limit((int) $n))
             ->with(['vertical', 'productLine', 'set', 'defaultMarketValue'])
             ->chunkById(200, function ($chunk) use ($create, $seed, $mult, $dry, &$created, &$seeded, &$skipped) {
@@ -58,8 +74,19 @@ class GenerateFoilsCommand extends Command
                         continue;
                     }
 
+                    // A dry run has to answer the same question a real run
+                    // does — is there already a foil of this card? Counting
+                    // every candidate instead reported 3,047 for a line where
+                    // only 511 were missing, which reads as mass duplication.
                     if ($dry) {
-                        $created++;
+                        $exists = CatalogItem::where('set_id', $base->set_id)
+                            ->where('item_type', ItemType::Single)
+                            ->where('name', $base->name)
+                            ->where('number', $base->number)
+                            ->where('variant', 'foil')
+                            ->exists();
+
+                        $exists ? $skipped++ : $created++;
 
                         continue;
                     }
