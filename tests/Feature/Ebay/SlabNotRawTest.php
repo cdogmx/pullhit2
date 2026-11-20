@@ -180,9 +180,10 @@ test('"NO. 250" is a stated collector number', function () {
         slabCandidate('Pokemon Card - Pikachu ex Neo Premium NO. 250 Japanese', 1799), $this->item
     ))->toBeTrue();
 
-    // Our own number, stated the same way, is fine.
+    // Our own number, stated the same way, is fine. (No "Japanese" here: this
+    // item is English, and the language gate rightly rejects that on its own.)
     expect($this->classifier->structurallyInvalid(
-        slabCandidate('Pokemon Card - Pikachu ex NO. 276 Japanese', 1799), $this->item
+        slabCandidate('Pokemon Card - Pikachu ex NO. 276', 1799), $this->item
     ))->toBeFalse();
 });
 

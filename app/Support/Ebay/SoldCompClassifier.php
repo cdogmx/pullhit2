@@ -181,6 +181,15 @@ class SoldCompClassifier
     {
         $lower = mb_strtolower($title);
 
+        // Another language's printing. Live asks were filtered on language, sold
+        // comps never were: 3,440 comps on 1,617 English cards named another
+        // language, among them a Spanish Zekrom ex BWR and a $9,500 Japanese
+        // Jungle box priced as the English one. Ahead of the sealed branch
+        // because a box's language is as much a different market as a card's.
+        if ($foreign = CardSearchTerms::foreignLanguageNamed($item, $title)) {
+            return "listing is a {$foreign} printing, this card is not";
+        }
+
         // Sealed products use their own variant-aware gates, shared with the
         // card-page listings and the for-sale ask ingest.
         if ($item->item_type === ItemType::Sealed) {

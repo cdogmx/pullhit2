@@ -30,6 +30,7 @@ class PruneBadCompsCommand extends Command
         {--from-id= : only observations above this id}
         {--to-id= : only observations up to this id}
         {--limit= : stop after this many observations, and report where to resume}
+        {--title-regex= : only observations whose lowercased title matches this MySQL REGEXP}
         {--price-band : also drop raw comps priced outside the sanity band}
         {--dry-run : report what would be removed, delete nothing}';
 
@@ -79,6 +80,13 @@ class PruneBadCompsCommand extends Command
             // can schedule around, and the reject rate climbs the further back
             // you go — 0% in September, 12.8% in mid-August, 20.7% before that
             // — so the oldest slices are worth doing first.
+            // A pre-filter, not a verdict: the classifier still judges every row
+            // it lets through. It exists so a gate added for one tell can be
+            // applied to the rows that carry it without walking all 1.2M.
+            ->when($this->option('title-regex'), fn (Builder $q, $re) => $q->whereRaw(
+                "LOWER(JSON_UNQUOTE(JSON_EXTRACT(raw, '$.title'))) REGEXP ?",
+                [$re],
+            ))
             ->when($this->option('from-id'), fn (Builder $q, $id) => $q->where('id', '>', (int) $id))
             ->when($this->option('to-id'), fn (Builder $q, $id) => $q->where('id', '<=', (int) $id))
             ->chunkById(500, function ($rows) use ($classifier, $recompute, $anchor, $dryRun, $usePriceBand, $companyIds, $limit, &$affected, &$removed, &$checked, &$lastId) {

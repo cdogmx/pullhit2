@@ -85,6 +85,40 @@ final class CardSearchTerms
     }
 
     /**
+     * The other language a title names, when it is not this card's — or null.
+     *
+     * The half of matchesLanguage() that holds for sold comps. Sold titles of a
+     * Japanese card often never say "Japanese" (the search already pinned it),
+     * so requiring a card's own language there throws good comps away; naming a
+     * DIFFERENT language is a fact about the listing either way. A word that is
+     * part of the card's own name or set is not a tell.
+     */
+    public static function foreignLanguageNamed(CatalogItem $item, string $title): ?string
+    {
+        $language = self::language($item);
+        if ($language === null) {
+            return null;
+        }
+
+        // An English card whose title SAYS English is one, whatever else the
+        // title mentions — "Sanji P-034 Promo English One Piece Card Japan" is
+        // an English card shipped from Japan.
+        if ($language === 'English' && preg_match('/\benglish\b/iu', $title)) {
+            return null;
+        }
+
+        $identity = $item->name.' '.($item->set?->name ?? '');
+
+        foreach (self::LANGUAGE_MARKERS as $marker => $pattern) {
+            if ($marker !== $language && preg_match($pattern, $title) && ! preg_match($pattern, $identity)) {
+                return $marker;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Is this listing title the card's language? A non-English printing must say
      * so ("Japanese", "JP", 日本語); an English one must name no other language.
      * Keyword searches alone leak the wrong printing, whose prices are a
