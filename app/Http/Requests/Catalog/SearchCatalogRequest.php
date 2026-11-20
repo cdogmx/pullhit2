@@ -58,11 +58,18 @@ class SearchCatalogRequest extends FormRequest
     /**
      * Normalized filters for the SearchCatalog action + the UI's current state.
      *
+     * With $browseDefaults an absent sort/direction stays null, so the web
+     * browse can pick its own default once it knows the whole context (a set
+     * can come from the route, not the query). The API keeps binder order.
+     *
      * @return array<string, mixed>
      */
-    public function filters(): array
+    public function filters(bool $browseDefaults = false): array
     {
         $v = $this->validated();
+
+        $sort = $v['sort'] ?? ($browseDefaults ? null : 'number');
+        $direction = $v['direction'] ?? ($browseDefaults ? null : 'asc');
 
         return [
             'q' => $v['q'] ?? null,
@@ -79,8 +86,8 @@ class SearchCatalogRequest extends FormRequest
             'grading_company' => $v['grading_company'] ?? null,
             'grade' => isset($v['grade']) ? (float) $v['grade'] : null,
             'owned' => $v['owned'] ?? null,
-            'sort' => $v['sort'] ?? 'number',
-            'direction' => $v['direction'] ?? 'asc',
+            'sort' => $sort,
+            'direction' => $direction,
             // Tri-state on purpose: null means "not asked for", which lets the
             // browse controller pick a default per vertical, while an explicit
             // group=0 still turns grouping off. A plain boolean here could not
@@ -90,5 +97,15 @@ class SearchCatalogRequest extends FormRequest
             'view' => $v['view'] ?? 'grid',
             'per_page' => min(max((int) ($v['per_page'] ?? 24), 1), 96),
         ];
+    }
+
+    /**
+     * Sorts that read best high-to-low when no direction is given. Mirrors
+     * DESC_BY_DEFAULT on the browse page, which omits a direction from the URL
+     * exactly when it matches this.
+     */
+    public static function defaultDirection(string $sort): string
+    {
+        return in_array($sort, ['price', 'change', 'newest', 'release'], true) ? 'desc' : 'asc';
     }
 }

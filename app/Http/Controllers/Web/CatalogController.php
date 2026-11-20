@@ -48,7 +48,7 @@ class CatalogController extends Controller
         SearchCatalog $search,
         CatalogFilterOptions $options,
     ): Response {
-        return $this->renderBrowse($request->filters(), $search, $options);
+        return $this->renderBrowse($request->filters(browseDefaults: true), $search, $options);
     }
 
     /** SEO landing for a product line, e.g. /browse/pokemon. */
@@ -60,7 +60,7 @@ class CatalogController extends Controller
     ): Response {
         $line = ProductLine::where('slug', $productLine)->firstOrFail();
 
-        $filters = array_merge($request->filters(), ['product_line' => $line->slug]);
+        $filters = array_merge($request->filters(browseDefaults: true), ['product_line' => $line->slug]);
 
         return $this->renderBrowse($filters, $search, $options, seo: [
             'title' => "{$line->name} cards & prices",
@@ -79,7 +79,7 @@ class CatalogController extends Controller
         $line = ProductLine::where('slug', $productLine)->firstOrFail();
         $setModel = Set::where('slug', $set)->where('product_line_id', $line->id)->firstOrFail();
 
-        $filters = array_merge($request->filters(), array_filter([
+        $filters = array_merge($request->filters(browseDefaults: true), array_filter([
             'product_line' => $line->slug,
             // Seed the set's series so the brand → series → set scope pickers (and
             // the breadcrumb) show the full path a direct set link landed on.
@@ -154,6 +154,14 @@ class CatalogController extends Controller
         if (($filters['group'] ?? null) === null) {
             $filters['group'] = $groupDefault;
         }
+
+        // Browse leads with the most valuable cards. A catalog-wide search is
+        // the exception: "number" is what SearchCatalog reads as "rank by
+        // relevance", and inside a set the box is a filter, so price stands.
+        // The page mirrors this rule to know when a sort can be left out.
+        $searching = trim((string) ($filters['q'] ?? '')) !== '' && empty($filters['set']);
+        $filters['sort'] ??= $searching ? 'number' : 'price';
+        $filters['direction'] ??= SearchCatalogRequest::defaultDirection($filters['sort']);
 
         $tiles = app(BrowseTiles::class);
 

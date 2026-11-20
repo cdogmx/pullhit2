@@ -70,11 +70,12 @@ test('the series scope reaches the filter option lists', function () {
 
 test('a set filter keeps the binder order instead of ranking by relevance', function () {
     // "Pikachu" is an exact name hit and would outrank "Pikachu ex" on relevance;
-    // inside a set the collector-number order stands (4 before 100).
+    // inside a set the chosen order stands (4 before 100). Pinned to number:
+    // the browse default inside a set is price, and neither card has one.
     CatalogItem::factory()->for($this->vertical)->for($this->poke)->for($this->sv)
         ->create(['name' => 'Pikachu', 'number' => '100', 'attributes' => ['language' => 'en']]);
 
-    $this->get('/browse?product_line=pokemon&set=surging-sparks&q=pikachu')
+    $this->get('/browse?product_line=pokemon&set=surging-sparks&q=pikachu&sort=number')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('mode', 'cards')

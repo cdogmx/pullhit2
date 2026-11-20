@@ -114,6 +114,18 @@ const DESC_BY_DEFAULT: Record<string, 'asc' | 'desc'> = {
 
 const ALL = '__all__';
 
+/**
+ * The sort the server applies when none is sent: price, high to low — except
+ * a catalog-wide search, which ranks by relevance ("number"). Inside a set the
+ * box only filters the set, so price stands. Mirrors renderBrowse.
+ */
+const defaultSortFor = (f: Pick<CatalogFilters, 'q' | 'set'>): string =>
+    f.q && !f.set ? 'number' : 'price';
+
+const isDefaultSort = (f: CatalogFilters): boolean =>
+    f.sort === defaultSortFor(f) &&
+    f.direction === (DESC_BY_DEFAULT[f.sort] ?? 'asc');
+
 /** The only subset value that appears as a filter is the parent's own "main" set. */
 const subsetLabel = (key: string): string =>
     key === 'main' ? 'Main set' : key;
@@ -167,11 +179,15 @@ function buildQuery(
         out.owned = filters.owned;
     }
 
-    if (filters.sort && filters.sort !== 'number') {
+    // Omit what the server would pick anyway (see defaultSortFor).
+    if (filters.sort && filters.sort !== defaultSortFor(filters)) {
         out.sort = filters.sort;
     }
 
-    if (filters.direction && filters.direction !== 'asc') {
+    if (
+        filters.direction &&
+        filters.direction !== (DESC_BY_DEFAULT[filters.sort] ?? 'asc')
+    ) {
         out.direction = filters.direction;
     }
 
@@ -374,7 +390,16 @@ export default function Browse({
         // keep ids the user can no longer see.
         clearSelection();
 
-        const next = buildQuery({ ...filters, ...partial }, groupDefault);
+        const merged = { ...filters, ...partial };
+
+        // Starting or clearing a search moves to that context's default sort
+        // (relevance vs price) — unless the user chose a sort themselves.
+        if (!('sort' in partial) && isDefaultSort(filters)) {
+            merged.sort = defaultSortFor(merged);
+            merged.direction = DESC_BY_DEFAULT[merged.sort] ?? 'asc';
+        }
+
+        const next = buildQuery(merged, groupDefault);
         router.get('/browse', next, {
             preserveState: true,
             preserveScroll: true,

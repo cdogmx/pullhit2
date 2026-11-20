@@ -58,7 +58,40 @@ test('the browse page renders cards once a set is chosen, defaulting to singles'
             ->where('pagination.total', 3)
             ->where('filters.item_type', 'single')
             ->has('options.rarities')
-            ->where('filters.sort', 'number'));
+            // Browse leads with the most valuable cards.
+            ->where('filters.sort', 'price')
+            ->where('filters.direction', 'desc'));
+});
+
+test('browse defaults to price high-to-low, and an explicit sort still wins', function () {
+    $pikachu = CatalogItem::where('name', 'Pikachu ex')->firstOrFail();
+    MarketValue::factory()->for($pikachu)->create([
+        'state_key' => 'NM', 'condition' => 'NM', 'grading_company_id' => null, 'median' => 9000,
+    ]);
+
+    $this->get('/browse?set=chaos-rising-en')
+        ->assertInertia(fn (Assert $page) => $page->where('items.0.name', 'Pikachu ex'));
+
+    $this->get('/browse?set=chaos-rising-en&sort=number')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('filters.sort', 'number')
+            ->where('filters.direction', 'asc')
+            ->where('items.0.name', 'Weedle'));
+});
+
+test('a catalog-wide search still ranks by relevance, but a filter inside a set keeps price', function () {
+    $this->get('/browse?q=weedle')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('filters.sort', 'number')
+            ->where('filters.direction', 'asc'));
+
+    $this->get('/browse?set=chaos-rising-en&q=weedle')
+        ->assertInertia(fn (Assert $page) => $page->where('filters.sort', 'price'));
+});
+
+test('the API keeps binder order by default', function () {
+    expect($this->getJson('/api/v1/catalog')->json('filters'))
+        ->toMatchArray(['sort' => 'number', 'direction' => 'asc']);
 });
 
 test('the browse page can opt into all types or just sealed', function () {
