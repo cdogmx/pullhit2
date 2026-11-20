@@ -23,6 +23,7 @@ use App\Models\ProductLine;
 use App\Models\Set;
 use App\Models\Vertical;
 use App\Support\Catalog\CrossLanguageMatcher;
+use App\Support\Http\Crawler;
 use App\Support\Verticals\Definitions\TcgVertical;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -378,25 +379,32 @@ class CatalogController extends Controller
         MaybeRefreshEbay $maybeRefresh,
         PriceHistory $history,
     ): Response {
-        // Record the view (popularity drives refresh cadence) and, if the eBay
-        // data is stale for this item's tier, queue a background refresh. The
-        // page renders the current cached value immediately.
-        $catalogItem->forceFill([
-            'popularity' => $catalogItem->popularity + 1,
-            'last_viewed_at' => Carbon::now(),
-        ])->save();
+        // A crawler gets the page but none of the side effects: they exist for
+        // readers, and GPTBot walking thousands of cards once queued 3,000
+        // scrapes ahead of every real one (see Crawler).
+        $refreshing = false;
 
-        // When stale (>12h), this queues a background refresh and reports true so
-        // the page shows an "updating" indicator and polls for the new values.
-        $refreshing = $maybeRefresh($catalogItem);
+        if (! Crawler::is($request)) {
+            // Record the view (popularity drives refresh cadence) and, if the eBay
+            // data is stale for this item's tier, queue a background refresh. The
+            // page renders the current cached value immediately.
+            $catalogItem->forceFill([
+                'popularity' => $catalogItem->popularity + 1,
+                'last_viewed_at' => Carbon::now(),
+            ])->save();
 
-        // Lazily pull PriceCharting data (completed sales + long-term monthly
-        // history) once per sealed card — fire-and-forget; appears on next load.
-        app(MaybeRefreshPricecharting::class)($catalogItem);
+            // When stale (>12h), this queues a background refresh and reports true so
+            // the page shows an "updating" indicator and polls for the new values.
+            $refreshing = $maybeRefresh($catalogItem);
 
-        // Refresh the "for sale" asks (eBay Browse + TCGplayer, both free) if
-        // stale — background, appears on the next load.
-        app(MaybeRefreshForSale::class)($catalogItem);
+            // Lazily pull PriceCharting data (completed sales + long-term monthly
+            // history) once per sealed card — fire-and-forget; appears on next load.
+            app(MaybeRefreshPricecharting::class)($catalogItem);
+
+            // Refresh the "for sale" asks (eBay Browse + TCGplayer, both free) if
+            // stale — background, appears on the next load.
+            app(MaybeRefreshForSale::class)($catalogItem);
+        }
 
         $model = $show($catalogItem); // has marketValues + relations loaded
 

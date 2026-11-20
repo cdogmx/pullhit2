@@ -133,3 +133,31 @@ test('with the server fetcher switched on, nothing is queued for the agent', fun
     expect(($this->refresh)($this->card))->toBeTrue()
         ->and(EbayScrapeJob::count())->toBe(0);
 });
+
+test('a crawler gets the card page but queues nothing and adds no popularity', function () {
+    // The live failure: GPTBot walked ~5,700 card pages in two hours and
+    // queued 3,000 scrapes at view priority, ahead of every real reader.
+    $this->presence->touch();
+    // A consistent set/product line so /catalog/{id} can 301 to the canonical
+    // page, which is where the view side effects run.
+    $set = \App\Models\Set::factory()->create();
+    $card = CatalogItem::factory()->create([
+        'set_id' => $set->id, 'product_line_id' => $set->product_line_id,
+        'ebay_refreshed_at' => null, 'popularity' => 0,
+        'attributes' => ['language' => 'en', 'variant' => 'normal', 'rarity' => 'Rare'],
+    ]);
+
+    $this->withHeaders([
+        'User-Agent' => 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.4; +https://openai.com/gptbot)',
+    ])->followingRedirects()->get("/catalog/{$card->id}")->assertOk();
+
+    expect(EbayScrapeJob::count())->toBe(0)
+        ->and((int) $card->fresh()->popularity)->toBe(0);
+
+    // The same page for a person still queues.
+    $this->withHeaders([
+        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
+    ])->followingRedirects()->get("/catalog/{$card->id}")->assertOk();
+
+    expect(EbayScrapeJob::count())->toBe(1);
+});
