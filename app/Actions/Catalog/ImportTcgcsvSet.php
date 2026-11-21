@@ -83,7 +83,7 @@ class ImportTcgcsvSet
             ['vertical_id' => $vertical->id, 'slug' => $game->value],
             ['name' => $game->productLineName()],
         );
-        $set = $this->upsertSet($productLine->id, $group);
+        $set = $this->upsertSet($productLine->id, $group, $game);
 
         $items = 0;
         $valued = 0;
@@ -111,7 +111,14 @@ class ImportTcgcsvSet
                 continue;
             }
             $rarity = Arr::get($extended->get('Rarity', []), 'value') ?: 'Unknown';
-            $name = $this->cleanName((string) ($product['name'] ?? $product['cleanName'] ?? 'Unknown'), $number);
+            $rawName = (string) ($product['name'] ?? $product['cleanName'] ?? 'Unknown');
+            $finish = null;
+
+            if ($game === TcgcsvGame::OnePiece) {
+                [$name, $finish] = $this->onePieceName($rawName);
+            } else {
+                $name = $this->cleanName($rawName, $number);
+            }
 
             $imageUrl = null;
             if ($withImages) {
@@ -152,6 +159,7 @@ class ImportTcgcsvSet
                         'language' => 'en',
                         'rarity' => $rarity,
                         'variant' => $variant,
+                        'finish' => $finish,
                     ], fn ($v) => $v !== null && $v !== ''),
                     externalIds: $externalIds,
                     primaryImagePath: $imageUrl,
@@ -287,8 +295,12 @@ class ImportTcgcsvSet
         return $series->count() === 1 ? $series->first() : null;
     }
 
-    protected function upsertSet(int $productLineId, array $group): Set
+    protected function upsertSet(int $productLineId, array $group, TcgcsvGame $game = TcgcsvGame::Pokemon): Set
     {
+        if ($game === TcgcsvGame::OnePiece) {
+            return $this->upsertOnePieceSet($productLineId, $group);
+        }
+
         $fullName = $group['name'] ?? ('Group '.($group['groupId'] ?? ''));
 
         // TCGplayer prefixes the set code on some games: "ME05: Pitch Black" →
@@ -342,6 +354,92 @@ class ImportTcgcsvSet
         ])->save();
 
         return $set;
+    }
+
+    /**
+     * One Piece sets follow the conventions the PriceCharting import laid down,
+     * because every existing One Piece set came from there: a compact code
+     * ("ST-31" → "ST31"), a slug of "one-piece-{name}-en", and the name without
+     * TCGplayer's code prefix. A set we already hold keeps its own name and
+     * slug — renaming it would move its URL — and only gains the group id.
+     *
+     * @param  array<string, mixed>  $group
+     */
+    protected function upsertOnePieceSet(int $productLineId, array $group): Set
+    {
+        $groupId = (string) $group['groupId'];
+        $name = trim((string) preg_replace('/^[A-Za-z0-9 -]+:\s*/', '', (string) ($group['name'] ?? "Group {$groupId}")));
+        $code = strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', (string) ($group['abbreviation'] ?? ''))) ?: null;
+        $slug = 'one-piece-'.Str::slug($name).'-en';
+
+        $set = Set::query()
+            ->where('product_line_id', $productLineId)
+            ->where('language', 'en')
+            ->where(fn ($q) => $q
+                ->where('external_ids->tcgplayer_group_id', $groupId)
+                ->orWhere('slug', $slug))
+            ->first();
+
+        $set ??= (new Set)->forceFill([
+            'product_line_id' => $productLineId,
+            'slug' => $slug,
+            'name' => $name,
+            'set_family' => $name,
+            'language' => 'en',
+        ]);
+
+        $set->forceFill([
+            'code' => $set->code ?: $code,
+            'released_at' => $set->released_at ?? (isset($group['publishedOn']) ? substr((string) $group['publishedOn'], 0, 10) : null),
+            'external_ids' => array_merge((array) ($set->external_ids ?? []), [
+                'tcgplayer_group_id' => $groupId,
+            ]),
+        ])->save();
+
+        return $set;
+    }
+
+    /**
+     * A TCGplayer One Piece product name as our name + finish.
+     *
+     * TCGplayer writes "Shanks (020) (Alternate Art)" and "Roronoa Zoro
+     * (EB04-007) (SP)": the first bracket tells two same-named cards in a set
+     * apart by number, the rest name the printing. Our rows — all built by the
+     * PriceCharting import — keep the plain name and file the printing as a
+     * finish slug ("alternate_art", "sp", "alternate_art_manga"), and identity
+     * includes the name, so a suffix left in would make every alt art a new
+     * card beside the one PriceCharting already gave us.
+     *
+     * @return array{0: string, 1: ?string}
+     */
+    protected function onePieceName(string $raw): array
+    {
+        $name = trim($raw);
+        $tags = [];
+
+        // A space before the bracket marks a tag; without one it is part of
+        // the name, as in "Mr.2.Bon.Kurei(Bentham)".
+        while (preg_match('/^(.*\S)\s+\(([^()]+)\)$/u', $name, $m)) {
+            $name = trim($m[1]);
+            $tag = trim($m[2]);
+
+            // A number tag only disambiguates; the number is stored on its own.
+            if (! preg_match('/^(?:\d{3}|[A-Z0-9]{1,6}-[A-Z0-9]{2,5}[A-Za-z]?)$/i', $tag)) {
+                array_unshift($tags, $tag);
+            }
+        }
+
+        // TCGplayer's spellings of printings PriceCharting named otherwise —
+        // and so every row we hold: an older set's "Parallel" is an Alternate
+        // Art, and "TR" is a Treasure Rare.
+        $aliases = ['parallel' => 'Alternate Art', 'tr' => 'Treasure Rare'];
+        $slug = collect($tags)
+            ->map(fn (string $t) => $aliases[strtolower($t)] ?? $t)
+            ->map(fn (string $t) => Str::slug($t, '_'))
+            ->filter()
+            ->implode('_');
+
+        return [CardName::clean($name), $slug !== '' ? $slug : null];
     }
 
     /** @see CardName::clean() */

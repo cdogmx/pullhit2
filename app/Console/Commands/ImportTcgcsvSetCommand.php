@@ -19,7 +19,7 @@ class ImportTcgcsvSetCommand extends Command
 {
     protected $signature = 'catalog:import-tcgcsv
         {groupIds* : TCGplayer group ids (e.g. 24688 "ME05: Pitch Black", 24666 "Attack of the Vine!")}
-        {--game=pokemon : which game the group belongs to (pokemon|lorcana)}
+        {--game=pokemon : which game the group belongs to (pokemon|lorcana|one-piece)}
         {--no-prices : skip valuation seeding}
         {--no-images : skip downloading card images}
         {--skip-numbers= : collector numbers to leave alone, comma-separated or a range like 037-063}';
