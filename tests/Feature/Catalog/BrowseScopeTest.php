@@ -138,3 +138,20 @@ test('suggestions stay inside the browsed series', function () {
     expect(collect($scoped['cards'])->pluck('name')->all())->toBe(['Pikachu VMAX'])
         ->and(collect($scoped['sets'])->pluck('name')->all())->toBe([]);
 });
+
+test('a brand landing filtered to English shows only English sets', function () {
+    // The header's per-language links (English / Japanese) land here.
+    $ja = Set::factory()->for($this->poke)->create([
+        'slug' => 'terastal-festival-ja', 'name' => 'Terastal Festival',
+        'series' => 'Scarlet & Violet (JP)', 'language' => 'ja', 'released_at' => '2024-12-06',
+    ]);
+    CatalogItem::factory()->for($this->vertical)->for($this->poke)->for($ja)
+        ->create(['name' => 'Pikachu ex', 'number' => '1', 'attributes' => ['language' => 'ja']]);
+
+    $series = fn (string $url) => collect($this->get($url)->assertOk()->viewData('page')['props']['tiles'])
+        ->pluck('name')->sort()->values()->all();
+
+    expect($series('/browse/pokemon?language=en'))->toBe(['Scarlet & Violet', 'Sword & Shield'])
+        // One Japanese series collapses straight to its sets.
+        ->and($series('/browse/pokemon?language=ja'))->toBe(['Terastal Festival']);
+});

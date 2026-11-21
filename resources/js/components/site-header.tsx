@@ -34,8 +34,9 @@ import type { Auth } from '@/types';
  * authenticated app keeps the sidebar layout; this header wraps public pages.
  */
 // The catalog, consolidated under one "Browse" menu. A game with multiple
-// languages becomes a submenu (Japanese links into the SEO landing with a
-// language filter); single-language games are plain links.
+// languages becomes a submenu — every language gets its own link into the SEO
+// landing with a language filter, so English sets are one click away rather
+// than mixed in with the Japanese ones; single-language games are plain links.
 const catalogMenu: {
     label: string;
     href?: string;
@@ -45,6 +46,7 @@ const catalogMenu: {
         label: 'Pokémon',
         links: [
             { label: 'All Pokémon', href: '/browse/pokemon' },
+            { label: 'English', href: '/browse/pokemon?language=en' },
             { label: 'Japanese', href: '/browse/pokemon?language=ja' },
         ],
     },
@@ -52,6 +54,7 @@ const catalogMenu: {
         label: 'One Piece',
         links: [
             { label: 'All One Piece', href: '/browse/one-piece' },
+            { label: 'English', href: '/browse/one-piece?language=en' },
             { label: 'Japanese', href: '/browse/one-piece?language=ja' },
         ],
     },
@@ -310,13 +313,17 @@ function MobileMenu({ auth }: { auth: Auth }) {
                     {auth.user ? (
                         <>
                             <MenuHeading>Account</MenuHeading>
-                            <MenuLink href={dashboard().url}>Dashboard</MenuLink>
+                            <MenuLink href={dashboard().url}>
+                                Dashboard
+                            </MenuLink>
                         </>
                     ) : (
                         <>
                             <MenuHeading>Account</MenuHeading>
                             <MenuLink href={login().url}>Log in</MenuLink>
-                            <MenuLink href={register().url}>Get started</MenuLink>
+                            <MenuLink href={register().url}>
+                                Get started
+                            </MenuLink>
                         </>
                     )}
                 </nav>
