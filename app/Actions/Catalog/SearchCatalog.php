@@ -390,7 +390,9 @@ class SearchCatalog
         // collapse unrelated cards into one and hide the rest of them.
         $representativeIds = (clone $query)
             ->reorder()
-            ->selectRaw('MIN(id) as rep_id')
+            // select(), not addSelect: the caller's query may already carry
+            // catalog_items.* and subselects, which only_full_group_by rejects.
+            ->select(DB::raw('MIN(catalog_items.id) as rep_id'))
             ->groupByRaw("COALESCE(catalog_items.base_key, CONCAT('#', catalog_items.id))")
             ->pluck('rep_id');
 
