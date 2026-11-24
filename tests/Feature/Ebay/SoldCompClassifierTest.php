@@ -376,6 +376,21 @@ test('a non-foil Lorcana card rejects foil/cold-foil listings but keeps regulars
         ->and($c('Disney Lorcana Pocahontas - Peacekeeper 22/204 Winterspell', 550))->not->toBeNull();
 });
 
+test('a foil-only Lorcana rarity keeps listings that say foil', function () {
+    // The live failure: Hyperia City Iconic Mickey #241 is printed only in
+    // foil, and every "Holo Foil" sale of it was rejected as another printing.
+    $line = ProductLine::factory()->create(['slug' => 'lorcana']);
+    $iconic = CatalogItem::factory()->for($line)->create([
+        'name' => 'Mickey Mouse - Best in Town (Iconic)', 'number' => '241',
+        'attributes' => ['language' => 'en', 'variant' => 'normal', 'rarity' => 'Iconic'],
+    ])->fresh();
+
+    $c = fn (string $t) => $this->classifier->classify(candidate($t, 190000), $iconic, 190000, []);
+
+    expect($c('Mickey Mouse Best in Town Iconic 241 Hyperia City Holo Foil'))->not->toBeNull()
+        ->and($c('Disney Lorcana Mickey Mouse - Best in Town Iconic 241/204 Hyperia City'))->not->toBeNull();
+});
+
 test('a base One Piece card rejects alt-art/parallel listings, and the alt-art requires it', function () {
     $line = ProductLine::factory()->create(['slug' => 'one-piece']);
     $base = CatalogItem::factory()->for($line)->create([

@@ -288,6 +288,9 @@ class SoldCompClassifier
         'Common', 'Uncommon', 'Rare', 'Double Rare', 'C', 'UC', 'R',
     ];
 
+    /** Lorcana rarities printed only in foil — TCGplayer lists them as Holofoil alone. */
+    public const LORCANA_FOIL_ONLY = ['Enchanted', 'Epic', 'Iconic'];
+
     private const TREATMENTS = [
         'special illustration rare' => ['Special Illustration Rare', 'Special Art Rare'],
         'shiny ultra rare' => ['Shiny Ultra Rare', 'Shiny Rare', 'Rare Shiny', 'Shiny Secret Rare'],
@@ -1383,7 +1386,13 @@ class SoldCompClassifier
         // the base card — and the eBay search mixes the two. A non-foil card
         // rejects foil listings and a foil card requires the foil wording. Gated
         // to Lorcana so Pokémon "holo/foil" phrasing isn't affected.
-        if ($item->productLine?->slug === 'lorcana') {
+        //
+        // Not for a rarity that is printed ONLY in foil: an Enchanted, Epic or
+        // Iconic card has no non-foil to confuse it with, and its sellers say
+        // "foil" as often as not. Gating those rejected half their sales, and
+        // the generated foil twin of the Hyperia City Iconic Mickey took them.
+        if ($item->productLine?->slug === 'lorcana'
+            && ! in_array($attributes['rarity'] ?? null, self::LORCANA_FOIL_ONLY, true)) {
             $listFoil = (bool) preg_match('/\bfoil\b/', $lower)
                 && ! (bool) preg_match('/non[\s-]?foil/', $lower);
             $itemFoil = in_array($variant, ['foil', 'cold_foil'], true);

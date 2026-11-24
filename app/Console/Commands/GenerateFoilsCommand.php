@@ -8,6 +8,7 @@ use App\Enums\ItemType;
 use App\Models\CatalogItem;
 use App\Models\ProductLine;
 use App\Models\Set;
+use App\Support\Ebay\SoldCompClassifier;
 use Illuminate\Console\Command;
 
 /**
@@ -67,8 +68,11 @@ class GenerateFoilsCommand extends Command
             ->with(['vertical', 'productLine', 'set', 'defaultMarketValue'])
             ->chunkById(200, function ($chunk) use ($create, $seed, $mult, $dry, &$created, &$seeded, &$skipped) {
                 foreach ($chunk as $base) {
-                    // Enchanted/Iconic alt-arts are already their own (foil) cards.
-                    if (($base->getAttribute('attributes')['rarity'] ?? null) === 'Enchanted') {
+                    // Enchanted, Epic and Iconic are printed only in foil — the
+                    // card IS the foil, and a twin just splits its comps. The
+                    // comment said Iconic while the check said Enchanted alone,
+                    // and 60 phantom Epic/Iconic foils were made.
+                    if (in_array($base->getAttribute('attributes')['rarity'] ?? null, SoldCompClassifier::LORCANA_FOIL_ONLY, true)) {
                         $skipped++;
 
                         continue;
