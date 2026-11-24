@@ -285,10 +285,14 @@ class BackfillCardFactsCommand extends Command
         return strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', $code));
     }
 
-    /** Collector numbers compare case- and padding-insensitively. */
+    /**
+     * Collector numbers compare case-insensitively and without the set size:
+     * TCGplayer writes Lorcana's "241/204" where we store "241", which left
+     * every Lorcana card unmatched (One Piece numbers carry no fraction).
+     */
     protected function normalize(string $number): string
     {
-        return strtoupper(trim($number));
+        return strtoupper(trim(explode('/', $number)[0]));
     }
 
     protected function clean(mixed $value): ?string

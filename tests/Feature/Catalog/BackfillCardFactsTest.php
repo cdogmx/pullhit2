@@ -198,3 +198,37 @@ test('it refuses a product line TCGCSV does not carry', function () {
     $this->artisan('catalog:backfill-card-facts', ['--line' => 'riftbound'])
         ->assertFailed();
 });
+
+test('it matches Lorcana numbers TCGplayer writes with the set size', function () {
+    // TCGplayer writes "241/204"; we store "241". Unstripped, no Lorcana card
+    // ever matched, and Wilds Unknown kept no rarity — so its foil-only cards
+    // got phantom foil twins that split their sales.
+    $lorcana = ProductLine::factory()->create([
+        'vertical_id' => $this->vertical->id,
+        'slug' => 'lorcana',
+        'name' => 'Disney Lorcana',
+    ]);
+    $this->line = $lorcana;
+
+    Http::fake([
+        'tcgcsv.com/tcgplayer/71/groups' => Http::response(['results' => [
+            ['groupId' => 24617, 'name' => 'Wilds Unknown', 'abbreviation' => 'WU', 'categoryId' => 71],
+        ]]),
+        'tcgcsv.com/tcgplayer/71/24617/products' => Http::response(['results' => [[
+            'productId' => 690216,
+            'name' => 'Buzz Lightyear - Jungle Ranger (Enchanted)',
+            'extendedData' => [
+                ['name' => 'Number', 'value' => '241/204'],
+                ['name' => 'Rarity', 'value' => 'Enchanted'],
+            ],
+        ]]]),
+    ]);
+
+    $set = factsSet('Wilds Unknown', null);
+    $buzz = factsItem($set, 'Buzz Lightyear - Jungle Ranger', '241');
+
+    $this->artisan('catalog:backfill-card-facts', ['--line' => 'lorcana', '--execute' => true])
+        ->assertSuccessful();
+
+    expect($buzz->fresh()->getAttribute('attributes')['rarity'] ?? null)->toBe('Enchanted');
+});
