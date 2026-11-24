@@ -44,7 +44,8 @@ class JapaneseCardMapper
         $items = [];
         foreach ($prices as $price) {
             $variant = self::SUBTYPE_VARIANT[$price['subTypeName'] ?? ''] ?? 'normal';
-            $anchor = $this->cents($price['marketPrice'] ?? $price['midPrice'] ?? $price['lowPrice'] ?? null);
+            // Market price only: pre-release mid/low asks are not a value.
+            $anchor = $this->cents($price['marketPrice'] ?? null);
             $items[$variant] = $this->item($name, $number, $rarity, $variant, $externalIds, $anchor);
         }
 

@@ -377,15 +377,38 @@ class SoldCompClassifier
      *
      * @return array<int, string>
      */
-    private function statedNumbers(string $lower): array
+    private function statedNumbers(string $lower, ?CatalogItem $item = null): array
     {
         $stated = [];
+        $setSize = $item ? $this->setSize($item) : null;
 
         // "220/214", "84/147", "TG12/TG30" — numerator is the collector number,
         // but only where the denominator is a set size (see isNotASetSize).
         if (preg_match_all('#\b([0-9a-z]{1,5})\s*/\s*([0-9a-z]{1,5})\b#u', $lower, $matches, PREG_SET_ORDER)) {
+            $sizes = array_map(fn (array $m) => (int) $m[2], array_filter($matches, fn (array $m) => ctype_digit($m[2])));
+            $largest = $sizes === [] ? 0 : max($sizes);
+
             foreach ($matches as $match) {
                 if (self::isNotASetSize($match[2])) {
+                    continue;
+                }
+
+                // A sub-series number is a fraction too. The 30th Celebration
+                // Pikachus are cards 023-052 of 128 and ALSO print "N/30", their
+                // place among thirty Pikachus — so "045/128 (23/30)" filed #45's
+                // sales under Pikachu #23, and "047/128 25/30" under #25.
+                //
+                // Dropped only when BOTH hold: the title states a bigger
+                // fraction beside it, and this one is far smaller than the
+                // card's set. Size alone is wrong — White Flare's art rares run
+                // to 173 over a printed /086, so a lone "112/086" is the card.
+                // A bigger fraction alone is wrong too — a reprint's "087/198"
+                // beside its own "138/128" is the original printing. And a
+                // place in a series never exceeds the series, so "091/086" is
+                // a secret rare however much else the title carries.
+                if ($setSize !== null && ctype_digit($match[2])
+                    && (int) $match[2] < $largest && (int) $match[2] * 2 < $setSize
+                    && ! (ctype_digit($match[1]) && (int) $match[1] > (int) $match[2])) {
                     continue;
                 }
 
@@ -482,6 +505,33 @@ class SoldCompClassifier
             || (ctype_digit($denominator) && (int) $denominator > 999);
     }
 
+    /** @var array<int, int|null> */
+    private array $setSizes = [];
+
+    /**
+     * The highest plain collector number in the card's set: what a printed
+     * fraction's denominator should be near. Null for a set numbered otherwise
+     * (One Piece's OP09-015), which leaves every fraction readable as before.
+     */
+    private function setSize(CatalogItem $item): ?int
+    {
+        if ($item->set_id === null) {
+            return null;
+        }
+
+        return $this->setSizes[$item->set_id] ??= (function () use ($item): ?int {
+            $max = CatalogItem::query()
+                ->where('set_id', $item->set_id)
+                ->distinct()
+                ->pluck('number')
+                ->filter(fn ($n) => is_string($n) && ctype_digit($n))
+                ->map(fn (string $n) => (int) $n)
+                ->max();
+
+            return $max > 0 ? $max : null;
+        })();
+    }
+
     private function numberContradicts(CatalogItem $item, string $lower): bool
     {
         $own = $this->normalizeNumber((string) $item->number);
@@ -490,7 +540,7 @@ class SoldCompClassifier
             return false;
         }
 
-        $stated = $this->statedNumbers($lower);
+        $stated = $this->statedNumbers($lower, $item);
 
         if ($stated === []) {
             return false;

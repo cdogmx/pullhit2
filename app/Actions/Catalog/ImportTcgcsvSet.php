@@ -224,10 +224,17 @@ class ImportTcgcsvSet
         return $out === [] ? ['normal' => 0] : $out;
     }
 
-    /** @param  array<string, mixed>  $price */
+    /**
+     * The market price only. Before a set releases TCGplayer has no market
+     * price, and the mid of a handful of pre-order asks is fiction: the 30th
+     * Celebration Classic Collection Metagross was seeded at ~$410 from one,
+     * against a $4 card. No market price means no seed; real sales fill in.
+     *
+     * @param  array<string, mixed>  $price
+     */
     protected function anchorCents(array $price): int
     {
-        $value = $price['marketPrice'] ?? $price['midPrice'] ?? $price['lowPrice'] ?? null;
+        $value = $price['marketPrice'] ?? null;
 
         return $value ? (int) round((float) $value * 100) : 0;
     }

@@ -210,3 +210,23 @@ test('a set TCGCSV seeded on release day is refined, not duplicated, when lorcan
         // ...and the real printed code lorcana-api knows now fills in.
         ->and($sets->first()->code)->toBe('AOV');
 });
+
+test('a pre-release card with no market price is imported unvalued, not seeded from asks', function () {
+    // The live failure: before release TCGplayer had only a few pre-order asks,
+    // and the Classic Collection Metagross was seeded at ~$410 from their mid.
+    Http::fake([
+        'tcgcsv.com/tcgplayer/3/24326/products' => Http::response(['results' => [[
+            'productId' => 710011, 'name' => 'Metagross', 'cleanName' => 'Metagross',
+            'extendedData' => [['name' => 'Rarity', 'value' => 'Rare'], ['name' => 'Number', 'value' => '011/113']],
+        ]]]),
+        'tcgcsv.com/tcgplayer/3/24326/prices' => Http::response(['results' => [
+            ['productId' => 710011, 'subTypeName' => 'Holofoil', 'marketPrice' => null, 'midPrice' => 410.00, 'lowPrice' => 250.00, 'highPrice' => 4321.00],
+        ]]),
+    ]);
+
+    $r = app(ImportTcgcsvSet::class)(24326);
+
+    expect($r)->toMatchArray(['items' => 1, 'valued' => 0]);
+    $item = CatalogItem::where('name', 'Metagross')->sole();
+    expect($item->saleObservations()->count())->toBe(0);
+});
